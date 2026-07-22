@@ -9,6 +9,8 @@ analysis tool, deployable as a standalone Windows executable.
   chain of small milestones with a "Done when" acceptance test.
 - **`MATLAB_TOOL_PRD.md`** — the requirements spec (what to build + the rules).
 - **`MATLAB_TOOL_DECK_OUTLINE.md`** — plain-English outline for a share-out deck.
+- **`ARCHITECTURE.md`** — how the pieces fit together (layers, data flow, design
+  decisions); a living doc, updated as each milestone lands.
 - **`UNITS.md`** — the unit contract: English units (in, lbf, psi) with
   temperature in °C and CTE in 1/°C. Single source of truth for units.
 
