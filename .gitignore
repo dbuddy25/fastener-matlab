@@ -1,0 +1,22 @@
+# MATLAB
+*.asv
+*.m~
+*.mex*
+*.mlx.autosave
+slprj/
+codegen/
+*.slxc
+
+# MATLAB Compiler / deployment output
+*.exe
+mccExcludedFiles.log
+readme.txt
+requiredMCRProducts.txt
+*.prj.autosave
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
