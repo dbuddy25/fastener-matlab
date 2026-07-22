@@ -2,13 +2,11 @@
 
 ## Purpose & how to use this guide
 
-Build a **new MATLAB application** for NASA-STD-5020A bolted-joint margin analysis. This is a **ground-up build**. Two references, with different jobs:
+Build a **new MATLAB application** for NASA-STD-5020A bolted-joint margin analysis, ground-up. Two references, with different jobs:
 - **The existing Python/PySide6 tool defines *what to build*** — the features, workflow, and scope.
-- **Your group's existing spreadsheet tool is the *numerical acceptance reference*** — validate each margin against it, not against the Python tool.
+- **A validation "answer key" defines whether the *numbers* are right** — validate each margin against a known-good worked example (see *Validation reference* below), not against the Python tool.
 
-Build one capability at a time; after each, check your MATLAB output against the spreadsheet for the same inputs. When they agree, the milestone is done.
-
-Work top to bottom. Each milestone is small (roughly one focused session), states **what to build** and a **Done when** acceptance test. Don't start a milestone until the previous one in its track passes.
+The work is organized into **five phases**. Each phase has small steps (roughly one focused session each) with a **Done when** acceptance test. Work top to bottom; finish a step before starting the next.
 
 **Licensing (all confirmed available):** MATLAB Compiler (standalone `.exe`), Report Generator (PDF), Database Toolbox (SQLite — optional; this guide uses JSON instead).
 
@@ -24,158 +22,178 @@ A desktop tool that lets an engineer:
 5. Export PDF and Excel reports.
 6. Ship as a standalone Windows app.
 
-## Target MATLAB architecture
+## Architecture — the five areas of work
+
+The code is organized into five **areas** (the MATLAB packages). The build proceeds in five **phases** (next section) that cut across these areas.
 
 ```
-+engine/    analysis math (margins, solver, preload, stiffness, forces)  ← the core
-+data/      load the hardware/material library; save & reopen analysis cases (both JSON)
++model/     domain types — the "nouns" (bolt, material, joint, loads, factors)
++engine/    analysis math — the core (preload, forces, margins, solver)
++data/      library + case save/load, table import (JSON / spreadsheet)
 +report/    PDF (Report Generator) + XLSX export
-+gui/       App Designer uifigure app (built last)
-tests/      validation cases checked against the group's spreadsheet
++gui/       App Designer uifigure app
+tests/      validation cases + unit tests
 ```
 
-Keep the engine **completely independent of the GUI** — it must run headless from the console. Build it that way from day one.
+**Golden rule:** the **engine never depends on the GUI**, and **everything is reachable headless.** The GUI is a thin shell over the engine's API (see *Engine interface contract*).
 
-## The five tracks at a glance
+## The roadmap at a glance (5 phases)
 
-The build is organized into five **tracks** — dependency-ordered lanes of small, session-sized milestones. Order matters *within* a track.
+| Phase | Goal | Primary areas | Status |
+|-------|------|---------------|--------|
+| **1 — Foundation** | Project skeleton + domain data model | model | ✅ **Done** |
+| **2 — Validated single-joint engine** | One joint, every margin matches the reference example | model, engine | ⏳ **Next** |
+| **3 — Headless Release** | Fully usable from the Command Window — no GUI | engine, data, report | ⏳ |
+| **4 — GUI** | The point-and-click app (committed; thin shell over the engine) | gui | ⏳ |
+| **5 — Packaging & release** | Standalone Windows `.exe` | — | ⏳ |
 
-**Primary target: a usable HEADLESS RELEASE before the GUI.** Sequence the work so an engineer can run the whole workflow from the MATLAB Command Window — *load a library → import a table of joints → bulk-analyze → export margins to XLSX* — with no GUI. The **GUI (Track D) is a committed deliverable**, built next as a thin shell over that same headless API.
-
-| Track | What it builds | Milestones | Key note |
-|-------|----------------|------------|----------|
-| **A — Analysis engine** | The math core (preload, forces, all 15 margin checks, solver) | A1–A15 | The heart of the tool; ends at **ENGINE VALIDATED** |
-| **B — Data layer** | JSON library loader, case save/load, factor presets | B1–B3 | Feeds the Headless Release |
-| **C — Reports** | Excel export + PDF (Report Generator) | C1–C3 | C1 (XLSX) completes the Headless Release |
-| **D — GUI** | App Designer `uifigure`, 11 tabs, theming, visuals | D1–D14 | **Committed**; thin shell over the headless API |
-| **E — Packaging** | Version stamping, Compiler → `.exe`, final validation | E1–E3 | Ships standalone Windows app |
-
-**The flow:** prove the engine (A) → add data + table input + XLSX export so it's **usable headless (the Headless Release)** → build the committed GUI (D) as a thin shell on top → package (E) — validating against the group's spreadsheet the entire way.
+**Primary target: reach a usable Headless Release (Phase 3) before building the GUI.** The GUI (Phase 4) is a committed deliverable, built afterward as a thin shell over the same tested engine.
 
 ## Ground rules (the physics that must be exactly right)
 
 - **Interaction equations:** NASA-STD-5020A Eq. 20–23 — *not* the simpler R²+R² form. Different exponents for threads-in-shear vs. body-in-shear.
 - **Thermal preload:** included (per TFSR 5).
 - **Separation-before-rupture:** 5020A Figure 8 decision tree; the 0.75–0.85 × Ptu intermediate preload band conservatively assumes rupture when bolt-elongation data is unavailable.
-- **Temperature:** the **engine works internally in °C** (CTE data is 1/°C); all other units are US customary (in, lbf, psi). GUI may display °F, converting only at the boundary.
+- **Temperature:** the **engine works internally in °C** (CTE data is 1/°C); all other units are US customary (in, lbf, psi). See `UNITS.md`.
 - **Bolt length for nut config:** grip + nut height + 2·pitch.
 - **Nut strength:** use the spec-rated ultimate load from the library (not a thread-stripping calc), per 5020A §4.2.2.8.
 - **Flanges** = the clamped stack only (not the threaded interface). Insert/tapped-hole material is independent of the flanges.
 
-## Validation reference = the group's spreadsheet tool
+## Validation reference = a known-good worked example
 
-The spreadsheet is the source of truth for expected numbers. Before building the margins, assemble a **validation set**: ~10–20 representative joints/load cases run through the spreadsheet, with its margin results recorded as the expected values. Each engine milestone is checked against that set. (The Python tool is *not* used for numerical validation.)
-
----
-
-## Track A — Analysis engine (the core)
-
-**A1 · Project skeleton.** Create the MATLAB project (package folders above, `tests/`, `git init`) with a stub entry function that prints a version.
-*Done when:* the project opens and the stub runs.
-
-**A2 · Data model.** Define the domain types as MATLAB classes/structs: bolt geometry, material properties (strengths, CTE), joint definition (flange stack, threaded-member type + its material, preload, temperatures), project metadata, and the enums (threaded-member type, shear-plane condition).
-*Done when:* you can construct a complete joint definition in the console.
-
-**A3 · Validation set.** Pick ~10–20 representative joints/load cases; run each through the group's spreadsheet tool and record the expected margins in a `validation_cases` file (inputs + expected outputs).
-*Done when:* the file exists with inputs + every expected margin per case. **This is the spec for all of Track A.**
-
-**A4 · Preload + stiffness.** Implement preload (including thermal) and the bolt/member stiffness + stiffness factor. These feed every margin.
-*Done when:* preload and stiffness match the spreadsheet within tolerance.
-
-**A5 · Force resolution.** Implement resolving applied loads into axial + shear on the bolt.
-*Done when:* bolt forces match the spreadsheet.
-
-**A6 · Tension margins.** Ultimate and yield tensile margins. Write the first regression test that loads the validation set and asserts a match.
-*Done when:* both match the spreadsheet for all cases (first green test).
-
-**A7 · Shear margins.** Ultimate shear + shear-tearout margins.
-*Done when:* tests green.
-
-**A8 · Bearing margins.** Bearing and bearing-under-head margins.
-*Done when:* tests green.
-
-**A9 · Thread / nut / insert margins.** Bolt-thread shear, nut strength (spec Pult), insert failure modes.
-*Done when:* tests green.
-
-**A10 · Separation + slip.** Separation margin, slip margin, and separation-before-rupture (Fig 8 band logic).
-*Done when:* tests green.
-
-**A11 · Interaction.** The combined tension/shear interaction check (Eq. 20–23, correct per-mode exponents) — the subtle one.
-*Done when:* tests green.
-
-**A12 · Solver orchestration.** Assemble all of the above into a single "analyze one joint" routine returning a full result object.
-*Done when:* an end-to-end single-joint analysis matches the spreadsheet on every validation case. **← Engine works for one joint.**
-
-**A13 · Tapped-hole parent-thread check.** Include a **parent-material thread-shear check for tapped holes** (soft-parent case). If the spreadsheet doesn't cover it, validate with a hand computation.
-*Done when:* the check produces a verified margin for a soft-parent tapped hole.
-
-**A14 · Bulk analysis + table input.** A **table/CSV joint loader** (one row per joint or FEM element → `model.Joint` array), element→joint mapping, and analysis over a matrix of elements/load cases. This is the **headless batch entry point** — engineers define many joints in a spreadsheet, no GUI needed.
-*Done when:* a table of joints loads into a `Joint` array and a bulk run matches the spreadsheet results across the matrix.
-
-**A15 · Decision narrative.** Generate the 5020A Fig 8 decision-tree explanation text.
-*Done when:* the narrative reflects the correct standard logic for representative cases (hand-checked).
-
-> **Milestone — ENGINE VALIDATED.** Full analysis runs headless in MATLAB, numerically agreeing with the spreadsheet. This alone lets colleagues call it from their own MATLAB scripts.
+Each margin is checked against a **validation "answer key"** — a fully worked joint with published inputs and expected margins.
+- **Primary seed:** the **DABJ course book §9** worked example (public, so the repo stays public). Config: 3/8" A-286 bolt, 4-bolt single-shear joint into aluminum; it exercises preload, tension, separation, yield, shear, interaction, and a deliberate slip *failure* — 7 of the checks in one joint.
+- **Second wave (later):** the group's spreadsheet supplies additional cases covering checks the DABJ example doesn't reach (bearing, inserts, tapped holes). Real spreadsheet data is sensitive → **flip the repo private before those land** (or keep the numbers out of the repo).
 
 ---
 
-## Track B — Data layer
+# Phase 1 — Foundation ✅ (complete)
 
-**B1 · Library loader.** Load the hardware/material library from JSON (bolts, materials, nuts, inserts, washers, torque specs) with lookups by key. *(JSON keeps packaging simple; SQLite via Database Toolbox is a valid alternative.)*
-*Done when:* you can pull a bolt/material out of the library by key.
+**1.1 · Project skeleton** *(model)* — MATLAB project, package folders, `tests/`, a stub entry function that prints a version.
+*Done when:* the project opens and the stub runs. ✅
 
-**B2 · Case save/load.** JSON round-trip of an analysis case.
-*Done when:* save a joint, reload it, it's identical.
-
-**B3 · Factor presets.** Built-in (protected) + user-defined safety-factor presets.
-*Done when:* presets load and apply.
-
-> **HEADLESS RELEASE — the first usable product.** With the engine, the data layer (B1), table input (A14), and XLSX export (C1) done, the tool is **fully usable from the Command Window with no GUI**: load a library → import a table of joints → bulk-analyze → export margins. Ship this first so engineers can use it immediately. The GUI (Track D, ~65% of the Python app's code) is **committed** and comes next — a thin shell over this same headless API, not a prerequisite for using the tool.
+**1.2 · Data model** *(model)* — the `+model` domain types: `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`, `Joint`, and the enums (`ThreadSeries`, `ThreadedMemberType`, `ShearPlaneCondition`). Value classes with validation.
+*Done when:* you can construct a complete joint definition in the console. ✅
 
 ---
 
-## Track C — Reports
+# Phase 2 — Validated single-joint engine
 
-**C1 · Excel export.** Bulk results → `.xlsx` (`writetable`/`writecell`).
-*Done when:* a bulk run exports a clean spreadsheet.
+**Goal:** an `engine.analyze(joint, loadCase, factors)` that reproduces the DABJ worked example, margin by margin. This is the analytical heart of the tool.
 
-**C2 · Single-joint PDF.** Report Generator: joint summary + all margins.
-*Done when:* a joint produces a complete PDF.
+**2.1 · Finalize the data model** *(model)* — add the analysis inputs the model can't yet hold, in one commit **before any engine code depends on it** (the only free moment for a structural change):
+  - Replace the scalar `Preload` with a **`PreloadSpec`** (torque min/max, nut factor K, uncertainty Γ, relaxation/creep, thermal) — *the one breaking reshape.*
+  - Add **`LoadCase`** (applied per-bolt + joint-level loads) and **`Factors`** (safety + fitting factors) value classes.
+  - Add to `Joint`: `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, bolt spec allowables. Add to `Bolt`: `MinorDiameter`, `BodyDiameter` (with dependent `MinorArea`/`BodyArea`).
+*Done when:* the amended model builds and all model tests pass.
 
-**C3 · Derivations.** Add step-by-step worked-equation tables to the PDF.
-*Done when:* derivations appear in the report.
+**2.2 · Seed the library** *(data)* — a minimal `data/library.json` + `data.Library.load()` with `bolt(key)`/`material(key)`/`boltSpec(key)`, seeded with the DABJ case's bolt + materials.
+*Done when:* you can pull the bolt and materials out of the library by key.
+
+**2.3 · Encode the validation case** *(engine/tests)* — encode the DABJ §9 joint as an executable answer key (`tests/cases/dabjSection9.m`) returning inputs **and** every expected number (preloads, design loads, 6 margins), built from library keys, with citations to the solution pages.
+*Done when:* the case builds and states every expected value. **This is the spec for all of Phase 2.**
+
+**2.4 · Preload** *(engine)* — compute nominal/min/max preload from torque + uncertainty + thermal ΔP.
+*Done when:* preload matches the case (Pp-max ≈ 11,069, Pp-min ≈ 6,470 lb). **← first validated numbers.**
+
+**2.5 · Ultimate-tension margin + separation-before-rupture gate** *(engine)* — design loads, the 5020A Fig 8 decision tree, ultimate tensile MS.
+*Done when:* MS = **+0.69**. **← first validated margin.**
+
+**2.6 · Separation + bolt-yield margins** *(engine)*.
+*Done when:* separation = **+0.16**, bolt yield = **+0.63**.
+
+**2.7 · Shear + tension-shear interaction** *(engine)* — ultimate shear + the Eq. 20–23 solve-for-`a` interaction (correct per-mode exponents), using area-by-shear-plane-condition.
+*Done when:* shear = **+3.18**, interaction = **+0.59**.
+
+**2.8 · Slip margin** *(engine)* — joint-level friction/slip check.
+*Done when:* slip = **−0.65** (a deliberate FAIL — confirms negative margins are handled).
+
+**2.9 · Solver + Result object** *(engine)* — assemble `engine.analyze(joint, loadCase, factors)` returning an `engine.Result` (all 15 margins + pass/fail + governing equation); checks not yet built report `NotEvaluated`.
+*Done when:* one `analyze()` call reproduces all 6 DABJ margins. **← Engine works for one joint, validated.**
 
 ---
 
-## Track D — GUI (App Designer — build last)
+# Phase 3 — Headless Release
 
-> **Committed deliverable.** The GUI is a **thin shell over the headless API** from Tracks A–C — every control calls an already-tested function, and **no analysis logic lives in the GUI.** This is why headless-first pays off: the GUI just wires buttons to functions that already work. Build after the Headless Release.
+**Goal:** an engineer runs the entire workflow from the MATLAB Command Window — no GUI:
+```matlab
+lib     = data.Library.load();
+cases   = data.loadJoints("my_joints.xlsx", lib);   % table → joints + load cases
+results = engine.analyzeBulk(cases, factors);       % all margins per joint
+writetable(results, "margins.xlsx");                % answers out
+```
 
-**D1 · App shell.** `uifigure` with the 11 tabs as empty panels + navigation.
-**D2–D10 · One tab per milestone**, each wired to the engine and independently usable: Project & Factors → Joint Config → Single Joint Analysis (+results) → Defined Joints → Element Mapping → Element Forces/import → Bulk Analysis (+table +XLSX) → Bolt Sizing → Materials & Hardware DB editor.
-**D11 · Static content.** User Guide + References tabs.
-**D12 · Unit system.** °C/°F toggle at the GUI boundary (engine stays °C).
-**D13 · Visualizations.** Joint schematic + decision-tree diagram on `uiaxes` (the fiddliest UI work).
-**D14 · Theming.** Light/dark styling.
+**3.1 · Joint stiffness + CTE-based thermal preload** *(engine)* — stiffness factor φ and the CTE/stiffness thermal path (for joints not covered by a table thermal rate).
+*Done when:* matches a stiffness-based validation case (hand- or spreadsheet-checked).
+
+**3.2 · Bearing margins** *(engine)* — bearing, bearing-under-head, shear-tearout (adds hole/edge/washer geometry).
+*Done when:* validated.
+
+**3.3 · Thread / nut / insert + tapped-hole parent-thread shear** *(engine)* — bolt-thread shear, nut strength (spec Pult), insert failure modes, and the soft-parent tapped-hole thread-shear check.
+*Done when:* validated.
+
+**3.4 · Second validation wave** *(tests)* — add group-spreadsheet cases covering the checks the DABJ example doesn't reach. *(Flip the repo private before real data lands.)*
+*Done when:* the expanded validation set passes.
+
+**3.5 · Table input + bulk analysis** *(data/engine)* — `data.loadJoints("table.xlsx", lib)` → joints + load cases; `engine.analyzeBulk` → results table. The headless batch entry point.
+*Done when:* a table of joints loads and a bulk run matches the reference across the matrix.
+
+**3.6 · XLSX export** *(report)* — bulk results → clean `.xlsx`.
+*Done when:* a bulk run exports a clean spreadsheet. **← HEADLESS RELEASE — first shippable product.**
+
+**3.7 · Convenience: case save/load + factor presets** *(data)* — JSON round-trip of an analysis case; built-in (protected) + user safety-factor presets.
+*Done when:* a case round-trips identically; presets load and apply.
+
+**3.8 · Convenience: PDF reports** *(report)* — single-joint PDF (summary + all margins) with step-by-step worked-equation derivations.
+*Done when:* a joint produces a complete PDF with derivations.
 
 ---
 
-## Track E — Packaging & release
+# Phase 4 — GUI (App Designer)
 
-**E1 · Version/build stamping.** Bake version + build info into the app.
-**E2 · Compiler build.** MATLAB Compiler → standalone Windows `.exe`; bundle the library JSON. *Note:* end users install the free MATLAB Runtime (~1 GB, one-time) — two installs, not one.
+**Committed deliverable. The GUI is a thin shell over the engine's API** — every control calls an already-tested function; **no analysis logic lives in the GUI.** This is why headless-first pays off: the GUI just wires buttons to functions that already work.
+
+**4.1 · App shell** — `uifigure` with the 11 tabs as panels + navigation.
+**4.2–4.10 · One tab per step**, each wired to the engine: Project & Factors → Joint Config → Single-Joint Analysis (+results) → Defined Joints → Element Mapping → Element Forces/import → Bulk Analysis (+table +XLSX) → Bolt Sizing → Materials & Hardware DB editor.
+**4.11 · Static content** — User Guide + References tabs.
+**4.12 · Unit system** — °C/°F display toggle at the GUI boundary (engine stays °C).
+**4.13 · Visualizations** — joint schematic + decision-tree diagram on `uiaxes`.
+**4.14 · Theming** — light/dark styling.
+
+---
+
+# Phase 5 — Packaging & release
+
+**5.1 · Version/build stamping** — bake version + build info into the app.
+**5.2 · Compiler build** — MATLAB Compiler → standalone Windows `.exe`; bundle the library JSON. *Note:* end users install the free MATLAB Runtime (~1 GB, one-time).
 *Done when:* the exe runs on a clean Windows box with only the Runtime.
-**E3 · Final validation.** Re-run the full validation set (plus any additional spreadsheet cases) against the packaged app; confirm all margins agree before release.
-*Done when:* the full matrix matches the spreadsheet.
+**5.3 · Final validation** — re-run the full validation set against the packaged app.
+*Done when:* the full matrix matches the reference.
 
 ---
+
+## Engine interface contract (lock these signatures early)
+
+The whole tool — headless scripts, bulk runs, and the eventual GUI — talks to the engine through these. Locking them now prevents rework.
+
+```matlab
+r     = engine.analyze(joint, loadCase, factors)   % model.Joint, model.LoadCase, model.Factors → engine.Result
+                                                   %   loadCase may be an array → array of Result
+T     = engine.analyzeBulk(cases, factors)         % cases: struct array {Joint, LoadCases} → writetable-ready table
+cases = data.loadJoints("table.xlsx", lib)         % table rows reference library keys → the cases struct array
+```
+
+**`engine.Result`** — one shape every consumer reads (report, GUI, bulk table):
+`JointName`, `CaseName`, `Preload` (nom/min/max + thermal), `DesignLoads`, `Margins` (15 × {Name, MS, Status = Pass|Fail|NotEvaluated, Method (eq. citation), Detail}), `WorstMargin`, `GoverningCheck`, `Narrative` (Fig 8 text), `asTable()`.
+
+`NotEvaluated` as a first-class status lets the engine ship real results with only some checks live — no fake numbers, no rework as the rest land.
 
 ## Verification strategy (applies throughout)
-- Every Track A/B milestone replays the `validation_cases` set and asserts a numeric match against the group's spreadsheet — the guardrail against silent drift in a safety-critical tool.
-- Track D verified by manual walkthrough of each tab.
-- E2 verified on a clean machine; E3 is the final full-matrix check against the spreadsheet.
+- Every engine step replays the validation case(s) and asserts a numeric match (margins to ±0.01) — the guardrail against silent drift in a safety-critical tool.
+- The GUI (Phase 4) is verified by manual walkthrough of each tab (it holds no logic to unit-test).
+- Phase 5 is verified on a clean machine, ending with the full-matrix validation.
 
 ## Working notes
-- Order matters **within** each track. Sequence toward the **Headless Release** first (engine + B1 + A14 table input + C1 export); the GUI (Track D) is committed and follows.
-- Each milestone ≈ one focused session — safe to stop between any two.
-- The Python tool is the feature reference only; the spreadsheet is the number reference.
+- Sequence toward the **Headless Release** (Phase 3) first; the GUI (Phase 4) is committed and follows.
+- Each step ≈ one focused session — safe to stop between any two.
+- The Python tool is the *feature* reference; the worked example / spreadsheet is the *number* reference.
