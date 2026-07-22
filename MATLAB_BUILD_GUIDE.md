@@ -38,17 +38,19 @@ Keep the engine **completely independent of the GUI** — it must run headless f
 
 ## The five tracks at a glance
 
-The build is organized into five **tracks** — dependency-ordered lanes of small, session-sized milestones. Order matters *within* a track; **Tracks A→B are mandatory before committing to the Track D (GUI) decision.**
+The build is organized into five **tracks** — dependency-ordered lanes of small, session-sized milestones. Order matters *within* a track.
+
+**Primary target: a usable HEADLESS RELEASE before the GUI.** Sequence the work so an engineer can run the whole workflow from the MATLAB Command Window — *load a library → import a table of joints → bulk-analyze → export margins to XLSX* — with no GUI. The **GUI (Track D) is a committed deliverable**, built next as a thin shell over that same headless API.
 
 | Track | What it builds | Milestones | Key note |
 |-------|----------------|------------|----------|
 | **A — Analysis engine** | The math core (preload, forces, all 15 margin checks, solver) | A1–A15 | The heart of the tool; ends at **ENGINE VALIDATED** |
-| **B — Data layer** | JSON library loader, case save/load, factor presets | B1–B3 | Ends at the **DECISION GATE** |
-| **C — Reports** | Excel export + PDF (Report Generator) | C1–C3 | Can proceed once the engine exists |
-| **D — GUI** | App Designer `uifigure`, 11 tabs, theming, visuals | D1–D14 | **Built last** — ~65% of the Python app's code |
+| **B — Data layer** | JSON library loader, case save/load, factor presets | B1–B3 | Feeds the Headless Release |
+| **C — Reports** | Excel export + PDF (Report Generator) | C1–C3 | C1 (XLSX) completes the Headless Release |
+| **D — GUI** | App Designer `uifigure`, 11 tabs, theming, visuals | D1–D14 | **Committed**; thin shell over the headless API |
 | **E — Packaging** | Version stamping, Compiler → `.exe`, final validation | E1–E3 | Ships standalone Windows app |
 
-**The flow:** prove the engine (A) → back it with data (B) → **gate** on whether the GUI is even needed → reports (C) / GUI (D) → package (E) — validating against the group's spreadsheet the entire way.
+**The flow:** prove the engine (A) → add data + table input + XLSX export so it's **usable headless (the Headless Release)** → build the committed GUI (D) as a thin shell on top → package (E) — validating against the group's spreadsheet the entire way.
 
 ## Ground rules (the physics that must be exactly right)
 
@@ -107,8 +109,8 @@ The spreadsheet is the source of truth for expected numbers. Before building the
 **A13 · Tapped-hole parent-thread check.** Include a **parent-material thread-shear check for tapped holes** (soft-parent case). If the spreadsheet doesn't cover it, validate with a hand computation.
 *Done when:* the check produces a verified margin for a soft-parent tapped hole.
 
-**A14 · Bulk analysis.** Element→joint mapping and analysis over a matrix of elements/load cases.
-*Done when:* a bulk run matches the spreadsheet results across the matrix.
+**A14 · Bulk analysis + table input.** A **table/CSV joint loader** (one row per joint or FEM element → `model.Joint` array), element→joint mapping, and analysis over a matrix of elements/load cases. This is the **headless batch entry point** — engineers define many joints in a spreadsheet, no GUI needed.
+*Done when:* a table of joints loads into a `Joint` array and a bulk run matches the spreadsheet results across the matrix.
 
 **A15 · Decision narrative.** Generate the 5020A Fig 8 decision-tree explanation text.
 *Done when:* the narrative reflects the correct standard logic for representative cases (hand-checked).
@@ -128,7 +130,7 @@ The spreadsheet is the source of truth for expected numbers. Before building the
 **B3 · Factor presets.** Built-in (protected) + user-defined safety-factor presets.
 *Done when:* presets load and apply.
 
-> **DECISION GATE:** engine + data done. Decide whether to build the full GUI (Track D — the biggest effort) or ship the engine as a scriptable library first. The Python app's GUI is ~65% of its code; confirm the audience actually needs it rebuilt before committing.
+> **HEADLESS RELEASE — the first usable product.** With the engine, the data layer (B1), table input (A14), and XLSX export (C1) done, the tool is **fully usable from the Command Window with no GUI**: load a library → import a table of joints → bulk-analyze → export margins. Ship this first so engineers can use it immediately. The GUI (Track D, ~65% of the Python app's code) is **committed** and comes next — a thin shell over this same headless API, not a prerequisite for using the tool.
 
 ---
 
@@ -146,6 +148,8 @@ The spreadsheet is the source of truth for expected numbers. Before building the
 ---
 
 ## Track D — GUI (App Designer — build last)
+
+> **Committed deliverable.** The GUI is a **thin shell over the headless API** from Tracks A–C — every control calls an already-tested function, and **no analysis logic lives in the GUI.** This is why headless-first pays off: the GUI just wires buttons to functions that already work. Build after the Headless Release.
 
 **D1 · App shell.** `uifigure` with the 11 tabs as empty panels + navigation.
 **D2–D10 · One tab per milestone**, each wired to the engine and independently usable: Project & Factors → Joint Config → Single Joint Analysis (+results) → Defined Joints → Element Mapping → Element Forces/import → Bulk Analysis (+table +XLSX) → Bolt Sizing → Materials & Hardware DB editor.
@@ -172,6 +176,6 @@ The spreadsheet is the source of truth for expected numbers. Before building the
 - E2 verified on a clean machine; E3 is the final full-matrix check against the spreadsheet.
 
 ## Working notes
-- Order matters **within** each track; Tracks A→B are mandatory before the Track D decision.
+- Order matters **within** each track. Sequence toward the **Headless Release** first (engine + B1 + A14 table input + C1 export); the GUI (Track D) is committed and follows.
 - Each milestone ≈ one focused session — safe to stop between any two.
 - The Python tool is the feature reference only; the spreadsheet is the number reference.

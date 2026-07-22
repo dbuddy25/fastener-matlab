@@ -25,9 +25,13 @@ kept in separate layers so each can be built and tested on its own:
       ✅ A2              ⏳ A4–A15          ⏳ Track C/D
 ```
 
-**Golden rule:** the **engine never depends on the GUI**. It runs headless from the
-Command Window. The GUI is a thin layer on top, built last (Track D) — and only if
-the audience needs it (the "decision gate" after Tracks A+B).
+**Golden rule:** the **engine never depends on the GUI**, and **everything is reachable
+headless.** The primary target is a **Headless Release** — a fully usable tool driven
+from the Command Window (define joints in a table → analyze → export margins) *before*
+the GUI exists. The **GUI is a committed deliverable** (Track D), but it is a **thin
+shell over the headless API**: every control calls an already-tested function, and no
+analysis logic lives in the GUI. Headless-first is a down payment on the GUI, not a
+detour from it.
 
 ---
 
@@ -47,6 +51,24 @@ The single flow everything is organized around:
   governing equation behind each. Every consumer (report, GUI, bulk table) reads this
   *one* shape, so nothing re-derives numbers. (⏳ defined alongside the solver, A12.)
 - **Bulk:** the same flow mapped over many joints/load cases → a results table. (⏳ A14.)
+
+### Headless usage — the primary path (⏳ Headless Release)
+
+You don't build many joints by hand — you **describe them in a table and import them.**
+This is the whole product for an engineer who lives in MATLAB/Excel, no GUI required:
+
+```matlab
+lib     = data.Library.load();                 % ⏳ B1  — hardware/material catalog
+joints  = data.loadJoints("my_joints.xlsx");   % ⏳ A14 — table (1 row per joint/element) → model.Joint[]
+results = engine.analyzeBulk(joints, factors); % ⏳ A14 — all 15 margins per joint
+writetable(results, "margins.xlsx");           % ⏳ C1  — answers out
+```
+
+For the few-by-hand case, library lookups keep it terse:
+`b = lib.bolt("#10-32 UNF"); m = lib.material("A286");`. Precedent: the Python tool
+already works this way (`joint_library.csv`, `mapping_template.csv`). The **Headless
+Release** = engine + `B1` + `A14` (table input + bulk) + `C1` (XLSX). The GUI wraps
+exactly these calls later.
 
 ---
 
@@ -92,9 +114,11 @@ bolts ignore. Keeping them one type lets a shared alloy serve both roles; the
 
 ## 5. Key design decisions (and why)
 
-- **Layered, engine-first, GUI-last** — value shows up early (a validated headless
-  engine is usable from scripts before any screen exists) and the biggest, riskiest
-  chunk (GUI) is deferred until proven necessary.
+- **Headless-first, GUI as a thin shell** — the tool is made fully usable from the
+  Command Window (the Headless Release) before the GUI is built, so value shows up
+  early. The GUI is **committed**, but it only wires controls to the already-tested
+  headless API — no logic lives in it. This keeps the no-GUI path first-class and
+  makes the GUI cheaper and more robust to build.
 - **One `Result` object** (⏳) — every consumer reads the same computed output; no
   double-math between report and GUI.
 - **Units: English + °C** — inch/lbf/psi with temperature in °C and CTE in 1/°C. One

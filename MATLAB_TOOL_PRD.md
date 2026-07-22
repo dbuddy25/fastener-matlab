@@ -115,12 +115,19 @@ Plus: °C/°F unit toggle at the GUI boundary, joint schematic + decision-tree d
 - **GUI:** verified by manual walkthrough of each tab.
 - **Release gate:** re-run the full validation set (plus any additional spreadsheet cases) against the **packaged** app; all margins must agree before release.
 
-## 10. Key project decision — the GUI gate
+## 10. Sequencing decision — headless-first, then GUI (both committed)
 
-After the engine + data layer are validated, **explicitly decide** whether to build the full GUI (largest effort — ~65% of the Python app's code) or ship the engine as a scriptable library first. Do not begin GUI work until the audience's need for it is confirmed.
+**Decided:** build a usable **Headless Release** first, then the GUI. The tool must be
+fully operable from the MATLAB Command Window — *load a library → import a table of
+joints → bulk-analyze → export margins to XLSX* — with no GUI (engine + B1 + A14 table
+input + C1 export). The **GUI (Track D) is a committed deliverable**, built next as a
+**thin shell over the headless API**: every control calls an already-tested function,
+and no analysis logic lives in the GUI. Headless-first makes the no-GUI path
+first-class and makes the GUI cheaper/more robust to build — it is not a substitute
+for the GUI.
 
 ## 11. Open items
 
 - Confirm the exact validation-case list with the group (the "answer key").
 - Confirm insert failure-mode set to model (NASM 33537 scope).
-- Decision owner + criteria for the §10 GUI gate.
+- Define the joint-input table schema (columns) for the A14 loader.
