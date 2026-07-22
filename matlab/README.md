@@ -37,5 +37,8 @@ runtests("tests")            % runs the smoke test — A1 "done when" check
 
 ## Current status
 
-**A1 — Project skeleton.** Package folders, `tests/`, and a stub entry point
-that prints a version. Next: **A2 — data model** (domain types in the console).
+**A2 — Data model complete.** The `+model` package defines `Bolt`, `Material`,
+`ThreadedMember`, `FlangeLayer`, `Joint`, and the enums (`ThreadSeries`,
+`ThreadedMemberType`, `ShearPlaneCondition`) — a full joint can be constructed
+in the Command Window (see the usage example in `+model/Joint.m`, exercised by
+`tests/tModel.m`). Next: **A3**.
