@@ -86,7 +86,7 @@ Plus: °C/°F unit toggle at the GUI boundary, joint schematic + decision-tree d
 ## 6. Domain model (engine types)
 
 - **Bolt geometry** — size, thread series, pitch, areas.
-- **Material properties** — ultimate/yield strengths, CTE (in/in/°F).
+- **Material properties** — ultimate/yield strengths, CTE (1/°C).
 - **Joint definition** — clamped flange stack; threaded-member type (nut | insert | tapped hole) + its material; preload; temperatures.
 - **Enums** — threaded-member type; shear-plane condition (threads-in-shear vs body-in-shear).
 - **Project metadata**; **result object** (per-check margins + governing equations + decision narrative).
@@ -96,7 +96,7 @@ Plus: °C/°F unit toggle at the GUI boundary, joint schematic + decision-tree d
 - **Interaction:** NASA-STD-5020A **Eq. 20–23** — *not* the simpler R²+R² form. Different exponents for threads-in-shear vs body-in-shear.
 - **Thermal preload:** included, per TFSR 5.
 - **Separation-before-rupture:** 5020A Figure 8 decision tree. The **0.75–0.85 × Ptu** intermediate preload band conservatively assumes rupture when bolt-elongation data is unavailable.
-- **Temperature:** engine works internally in **°F** (CTE data is in/in/°F). Convert only at the GUI boundary.
+- **Temperature:** engine works internally in **°C** (CTE data is 1/°C); all other units are US customary (in, lbf, psi). The GUI may display °F, converting at the boundary.
 - **Bolt length for nut config:** grip + nut height + 2·pitch.
 - **Flanges** = the clamped stack only (not the threaded interface). Insert/tapped-hole material is **independent** of the flanges.
 

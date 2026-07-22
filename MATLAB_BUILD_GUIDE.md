@@ -55,7 +55,7 @@ The build is organized into five **tracks** — dependency-ordered lanes of smal
 - **Interaction equations:** NASA-STD-5020A Eq. 20–23 — *not* the simpler R²+R² form. Different exponents for threads-in-shear vs. body-in-shear.
 - **Thermal preload:** included (per TFSR 5).
 - **Separation-before-rupture:** 5020A Figure 8 decision tree; the 0.75–0.85 × Ptu intermediate preload band conservatively assumes rupture when bolt-elongation data is unavailable.
-- **Temperature:** GUI supports °C/°F, but the **engine works internally in °F** (CTE data is in/in/°F). Convert only at the GUI boundary.
+- **Temperature:** the **engine works internally in °C** (CTE data is 1/°C); all other units are US customary (in, lbf, psi). GUI may display °F, converting only at the boundary.
 - **Bolt length for nut config:** grip + nut height + 2·pitch.
 - **Nut strength:** use the spec-rated ultimate load from the library (not a thread-stripping calc), per 5020A §4.2.2.8.
 - **Flanges** = the clamped stack only (not the threaded interface). Insert/tapped-hole material is independent of the flanges.
@@ -150,7 +150,7 @@ The spreadsheet is the source of truth for expected numbers. Before building the
 **D1 · App shell.** `uifigure` with the 11 tabs as empty panels + navigation.
 **D2–D10 · One tab per milestone**, each wired to the engine and independently usable: Project & Factors → Joint Config → Single Joint Analysis (+results) → Defined Joints → Element Mapping → Element Forces/import → Bulk Analysis (+table +XLSX) → Bolt Sizing → Materials & Hardware DB editor.
 **D11 · Static content.** User Guide + References tabs.
-**D12 · Unit system.** °C/°F toggle at the GUI boundary (engine stays °F).
+**D12 · Unit system.** °C/°F toggle at the GUI boundary (engine stays °C).
 **D13 · Visualizations.** Joint schematic + decision-tree diagram on `uiaxes` (the fiddliest UI work).
 **D14 · Theming.** Light/dark styling.
 

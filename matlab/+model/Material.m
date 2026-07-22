@@ -1,9 +1,9 @@
 classdef Material
     %MATERIAL  Mechanical + thermal properties of a bolt/flange/insert material.
-    %   Strengths in psi; CTE in in/in/°F (engine works internally in °F).
+    %   Strengths in psi; CTE in 1/°C (engine works internally in °C).
     %
     %   m = model.Material(Name="A286", Ftu=140000, Fty=95000, Fsu=85000, ...
-    %                      E=29.1e6, CTE=9.17e-6);
+    %                      E=29.1e6, CTE=16.5e-6);
 
     properties
         Name (1,1) string = ""
@@ -13,7 +13,7 @@ classdef Material
         Fbru (1,1) double {mustBeNonnegative} = 0   % ultimate bearing strength, psi
         Fbry (1,1) double {mustBeNonnegative} = 0   % bearing yield strength, psi
         E    (1,1) double {mustBeNonnegative} = 0   % elastic (Young's) modulus, psi
-        CTE  (1,1) double = 0                        % coeff. of thermal expansion, in/in/°F
+        CTE  (1,1) double = 0                        % coeff. of thermal expansion, 1/°C
     end
 
     methods
