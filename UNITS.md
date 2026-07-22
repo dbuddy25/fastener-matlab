@@ -21,7 +21,7 @@ deliberate mixed system, chosen because the group works in °C.
 ## The temperature rule
 - The **engine works internally in °C**; thermal preload uses `ΔT(°C) × CTE(1/°C)`.
 - The GUI may let the user enter/display °F, but it **converts to °C at the boundary** —
-  the engine never sees Fahrenheit (GUI unit toggle: milestone D12).
+  the engine never sees Fahrenheit (GUI unit toggle: Phase 4.12).
 - CTE and temperature must always share the °C basis. A CTE given in in/in/°F is wrong
   here; multiply a per-°F CTE by **1.8** to get 1/°C.
 
@@ -29,4 +29,4 @@ deliberate mixed system, chosen because the group works in °C.
 Units are a **convention, not enforced by the type system**. Safeguards:
 - Every physical property in `+model` carries its unit in a code comment.
 - **This file is the single source of truth** — update it if the convention ever changes.
-- Library / imported data (Track B) must be normalized to these units on the way in.
+- Library / imported data (the `+data` area) must be normalized to these units on the way in.

@@ -1,9 +1,9 @@
 # PRD — MATLAB Fastener Analysis Tool
 
 **Status:** Draft for implementation · **Standard:** NASA-STD-5020A w/Change 1
-**Companion docs:** `MATLAB_BUILD_GUIDE.md` (build sequence & milestones), `MATLAB_TOOL_DECK_OUTLINE.md` (stakeholder deck)
+**Companion docs:** `MATLAB_BUILD_GUIDE.md` (build sequence & phases), `MATLAB_TOOL_DECK_OUTLINE.md` (stakeholder deck)
 
-> This PRD is the *requirements* spec — **what** the tool must do and the rules it must obey. The build guide is the *sequence* — the order to build it in. Read them together: a requirement here maps to one or more milestones there.
+> This PRD is the *requirements* spec — **what** the tool must do and the rules it must obey. The build guide is the *sequence* — the order to build it in (five phases). Read them together: a requirement here maps to one or more phase steps there.
 
 ---
 
@@ -16,9 +16,9 @@ Build a **new, ground-up MATLAB application** for NASA-STD-5020A bolted-joint ma
 | Reference | Its role | Used for |
 |-----------|----------|----------|
 | Existing **Python/PySide6 tool** | Feature & workflow spec | *What* to build — scope, screens, behavior |
-| Group's **spreadsheet tool** | Numerical acceptance reference | *Whether the numbers are right* — validation |
+| **Validation "answer key"** — the **DABJ course book §9 public worked example** (primary), plus a later second wave of group-spreadsheet cases (Phase 3.4) | Numerical acceptance reference | *Whether the numbers are right* — validation |
 
-**Rule:** Never validate margins against the Python tool. All numeric acceptance is against the spreadsheet.
+**Rule:** Never validate margins against the Python tool. All numeric acceptance is against the answer key: the DABJ §9 worked example first, then the group's spreadsheet cases in the second wave.
 
 ## 3. Users & primary use cases
 
@@ -60,7 +60,7 @@ The engine MUST compute all of the following per joint and return a full result 
 | 11 | Slip margin | |
 | 12 | Separation-before-rupture | 5020A Fig 8 decision tree |
 | 13 | Combined tension–shear interaction | 5020A **Eq. 20–23**, correct per-mode exponents |
-| 14 | Tapped-hole parent-material thread shear | Soft-parent case; hand-validate if spreadsheet lacks it |
+| 14 | Tapped-hole parent-material thread shear | Soft-parent case; hand-validate if no answer-key case covers it |
 | 15 | (Solver) end-to-end single-joint analysis | Assembles all above |
 
 Plus supporting computations: preload (incl. thermal), bolt/member stiffness + stiffness factor, applied-load resolution into axial + shear, and a 5020A Fig 8 decision-narrative generator.
@@ -78,7 +78,7 @@ Plus supporting computations: preload (incl. thermal), bolt/member stiffness + s
 - **Excel:** bulk results → `.xlsx` (`writetable`/`writecell`).
 - **PDF (Report Generator):** single-joint summary + all margins + step-by-step worked-equation derivations.
 
-### 5.5 GUI (App Designer `uifigure`, build last)
+### 5.5 GUI (App Designer `uifigure`, Phase 4 — after the Headless Release)
 11 tabs, each wired to the engine and independently usable:
 Project & Factors · Joint Config · Single-Joint Analysis (+results) · Defined Joints · Element Mapping · Element Forces/import · Bulk Analysis (+table +XLSX) · Bolt Sizing · Materials & Hardware DB editor · User Guide · References.
 Plus: °C/°F unit toggle at the GUI boundary, joint schematic + decision-tree diagram on `uiaxes`, light/dark theming, version/build stamping.
@@ -87,9 +87,14 @@ Plus: °C/°F unit toggle at the GUI boundary, joint schematic + decision-tree d
 
 - **Bolt geometry** — size, thread series, pitch, areas.
 - **Material properties** — ultimate/yield strengths, CTE (1/°C).
-- **Joint definition** — clamped flange stack; threaded-member type (nut | insert | tapped hole) + its material; preload; temperatures.
+- **Joint definition** — clamped flange stack; threaded-member type (nut | insert | tapped hole) + its material; preload spec; temperatures.
+- **Preload spec** (`PreloadSpec`) — torque min/max, nut factor K, uncertainty Γ, relaxation, thermal; replaces a scalar preload value.
+- **Load case** (`LoadCase`) — applied per-bolt + joint-level loads for one analysis case; passed to the engine alongside the joint.
+- **Factors** (`Factors`) — safety + fitting factors; passed to the engine, not stored on the joint.
 - **Enums** — threaded-member type; shear-plane condition (threads-in-shear vs body-in-shear).
 - **Project metadata**; **result object** (per-check margins + governing equations + decision narrative).
+
+> **Note:** the engine consumes per-bolt loads already resolved upstream; bolt-pattern/FEM load distribution is out of engine scope.
 
 ## 7. Engineering ground rules (must be exactly right)
 
@@ -109,25 +114,26 @@ Plus: °C/°F unit toggle at the GUI boundary, joint schematic + decision-tree d
 
 ## 9. Validation & acceptance
 
-- **Validation set:** ~10–20 representative joints/load cases run through the group's spreadsheet, recorded as expected inputs+outputs in a `validation_cases` file. This is the acceptance spec for the engine.
-- **Per-milestone:** every engine/data milestone replays `validation_cases` and asserts a numeric match within tolerance — the guardrail against silent drift in a safety-critical tool.
-- **Tapped-hole parent-thread (check 14):** if the spreadsheet doesn't cover it, validate with a documented hand computation.
+- **Primary answer key:** the **DABJ course book §9 public worked example** — a fully worked joint with published inputs and expected margins (preload, tension, separation, yield, shear, interaction, slip). Being public, it lets the repo stay public. Encoded as an executable validation case (Phase 2.3); it is the acceptance spec for the Phase 2 engine.
+- **Second validation wave (later, Phase 3.4):** cases from the group's spreadsheet covering checks the DABJ example doesn't reach (bearing, inserts, tapped holes). Spreadsheet data is sensitive — the repo goes private (or the numbers stay out of the repo) before those land.
+- **Per step:** every engine/data step replays the validation case(s) and asserts a numeric match within tolerance — the guardrail against silent drift in a safety-critical tool.
+- **Tapped-hole parent-thread (check 14):** if no answer-key case covers it, validate with a documented hand computation.
 - **GUI:** verified by manual walkthrough of each tab.
-- **Release gate:** re-run the full validation set (plus any additional spreadsheet cases) against the **packaged** app; all margins must agree before release.
+- **Release gate:** re-run the full validation set against the **packaged** app; all margins must agree before release.
 
 ## 10. Sequencing decision — headless-first, then GUI (both committed)
 
-**Decided:** build a usable **Headless Release** first, then the GUI. The tool must be
-fully operable from the MATLAB Command Window — *load a library → import a table of
-joints → bulk-analyze → export margins to XLSX* — with no GUI (engine + B1 + A14 table
-input + C1 export). The **GUI (Track D) is a committed deliverable**, built next as a
-**thin shell over the headless API**: every control calls an already-tested function,
-and no analysis logic lives in the GUI. Headless-first makes the no-GUI path
-first-class and makes the GUI cheaper/more robust to build — it is not a substitute
-for the GUI.
+**Decided:** build a usable **Headless Release** (Phase 3) first, then the GUI. The
+tool must be fully operable from the MATLAB Command Window — *load a library → import
+a table of joints → bulk-analyze → export margins to XLSX* — with no GUI (the validated
+engine plus table input, bulk analysis, and XLSX export). The **GUI (Phase 4) is a
+committed deliverable**, built next as a **thin shell over the headless API**: every
+control calls an already-tested function, and no analysis logic lives in the GUI.
+Headless-first makes the no-GUI path first-class and makes the GUI cheaper/more robust
+to build — it is not a substitute for the GUI.
 
 ## 11. Open items
 
-- Confirm the exact validation-case list with the group (the "answer key").
+- Confirm the second-wave validation-case list from the group's spreadsheet (Phase 3.4) — which joints cover bearing/insert/tapped-hole checks.
 - Confirm insert failure-mode set to model (NASM 33537 scope).
-- Define the joint-input table schema (columns) for the A14 loader.
+- Define the joint-input table schema (columns) for the Phase 3.5 loader.

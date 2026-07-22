@@ -44,54 +44,54 @@ An engineer describes a bolted joint → the tool tells them **if it's strong en
 
 ## Slide 5 — Two reference points (this is important)
 - **The existing Python app tells us WHAT to build** — the features and workflow.
-- **Our group's spreadsheet is the SOURCE OF TRUTH for the NUMBERS.**
+- **A known-good worked example is the SOURCE OF TRUTH for the NUMBERS** — first a
+  fully published textbook joint (DABJ course book §9), then a second wave of cases
+  from our group's spreadsheet.
 
-Every calculation we build gets checked against the spreadsheet before we move on.
+Every calculation we build gets checked against the answer key before we move on.
 
-*Say:* We copy the *behavior* from Python, but we trust the *numbers* from our own validated spreadsheet. That's the guardrail.
+*Say:* We copy the *behavior* from Python, but we trust the *numbers* from a published, fully worked example — and later from our own spreadsheet cases for the checks it doesn't cover. That's the guardrail.
 
 ---
 
-## Slide 6 — How we'll build it: five "tracks"
-Work is split into five ordered lanes. Each lane is a series of small steps ≈ one work session each.
+## Slide 6 — How we'll build it: five phases
+Work proceeds through five ordered phases. Each phase is a series of small steps ≈ one work session each.
 
-| Track | In plain terms |
+| Phase | In plain terms |
 |-------|----------------|
-| **A — Engine** | The brain: all the strength math |
-| **B — Data** | The filing cabinet: bolt/material library, save/load |
-| **C — Reports** | The paperwork: PDF + Excel output |
-| **D — GUI** | The dashboard: the point-and-click screen (built last) |
-| **E — Packaging** | The shipping box: turn it into a Windows app |
+| **1 — Foundation** | The skeleton: project setup + the data model *(done)* |
+| **2 — Validated single-joint engine** | The brain: one joint, every number proven right |
+| **3 — Headless Release** | A complete, usable tool driven from scripts — no screen yet |
+| **4 — GUI** | The dashboard: the point-and-click screen |
+| **5 — Packaging** | The shipping box: turn it into a Windows app |
 
 *Say:* We build the brain first and prove it's right, *then* wrap it in a nice interface — not the other way around.
 
 ---
 
-## Slide 7 — Track A: the engine (the real work)
-- Builds up from preload → forces → each of the **15 safety checks** → one "analyze this joint" button.
-- **Every step is checked against the spreadsheet numbers.** No moving on until they match.
+## Slide 7 — Phase 2: the validated engine (the real work)
+- Builds up from preload → design loads → the **safety checks** → one "analyze this joint" call.
+- **Every step is checked against the worked example's numbers.** No moving on until they match.
 - Ends at a big milestone: **"Engine Validated"** — it runs correctly with no screen at all.
 
 *Say:* This is 60–70% of the value. Once the engine is validated, colleagues could already use it from their own scripts.
 
 ---
 
-## Slide 8 — The decision gate
-After the engine + data are done, we **stop and decide**:
+## Slide 8 — Headless-first: a usable tool before the GUI
+Phase 3 delivers a **complete, usable tool with no screen**: import a table of joints → analyze everything → export the margins to Excel.
 
-> Do we actually need to build the full point-and-click screen — or is a script-driven tool enough?
+- Value shows up **early** — colleagues can run real analyses from their own scripts.
+- The GUI is still **100% committed** — Phase 4 builds it as a **thin shell** on top of the already-proven engine.
+- Because no math lives in the screen, the GUI is cheaper to build and harder to break.
 
-- The screen (GUI) is the **single biggest chunk of work** (~65% of the old app's code).
-- We only build it if the audience truly needs it.
-
-*Say:* This is deliberate. We don't sink months into a GUI until we've confirmed people want one. It's an off-ramp to save effort.
+*Say:* This isn't GUI-or-no-GUI. We ship a working script-driven tool first, then put the point-and-click screen on top. The screen just presses buttons on math that's already validated.
 
 ---
 
-## Slide 9 — Tracks C, D, E: finishing up
-- **C — Reports:** professional PDF and Excel output for design reviews.
-- **D — GUI:** the 11-tab screen — joint setup, analysis, libraries, bulk runs, diagrams.
-- **E — Packaging:** compile to a standalone `.exe` and do a final full validation against the spreadsheet.
+## Slide 9 — Phases 4 & 5: finishing up
+- **4 — GUI:** the 11-tab screen — joint setup, analysis, libraries, bulk runs, diagrams — every control calling the already-proven engine. (Professional PDF and Excel reports land in Phase 3, so design reviews are covered even before the GUI.)
+- **5 — Packaging:** compile to a standalone `.exe` and do a final full validation of the packaged app.
 
 *Say:* These make it something the whole group can pick up and use, not just the person who built it.
 
@@ -99,7 +99,7 @@ After the engine + data are done, we **stop and decide**:
 
 ## Slide 10 — Why this is trustworthy
 - It follows the **NASA-STD-5020A** standard (the governing spec for this kind of analysis).
-- **Every calculation is validated against our spreadsheet** — at every milestone and again on the final packaged app.
+- **Every calculation is validated against a known-good answer key** — the published worked example first, then our own spreadsheet cases — at every step and again on the final packaged app.
 - The tool **shows its work** — the equations behind each verdict are in the report.
 
 *Say:* For a safety-critical check, "trust me" isn't enough. The design is built so every number is traceable.
@@ -107,20 +107,20 @@ After the engine + data are done, we **stop and decide**:
 ---
 
 ## Slide 11 — Roadmap / effort
-- Each milestone ≈ one focused session; safe to stop between any two.
-- Rough order: **Engine → Data → (decide) → Reports → GUI → Package.**
-- Value shows up **early** — a working, validated engine well before the GUI exists.
+- Each step ≈ one focused session; safe to stop between any two.
+- The five phases in order: **Foundation (done) → Validated engine → Headless Release → GUI → Package.**
+- Value shows up **early** — a working, validated, script-usable tool well before the GUI exists.
 
 *Say:* This delivers usable value incrementally. We're not waiting until the very end to have something that works.
 
 ---
 
 ## Slide 12 — Ask / next steps
-- Agreement to **start Track A** (engine) against a validation set from the spreadsheet.
-- Input on the **validation cases** — which ~10–20 representative joints to lock in as the "answer key."
-- A decision-maker for the **GUI gate** when we get there.
+- Agreement to **start Phase 2** (the validated engine) against the published worked-example answer key.
+- Input on the **second-wave validation cases** — which representative joints from our spreadsheet to lock in later for the checks the worked example doesn't reach (bearing, inserts, tapped holes).
+- Awareness that a **usable script-driven tool arrives before the GUI** — the GUI follows as a thin shell on top.
 
-*Say:* The one thing I need to start is the validation set — the joints and expected answers we'll build against.
+*Say:* Nothing blocks the start — the primary answer key is already published. What I'll need from the group later is the second wave of validation joints from our spreadsheet.
 
 ---
 

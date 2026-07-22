@@ -1,5 +1,5 @@
 classdef tModel < matlab.unittest.TestCase
-    %TMODEL  A2 acceptance: the +model domain types construct and compose.
+    %TMODEL  Phase 1 acceptance: the +model domain types construct and compose.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -53,7 +53,7 @@ classdef tModel < matlab.unittest.TestCase
     methods
         function j = makeJoint(~)
             % A representative #10-32 A286 bolt through two aluminum flanges
-            % into a nut — the A2 "construct a full joint in the console" case.
+            % into a nut — the Phase 1 "construct a full joint in the console" case.
             b  = model.Bolt(Designation="#10-32 UNF", NominalDiameter=0.190, ...
                             Series=model.ThreadSeries.UNF, ThreadsPerInch=32, ...
                             TensileStressArea=0.0200);

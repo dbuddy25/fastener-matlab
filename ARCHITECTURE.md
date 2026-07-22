@@ -4,9 +4,10 @@ How the pieces fit together. **This is a living document** — it describes what
 built today and where it is headed. Each section is tagged:
 
 - ✅ **Built** — exists and tested now
-- ⏳ **Planned** — designed, not yet implemented (milestone noted)
+- ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through milestone A2 (data model).** No analysis math exists yet.
+**Current state: through Phase 1 (Foundation — skeleton + data model).** No analysis
+math exists yet.
 
 ---
 
@@ -22,16 +23,16 @@ kept in separate layers so each can be built and tested on its own:
    │  (nouns) │      │  (math)   │      │  (present)   │
    └──────────┘      └───────────┘      └──────────────┘
    describe a joint   compute margins    show the answer
-      ✅ A2              ⏳ A4–A15          ⏳ Track C/D
+      ✅ Phase 1         ⏳ Phases 2–3       ⏳ Phases 3–4
 ```
 
 **Golden rule:** the **engine never depends on the GUI**, and **everything is reachable
-headless.** The primary target is a **Headless Release** — a fully usable tool driven
-from the Command Window (define joints in a table → analyze → export margins) *before*
-the GUI exists. The **GUI is a committed deliverable** (Track D), but it is a **thin
-shell over the headless API**: every control calls an already-tested function, and no
-analysis logic lives in the GUI. Headless-first is a down payment on the GUI, not a
-detour from it.
+headless.** The primary target is a **Headless Release** (Phase 3) — a fully usable tool
+driven from the Command Window (define joints in a table → analyze → export margins)
+*before* the GUI exists. The **GUI is a committed deliverable** (Phase 4), but it is a
+**thin shell over the headless API**: every control calls an already-tested function,
+and no analysis logic lives in the GUI. Headless-first is a down payment on the GUI,
+not a detour from it.
 
 ---
 
@@ -40,17 +41,25 @@ detour from it.
 The single flow everything is organized around:
 
 ```
-  model.Joint  ──▶  engine.analyze(joint, factors)  ──▶  engine.Result  ──▶  report / gui
-   (✅ built)              (⏳ A12 solver)              (⏳ result object)     (⏳ C/D)
+  model.Joint + model.LoadCase + model.Factors  ──▶  engine.analyze(joint, loadCase, factors)
+        (✅ Joint; ⏳ 2.1)                                    (⏳ 2.9 solver)
+                                                                  │
+                                              engine.Result  ──▶  report / gui
+                                            (⏳ result object)   (⏳ Phases 3–4)
 ```
 
-- **Input:** one `model.Joint` — a fully-described joint (✅ you can build this today).
+- **Input:** one `model.Joint` — a fully-described joint (✅ you can build this today) —
+  plus a `model.LoadCase` (the applied loads) and `model.Factors` (safety + fitting
+  factors), both passed to `analyze()` rather than stored on the Joint (⏳ Phase 2.1).
 - **Engine:** resolves loads, computes preload/stiffness, runs all 15 margin checks,
-  applies the interaction and separation logic. (⏳ built up piece by piece, A4–A15.)
-- **Output:** one `engine.Result` object — the 15 margins, pass/fail, and the
-  governing equation behind each. Every consumer (report, GUI, bulk table) reads this
-  *one* shape, so nothing re-derives numbers. (⏳ defined alongside the solver, A12.)
-- **Bulk:** the same flow mapped over many joints/load cases → a results table. (⏳ A14.)
+  applies the interaction and separation logic. (⏳ built up piece by piece, Phases 2–3.)
+- **Output:** one `engine.Result` object — the 15 margins, each with pass/fail status
+  (`Pass|Fail|NotEvaluated`), the governing equation/method, plus `WorstMargin`,
+  `GoverningCheck`, the Fig 8 `Narrative`, and `asTable()`. Every consumer (report, GUI,
+  bulk table) reads this *one* shape, so nothing re-derives numbers. (⏳ defined
+  alongside the solver, Phase 2.9.)
+- **Bulk:** the same flow mapped over many joints/load cases → a results table:
+  `engine.analyzeBulk(cases, factors)`. (⏳ Phase 3.5.)
 
 ### Headless usage — the primary path (⏳ Headless Release)
 
@@ -58,17 +67,17 @@ You don't build many joints by hand — you **describe them in a table and impor
 This is the whole product for an engineer who lives in MATLAB/Excel, no GUI required:
 
 ```matlab
-lib     = data.Library.load();                 % ⏳ B1  — hardware/material catalog
-joints  = data.loadJoints("my_joints.xlsx");   % ⏳ A14 — table (1 row per joint/element) → model.Joint[]
-results = engine.analyzeBulk(joints, factors); % ⏳ A14 — all 15 margins per joint
-writetable(results, "margins.xlsx");           % ⏳ C1  — answers out
+lib     = data.Library.load();                    % ⏳ 2.2 — hardware/material catalog
+cases   = data.loadJoints("my_joints.xlsx", lib); % ⏳ 3.5 — table → joints + load cases
+results = engine.analyzeBulk(cases, factors);     % ⏳ 3.5 — all 15 margins per joint
+writetable(results, "margins.xlsx");              % ⏳ 3.6 — answers out
 ```
 
 For the few-by-hand case, library lookups keep it terse:
 `b = lib.bolt("#10-32 UNF"); m = lib.material("A286");`. Precedent: the Python tool
 already works this way (`joint_library.csv`, `mapping_template.csv`). The **Headless
-Release** = engine + `B1` + `A14` (table input + bulk) + `C1` (XLSX). The GUI wraps
-exactly these calls later.
+Release** = the validated engine (Phase 2) + table input, bulk analysis, and XLSX
+export (Phase 3). The GUI wraps exactly these calls later.
 
 ---
 
@@ -76,12 +85,12 @@ exactly these calls later.
 
 ```
 matlab/
-├── fastenerTool.m   ✅ entry-point stub (prints version)   — A1
-├── +model/          ✅ domain types (the "nouns")           — A2
-├── +engine/         ⏳ analysis math (the core)             — Track A (A4–A15)
-├── +data/           ⏳ library + case save/load (JSON)      — Track B
-├── +report/         ⏳ PDF + XLSX export                    — Track C
-├── +gui/            ⏳ App Designer app (built last)        — Track D
+├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
+├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
+├── +engine/         ⏳ analysis math (the core)             — Phases 2–3
+├── +data/           ⏳ library + case save/load (JSON)      — Phases 2–3
+├── +report/         ⏳ PDF + XLSX export                    — Phase 3
+├── +gui/            ⏳ App Designer app (thin shell)        — Phase 4
 └── tests/           ✅ smoke + model tests; ⏳ validation   — throughout
 ```
 
@@ -89,7 +98,7 @@ Package classes reference each other with the `model.` / `engine.` prefix.
 
 ---
 
-## 4. The domain model (`+model`) — ✅ built (A2)
+## 4. The domain model (`+model`) — ✅ built (Phase 1)
 
 The vocabulary the whole engine speaks. All are **value classes** with name-value
 constructors, input validation, and unit comments (see `UNITS.md`).
@@ -105,10 +114,23 @@ constructors, input validation, and unit comments (see `UNITS.md`).
 | `ThreadedMemberType` | enum | `Nut`, `Insert`, `TappedHole` |
 | `ShearPlaneCondition` | enum | `ThreadsInShear`, `BodyInShear` |
 
+### Planned additions — ⏳ Phase 2.1 (model finalization)
+
+| Type | What it is | Notes |
+|------|-----------|-------|
+| `PreloadSpec` | Full preload definition | **Replaces the scalar `Preload`** on `Joint`: torque min/max, nut factor K, uncertainty Γ, relaxation/creep, thermal |
+| `LoadCase` | Applied loads for one case | Per-bolt + joint-level loads; **passed to `analyze()`, not stored on the Joint** |
+| `Factors` | Safety + fitting factors | Also passed to `analyze()`, not stored on the Joint |
+
+Plus field additions: `Joint` gains `BoltCount`, `FrictionCoefficient`,
+`LoadingPlaneFactor`, and bolt spec allowables; `Bolt` gains `MinorDiameter` and
+`BodyDiameter` (with dependent `MinorArea`/`BodyArea`).
+
 **Why one `Material` for every role:** a bolt material and a flange material are the
 same *kind* of thing; flanges just also use the bearing fields (`Fbru`/`Fbry`) that
 bolts ignore. Keeping them one type lets a shared alloy serve both roles; the
-"which material goes where" distinction is a *library* concern (Track B), not a type.
+"which material goes where" distinction is a *library* concern (the `+data` area,
+Phase 2.2), not a type.
 
 ---
 
@@ -123,11 +145,13 @@ bolts ignore. Keeping them one type lets a shared alloy serve both roles; the
   double-math between report and GUI.
 - **Units: English + °C** — inch/lbf/psi with temperature in °C and CTE in 1/°C. One
   contract, documented in `UNITS.md`; conversion only at the GUI boundary.
-- **Validate against the spreadsheet, not the Python tool** — the Python app defines
-  *features*; the group's spreadsheet is the source of truth for *numbers*.
+- **Validate against a known-good answer key, not the Python tool** — the Python app
+  defines *features*; the numbers are validated against the **DABJ course book §9
+  public worked example** (primary), with a second wave of cases from the group's
+  spreadsheet later (Phase 3.4).
 - **Domain rules baked in** — flanges = the clamped stack only (not the threaded
   interface); nut strength uses the spec-rated ultimate load, not a thread-stripping
-  calc; tapped-hole parent-thread shear is a distinct check (A13).
+  calc; tapped-hole parent-thread shear is a distinct check (Phase 3.3).
 
 ---
 
@@ -137,30 +161,31 @@ bolts ignore. Keeping them one type lets a shared alloy serve both roles; the
   composes, computes its derived fields (`Pitch`, `GripLength`), and rejects bad input.
   `tFastenerToolSmoke.m` proves the entry point runs. Tests add the source folder to
   the path via a `PathFixture`, so they pass regardless of the current folder.
-- **Numerical validation (⏳ A3 onward):** each engine milestone will replay a
-  `validation_cases` set — real joints with expected margins from the group's
-  spreadsheet — and assert a numeric match. This is the guardrail against silent
-  drift in a safety-critical tool.
+- **Numerical validation (⏳ Phase 2.3 onward):** each engine step will replay the
+  validation case(s) — joints with published expected margins, seeded by the **DABJ
+  §9 worked example** and expanded with group-spreadsheet cases in Phase 3.4 — and
+  assert a numeric match. This is the guardrail against silent drift in a
+  safety-critical tool.
 
 ---
 
-## 7. Milestone ↔ architecture map
+## 7. Phase ↔ architecture map
 
-| Layer / capability | Milestone(s) | Status |
-|--------------------|-------------|--------|
-| Entry-point skeleton | A1 | ✅ |
-| Domain model (`+model`) | A2 | ✅ |
-| Validation set (answer key) | A3 | ⏳ next |
-| Preload, stiffness, forces | A4–A5 | ⏳ |
-| The 15 margin checks | A6–A11, A13 | ⏳ |
-| Single-joint solver + `Result` | A12 | ⏳ |
-| Bulk analysis | A14 | ⏳ |
-| Data layer (`+data`) | Track B | ⏳ |
-| Reports (`+report`) | Track C | ⏳ |
-| GUI (`+gui`) | Track D | ⏳ |
-| Packaging (`.exe`) | Track E | ⏳ |
+| Layer / capability | Phase | Status |
+|--------------------|-------|--------|
+| Skeleton + domain model (`+model`) | 1 — Foundation | ✅ |
+| Model finalization (`PreloadSpec`, `LoadCase`, `Factors`) | 2.1 | ⏳ next |
+| Library seed (`+data`) | 2.2 | ⏳ |
+| Validation answer key (DABJ §9) | 2.3 | ⏳ |
+| Preload + core margins | 2.4–2.8 | ⏳ |
+| Single-joint solver + `Result` | 2.9 | ⏳ |
+| Remaining checks + second validation wave | 3.1–3.4 | ⏳ |
+| Table input + bulk analysis + XLSX (Headless Release) | 3.5–3.6 | ⏳ |
+| Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
+| GUI (`+gui`) | 4 | ⏳ |
+| Packaging (`.exe`) | 5 | ⏳ |
 
 ---
 
-*Update this doc as each milestone lands — flip ⏳ to ✅ and fill in the real shapes
+*Update this doc as each phase step lands — flip ⏳ to ✅ and fill in the real shapes
 (especially the `Result` object) once they exist.*

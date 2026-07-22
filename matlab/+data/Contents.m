@@ -4,5 +4,5 @@
 %   torque specs) with lookup by key; analysis-case JSON round-trip;
 %   factor presets (built-in + user).
 %
-%   Reference for structure: MATLAB_BUILD_GUIDE.md, Track B.
-%   Currently empty — first real code lands at B1.
+%   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.
+%   Currently empty — first real code lands in Phase 2.2 (library seed).

@@ -3,7 +3,7 @@ classdef ThreadedMember
     %   For a Nut or Insert, RatedUltimateLoad is the spec-rated Pult
     %   (per 5020A §4.2.2.8). For a TappedHole, Material is the PARENT
     %   material and RatedUltimateLoad may be 0 — parent-thread-shear is
-    %   computed later (milestone A13).
+    %   computed later (Phase 3.3).
     %
     %   tm = model.ThreadedMember(Type=model.ThreadedMemberType.Nut, ...
     %                             Material=nutMat, RatedUltimateLoad=4080);
