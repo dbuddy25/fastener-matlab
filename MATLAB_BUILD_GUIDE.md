@@ -192,8 +192,8 @@ cases = data.loadJoints("table.xlsx", lib)         % table rows reference librar
 
 **Equation traceability (required).** Everywhere an equation is implemented, the
 point-of-use comment must carry all three together: the **reference document**
-(e.g. NASA-STD-5020A, DABJ), the **equation number** if one exists, and the
-**equation written out**. The reference + number are also surfaced in each
+(e.g. NASA-STD-5020A, NASA TM-106943), the **equation number** if one exists, and
+the **equation written out**. The reference + number are also surfaced in each
 function's `Method` string (and thus in `Result`, reports, and the GUI). Example:
 
 ```matlab
@@ -202,6 +202,20 @@ MS = preload.PpMin / designLoads.Psep - 1;
 ```
 
 No bare equation number without the written formula; no formula without the citation.
+
+**Document hierarchy — 5020A governs; supplements only where 5020A relies on them.**
+1. **NASA-STD-5020A is the governing standard.** Where 5020A provides the equation,
+   cite 5020A (preload Eq. 3/4/5/24, tension Eq. 6, shear Eq. 14, separation Eq. 19,
+   interaction Eq. 20–23, slip Eq. 84–86, …).
+2. **Supplemental docs** (NASA TM-106943 "Chambers", NASA RP-1228 "Barrett") are
+   cited **only where 5020A itself relies on them** for a detailed formula 5020A
+   does not print — e.g. the thermal preload change `P_dT` (5020A Eq. 2 uses the
+   term; the CTE-mismatch formula is **TM-106943 Eq. 10**), and several
+   thread-shear / bearing / insert failure modes 5020A defers to TM-106943.
+   Confirm 5020A does not give the equation itself before citing a supplement.
+3. **The DABJ course book is validation only** — the worked-example answer key.
+   Never cite DABJ as a governing equation; use it only in "Validated against
+   DABJ §N" provenance notes.
 
 ## Verification strategy (applies throughout)
 - Every engine step replays the validation case(s) and asserts a numeric match (margins to ±0.01) — the guardrail against silent drift in a safety-critical tool.
