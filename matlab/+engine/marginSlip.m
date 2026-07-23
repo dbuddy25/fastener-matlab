@@ -1,5 +1,5 @@
 function r = marginSlip(joint, loadCase, preload, factors)
-%MARGINSLIP  Joint-slip margin of safety (DABJ Eq. 84).
+%MARGINSLIP  Joint-slip margin of safety (NASA-STD-5020A Eq. 86).
 %   r = engine.marginSlip(joint, loadCase, preload, factors) computes the
 %   friction (slip) margin for one joint. preload is the struct from
 %   engine.preload. All loads in lbf (see UNITS.md).
@@ -8,7 +8,7 @@ function r = marginSlip(joint, loadCase, preload, factors)
 %   from clamp-up across all nf bolts against the total applied joint shear,
 %   using JOINT limit loads (loadCase.JointShear/TensileLimitLoad), NOT
 %   nf x per-bolt loads (bolt-pattern distribution makes those differ):
-%       MS = (nf*mu*PpMin) / (FSslip*(PsL_joint + mu*PtL_joint)) - 1  (Eq. 84)
+%       MS = (nf*mu*PpMin) / (FSslip*FFslip*(PsL_joint + mu*PtL_joint)) - 1  (Eq. 86)
 %   where nf = joint.BoltCount, mu = joint.FrictionCoefficient,
 %   PpMin = preload.PpMin (worst-case min preload), and applied joint
 %   tension erodes the clamp (hence the mu*PtL_joint demand term).
@@ -36,7 +36,7 @@ mu = joint.FrictionCoefficient;
 if mu == 0
     r = struct( ...
         "MS",     NaN, ...
-        "Method", "DABJ Eq. 84 (joint slip) — not evaluated, μ = 0");
+        "Method", "NASA-STD-5020A Eq. 86 (joint slip) — not evaluated, μ = 0");
     return
 end
 
@@ -44,7 +44,7 @@ PsLjoint = loadCase.JointShearLimitLoad;
 PtLjoint = loadCase.JointTensileLimitLoad;
 if isnan(PsLjoint) || isnan(PtLjoint)
     error("engine:marginSlip:jointLoadsRequired", ...
-        "Joint slip (DABJ Eq. 84) requires joint-level limit loads " + ...
+        "Joint slip (NASA-STD-5020A Eq. 86) requires joint-level limit loads " + ...
         "(LoadCase.JointShearLimitLoad / JointTensileLimitLoad). They are " + ...
         "NOT simply BoltCount x per-bolt loads because of bolt-pattern " + ...
         "load distribution — set them explicitly on the LoadCase.");
@@ -53,15 +53,15 @@ end
 nf     = joint.BoltCount;
 FSslip = factors.FSSlip;
 
-% DABJ Eq. 84 (numerator) — Capacity = nf·μ·PpMin (friction resistance from clamp-up)
+% NASA-STD-5020A Eq. 86 (numerator) — Capacity = nf·μ·PpMin (friction resistance from clamp-up)
 Capacity = nf * mu * preload.PpMin;
-% DABJ Eq. 84 (denominator) — Demand = FSslip·(PsL_joint + μ·PtL_joint)
+% NASA-STD-5020A Eq. 86 (denominator) — Demand = FSslip·FFslip·(PsL_joint + μ·PtL_joint)
 % (applied joint shear + friction lost to applied joint tension)
-Demand = FSslip * (PsLjoint + mu * PtLjoint);
-% DABJ Eq. 84 — MS = (nf·μ·PpMin) / (FSslip·(PsL_joint + μ·PtL_joint)) - 1
+Demand = FSslip * factors.FFSlip * (PsLjoint + mu * PtLjoint);
+% NASA-STD-5020A Eq. 86 — MS = (nf·μ·PpMin) / (FSslip·FFslip·(PsL_joint + μ·PtL_joint)) - 1
 MS = Capacity / Demand - 1;
 
 r = struct( ...
     "MS",     MS, ...
-    "Method", "DABJ Eq. 84 (joint slip)");
+    "Method", "NASA-STD-5020A Eq. 86 (joint slip)");
 end

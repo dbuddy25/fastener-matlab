@@ -194,7 +194,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function slipMarginMatchesDABJ(testCase)
-            % Phase 2.8: joint-level friction check (DABJ Eq. 84) with
+            % Phase 2.8: joint-level friction check (NASA-STD-5020A Eq. 86) with
             % joint totals, NOT nf x per-bolt:
             % MS = 4*0.1*6,469.75 / (1.0*(5,690 + 0.1*16,090)) - 1
             %    = 2,587.9/7,299 - 1 = -0.65 (Solutions-23) — a deliberate
@@ -205,7 +205,7 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyEqual(r.MS, c.Expected.MS_Slip, ...
                 "AbsTol", c.Tol.MarginAbsTol);
             testCase.verifyLessThan(r.MS, 0);
-            testCase.verifySubstring(r.Method, "Eq. 84");
+            testCase.verifySubstring(r.Method, "Eq. 86");
         end
 
         function analyzeReproducesAllDABJMargins(testCase)

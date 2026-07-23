@@ -13,7 +13,7 @@ function r = analyze(joint, loadCase, factors)
 %       Shear-Ultimate     engine.marginShearUlt     5020A Eq. 12/13 + Eq. 14
 %       Interaction        engine.marginInteraction  5020A Eq. 20/21
 %       Separation         engine.marginSeparation   5020A Eq. 19
-%       Slip               engine.marginSlip         DABJ Eq. 84
+%       Slip               engine.marginSlip         NASA-STD-5020A Eq. 86
 %   plus the Separation-before-rupture gate (NASA-STD-5020A Fig. 8), a
 %   boolean check reported as its own Margins row (Pass = assured) and as
 %   Result.Narrative.
@@ -51,7 +51,7 @@ ty = engine.marginBoltYield(joint, d);               % 5020A Eq. 15
 su = engine.marginShearUlt(joint, d);                % 5020A Eq. 12/13 + Eq. 14
 ia = engine.marginInteraction(joint, d);             % 5020A Eq. 20/21 solve-for-a
 sp = engine.marginSeparation(p, d);                  % 5020A Eq. 19
-sl = engine.marginSlip(joint, loadCase, p, factors); % DABJ Eq. 84
+sl = engine.marginSlip(joint, loadCase, p, factors); % NASA-STD-5020A Eq. 86
 
 % ---- Separation-before-rupture as its own row ----------------------------
 % The gate (NASA-STD-5020A Fig. 8 / DABJ Fig. 9-9) is boolean — it has no

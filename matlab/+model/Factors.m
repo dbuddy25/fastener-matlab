@@ -13,6 +13,7 @@ classdef Factors
         FFU    (1,1) double {mustBePositive} = 1.15   % ultimate fitting factor
         FFY    (1,1) double {mustBePositive} = 1.0    % yield fitting factor
         FFSep  (1,1) double {mustBePositive} = 1.0    % separation fitting factor
+        FFSlip (1,1) double {mustBePositive} = 1.0    % slip fitting factor
         FSSlip (1,1) double {mustBePositive} = 1.0    % slip factor of safety
     end
 

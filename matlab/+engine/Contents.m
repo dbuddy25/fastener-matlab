@@ -23,7 +23,7 @@
 %                      deferred to Phase 3.4).
 %                      ✅ Phase 2.7 — validated against DABJ §9 (+0.59).
 %   marginSlip       - Joint-slip margin, nf·μ·PpMin friction capacity vs
-%                      joint-level shear demand (DABJ Eq. 84).
+%                      joint-level shear demand (NASA-STD-5020A Eq. 86).
 %                      ✅ Phase 2.8 — validated against DABJ §9 (-0.65).
 %   analyze          - Single-joint solver: preload + design loads + every
 %                      margin check in one call -> engine.Result.
