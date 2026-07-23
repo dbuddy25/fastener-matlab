@@ -5,6 +5,8 @@ analysis tool, deployable as a standalone Windows executable.
 
 ## Docs (read these first)
 
+- **`USER_GUIDE.md`** — ⭐ **start here to actually use the tool** — a from-scratch
+  walkthrough: setup, single-joint analysis, and the bulk spreadsheet workflow.
 - **`MATLAB_BUILD_GUIDE.md`** — the build sequence: five phases (1–5), each a
   chain of small steps with a "Done when" acceptance test.
 - **`MATLAB_TOOL_PRD.md`** — the requirements spec (what to build + the rules).
