@@ -55,7 +55,7 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 2.3 (DABJ validation case encoded) complete; next Phase 2.4 (preload math — first validated numbers).**
+**Phase 2.4 (preload — first validated math) complete; next Phase 2.5 (ultimate-tension margin).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint

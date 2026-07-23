@@ -3,8 +3,8 @@ classdef tDabjCase < matlab.unittest.TestCase
     %   (validation.dabjSection9) is well-formed and pins the book's
     %   expected numbers.
     %
-    %   Engine-driven margin assertions are added in Phase 2.4+ as each
-    %   check is built; this file only checks the fixture is well-formed.
+    %   Engine-driven assertions are added here as each check is built;
+    %   Phase 2.4 added preloadMatchesDABJ (engine.preload vs the book).
     %   The Expected values verified here are recorded constants from the
     %   course book, not computed results — the point is that the answer
     %   key is captured and cannot drift silently.
@@ -86,6 +86,24 @@ classdef tDabjCase < matlab.unittest.TestCase
             % Tolerances for the Phase 2.4+ engine assertions
             testCase.verifyEqual(c.Tol.MarginAbsTol, 0.01);
             testCase.verifyEqual(c.Tol.LoadRelTol, 0.005);
+        end
+
+        function preloadMatchesDABJ(testCase)
+            % Phase 2.4: engine.preload reproduces the book's preloads
+            % (Solutions-11..13; book values are lightly rounded, so the
+            % 0.5% load tolerance absorbs e.g. 10,888.9 vs printed 10,890).
+            c = validation.dabjSection9();
+            p = engine.preload(c.Joint);
+            testCase.verifyEqual(p.PpiMax, c.Expected.PpiMax, ...
+                "RelTol", c.Tol.LoadRelTol);
+            testCase.verifyEqual(p.PpiMin, c.Expected.PpiMin, ...
+                "RelTol", c.Tol.LoadRelTol);
+            testCase.verifyEqual(p.ThermalDelta, c.Expected.ThermalDelta, ...
+                "RelTol", c.Tol.LoadRelTol);
+            testCase.verifyEqual(p.PpMax, c.Expected.PpMax, ...
+                "RelTol", c.Tol.LoadRelTol);
+            testCase.verifyEqual(p.PpMin, c.Expected.PpMin, ...
+                "RelTol", c.Tol.LoadRelTol);
         end
     end
 end
