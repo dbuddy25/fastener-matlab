@@ -5,7 +5,8 @@ classdef tDabjCase < matlab.unittest.TestCase
     %
     %   Engine-driven assertions are added here as each check is built;
     %   Phase 2.4 added preloadMatchesDABJ (engine.preload vs the book);
-    %   Phase 2.5 added designLoadsMatchDABJ and tensionUltMarginMatchesDABJ.
+    %   Phase 2.5 added designLoadsMatchDABJ and tensionUltMarginMatchesDABJ;
+    %   Phase 2.6 added separationMarginMatchesDABJ and boltYieldMarginMatchesDABJ.
     %   The Expected values verified here are recorded constants from the
     %   course book, not computed results — the point is that the answer
     %   key is captured and cannot drift silently.
@@ -135,6 +136,31 @@ classdef tDabjCase < matlab.unittest.TestCase
                 "AbsTol", c.Tol.MarginAbsTol);
             testCase.verifyTrue(r.SeparationBeforeRupture);
             testCase.verifySubstring(r.Method, "Eq. 6");
+        end
+
+        function separationMarginMatchesDABJ(testCase)
+            % Phase 2.6: min preload vs the design separation load
+            % (5020A Eq. 19): MS = 6,469.75/5,590 - 1 = +0.16
+            % (Solutions-17; book prints 0.16, exact 0.157).
+            c = validation.dabjSection9();
+            p = engine.preload(c.Joint);
+            d = engine.designLoads(c.LoadCase, c.Factors);
+            r = engine.marginSeparation(p, d);
+            testCase.verifyEqual(r.MS, c.Expected.MS_Separation, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+            testCase.verifySubstring(r.Method, "Eq. 19");
+        end
+
+        function boltYieldMarginMatchesDABJ(testCase)
+            % Phase 2.6: spec yield allowable vs the design yield load
+            % (5020A Eq. 15): MS = 11,400/6,987.5 - 1 = +0.63
+            % (Solutions-18; book prints 0.63, exact 0.631).
+            c = validation.dabjSection9();
+            d = engine.designLoads(c.LoadCase, c.Factors);
+            r = engine.marginBoltYield(c.Joint, d);
+            testCase.verifyEqual(r.MS, c.Expected.MS_BoltYield, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+            testCase.verifySubstring(r.Method, "Eq. 15");
         end
     end
 end

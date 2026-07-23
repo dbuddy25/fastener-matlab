@@ -55,7 +55,7 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 2.5 (ultimate-tension margin + separation gate) complete; next Phase 2.6 (separation + bolt-yield margins).**
+**Phase 2.6 (separation + bolt-yield margins) complete; next Phase 2.7 (shear + interaction).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
