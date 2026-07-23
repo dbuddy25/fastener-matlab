@@ -6,8 +6,10 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 2.4 (preload — first validated math).** The first
-engine function, `engine.preload`, reproduces the DABJ §9 preloads.
+**Current state: through Phase 2.5 (design loads + ultimate-tension margin).**
+`engine.preload` reproduces the DABJ §9 preloads; `engine.designLoads` and
+`engine.marginTensionUlt` (with the Fig. 8 separation-before-rupture gate)
+reproduce the design loads and the +0.69 ultimate-tension margin.
 
 ---
 
@@ -87,7 +89,7 @@ export (Phase 3). The GUI wraps exactly these calls later.
 matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
-├── +engine/         ✅ `preload` (2.4); ⏳ rest of the math  — Phases 2–3
+├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5); ⏳ rest — Phases 2–3
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3)
 ├── +report/         ⏳ PDF + XLSX export                    — Phase 3
@@ -177,7 +179,8 @@ Phase 2.2), not a type.
 | Library seed (`+data`) | 2.2 | ✅ |
 | Validation answer key (DABJ §9, `+validation`) | 2.3 | ✅ |
 | Preload (`engine.preload`, validated vs DABJ §9) | 2.4 | ✅ |
-| Core margins | 2.5–2.8 | ⏳ next |
+| Design loads + ultimate-tension margin w/ separation-before-rupture gate (`engine.designLoads`, `engine.marginTensionUlt`) | 2.5 | ✅ |
+| Remaining core margins | 2.6–2.8 | ⏳ next |
 | Single-joint solver + `Result` | 2.9 | ⏳ |
 | Remaining checks + second validation wave | 3.1–3.4 | ⏳ |
 | Table input + bulk analysis + XLSX (Headless Release) | 3.5–3.6 | ⏳ |

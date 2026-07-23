@@ -4,7 +4,8 @@ classdef tDabjCase < matlab.unittest.TestCase
     %   expected numbers.
     %
     %   Engine-driven assertions are added here as each check is built;
-    %   Phase 2.4 added preloadMatchesDABJ (engine.preload vs the book).
+    %   Phase 2.4 added preloadMatchesDABJ (engine.preload vs the book);
+    %   Phase 2.5 added designLoadsMatchDABJ and tensionUltMarginMatchesDABJ.
     %   The Expected values verified here are recorded constants from the
     %   course book, not computed results — the point is that the answer
     %   key is captured and cannot drift silently.
@@ -104,6 +105,36 @@ classdef tDabjCase < matlab.unittest.TestCase
                 "RelTol", c.Tol.LoadRelTol);
             testCase.verifyEqual(p.PpMin, c.Expected.PpMin, ...
                 "RelTol", c.Tol.LoadRelTol);
+        end
+
+        function designLoadsMatchDABJ(testCase)
+            % Phase 2.5: engine.designLoads reproduces the book's design
+            % loads (p. 9-6; book values are rounded, e.g. 8,999.9 -> 9,000,
+            % 6,987.5 -> 6,990, 2,511.6 -> 2,510 — the 0.5% tolerance covers it).
+            c = validation.dabjSection9();
+            d = engine.designLoads(c.LoadCase, c.Factors);
+            testCase.verifyEqual(d.Ptu, c.Expected.Ptu, ...
+                "RelTol", c.Tol.LoadRelTol);
+            testCase.verifyEqual(d.Pty, c.Expected.Pty, ...
+                "RelTol", c.Tol.LoadRelTol);
+            testCase.verifyEqual(d.Psu, c.Expected.Psu, ...
+                "RelTol", c.Tol.LoadRelTol);
+            testCase.verifyEqual(d.Psep, c.Expected.Psep, ...
+                "RelTol", c.Tol.LoadRelTol);
+        end
+
+        function tensionUltMarginMatchesDABJ(testCase)
+            % Phase 2.5: the Fig. 9-9 separation-before-rupture gate passes
+            % on all four conditions (Ec > Eb/3, PpMax < 0.75*Ptu-allow,
+            % n <= 0.9, e/D assumed), so Eq. 6 applies:
+            % MS = 15,200/9,000 - 1 = +0.69 (Solutions-16).
+            c = validation.dabjSection9();
+            r = engine.marginTensionUlt(c.Joint, engine.preload(c.Joint), ...
+                engine.designLoads(c.LoadCase, c.Factors));
+            testCase.verifyEqual(r.MS, c.Expected.MS_TensionUlt, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+            testCase.verifyTrue(r.SeparationBeforeRupture);
+            testCase.verifySubstring(r.Method, "Eq. 6");
         end
     end
 end
