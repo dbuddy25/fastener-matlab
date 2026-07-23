@@ -42,7 +42,7 @@ arguments
 end
 
 % ---- Supporting computations --------------------------------------------
-p = engine.preload(joint);                  % 5020A Eq. 25/26 + Eq. 1/2
+p = engine.preload(joint);                  % 5020A Eq. 3/4/5 + Eq. 24 + Eq. 1/2
 d = engine.designLoads(loadCase, factors);  % 5020A design load = FS x FF x limit
 
 % ---- The six built margin checks (Phases 2.5-2.8) ------------------------

@@ -52,7 +52,8 @@ classdef tModel < matlab.unittest.TestCase
 
         function buildsPreloadLoadCaseFactors(testCase)
             psT = model.PreloadSpec(Method=model.PreloadMethod.TorqueControl, ...
-                                    TorqueMin=20, TorqueMax=25, NutFactor=0.2);
+                                    NominalTorque=20, TorqueTolerance=0.25, ...
+                                    NutFactor=0.2);
             psD = model.PreloadSpec(Method=model.PreloadMethod.DirectPreload, ...
                                     NominalPreload=2000, Uncertainty=0.25);
             lc  = model.LoadCase(Name="Case 1", BoltTensileLimitLoad=1200, ...
@@ -62,7 +63,11 @@ classdef tModel < matlab.unittest.TestCase
             testCase.verifyClass(psD, "model.PreloadSpec");
             testCase.verifyClass(lc, "model.LoadCase");
             testCase.verifyClass(fac, "model.Factors");
-            testCase.verifyEqual(psT.TorqueMax, 25);
+            % Dependent torque band + c-factors derive from nominal + tolerance
+            testCase.verifyEqual(psT.TorqueMax, 25);   % 20·(1 + 0.25)
+            testCase.verifyEqual(psT.TorqueMin, 15);   % 20·(1 - 0.25)
+            testCase.verifyEqual(psT.CMax, 1.25);      % 5020A c_max (Eq. 3)
+            testCase.verifyEqual(psT.CMin, 0.75);      % 5020A c_min (Eq. 4/5)
             testCase.verifyEqual(psD.NominalPreload, 2000);
             testCase.verifyTrue(isnan(lc.JointTensileLimitLoad));   % NaN → engine derives
             testCase.verifyEqual(fac.FSU, 1.4);

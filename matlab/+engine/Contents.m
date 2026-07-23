@@ -1,7 +1,7 @@
 % +ENGINE  Analysis math — the core (GUI-independent, headless-capable).
 %
-%   preload          - Min/max bolt preload incl. thermal (5020A Eq. 25/26 + 1/2;
-%                      thermal change per TM-106943 Eq. 10).
+%   preload          - Min/max bolt preload incl. thermal (5020A Eq. 3/4/5
+%                      + Eq. 24 + Eq. 1/2; thermal change per TM-106943 Eq. 10).
 %                      ✅ Phase 2.4 — validated against DABJ §9 (tests/tDabjCase.m).
 %   designLoads      - Design ultimate/yield/separation loads from limit loads
 %                      x safety/fitting factors.

@@ -50,8 +50,8 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyEqual(j.BoltRatedYieldLoad, 11400);
             testCase.verifyEqual(j.PreloadSpec.Method, model.PreloadMethod.TorqueControl);
             testCase.verifyEqual(j.PreloadSpec.NutFactor, 0.15);
-            testCase.verifyEqual(j.PreloadSpec.TorqueMin, 450);
-            testCase.verifyEqual(j.PreloadSpec.TorqueMax, 490);
+            testCase.verifyEqual(j.PreloadSpec.NominalTorque, 470);
+            testCase.verifyEqual(j.PreloadSpec.TorqueTolerance, 20/470);
             testCase.verifyEqual(j.PreloadSpec.Uncertainty, 0.25);
             testCase.verifyFalse(j.PreloadSpec.SeparationCritical);
             % Thermal encoded as exact degF -> degC expressions
@@ -93,6 +93,19 @@ classdef tDabjCase < matlab.unittest.TestCase
             % Tolerances for the Phase 2.4+ engine assertions
             testCase.verifyEqual(c.Tol.MarginAbsTol, 0.01);
             testCase.verifyEqual(c.Tol.LoadRelTol, 0.005);
+        end
+
+        function torqueBandDerivedFromNominal(testCase)
+            % The book's "450 to 490 in-lb" band is now encoded as
+            % NominalTorque = 470 + TorqueTolerance = 20/470; the dependent
+            % TorqueMin/TorqueMax must reproduce the specified band.
+            c = validation.dabjSection9();
+            ps = c.Joint.PreloadSpec;
+            testCase.verifyEqual(ps.TorqueMax, 490, "AbsTol", 1e-6);
+            testCase.verifyEqual(ps.TorqueMin, 450, "AbsTol", 1e-6);
+            % c-factors of 5020A Eq. 3/4/5: c_max = 490/470, c_min = 450/470
+            testCase.verifyEqual(ps.CMax, 490/470, "AbsTol", 1e-12);
+            testCase.verifyEqual(ps.CMin, 450/470, "AbsTol", 1e-12);
         end
 
         function preloadMatchesDABJ(testCase)

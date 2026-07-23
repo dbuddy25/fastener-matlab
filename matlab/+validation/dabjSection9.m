@@ -36,11 +36,13 @@ function c = dabjSection9()
 %
 %   Preload (Class Problem 9-1, p. 9-11; Solutions-10..13):
 %     - Torque specified as "450 to 490 in-lb above running torque", so the
-%       EFFECTIVE torques equal the specified values (Eqs. 27/28, p. 9-10):
-%       Tmax = 490, Tmin = 450 in-lbf. PreloadSpec.TorqueMin/Max are defined
-%       as effective torque, so they take these values directly.
+%       EFFECTIVE torques equal the specified values (Eqs. 27/28, p. 9-10).
+%       PreloadSpec takes nominal torque + fractional tolerance (5020A
+%       c-factor form): T_nom = 470 in-lbf, tolerance = 20/470 (±4.26%),
+%       so c_max = 490/470 and c_min = 450/470 — algebraically identical
+%       to the book's Tmax = 490 / Tmin = 450 in-lbf.
 %     - Nominal nut factor K = 0.15 (based on test); preload uncertainty
-%       Gamma = 0.25; joint is NOT separation critical (-> Eq. 26b for
+%       Gamma = 0.25; joint is NOT separation critical (-> 5020A Eq. 5 for
 %       minimum initial preload); no material creep; 5% short-term
 %       relaxation assumed (Solutions-13).
 %     - Thermal: max/min expected temperatures are +/-25 degF from room
@@ -101,13 +103,13 @@ fm   = lib.material("Al 7075-T7351");       % representative "aluminum alloy" me
 % ---- Preload definition (Class Problem 9-1) ------------------------------
 ps = model.PreloadSpec( ...
     Method             = model.PreloadMethod.TorqueControl, ...
-    TorqueMin          = 450, ...            % in-lbf, effective (= specified, Eq. 28)
-    TorqueMax          = 490, ...            % in-lbf, effective (= specified, Eq. 27)
+    NominalTorque      = 470, ...            % in-lbf, effective (= specified, Eqs. 27/28); "450 to 490" -> nominal 470
+    TorqueTolerance    = 20/470, ...         % fractional: ±20 in-lbf on 470 -> c_max = 490/470, c_min = 450/470
     NutFactor          = 0.15, ...           % Knom, based on test
     Uncertainty        = 0.25, ...           % Gamma
     RelaxationFraction = 0.05, ...           % 5% short-term relaxation (Solutions-13)
     CreepLoss          = 0, ...              % "no material creep is expected"
-    SeparationCritical = false, ...          % p. 9-11 -> Eq. 26b for Ppi-min
+    SeparationCritical = false, ...          % p. 9-11 -> 5020A Eq. 5 for Ppi-min
     ThermalRate        = 7.21 * 1.8);        % 7.21 lbf/degF (Table 8-4) -> lbf/degC
 
 % ---- The joint (p. 9-6 + Class Problems 9-1/9-2/9-5/9-6) -----------------

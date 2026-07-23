@@ -66,8 +66,10 @@ rows(end+1,:) = ["Threaded member", "RatedUltimateLoad", fmt(tm.RatedUltimateLoa
 % ---- Preload spec -------------------------------------------------------
 ps = joint.PreloadSpec;
 rows(end+1,:) = ["Preload spec", "Method",             fmt(ps.Method),             ""];
-rows(end+1,:) = ["Preload spec", "TorqueMin",          fmt(ps.TorqueMin),          "in-lbf"];
-rows(end+1,:) = ["Preload spec", "TorqueMax",          fmt(ps.TorqueMax),          "in-lbf"];
+rows(end+1,:) = ["Preload spec", "NominalTorque",      fmt(ps.NominalTorque),      "in-lbf"];
+rows(end+1,:) = ["Preload spec", "TorqueTolerance",    fmt(ps.TorqueTolerance),    ""];
+rows(end+1,:) = ["Preload spec", "TorqueMin (derived)", fmt(ps.TorqueMin),         "in-lbf"];
+rows(end+1,:) = ["Preload spec", "TorqueMax (derived)", fmt(ps.TorqueMax),         "in-lbf"];
 rows(end+1,:) = ["Preload spec", "NutFactor K",        fmt(ps.NutFactor),          ""];
 rows(end+1,:) = ["Preload spec", "Uncertainty Γ",      fmt(ps.Uncertainty),        ""];
 rows(end+1,:) = ["Preload spec", "RelaxationFraction", fmt(ps.RelaxationFraction), ""];
