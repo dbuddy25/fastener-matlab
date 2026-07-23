@@ -1,9 +1,12 @@
 classdef tStiffness < matlab.unittest.TestCase
-    %TSTIFFNESS  Phase 3.1a acceptance: engine.stiffness (30° conical
+    %TSTIFFNESS  Phase 3.1 acceptance: engine.stiffness (30° conical
     %   frustum, through-bolt configuration) reproduces the DABJ Example
     %   8-b published stiffnesses (validation.dabjExample8b): Kb = 2.39e6,
     %   Kc = 4.73e6 lbf/in, Phi = 0.336. Insert/tapped-hole joints error
-    %   (that frustum form is deferred within Phase 3.1).
+    %   (that frustum form is deferred within Phase 3.1). Phase 3.1b wiring
+    %   is exercised here too: the stiffness-based thermal preload path
+    %   (thermalFromStiffness), against a HAND-DERIVED number, not a book
+    %   value.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -45,6 +48,40 @@ classdef tStiffness < matlab.unittest.TestCase
             j.ThreadedMember.Type = model.ThreadedMemberType.Insert;
             testCase.verifyError(@() engine.stiffness(j), ...
                 "engine:stiffness:threadedInDeferred");
+        end
+
+        function thermalFromStiffness(testCase)
+            % Phase 3.1b: with no ThermalRate override, engine.preload
+            % computes the thermal preload change from the joint stiffness
+            % per NASA TM-106943 (Chambers) Eq. 10 —
+            % Pth = (Kb·Kc/(Kb+Kc))·L·ΔT·(αj − αb).
+            % HAND-DERIVED expected value (no book number): the Example 8-b
+            % geometry gives Kb = 2.3892e6 and Kc = 4.7253e6 lbf/in, so
+            % kSeries = 2.3892e6·4.7253e6/7.1145e6 = 1.5869e6 lbf/in. With
+            % L (grip) = 0.80 in, a hot-only excursion ΔT = +50 °C, and the
+            % fixture CTEs αj = 2.32e-5 (aluminum members) and
+            % αb = 1.69e-5 (A-286) 1/°C:
+            %   Pth = 1.5869e6 · 0.80 · 50 · (2.32e-5 − 1.69e-5) = 399.9 lbf
+            % Hot-only with αj > αb means the excursion only ADDS preload:
+            % the max side gains 399.9 lbf and the min side loses nothing.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.PreloadSpec = model.PreloadSpec( ...
+                Method             = model.PreloadMethod.DirectPreload, ...
+                NominalPreload     = 2000, ...
+                Uncertainty        = 0.25, ...
+                RelaxationFraction = 0.05);   % ThermalRate stays 0 -> stiffness path
+            j.ReferenceTemperature = 20;
+            j.MinTemperature       = 20;      % no cold excursion
+            j.MaxTemperature       = 70;      % ΔT_hot = +50 °C
+            p = engine.preload(j);
+            testCase.verifyEqual(p.ThermalDelta, 399.9, "AbsTol", 1.0);
+            % Max side: PpiMax = 1.25*2000 = 2500, plus the thermal gain
+            testCase.verifyEqual(p.PpMax, 2500 + p.ThermalDelta, "AbsTol", 1e-9);
+            % Min side: PpiMin = 0.75*2000 = 1500; NO thermal decrement
+            % (hot-only, members grow more than the bolt), so
+            % PpMin = 0.95*1500 = 1425 exactly.
+            testCase.verifyEqual(p.PpMin, 1425, "AbsTol", 1e-9);
         end
     end
 end

@@ -8,10 +8,11 @@ function p = preload(joint)
 %   Returned struct fields (all lbf):
 %       PpiMax       max initial preload at installation (Eq. 3)
 %       PpiMin       min initial preload at installation (Eq. 4/5)
-%       ThermalDelta preload change over the worst thermal excursion (>= 0)
-%       PpMax        max in-service preload = PpiMax + ThermalDelta
+%       ThermalDelta thermal preload GAIN applied on the max side (>= 0;
+%                    = P_thermal_max below)
+%       PpMax        max in-service preload = PpiMax + P_thermal_max
 %       PpMin        min in-service preload =
-%                    (1 - relaxation)·PpiMin - creep - ThermalDelta
+%                    (1 - relaxation)·PpiMin - creep - P_thermal_min
 %
 %   Preload method (PreloadSpec.Method):
 %     TorqueControl — nominal torque + tolerance, NASA-STD-5020B c-factor form:
@@ -27,12 +28,18 @@ function p = preload(joint)
 %         PpiMax = (1 + Γ)·Pnom,   PpiMin = (1 - Γ)·Pnom
 %
 %   Thermal: preload change from CTE mismatch per NASA TM-106943 (Chambers)
-%   Eq. 10 — P_dT = (Kb·Kj)/(Kb+Kj)·L·ΔT·(CTE_j − CTE_b) — approximated here
-%   by a supplied rate: ThermalDelta = PreloadSpec.ThermalRate (lbf/°C) × the
-%   larger excursion from ReferenceTemperature toward MaxTemperature or
-%   MinTemperature (Phase 3.1 adds the stiffness-based form). Applied as
-%   +ThermalDelta on the max side and -ThermalDelta on the min side
-%   (conservative both ways).
+%   Eq. 10 — P_th = (Kb·Kc)/(Kb+Kc)·L·ΔT·(αj − αb) — with the stiffnesses
+%   from engine.stiffness, L = GripLength, αj the thickness-weighted flange
+%   CTE, and αb the bolt CTE. Both temperature excursions are evaluated:
+%   the worst preload GAIN goes on the max side (P_thermal_max) and the
+%   worst preload LOSS on the min side (P_thermal_min); each is floored at
+%   zero. If PreloadSpec.ThermalRate is set (nonzero, non-NaN) it OVERRIDES
+%   the stiffness form: ThermalDelta = ThermalRate (lbf/°C) × the larger
+%   excursion from ReferenceTemperature, applied symmetrically (+ on the
+%   max side, - on the min side — conservative both ways). On the
+%   stiffness path, engine.stiffness errors (threaded-in configuration,
+%   missing frustum geometry) propagate: supply either the geometry or a
+%   ThermalRate override.
 %
 %   Validated against the DABJ Section 9 class problem
 %   (validation.dabjSection9): PpiMax 10,889 / PpiMin 7,000 /
@@ -75,19 +82,54 @@ switch ps.Method
             "Unsupported preload method: %s", string(ps.Method));
 end
 
-% ---- Thermal excursion (worst direction from reference, °C) ------------
-dT = max(joint.MaxTemperature - joint.ReferenceTemperature, ...
-         joint.ReferenceTemperature - joint.MinTemperature);
-% NASA TM-106943 (Chambers) Eq. 10 — thermal preload change from CTE mismatch;
-% full form P_dT = (Kb·Kj)/(Kb+Kj)·L·ΔT·(CTE_j − CTE_b). Here approximated by a
-% supplied rate (Phase 3.1 adds the stiffness-based form): ThermalDelta = ThermalRate·dT
-ThermalDelta = ps.ThermalRate * dT;                          % lbf
+% ---- Thermal preload change (max-side gain / min-side loss, °C) --------
+if ~isnan(ps.ThermalRate) && ps.ThermalRate ~= 0
+    % Override path: supplied rate × the larger excursion from reference,
+    % applied SYMMETRICALLY (+ on max, - on min — conservative both ways).
+    % NASA TM-106943 (Chambers) Eq. 10 approximated by a supplied rate —
+    % ThermalDelta = ThermalRate·dT
+    dT = max(joint.MaxTemperature - joint.ReferenceTemperature, ...
+             joint.ReferenceTemperature - joint.MinTemperature);
+    td = ps.ThermalRate * dT;                                % lbf
+    PthermalMax = td;
+    PthermalMin = td;
+else
+    % Stiffness path: compute the CTE-mismatch preload change from the
+    % joint stiffness for BOTH excursions (hot and cold).
+    dThot  = joint.MaxTemperature - joint.ReferenceTemperature;   % °C, >= 0
+    dTcold = joint.MinTemperature - joint.ReferenceTemperature;   % °C, <= 0
+    if dThot == 0 && dTcold == 0
+        % No thermal excursion — no CTE-mismatch load (stiffness not needed).
+        PthermalMax = 0;
+        PthermalMin = 0;
+    else
+        % engine.stiffness errors (threaded-in configuration, missing
+        % frustum geometry) propagate — supply the geometry or a
+        % ThermalRate override.
+        s = engine.stiffness(joint);
+        kSeries = s.Kb * s.Kc / (s.Kb + s.Kc);   % bolt+members in series, lbf/in
+        % Thickness-weighted flange CTE (joint members), 1/°C
+        t      = [joint.FlangeStack.Thickness];
+        cte    = arrayfun(@(fl) fl.Material.CTE, joint.FlangeStack);
+        alphaJ = sum(t .* cte) / sum(t);
+        alphaB = joint.BoltMaterial.CTE;         % bolt CTE, 1/°C
+        L      = joint.GripLength;               % clamped-stack length, in
+        % NASA TM-106943 (Chambers) Eq. 10 — Pth = (Kb·Kc/(Kb+Kc))·L·ΔT·(αj − αb)
+        PthHot  = kSeries * L * dThot  * (alphaJ - alphaB);  % lbf
+        PthCold = kSeries * L * dTcold * (alphaJ - alphaB);  % lbf
+        % Worst preload GAIN on the max side, worst LOSS on the min side,
+        % each floored at zero (an excursion that only helps is not credited).
+        PthermalMax = max([PthHot, PthCold, 0]);
+        PthermalMin = max([-PthHot, -PthCold, 0]);
+    end
+end
+ThermalDelta = PthermalMax;                      % reported: max-side gain, lbf
 
 % ---- In-service min/max preload ----------------------------------------
-% NASA-STD-5020B Eq. 1 — PpMax = PpiMax + ThermalDelta
-PpMax = PpiMax + ThermalDelta;
-% NASA-STD-5020B Eq. 2 — PpMin = (1 - relaxation)·PpiMin - creep - ThermalDelta
-PpMin = (1 - ps.RelaxationFraction) * PpiMin - ps.CreepLoss - ThermalDelta;
+% NASA-STD-5020B Eq. 1 — PpMax = PpiMax + P_thermal_max
+PpMax = PpiMax + PthermalMax;
+% NASA-STD-5020B Eq. 2 — PpMin = (1 - relaxation)·PpiMin - creep - P_thermal_min
+PpMin = (1 - ps.RelaxationFraction) * PpiMin - ps.CreepLoss - PthermalMin;
 
 p = struct( ...
     "PpiMax",       PpiMax, ...
