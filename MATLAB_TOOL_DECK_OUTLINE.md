@@ -8,7 +8,7 @@
 **A MATLAB Tool for Bolted-Joint Analysis**
 Rebuilding our fastener margin-of-safety workflow, from scratch, in MATLAB.
 
-*Say:* This is a proposal + roadmap for building our own MATLAB app that checks whether bolted joints are strong enough, to the NASA-STD-5020A standard.
+*Say:* This is a proposal + roadmap for building our own MATLAB app that checks whether bolted joints are strong enough, to the NASA-STD-5020B standard.
 
 ---
 
@@ -98,7 +98,7 @@ Phase 3 delivers a **complete, usable tool with no screen**: import a table of j
 ---
 
 ## Slide 10 — Why this is trustworthy
-- It follows the **NASA-STD-5020A** standard (the governing spec for this kind of analysis).
+- It follows the **NASA-STD-5020B** standard (the governing spec for this kind of analysis).
 - **Every calculation is validated against a known-good answer key** — the published worked example first, then our own spreadsheet cases — at every step and again on the final packaged app.
 - The tool **shows its work** — the equations behind each verdict are in the report.
 

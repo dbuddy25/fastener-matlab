@@ -1,5 +1,5 @@
 function p = preload(joint)
-%PRELOAD  Min/max bolt preload incl. thermal (NASA-STD-5020A Eq. 3/4/5 + Eq. 24
+%PRELOAD  Min/max bolt preload incl. thermal (NASA-STD-5020B Eq. 3/4/5 + Eq. 24
 %   + Eq. 1/2; thermal change per NASA TM-106943 Eq. 10).
 %   p = engine.preload(joint) computes the initial and worst-case preloads
 %   for one joint. All loads in lbf, torque in in-lbf, temperature in °C
@@ -14,13 +14,13 @@ function p = preload(joint)
 %                    (1 - relaxation)·PpiMin - creep - ThermalDelta
 %
 %   Preload method (PreloadSpec.Method):
-%     TorqueControl — nominal torque + tolerance, NASA-STD-5020A c-factor form:
+%     TorqueControl — nominal torque + tolerance, NASA-STD-5020B c-factor form:
 %         Ppi_nom = T_nom / (K·D)                                 (Eq. 24)
 %         PpiMax  = c_max·(1 + Γ)·Ppi_nom                         (Eq. 3)
 %         PpiMin  = c_min·(1 - Γ)·Ppi_nom      separation-critical (Eq. 4)
 %         PpiMin  = c_min·(1 - Γ/√nf)·Ppi_nom  otherwise           (Eq. 5)
 %       where c_max = 1 + TorqueTolerance and c_min = 1 - TorqueTolerance
-%       are the NASA-STD-5020A torque-tolerance factors (§4.3.1: "40 ± 2 N-m" ->
+%       are the NASA-STD-5020B torque-tolerance factors (§4.3.1: "40 ± 2 N-m" ->
 %       c_max = 1.05, c_min = 0.95), Γ = PreloadSpec.Uncertainty, and
 %       nf = joint.BoltCount.
 %     DirectPreload — nominal preload specified directly:
@@ -51,22 +51,22 @@ switch ps.Method
         D  = joint.Bolt.NominalDiameter;    % in
         K  = ps.NutFactor;
         nf = joint.BoltCount;
-        % NASA-STD-5020A Eq. 24 — Ppi_nom = T / (Knom·D)
+        % NASA-STD-5020B Eq. 24 — Ppi_nom = T / (Knom·D)
         PpiNom = ps.NominalTorque / (K * D);
-        % NASA-STD-5020A torque-tolerance factors — c_max = 1 + tol, c_min = 1 - tol
+        % NASA-STD-5020B torque-tolerance factors — c_max = 1 + tol, c_min = 1 - tol
         cMax = 1 + ps.TorqueTolerance;
         cMin = 1 - ps.TorqueTolerance;
-        % NASA-STD-5020A Eq. 3 — Ppi_max = c_max·(1 + Γ)·Ppi_nom
+        % NASA-STD-5020B Eq. 3 — Ppi_max = c_max·(1 + Γ)·Ppi_nom
         PpiMax = cMax * (1 + G) * PpiNom;
         if ps.SeparationCritical
-            % NASA-STD-5020A Eq. 4 (separation-critical) — Ppi_min = c_min·(1 - Γ)·Ppi_nom
+            % NASA-STD-5020B Eq. 4 (separation-critical) — Ppi_min = c_min·(1 - Γ)·Ppi_nom
             PpiMin = cMin * (1 - G) * PpiNom;
         else
-            % NASA-STD-5020A Eq. 5 (not separation-critical) — Ppi_min = c_min·(1 - Γ/√nf)·Ppi_nom
+            % NASA-STD-5020B Eq. 5 (not separation-critical) — Ppi_min = c_min·(1 - Γ/√nf)·Ppi_nom
             PpiMin = cMin * (1 - G/sqrt(nf)) * PpiNom;
         end
     case model.PreloadMethod.DirectPreload
-        % NASA-STD-5020A Eq. 3/4 uncertainty form with c = 1 (no torque
+        % NASA-STD-5020B Eq. 3/4 uncertainty form with c = 1 (no torque
         % tolerance) — PpiMax = (1 + Γ)·Pnom, PpiMin = (1 - Γ)·Pnom
         PpiMax = (1 + G) * ps.NominalPreload;
         PpiMin = (1 - G) * ps.NominalPreload;
@@ -84,9 +84,9 @@ dT = max(joint.MaxTemperature - joint.ReferenceTemperature, ...
 ThermalDelta = ps.ThermalRate * dT;                          % lbf
 
 % ---- In-service min/max preload ----------------------------------------
-% NASA-STD-5020A Eq. 1 — PpMax = PpiMax + ThermalDelta
+% NASA-STD-5020B Eq. 1 — PpMax = PpiMax + ThermalDelta
 PpMax = PpiMax + ThermalDelta;
-% NASA-STD-5020A Eq. 2 — PpMin = (1 - relaxation)·PpiMin - creep - ThermalDelta
+% NASA-STD-5020B Eq. 2 — PpMin = (1 - relaxation)·PpiMin - creep - ThermalDelta
 PpMin = (1 - ps.RelaxationFraction) * PpiMin - ps.CreepLoss - ThermalDelta;
 
 p = struct( ...

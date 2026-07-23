@@ -16,7 +16,7 @@ all six DABJ §9 margins (+0.69 / +0.63 / +3.18 / +0.59 / +0.16 / −0.65,
 governed by the deliberate slip failure); checks arriving in Phase 3 report
 `NotEvaluated`. ✅ Phase 3.1a adds `engine.stiffness(joint)` — bolt/member
 stiffness (Shigley 30° conical frustum; through-bolt/nut only) and the
-stiffness factor phi (NASA-STD-5020A Eq. 9), validated against DABJ Example
+stiffness factor phi (NASA-STD-5020B Eq. 9), validated against DABJ Example
 8-b (Kb 2.39e6 / Kc 4.73e6 / Phi 0.336, `validation.dabjExample8b` +
 `tests/tStiffness.m`), with new model fields to support it (`model.Washer`,
 `Bolt.HeadBearingDiameter`, `Joint.HeadWasher`/`NutWasher`/
@@ -27,7 +27,7 @@ stiffness factor phi (NASA-STD-5020A Eq. 9), validated against DABJ Example
 ## 1. The big picture
 
 The tool takes a **description of a bolted joint**, runs it through the
-**NASA-STD-5020A margin checks**, and **presents the result**. Three responsibilities,
+**NASA-STD-5020B margin checks**, and **presents the result**. Three responsibilities,
 kept in separate layers so each can be built and tested on its own:
 
 ```
@@ -128,14 +128,14 @@ NaN-tolerant validators, so garbage fails loud instead of silently defaulting.
 | `FlangeLayer` | One layer of the clamped stack | `Material`, `Thickness` |
 | `Washer` | Washer under head or nut (✅ 3.1a) | `Thickness`, `OuterDiameter`; rigid in the frustum — enters kc via the contact dia dc and kb via added clamped length |
 | `Joint` | The whole joint, ties it together | `Bolt`, `BoltMaterial`, `FlangeStack`, `ThreadedMember`, `PreloadSpec`, `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, bolt spec allowables, temps (order-validated), `ShearPlane`, `SlipMode` (single-fastener default / joint / disabled slip check), `HeadWasher`/`NutWasher` + `BodyLengthInGrip` (L1) + `FrustumAngle` (stiffness inputs, ✅ 3.1a); computed `GripLength` |
-| `PreloadSpec` | Full preload definition (✅ Phase 2.1) | **Replaced the scalar `Preload`** on `Joint`: `Method` (TorqueControl/DirectPreload), `NominalTorque` + fractional `TorqueTolerance` (5020A c-factor form, Eq. 3/4/5/24; `TorqueMin`/`TorqueMax`/`CMax`/`CMin` are derived Dependent props), nut factor K, `Uncertainty` Γ, relaxation/creep, `ThermalRate`, `SeparationCritical`, `NominalPreload` |
+| `PreloadSpec` | Full preload definition (✅ Phase 2.1) | **Replaced the scalar `Preload`** on `Joint`: `Method` (TorqueControl/DirectPreload), `NominalTorque` + fractional `TorqueTolerance` (5020B c-factor form, Eq. 3/4/5/24; `TorqueMin`/`TorqueMax`/`CMax`/`CMin` are derived Dependent props), nut factor K, `Uncertainty` Γ, relaxation/creep, `ThermalRate`, `SeparationCritical`, `NominalPreload` |
 | `LoadCase` | Applied loads for one case (✅ Phase 2.1) | Per-bolt + joint-level limit loads (joint-level NaN → engine derives); **passed to `analyze()`, not stored on the Joint** |
 | `Factors` | Safety + fitting factors (✅ Phase 2.1) | `FSU`,`FSY`,`FSSep`,`FFU`,`FFY`,`FFSep`,`FSSlip` (DABJ defaults); also passed to `analyze()`, not stored on the Joint |
 | `ThreadSeries` | enum | `UNC`, `UNF` |
 | `ThreadedMemberType` | enum | `Nut`, `Insert`, `TappedHole` |
 | `ShearPlaneCondition` | enum | `ThreadsInShear`, `BodyInShear` |
 | `PreloadMethod` | enum (✅ Phase 2.1) | `TorqueControl`, `DirectPreload` |
-| `SlipMode` | enum | `SingleFastener` (default; 5020A Eq. 86), `Joint` (5020A Eq. 84, joint totals), `Disabled` |
+| `SlipMode` | enum | `SingleFastener` (default; 5020B Eq. 86), `Joint` (5020B Eq. 84, joint totals), `Disabled` |
 
 **Why one `Material` for every role:** a bolt material and a flange material are the
 same *kind* of thing; flanges just also use the bearing fields (`Fbru`/`Fbry`) that

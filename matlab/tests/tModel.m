@@ -66,8 +66,8 @@ classdef tModel < matlab.unittest.TestCase
             % Dependent torque band + c-factors derive from nominal + tolerance
             testCase.verifyEqual(psT.TorqueMax, 25);   % 20·(1 + 0.25)
             testCase.verifyEqual(psT.TorqueMin, 15);   % 20·(1 - 0.25)
-            testCase.verifyEqual(psT.CMax, 1.25);      % NASA-STD-5020A c_max (Eq. 3)
-            testCase.verifyEqual(psT.CMin, 0.75);      % NASA-STD-5020A c_min (Eq. 4/5)
+            testCase.verifyEqual(psT.CMax, 1.25);      % NASA-STD-5020B c_max (Eq. 3)
+            testCase.verifyEqual(psT.CMin, 0.75);      % NASA-STD-5020B c_min (Eq. 4/5)
             testCase.verifyEqual(psD.NominalPreload, 2000);
             testCase.verifyTrue(isnan(lc.JointTensileLimitLoad));   % NaN → engine derives
             testCase.verifyEqual(fac.FSU, 1.4);

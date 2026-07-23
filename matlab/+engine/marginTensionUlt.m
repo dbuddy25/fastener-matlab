@@ -1,7 +1,7 @@
 function r = marginTensionUlt(joint, preload, designLoads)
 %MARGINTENSIONULT  Ultimate-tension margin with separation-before-rupture gate.
 %   r = engine.marginTensionUlt(joint, preload, designLoads) evaluates the
-%   NASA-STD-5020A Figure 8 (DABJ Fig. 9-9) separation-before-rupture
+%   NASA-STD-5020B Figure 8 (DABJ Fig. 9-9) separation-before-rupture
 %   decision tree, then computes the bolt ultimate-tension margin of
 %   safety. preload is the struct from engine.preload; designLoads is the
 %   struct from engine.designLoads. All loads in lbf (see UNITS.md).
@@ -24,9 +24,9 @@ function r = marginTensionUlt(joint, preload, designLoads)
 %        yet (arrives with Phase 3.2 bearing), so this condition is
 %        ASSUMED TRUE and noted in Decision.
 %
-%   If assured:  MS = Ptu_allow / designLoads.Ptu - 1   (NASA-STD-5020A Eq. 6 —
+%   If assured:  MS = Ptu_allow / designLoads.Ptu - 1   (NASA-STD-5020B Eq. 6 —
 %   the bolt only sees the external design load). If NOT assured, the
-%   rupture equations (NASA-STD-5020A Eq. 10/11) need the joint-stiffness factor
+%   rupture equations (NASA-STD-5020B Eq. 10/11) need the joint-stiffness factor
 %   phi, which is Phase 3.1; rather than fake it, MS = NaN with the
 %   reason in Decision.
 %
@@ -52,20 +52,20 @@ if isempty(joint.FlangeStack)
         "Joint.FlangeStack is empty; the member modulus Ec is needed for the separation-before-rupture check.");
 end
 
-% ---- Separation-before-rupture gate (NASA-STD-5020A Fig. 8 / DABJ Fig. 9-9) -----
+% ---- Separation-before-rupture gate (NASA-STD-5020B Fig. 8 / DABJ Fig. 9-9) -----
 Eb = joint.BoltMaterial.E;
 flangeMats = [joint.FlangeStack.Material];
 Ec = min([flangeMats.E]);                       % softest member (conservative)
 n  = joint.LoadingPlaneFactor;
 
-% NASA-STD-5020A Fig. 8 (DABJ Fig. 9-9) — Ec > Eb/3 (member-stiffness gate)
+% NASA-STD-5020B Fig. 8 (DABJ Fig. 9-9) — Ec > Eb/3 (member-stiffness gate)
 condStiffness = Ec > Eb/3;
-% NASA-STD-5020A Fig. 8 (DABJ Fig. 9-9) — PpMax < 0.75·Ptu_allow (preload gate;
+% NASA-STD-5020B Fig. 8 (DABJ Fig. 9-9) — PpMax < 0.75·Ptu_allow (preload gate;
 % [0.75, 0.85]·Ptu_allow band conservatively treated as rupture)
 condPreload   = preload.PpMax < 0.75 * PtuAllow;
-% NASA-STD-5020A Fig. 8 (DABJ Fig. 9-9) — n <= 0.9 (loading-plane-factor gate)
+% NASA-STD-5020B Fig. 8 (DABJ Fig. 9-9) — n <= 0.9 (loading-plane-factor gate)
 condPlane     = n <= 0.9;
-% NASA-STD-5020A Fig. 8 (DABJ Fig. 9-9) — e/D >= 1.5 (edge-distance gate);
+% NASA-STD-5020B Fig. 8 (DABJ Fig. 9-9) — e/D >= 1.5 (edge-distance gate);
 % ASSUMED TRUE (no edge-distance field until Phase 3.2)
 condEdge      = true;
 
@@ -73,9 +73,9 @@ assured = condStiffness && condPreload && condPlane && condEdge;
 
 % ---- Margin ------------------------------------------------------------
 if assured
-    % NASA-STD-5020A Eq. 6 — MS = Ptu_allow / Ptu - 1
+    % NASA-STD-5020B Eq. 6 — MS = Ptu_allow / Ptu - 1
     MS = PtuAllow / designLoads.Ptu - 1;
-    Method = "NASA-STD-5020A Eq. 6 (separation before rupture)";
+    Method = "NASA-STD-5020B Eq. 6 (separation before rupture)";
     Decision = string(sprintf( ...
         ['Separation before rupture assured: Ec(%.3g) > Eb/3(%.3g); ' ...
          'PpMax(%.0f) < 0.75*Ptu_allow(%.0f); n(%.2f) <= 0.9; ' ...
@@ -94,7 +94,7 @@ else
         fails(end+1) = sprintf("n(%.2f) > 0.9", n); %#ok<AGROW>
     end
     MS = NaN;
-    Method = "NASA-STD-5020A Eq. 10/11 (rupture) — requires stiffness, Phase 3.1";
+    Method = "NASA-STD-5020B Eq. 10/11 (rupture) — requires stiffness, Phase 3.1";
     Decision = "Separation before rupture NOT assured (rupture assumed): " + ...
         strjoin(fails, "; ") + ...
         ". Eq. 10/11 needs the joint-stiffness factor phi (Phase 3.1); MS = NaN until then.";

@@ -1,5 +1,5 @@
 function r = marginBoltYield(joint, designLoads)
-%MARGINBOLTYIELD  Bolt yield-tension margin of safety (NASA-STD-5020A Eq. 15).
+%MARGINBOLTYIELD  Bolt yield-tension margin of safety (NASA-STD-5020B Eq. 15).
 %   r = engine.marginBoltYield(joint, designLoads) computes the bolt yield
 %   margin for one joint. designLoads is the struct from
 %   engine.designLoads. All loads in lbf (see UNITS.md).
@@ -32,10 +32,10 @@ if isnan(PtyAllow)
         "BoltRatedYieldLoad required for bolt yield margin; (Fty/Ftu)*Ptu_allow fallback is Phase 3.");
 end
 
-% NASA-STD-5020A Eq. 15 — MS = Pty_allow / Pty - 1
+% NASA-STD-5020B Eq. 15 — MS = Pty_allow / Pty - 1
 MS = PtyAllow / designLoads.Pty - 1;
 
 r = struct( ...
     "MS",     MS, ...
-    "Method", "NASA-STD-5020A Eq. 15 (bolt yield)");
+    "Method", "NASA-STD-5020B Eq. 15 (bolt yield)");
 end

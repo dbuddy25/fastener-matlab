@@ -3,10 +3,10 @@ function s = stiffness(joint)
 %   s = engine.stiffness(joint) computes the axial bolt stiffness Kb, the
 %   clamped-member stiffness Kc (Shigley conical-frustum method, 30°
 %   half-angle; see also DABJ §8, Eqs. 8.1c / 8.1e-f — matches the group
-%   spreadsheet), and the joint stiffness factor Phi (NASA-STD-5020A Eq. 9).
+%   spreadsheet), and the joint stiffness factor Phi (NASA-STD-5020B Eq. 9).
 %   Lengths in inches, moduli in psi, stiffnesses in lbf/in (see UNITS.md).
 %
-%   The kb/kc frustum equations are NOT in NASA-STD-5020A — 5020A takes the
+%   The kb/kc frustum equations are NOT in NASA-STD-5020B — 5020B takes the
 %   stiffnesses as given inputs to Eq. 9 — so the conical-frustum method
 %   (Shigley, 30° half-angle) is the primary source here, with DABJ §8 as
 %   the validation-only see-also (Example 8-b is the answer key).
@@ -26,7 +26,7 @@ function s = stiffness(joint)
 %   Returned struct fields:
 %       Kb    bolt stiffness, lbf/in
 %       Kc    clamped-member stiffness, lbf/in
-%       Phi   stiffness factor kb/(kb+kc), dimensionless (NASA-STD-5020A Eq. 9)
+%       Phi   stiffness factor kb/(kb+kc), dimensionless (NASA-STD-5020B Eq. 9)
 %       L1    unthreaded body length in the grip, in (traceability)
 %       L2    threaded length in the grip, in (traceability)
 %       Dc    frustum contact diameter at the fitting face, in (traceability)
@@ -121,7 +121,7 @@ arg = ((tanA*L + Dc - D)*(Dc + D)) / ((tanA*L + Dc + D)*(Dc - D));
 kc  = 1.81*Ec*D / (2*log(arg));        % log() is natural log
 
 % ---- Stiffness factor ---------------------------------------------------
-% NASA-STD-5020A Eq. 9 — phi = kb/(kb + kc)
+% NASA-STD-5020B Eq. 9 — phi = kb/(kb + kc)
 % (DABJ prints it as 5020B Eq. 9 — identical equation.)
 phi = kb / (kb + kc);
 

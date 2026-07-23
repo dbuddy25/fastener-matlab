@@ -103,7 +103,7 @@ classdef tDabjCase < matlab.unittest.TestCase
             ps = c.Joint.PreloadSpec;
             testCase.verifyEqual(ps.TorqueMax, 490, "AbsTol", 1e-6);
             testCase.verifyEqual(ps.TorqueMin, 450, "AbsTol", 1e-6);
-            % c-factors of NASA-STD-5020A Eq. 3/4/5: c_max = 490/470, c_min = 450/470
+            % c-factors of NASA-STD-5020B Eq. 3/4/5: c_max = 490/470, c_min = 450/470
             testCase.verifyEqual(ps.CMax, 490/470, "AbsTol", 1e-12);
             testCase.verifyEqual(ps.CMin, 450/470, "AbsTol", 1e-12);
         end
@@ -158,7 +158,7 @@ classdef tDabjCase < matlab.unittest.TestCase
 
         function separationMarginMatchesDABJ(testCase)
             % Phase 2.6: min preload vs the design separation load
-            % (NASA-STD-5020A Eq. 19): MS = 6,469.75/5,590 - 1 = +0.16
+            % (NASA-STD-5020B Eq. 19): MS = 6,469.75/5,590 - 1 = +0.16
             % (Solutions-17; book prints 0.16, exact 0.157).
             c = validation.dabjSection9();
             p = engine.preload(c.Joint);
@@ -171,7 +171,7 @@ classdef tDabjCase < matlab.unittest.TestCase
 
         function boltYieldMarginMatchesDABJ(testCase)
             % Phase 2.6: spec yield allowable vs the design yield load
-            % (NASA-STD-5020A Eq. 15): MS = 11,400/6,987.5 - 1 = +0.63
+            % (NASA-STD-5020B Eq. 15): MS = 11,400/6,987.5 - 1 = +0.63
             % (Solutions-18; book prints 0.63, exact 0.631).
             c = validation.dabjSection9();
             d = engine.designLoads(c.LoadCase, c.Factors);
@@ -183,7 +183,7 @@ classdef tDabjCase < matlab.unittest.TestCase
 
         function shearUltMarginMatchesDABJ(testCase)
             % Phase 2.7: threads NOT in the shear plane, so the allowable
-            % uses the full-diameter area (NASA-STD-5020A Eq. 14):
+            % uses the full-diameter area (NASA-STD-5020B Eq. 14):
             % MS = 95,000*(pi/4)*0.375^2 / 2,511.6 - 1
             %    = 10,492.4/2,511.6 - 1 = +3.18 (Solutions-19).
             c = validation.dabjSection9();
@@ -209,7 +209,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function slipMarginMatchesDABJ(testCase)
-            % Phase 2.8: joint-level friction check (NASA-STD-5020A Eq. 84) with
+            % Phase 2.8: joint-level friction check (NASA-STD-5020B Eq. 84) with
             % joint totals, NOT nf x per-bolt — the fixture Joint is pinned to
             % SlipMode.Joint because the book works JOINT slip (Solutions-22..23):
             % MS = 4*0.1*6,469.75 / (1.0*(5,690 + 0.1*16,090)) - 1
@@ -226,7 +226,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function singleFastenerSlipMatches(testCase)
-            % Single-fastener slip (NASA-STD-5020A Eq. 86, the tool DEFAULT)
+            % Single-fastener slip (NASA-STD-5020B Eq. 86, the tool DEFAULT)
             % on the DABJ joint with PER-BOLT limit loads. HAND-DERIVED, not
             % a book value (the book only works joint slip):
             % MS = 0.1*6,469.75 / (1.0*1.0*(1,560 + 0.1*5,590)) - 1

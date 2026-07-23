@@ -1,5 +1,5 @@
 function r = marginShearUlt(joint, designLoads)
-%MARGINSHEARULT  Bolt ultimate-shear margin of safety (NASA-STD-5020A Eq. 14).
+%MARGINSHEARULT  Bolt ultimate-shear margin of safety (NASA-STD-5020B Eq. 14).
 %   r = engine.marginShearUlt(joint, designLoads) computes the bolt
 %   ultimate-shear margin for one joint. designLoads is the struct from
 %   engine.designLoads. All loads in lbf (see UNITS.md).
@@ -31,10 +31,10 @@ end
 
 switch joint.ShearPlane
     case model.ShearPlaneCondition.BodyInShear
-        % NASA-STD-5020A Eq. 12 (body in shear) — Psu_allow = Fsu · A_body
+        % NASA-STD-5020B Eq. 12 (body in shear) — Psu_allow = Fsu · A_body
         area = joint.Bolt.BodyArea;
     case model.ShearPlaneCondition.ThreadsInShear
-        % NASA-STD-5020A Eq. 13 (threads in shear) — Psu_allow = Fsu · A_minor
+        % NASA-STD-5020B Eq. 13 (threads in shear) — Psu_allow = Fsu · A_minor
         area = joint.Bolt.MinorArea;
     otherwise
         error("engine:marginShearUlt:unknownShearPlane", ...
@@ -42,14 +42,14 @@ switch joint.ShearPlane
 end
 
 Fsu = joint.BoltMaterial.Fsu;
-% NASA-STD-5020A Eq. 12/13 — Psu_allow = Fsu · A_shear (A_shear selected by
+% NASA-STD-5020B Eq. 12/13 — Psu_allow = Fsu · A_shear (A_shear selected by
 % shear-plane condition above)
 ShearAllowable = Fsu * area;                                 % Psu_allow, lbf
-% NASA-STD-5020A Eq. 14 — MS = Psu_allow / Psu - 1
+% NASA-STD-5020B Eq. 14 — MS = Psu_allow / Psu - 1
 MS = ShearAllowable / designLoads.Psu - 1;
 
 r = struct( ...
     "MS",             MS, ...
     "ShearAllowable", ShearAllowable, ...
-    "Method",         "NASA-STD-5020A Eq. 12/13 allowable + Eq. 14 (ultimate shear, area by shear-plane condition)");
+    "Method",         "NASA-STD-5020B Eq. 12/13 allowable + Eq. 14 (ultimate shear, area by shear-plane condition)");
 end

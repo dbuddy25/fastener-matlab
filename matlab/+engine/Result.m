@@ -25,7 +25,7 @@ classdef Result
     %       WorstMargin    double — minimum MS over the evaluated (non-NaN)
     %                      checks; NaN if none evaluated
     %       GoverningCheck string — Name of the check with the worst margin
-    %       Narrative      string — the NASA-STD-5020A Fig. 8
+    %       Narrative      string — the NASA-STD-5020B Fig. 8
     %                      separation-before-rupture decision text
     %
     %   "NotEvaluated" is a first-class status: the engine ships real results

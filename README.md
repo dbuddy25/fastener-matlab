@@ -1,6 +1,6 @@
 # Fastener Analysis Tool (MATLAB)
 
-Ground-up MATLAB build of a NASA-STD-5020A bolted-joint margin-of-safety
+Ground-up MATLAB build of a NASA-STD-5020B bolted-joint margin-of-safety
 analysis tool, deployable as a standalone Windows executable.
 
 ## Docs (read these first)
@@ -75,7 +75,7 @@ returning the standard `engine.Result` — the 15-check margin table
 narrative, and `asTable()` for export (one `analyze()` call reproduces all
 six DABJ §9 margins in `tests/tDabjCase.m`). `engine.stiffness(joint)`
 computes bolt/member stiffness and the stiffness factor phi (Shigley 30°
-conical frustum; phi per NASA-STD-5020A Eq. 9), validated against DABJ
+conical frustum; phi per NASA-STD-5020B Eq. 9), validated against DABJ
 Example 8-b via `validation.dabjExample8b()` (exercised by
 `tests/tStiffness.m`); it is not yet wired into preload/margins (3.1b).
 See `MATLAB_BUILD_GUIDE.md`.

@@ -1,5 +1,5 @@
 function r = marginSeparation(preload, designLoads)
-%MARGINSEPARATION  Joint-separation margin of safety (NASA-STD-5020A Eq. 19).
+%MARGINSEPARATION  Joint-separation margin of safety (NASA-STD-5020B Eq. 19).
 %   r = engine.marginSeparation(preload, designLoads) computes the
 %   separation margin for one joint. preload is the struct from
 %   engine.preload; designLoads is the struct from engine.designLoads.
@@ -24,10 +24,10 @@ arguments
     designLoads (1,1) struct
 end
 
-% NASA-STD-5020A Eq. 19 — MS = PpMin / Psep - 1
+% NASA-STD-5020B Eq. 19 — MS = PpMin / Psep - 1
 MS = preload.PpMin / designLoads.Psep - 1;
 
 r = struct( ...
     "MS",     MS, ...
-    "Method", "NASA-STD-5020A Eq. 19 (separation)");
+    "Method", "NASA-STD-5020B Eq. 19 (separation)");
 end

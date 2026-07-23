@@ -37,12 +37,12 @@ function c = dabjSection9()
 %   Preload (Class Problem 9-1, p. 9-11; Solutions-10..13):
 %     - Torque specified as "450 to 490 in-lb above running torque", so the
 %       EFFECTIVE torques equal the specified values (Eqs. 27/28, p. 9-10).
-%       PreloadSpec takes nominal torque + fractional tolerance (NASA-STD-5020A
+%       PreloadSpec takes nominal torque + fractional tolerance (NASA-STD-5020B
 %       c-factor form): T_nom = 470 in-lbf, tolerance = 20/470 (±4.26%),
 %       so c_max = 490/470 and c_min = 450/470 — algebraically identical
 %       to the book's Tmax = 490 / Tmin = 450 in-lbf.
 %     - Nominal nut factor K = 0.15 (based on test); preload uncertainty
-%       Gamma = 0.25; joint is NOT separation critical (-> NASA-STD-5020A Eq. 5 for
+%       Gamma = 0.25; joint is NOT separation critical (-> NASA-STD-5020B Eq. 5 for
 %       minimum initial preload); no material creep; 5% short-term
 %       relaxation assumed (Solutions-13).
 %     - Thermal: max/min expected temperatures are +/-25 degF from room
@@ -109,7 +109,7 @@ ps = model.PreloadSpec( ...
     Uncertainty        = 0.25, ...           % Gamma
     RelaxationFraction = 0.05, ...           % 5% short-term relaxation (Solutions-13)
     CreepLoss          = 0, ...              % "no material creep is expected"
-    SeparationCritical = false, ...          % p. 9-11 -> NASA-STD-5020A Eq. 5 for Ppi-min
+    SeparationCritical = false, ...          % p. 9-11 -> NASA-STD-5020B Eq. 5 for Ppi-min
     ThermalRate        = 7.21 * 1.8);        % 7.21 lbf/degF (Table 8-4) -> lbf/degC
 
 % ---- The joint (p. 9-6 + Class Problems 9-1/9-2/9-5/9-6) -----------------

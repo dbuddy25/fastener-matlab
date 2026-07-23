@@ -1,7 +1,7 @@
 function r = marginInteraction(joint, designLoads)
-%MARGININTERACTION  Combined tension-shear margin (NASA-STD-5020A Eq. 20-23).
+%MARGININTERACTION  Combined tension-shear margin (NASA-STD-5020B Eq. 20-23).
 %   r = engine.marginInteraction(joint, designLoads) computes the
-%   tension-shear interaction margin for one joint by the NASA-STD-5020A
+%   tension-shear interaction margin for one joint by the NASA-STD-5020B
 %   "solve-for-a" method. designLoads is the struct from
 %   engine.designLoads. All loads in lbf (see UNITS.md).
 %
@@ -13,8 +13,8 @@ function r = marginInteraction(joint, designLoads)
 %   loads to the interaction envelope:
 %       (a*Rt)^et + (a*Rs)^es = 1,    MS = a - 1
 %   with exponents by shear-plane condition:
-%       BodyInShear    — et = 1.5, es = 2.5 (NASA-STD-5020A Eq. 20/21; validated)
-%       ThreadsInShear — the NASA-STD-5020A exponents differ and no validation
+%       BodyInShear    — et = 1.5, es = 2.5 (NASA-STD-5020B Eq. 20/21; validated)
+%       ThreadsInShear — the NASA-STD-5020B exponents differ and no validation
 %                        case exercises them yet, so this path ERRORS
 %                        rather than return an unvalidated number
 %                        (Phase 3.4).
@@ -43,11 +43,11 @@ end
 
 switch joint.ShearPlane
     case model.ShearPlaneCondition.BodyInShear
-        % NASA-STD-5020A Eq. 20/21 (body in shear) — envelope Rt^1.5 + Rs^2.5 = 1
+        % NASA-STD-5020B Eq. 20/21 (body in shear) — envelope Rt^1.5 + Rs^2.5 = 1
         et = 1.5;                               % tension exponent
         es = 2.5;                               % shear exponent
     case model.ShearPlaneCondition.ThreadsInShear
-        % NASA-STD-5020A Eq. 22/23 (threads in shear) — exponents differ from
+        % NASA-STD-5020B Eq. 22/23 (threads in shear) — exponents differ from
         % Eq. 20/21; unvalidated here, so this path errors (Phase 3.4)
         error("engine:marginInteraction:threadsInShearUnvalidated", ...
             "Threads-in-shear interaction exponents need a validation case (Phase 3.4)");
@@ -57,22 +57,22 @@ switch joint.ShearPlane
 end
 
 shearUlt = engine.marginShearUlt(joint, designLoads);   % reuse its allowable
-% NASA-STD-5020A Eq. 20-23 load ratios — Rt = Ptu / Ptu_allow
+% NASA-STD-5020B Eq. 20-23 load ratios — Rt = Ptu / Ptu_allow
 Rt = designLoads.Ptu / PtuAllow;
-% NASA-STD-5020A Eq. 20-23 load ratios — Rs = Psu / Psu_allow
+% NASA-STD-5020B Eq. 20-23 load ratios — Rs = Psu / Psu_allow
 Rs = designLoads.Psu / shearUlt.ShearAllowable;
 
-% NASA-STD-5020A Eq. 20/21 solve-for-a — (a·Rt)^et + (a·Rs)^es = 1.
+% NASA-STD-5020B Eq. 20/21 solve-for-a — (a·Rt)^et + (a·Rs)^es = 1.
 % g(0) = -1 and g is strictly increasing for a > 0, so the root is unique;
 % guess 1 (root ~1.59 here).
 g = @(a) (a*Rt)^et + (a*Rs)^es - 1;
 a = fzero(g, 1);
 
-% NASA-STD-5020A Eq. 20/21 solve-for-a margin — MS = a - 1
+% NASA-STD-5020B Eq. 20/21 solve-for-a margin — MS = a - 1
 MS = a - 1;
 
 r = struct( ...
     "MS",     MS, ...
     "a",      a, ...
-    "Method", "NASA-STD-5020A Eq. 20/21 solve-for-a (body in shear, exp 1.5/2.5)");
+    "Method", "NASA-STD-5020B Eq. 20/21 solve-for-a (body in shear, exp 1.5/2.5)");
 end

@@ -2,7 +2,7 @@
 
 ## Purpose & how to use this guide
 
-Build a **new MATLAB application** for NASA-STD-5020A bolted-joint margin analysis, ground-up. Two references, with different jobs:
+Build a **new MATLAB application** for NASA-STD-5020B bolted-joint margin analysis, ground-up. Two references, with different jobs:
 - **The existing Python/PySide6 tool defines *what to build*** — the features, workflow, and scope.
 - **A validation "answer key" defines whether the *numbers* are right** — validate each margin against a known-good worked example (see *Validation reference* below), not against the Python tool.
 
@@ -17,7 +17,7 @@ The work is organized into **five phases**. Each phase has small steps (roughly 
 A desktop tool that lets an engineer:
 1. Define a bolted joint — bolt size/material, clamped flange stack, threaded interface (nut, insert, or tapped hole), preload, temperature.
 2. Apply loads (single case or a matrix of FEM element forces / load cases).
-3. Compute **15 margin-of-safety checks** per NASA-STD-5020A and report pass/fail with the governing equations.
+3. Compute **15 margin-of-safety checks** per NASA-STD-5020B and report pass/fail with the governing equations.
 4. Manage libraries of materials/hardware and save/load analysis cases.
 5. Export PDF and Excel reports.
 6. Ship as a standalone Windows app.
@@ -51,12 +51,12 @@ tests/      validation cases + unit tests
 
 ## Ground rules (the physics that must be exactly right)
 
-- **Interaction equations:** NASA-STD-5020A Eq. 20–23 — *not* the simpler R²+R² form. Different exponents for threads-in-shear vs. body-in-shear.
+- **Interaction equations:** NASA-STD-5020B Eq. 20–23 — *not* the simpler R²+R² form. Different exponents for threads-in-shear vs. body-in-shear.
 - **Thermal preload:** included (per TFSR 5).
-- **Separation-before-rupture:** 5020A Figure 8 decision tree; the 0.75–0.85 × Ptu intermediate preload band conservatively assumes rupture when bolt-elongation data is unavailable.
+- **Separation-before-rupture:** 5020B Figure 8 decision tree; the 0.75–0.85 × Ptu intermediate preload band conservatively assumes rupture when bolt-elongation data is unavailable.
 - **Temperature:** the **engine works internally in °C** (CTE data is 1/°C); all other units are US customary (in, lbf, psi). See `UNITS.md`.
 - **Bolt length for nut config:** grip + nut height + 2·pitch.
-- **Nut strength:** use the spec-rated ultimate load from the library (not a thread-stripping calc), per 5020A §4.2.2.8.
+- **Nut strength:** use the spec-rated ultimate load from the library (not a thread-stripping calc), per 5020B §4.2.2.8.
 - **Flanges** = the clamped stack only (not the threaded interface). Insert/tapped-hole material is independent of the flanges.
 
 ## Validation reference = a known-good worked example
@@ -96,7 +96,7 @@ Each margin is checked against a **validation "answer key"** — a fully worked 
 **2.4 · Preload** *(engine)* — compute nominal/min/max preload from torque + uncertainty + thermal ΔP.
 *Done when:* preload matches the case (Pp-max ≈ 11,069, Pp-min ≈ 6,470 lb). **← first validated numbers.**
 
-**2.5 · Ultimate-tension margin + separation-before-rupture gate** *(engine)* — design loads, the 5020A Fig 8 decision tree, ultimate tensile MS.
+**2.5 · Ultimate-tension margin + separation-before-rupture gate** *(engine)* — design loads, the 5020B Fig 8 decision tree, ultimate tensile MS.
 *Done when:* MS = **+0.69**. **← first validated margin.**
 
 **2.6 · Separation + bolt-yield margins** *(engine)*.
@@ -192,27 +192,27 @@ cases = data.loadJoints("table.xlsx", lib)         % table rows reference librar
 
 **Equation traceability (required).** Everywhere an equation is implemented, the
 point-of-use comment must carry all three together: the **reference document**
-(e.g. NASA-STD-5020A, NASA TM-106943), the **equation number** if one exists, and
+(e.g. NASA-STD-5020B, NASA TM-106943), the **equation number** if one exists, and
 the **equation written out**. The reference + number are also surfaced in each
 function's `Method` string (and thus in `Result`, reports, and the GUI). Example:
 
 ```matlab
-% NASA-STD-5020A Eq. 19 — MS = PpMin / Psep - 1
+% NASA-STD-5020B Eq. 19 — MS = PpMin / Psep - 1
 MS = preload.PpMin / designLoads.Psep - 1;
 ```
 
 No bare equation number without the written formula; no formula without the citation.
 
-**Document hierarchy — 5020A governs; supplements only where 5020A relies on them.**
-1. **NASA-STD-5020A is the governing standard.** Where 5020A provides the equation,
-   cite 5020A (preload Eq. 3/4/5/24, tension Eq. 6, shear Eq. 14, separation Eq. 19,
+**Document hierarchy — 5020B governs; supplements only where 5020B relies on them.**
+1. **NASA-STD-5020B is the governing standard.** Where 5020B provides the equation,
+   cite 5020B (preload Eq. 3/4/5/24, tension Eq. 6, shear Eq. 14, separation Eq. 19,
    interaction Eq. 20–23, slip Eq. 84–86, …).
 2. **Supplemental docs** (NASA TM-106943 "Chambers", NASA RP-1228 "Barrett") are
-   cited **only where 5020A itself relies on them** for a detailed formula 5020A
-   does not print — e.g. the thermal preload change `P_dT` (5020A Eq. 2 uses the
+   cited **only where 5020B itself relies on them** for a detailed formula 5020B
+   does not print — e.g. the thermal preload change `P_dT` (5020B Eq. 2 uses the
    term; the CTE-mismatch formula is **TM-106943 Eq. 10**), and several
-   thread-shear / bearing / insert failure modes 5020A defers to TM-106943.
-   Confirm 5020A does not give the equation itself before citing a supplement.
+   thread-shear / bearing / insert failure modes 5020B defers to TM-106943.
+   Confirm 5020B does not give the equation itself before citing a supplement.
 3. **The DABJ course book is validation only** — the worked-example answer key.
    Never cite DABJ as a governing equation; use it only in "Validated against
    DABJ §N" provenance notes.

@@ -38,7 +38,7 @@ function c = dabjExample8b()
 %     - Kc  = 4.73e6 lbf/in  (Eq. 8.1e-f, p. 8-20; contact dia
 %             dc = 0.523 + 2*tan(30)*0.070 = 0.604 in, below the 0.625
 %             smaller washer OD)
-%     - Phi = 0.336          (stiffness factor, p. 8-21; NASA-STD-5020A Eq. 9)
+%     - Phi = 0.336          (stiffness factor, p. 8-21; NASA-STD-5020B Eq. 9)
 %   -------------------------------------------------------------------------
 
 % ---- Materials: INLINE with the example's printed moduli (see header) ----

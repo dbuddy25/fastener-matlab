@@ -1,6 +1,6 @@
 # PRD — MATLAB Fastener Analysis Tool
 
-**Status:** Draft for implementation · **Standard:** NASA-STD-5020A w/Change 1
+**Status:** Draft for implementation · **Standard:** NASA-STD-5020B
 **Companion docs:** `MATLAB_BUILD_GUIDE.md` (build sequence & phases), `MATLAB_TOOL_DECK_OUTLINE.md` (stakeholder deck)
 
 > This PRD is the *requirements* spec — **what** the tool must do and the rules it must obey. The build guide is the *sequence* — the order to build it in (five phases). Read them together: a requirement here maps to one or more phase steps there.
@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-Build a **new, ground-up MATLAB application** for NASA-STD-5020A bolted-joint margin-of-safety analysis, deployable as a standalone Windows executable. It replaces a spreadsheet-based workflow and re-implements the capability set of an existing Python/PySide6 tool.
+Build a **new, ground-up MATLAB application** for NASA-STD-5020B bolted-joint margin-of-safety analysis, deployable as a standalone Windows executable. It replaces a spreadsheet-based workflow and re-implements the capability set of an existing Python/PySide6 tool.
 
 ## 2. Two authoritative references (do not conflate)
 
@@ -22,7 +22,7 @@ Build a **new, ground-up MATLAB application** for NASA-STD-5020A bolted-joint ma
 
 ## 3. Users & primary use cases
 
-- **Stress/mechanical engineer** analyzing a bolted joint against 5020A.
+- **Stress/mechanical engineer** analyzing a bolted joint against 5020B.
 - **UC1:** Analyze a single joint → 15 margin checks + pass/fail + governing equations.
 - **UC2:** Analyze a matrix of FEM element forces / load cases (bulk) → results table + export.
 - **UC3:** Manage material/hardware libraries; save & reopen analysis cases.
@@ -32,7 +32,7 @@ Build a **new, ground-up MATLAB application** for NASA-STD-5020A bolted-joint ma
 ## 4. Scope
 
 ### In scope (v1)
-- Full 5020A margin engine (15 checks), preload (incl. thermal), force resolution, interaction, separation/slip, separation-before-rupture, tapped-hole parent-thread check.
+- Full 5020B margin engine (15 checks), preload (incl. thermal), force resolution, interaction, separation/slip, separation-before-rupture, tapped-hole parent-thread check.
 - JSON hardware/material library + JSON case save/load.
 - PDF + Excel reporting.
 - App Designer GUI (11 tabs) with °C/°F toggle and joint/decision-tree visuals.
@@ -54,16 +54,16 @@ The engine MUST compute all of the following per joint and return a full result 
 | 3–4 | Shear margin — ultimate & shear-tearout | |
 | 5–6 | Bearing — bearing & bearing-under-head | |
 | 7 | Bolt-thread shear | |
-| 8 | Nut strength | Use spec-rated ultimate load from library, **not** a thread-stripping calc (5020A §4.2.2.8) |
+| 8 | Nut strength | Use spec-rated ultimate load from library, **not** a thread-stripping calc (5020B §4.2.2.8) |
 | 9 | Insert failure modes | |
 | 10 | Separation margin | |
-| 11 | Slip margin | Mode toggle: single-fastener (default, 5020A Eq. 86) / joint (Eq. 84) / disabled |
-| 12 | Separation-before-rupture | 5020A Fig 8 decision tree |
-| 13 | Combined tension–shear interaction | 5020A **Eq. 20–23**, correct per-mode exponents |
+| 11 | Slip margin | Mode toggle: single-fastener (default, 5020B Eq. 86) / joint (Eq. 84) / disabled |
+| 12 | Separation-before-rupture | 5020B Fig 8 decision tree |
+| 13 | Combined tension–shear interaction | 5020B **Eq. 20–23**, correct per-mode exponents |
 | 14 | Tapped-hole parent-material thread shear | Soft-parent case; hand-validate if no answer-key case covers it |
 | 15 | (Solver) end-to-end single-joint analysis | Assembles all above |
 
-Plus supporting computations: preload (incl. thermal), bolt/member stiffness + stiffness factor, applied-load resolution into axial + shear, and a 5020A Fig 8 decision-narrative generator.
+Plus supporting computations: preload (incl. thermal), bolt/member stiffness + stiffness factor, applied-load resolution into axial + shear, and a 5020B Fig 8 decision-narrative generator.
 
 ### 5.2 Bulk analysis
 - Map FEM elements → joints and run the full check set across a matrix of elements/load cases.
@@ -98,9 +98,9 @@ Plus: °C/°F unit toggle at the GUI boundary, joint schematic + decision-tree d
 
 ## 7. Engineering ground rules (must be exactly right)
 
-- **Interaction:** NASA-STD-5020A **Eq. 20–23** — *not* the simpler R²+R² form. Different exponents for threads-in-shear vs body-in-shear.
+- **Interaction:** NASA-STD-5020B **Eq. 20–23** — *not* the simpler R²+R² form. Different exponents for threads-in-shear vs body-in-shear.
 - **Thermal preload:** included, per TFSR 5.
-- **Separation-before-rupture:** 5020A Figure 8 decision tree. The **0.75–0.85 × Ptu** intermediate preload band conservatively assumes rupture when bolt-elongation data is unavailable.
+- **Separation-before-rupture:** 5020B Figure 8 decision tree. The **0.75–0.85 × Ptu** intermediate preload band conservatively assumes rupture when bolt-elongation data is unavailable.
 - **Temperature:** engine works internally in **°C** (CTE data is 1/°C); all other units are US customary (in, lbf, psi). The GUI may display °F, converting at the boundary.
 - **Bolt length for nut config:** grip + nut height + 2·pitch.
 - **Flanges** = the clamped stack only (not the threaded interface). Insert/tapped-hole material is **independent** of the flanges.

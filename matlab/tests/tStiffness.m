@@ -20,7 +20,7 @@ classdef tStiffness < matlab.unittest.TestCase
     methods (Test)
         function stiffnessMatchesDABJ8b(testCase)
             % Kb via Shigley/DABJ Eq. 8.1c, Kc via the 30° frustum
-            % (Eq. 8.1e-f), Phi via NASA-STD-5020A Eq. 9 — all against the
+            % (Eq. 8.1e-f), Phi via NASA-STD-5020B Eq. 9 — all against the
             % book's printed values (rounded to 3 sig figs; exact
             % recomputation gives 2.3892e6 / 4.7253e6 / 0.3358).
             c = validation.dabjExample8b();
