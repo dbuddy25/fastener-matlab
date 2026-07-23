@@ -1,4 +1,4 @@
 element_id,joint_name,pattern_id,load_case,FX,FY,FZ,MX,MY,MZ,scale,reversible
-1001,DABJ Sec. 9 class problem,PLATE-1,Liftoff,300,400,1200,0,0,0,1,FALSE
+1001,DABJ Sec. 9 class problem,PLATE-1,Liftoff,1560,0,5590,0,0,0,1,FALSE
 1002,DABJ Sec. 9 class problem,PLATE-1,Liftoff,-150,200,-800,10,5,0,1,TRUE
 1003,Example insert joint,,Landing,50,120,400,,,,1.5,FALSE

@@ -63,15 +63,10 @@ if isa(settingsFile, "model.Factors")
 elseif isempty(settingsFile) || strlength(string(settingsFile)) == 0
     factors = model.Factors();     % no settings -> defaults, temps as-is
 else
+    % global temps onto every joint + the settings-built factors — the
+    % same private/applyGlobalSettings engine.runWorkbook uses
     s = data.loadSettings(string(settingsFile));
-    factors = s.Factors;
-    for i = 1:numel(jl)            % global temperatures onto every joint
-        j = jl(i).Joint;
-        j.ReferenceTemperature = s.NominalTempC;
-        j.MaxTemperature       = s.HotTempC;
-        j.MinTemperature       = s.ColdTempC;
-        jl(i).Joint = j;
-    end
+    [jl, factors] = applyGlobalSettings(jl, s);
 end
 
 T = engine.analyzeBulk(jl, el, factors);

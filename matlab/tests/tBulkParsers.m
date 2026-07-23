@@ -5,8 +5,8 @@ classdef tBulkParsers < matlab.unittest.TestCase
     %   auto-lookup, AxialX/Y/Z bolt-direction marks, On-gated washers,
     %   Nut*/Helicoil* threaded-member columns, header-row auto-detect),
     %   data.loadElements (element + forces table -> struct array for
-    %   engine.resolveForces), and data.loadSettings (global temperatures +
-    %   factors). All are exercised against the shipped template CSVs in
+    %   engine.resolveForces; same header-row auto-detect as the joint
+    %   reader), and data.loadSettings (global temperatures + factors). All are exercised against the shipped template CSVs in
     %   templates/ — the joint template's first row IS the DABJ Section 9
     %   class-problem joint expressed in the table schema, so the parse is
     %   checked against the same numbers validation.dabjSection9 builds in
@@ -119,13 +119,16 @@ classdef tBulkParsers < matlab.unittest.TestCase
                 tBulkParsers.templatePath("elements_template.csv"));
             testCase.assertEqual(numel(el), 3);
 
+            % Row 1001 carries the DABJ §9 per-bolt limit loads (FZ 5590 ->
+            % PtL, FX 1560 -> PsL on the bolt-axis-Z joint) so the shipped
+            % template is self-validating end-to-end (see tWorkbook)
             testCase.verifyEqual(el(1).ElementId, "1001");
             testCase.verifyEqual(el(1).JointName, "DABJ Sec. 9 class problem");
             testCase.verifyEqual(el(1).LoadCaseName, "Liftoff");
             testCase.verifyEqual(el(1).PatternId, "PLATE-1");
-            testCase.verifyEqual(el(1).Forces.FX, 300);
-            testCase.verifyEqual(el(1).Forces.FY, 400);
-            testCase.verifyEqual(el(1).Forces.FZ, 1200);
+            testCase.verifyEqual(el(1).Forces.FX, 1560);
+            testCase.verifyEqual(el(1).Forces.FY, 0);
+            testCase.verifyEqual(el(1).Forces.FZ, 5590);
             testCase.verifyEqual(el(1).ScaleFactor, 1);
             testCase.verifyFalse(el(1).Reversible);
 
@@ -221,6 +224,30 @@ classdef tBulkParsers < matlab.unittest.TestCase
             testCase.verifyEqual(jl(1).Joint.SlipMode, model.SlipMode.Ignored);
             testCase.verifyEqual(jl(1).Joint.BoltAxis, model.BoltAxis.Z);   % none marked
             testCase.verifyEqual(jl(1).Joint.BoltRatedUltimateLoad, 15200); % auto-lookup
+        end
+
+        function elementsHeaderRowAutoDetect(testCase)
+            % Same tolerance for the ELEMENTS reader: a friendly banner row
+            % ABOVE the element headers must be skipped by the header-row
+            % auto-detect (mirrors headerRowAutoDetect for the joint
+            % reader). Also covers absent optional columns -> defaults.
+            f = tBulkParsers.writeTempCsv(testCase, { ...
+                'My Element Forces (friendly names go here),,,,,', ...
+                'element_id,joint_name,load_case,FX,FY,FZ', ...
+                '2001,HDR test,Liftoff,100,0,250'});
+
+            el = data.loadElements(f);
+            testCase.assertEqual(numel(el), 1);
+            testCase.verifyEqual(el(1).ElementId, "2001");
+            testCase.verifyEqual(el(1).JointName, "HDR test");
+            testCase.verifyEqual(el(1).LoadCaseName, "Liftoff");
+            testCase.verifyEqual(el(1).PatternId, "");    % absent -> ""
+            testCase.verifyEqual(el(1).Forces.FX, 100);
+            testCase.verifyEqual(el(1).Forces.FY, 0);
+            testCase.verifyEqual(el(1).Forces.FZ, 250);
+            testCase.verifyEqual(el(1).Forces.MX, 0);     % absent -> 0
+            testCase.verifyEqual(el(1).ScaleFactor, 1);   % absent -> 1
+            testCase.verifyFalse(el(1).Reversible);       % absent -> false
         end
 
         function multipleAxialMarksError(testCase)

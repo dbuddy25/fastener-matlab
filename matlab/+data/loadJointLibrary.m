@@ -1,9 +1,15 @@
-function jl = loadJointLibrary(file, lib)
+function jl = loadJointLibrary(file, lib, sheet)
 %LOADJOINTLIBRARY  Read a joint-table (.csv/.xlsx) into model.Joint objects.
 %   jl = data.loadJointLibrary(file, lib) reads a joint-definition table
 %   (one row per joint) and returns a struct array with fields:
 %       Name   (1,1) string      — the row's Name column
 %       Joint  (1,1) model.Joint — the fully-built joint
+%
+%   jl = data.loadJointLibrary(file, lib, sheet) reads the given SHEET of a
+%   workbook — a sheet name (e.g. "Joints") or a 1-based index. Omitted /
+%   [] / "" keeps the default read (sheet 1 of an .xlsx, or the CSV). This
+%   is how engine.runWorkbook pulls the Joints sheet out of the single
+%   multi-sheet workbook.
 %
 %   `lib` is a data.Library; the Bolt / BoltMaterial / BoltSpec /
 %   NutMaterial / HelicoilParentMaterial / {Head,Nut}WasherMaterial /
@@ -104,6 +110,7 @@ function jl = loadJointLibrary(file, lib)
 arguments
     file (1,1) string
     lib  (1,1) data.Library
+    sheet = []   % optional: sheet name or index (workbooks only)
 end
 
 if ~isfile(file)
@@ -111,8 +118,11 @@ if ~isfile(file)
         "Joint library file not found: %s", file);
 end
 
-raw = readcell(file, "DatetimeType", "text");
-[hdrRow, names] = detectHeader(raw, file);
+raw = readCellGrid(file, sheet);
+[hdrRow, names] = detectHeaderRow(raw, knownColumns(), ...
+    "data:loadJointLibrary:noHeader", sprintf( ...
+    "No header row found in %s — no row matches the joint-table column names (Name, Bolt, BoltMaterial, ...). See templates/joint_library_template.csv.", ...
+    file));
 
 jl = struct("Name", {}, "Joint", {});
 for r = hdrRow+1:size(raw, 1)
@@ -126,42 +136,8 @@ end
 end
 
 % =========================================================================
-% Header-row auto-detect
+% Header-row auto-detect (the scan itself lives in private/detectHeaderRow)
 % =========================================================================
-
-function [hdrRow, names] = detectHeader(raw, file)
-%DETECTHEADER  Find the row whose cells best match the known column names.
-%   Scans the top of the sheet, scores each row by how many of its cells
-%   are (case-insensitive) known column names, and picks the best. This
-%   makes the reader tolerant of decoration rows (titles, friendly names)
-%   above the real header; a plain single-header CSV scores row 1 best.
-known = knownColumns();
-nScan = min(size(raw, 1), 25);   % the header must live near the top
-best = 0;
-hdrRow = 0;
-for r = 1:nScan
-    score = 0;
-    for c = 1:size(raw, 2)
-        t = cellText(raw{r, c});
-        if strlength(t) > 0 && any(strcmpi(known, t))
-            score = score + 1;
-        end
-    end
-    if score > best
-        best = score;
-        hdrRow = r;
-    end
-end
-if best < 3
-    error("data:loadJointLibrary:noHeader", ...
-        "No header row found in %s — no row matches the joint-table column names (Name, Bolt, BoltMaterial, ...). See templates/joint_library_template.csv.", ...
-        file);
-end
-names = strings(1, size(raw, 2));
-for c = 1:size(raw, 2)
-    names(c) = cellText(raw{hdrRow, c});
-end
-end
 
 function cols = knownColumns()
 %KNOWNCOLUMNS  Every recognized column name (the header-detection set).
@@ -181,18 +157,6 @@ cols = ["Name", "Bolt", "BoltMaterial", "BoltSpec", ...
 for k = 1:4
     cols = [cols, "Flange" + k + ["Name", "Material", "HoleDia", ...
             "Thickness", "Tearout", "EdgeDist"]]; %#ok<AGROW>
-end
-end
-
-function t = cellText(v)
-%CELLTEXT  Trimmed string of a readcell cell; "" for non-text/missing.
-if ischar(v) || isstring(v)
-    t = strtrim(string(v));
-    if ismissing(t)
-        t = "";
-    end
-else
-    t = "";
 end
 end
 

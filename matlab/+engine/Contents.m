@@ -131,5 +131,18 @@
 %                      orchestration only. The Headless Release entry
 %                      point — see matlab/examples/run_bulk_example.m.
 %                      ✅ Phase 3.6 (tests/tExport.m; Step 2a settings).
+%   runWorkbook      - One-call bulk run from a SINGLE multi-sheet
+%                      workbook: runWorkbook(workbookFile, outFile) reads
+%                      the Joints/Elements/Settings sheets by name (the
+%                      data.makeTemplate fill-in workbook; both table
+%                      readers header-auto-detect, so the friendly banner
+%                      rows need no cleanup), applies the global temps +
+%                      factors via the same shared helper runBulk uses,
+%                      and runs analyzeBulk -> optional exportResults.
+%                      outFile optional; must differ from workbookFile
+%                      (refuses to clobber the filled input sheets). The
+%                      streamlined bulk entry point — see USER_GUIDE.md §4.
+%                      ✅ Step 2c — a fresh template reproduces the DABJ §9
+%                      per-bolt margins end-to-end (tests/tWorkbook.m).
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

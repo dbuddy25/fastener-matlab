@@ -13,11 +13,13 @@ function f = makeTemplate(outFile)
 %                   the DABJ Section 9 class-problem joint and an insert
 %                   (Helicoil) joint — so the workbook reproduces §9 as-is.
 %       Elements  — the element + forces table (same two-row header idea;
-%                   data.loadElements reads the MATLAB-name header) with
-%                   the three shipped example rows. NOTE: loadElements uses
-%                   readtable (no header auto-detect yet) — when exporting
-%                   this sheet to CSV for engine.runBulk, DELETE the
-%                   friendly row first so row 1 is the MATLAB names.
+%                   data.loadElements header-auto-detects the MATLAB-name
+%                   row, so the friendly row needs no cleanup) with the
+%                   three shipped example rows. Example row 1001 carries
+%                   the DABJ §9 PER-BOLT limit loads (FZ 5590 / FX 1560 on
+%                   the bolt-axis-Z §9 joint), so a fresh template run
+%                   through engine.runWorkbook reproduces the published §9
+%                   per-bolt margins — the workbook is self-validating.
 %       Settings  — Setting | Value | Description. data.loadSettings reads
 %                   columns 1–2 (key, value) and ignores everything else,
 %                   so the Description column is safe decoration. Seeded
@@ -270,9 +272,13 @@ end
 
 function rows = elementExampleRows()
 %ELEMENTEXAMPLEROWS  The three shipped example rows (templates/elements_template.csv).
+%   Row 1001 carries the DABJ §9 per-bolt limit loads (bolt axis Z: FZ 5590
+%   -> PtL, FX 1560 -> PsL) so the template workbook is self-validating —
+%   engine.runWorkbook on a fresh template reproduces the §9 per-bolt
+%   margins (tests/tWorkbook.m).
 r1 = struct("element_id", 1001, "joint_name", "DABJ Sec. 9 class problem", ...
     "pattern_id", "PLATE-1", "load_case", "Liftoff", ...
-    "FX", 300, "FY", 400, "FZ", 1200, "MX", 0, "MY", 0, "MZ", 0, ...
+    "FX", 1560, "FY", 0, "FZ", 5590, "MX", 0, "MY", 0, "MZ", 0, ...
     "scale", 1, "reversible", false);
 r2 = struct("element_id", 1002, "joint_name", "DABJ Sec. 9 class problem", ...
     "pattern_id", "PLATE-1", "load_case", "Liftoff", ...

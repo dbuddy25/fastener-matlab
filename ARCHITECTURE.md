@@ -101,7 +101,12 @@ table carries NO temperature columns — temperatures are GLOBAL:
 FFSlip → a `model.Factors`) and `engine.runBulk` applies the temps to
 every Joint before analysis. `data.loadElements(file)` reads an element +
 forces table (`element_id`, `joint_name`, `load_case`, FX..MZ, `scale`,
-`reversible`) into the struct `engine.resolveForces` consumes. Template
+`reversible`) into the struct `engine.resolveForces` consumes — with the
+same header-row auto-detect as the joint reader (Step 2c), so a friendly
+banner row above the MATLAB names is tolerated. All three loaders take an
+optional trailing `sheet` argument (name or index) to read a named sheet
+of a workbook (the shared `+data/private` helpers `readCellGrid` +
+`detectHeaderRow` keep the two table readers from drifting). Template
 CSVs with the exact headers ship at `matlab/templates/`; the joint
 template's first row is the DABJ §9 class-problem joint expressed in the
 schema and the settings template carries the §9 temperatures + factors,
@@ -160,6 +165,17 @@ accepted for back-compat. A runnable reference script lives at
 `matlab/examples/run_bulk_example.m` (runs the bundled templates, writes
 `bulk_results.xlsx` next to itself). The headless data flow is now fully
 realized end to end: files in → margins out (`tests/tExport.m`).
+✅ Step 2c adds the streamlined single-workbook entry point:
+`engine.runWorkbook(workbookFile, outFile)` runs the same pipeline on ONE
+.xlsx — the `data.makeTemplate` workbook — reading the Joints/Elements/
+Settings sheets by name and applying the global temps + factors through
+the shared `+engine/private/applyGlobalSettings` helper `runBulk` also
+uses (one settings-apply implementation, no drift). `outFile` is optional
+and must differ from the input workbook (the call errors rather than
+clobber the filled sheets). The template's shipped example content is the
+DABJ §9 case (Elements row 1001 carries the §9 per-bolt limit loads), so
+a fresh template reproduces the published per-bolt margins end-to-end
+(`tests/tWorkbook.m`).
 
 ---
 
@@ -239,7 +255,15 @@ The single flow everything is organized around:
 
 You don't build many joints by hand — you **describe them in a table and import them.**
 This is the whole product for an engineer who lives in MATLAB/Excel, no GUI required —
-one call end to end:
+one workbook, one call end to end:
+
+```matlab
+f = data.makeTemplate("my_joints.xlsx");                     % ✅ 2b  — the fill-in workbook
+% ... fill the Joints / Elements / Settings sheets in Excel ...
+T = engine.runWorkbook("my_joints.xlsx", "margins.xlsx");    % ✅ 2c  — single-workbook run
+```
+
+or, with the three inputs in separate files:
 
 ```matlab
 T = engine.runBulk("my_joints.csv", "my_elements.csv", ...   % ✅ 3.6 — the whole pipeline
@@ -273,7 +297,7 @@ export (Phase 3). The GUI wraps exactly these calls later.
 matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
-├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); `analyzeBulk` (3.5c) — the bulk orchestrator; `runBulk` (3.6) — the one-call headless workflow
+├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); `analyzeBulk` (3.5c) — the bulk orchestrator; `runBulk` (3.6) — the one-call headless workflow; `runWorkbook` (Step 2c) — the single-workbook entry point (shared settings-apply helper with `runBulk`)
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b — Step 2a joint-table layout); global settings (`loadSettings` — temps + factors, Step 2a); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields sheets, Step 2b); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ✅ XLSX export (`exportResults`, 3.6); ⏳ PDF — Phase 3.8
@@ -385,6 +409,7 @@ Phase 2.2), not a type.
 | FEM force resolution (`engine.resolveForces` + `loadCaseFromForces`, `Joint.BoltAxis`) | 3.5a | ✅ |
 | Table input (`data.loadJointLibrary` + `data.loadElements` + template CSVs) | 3.5b | ✅ |
 | Bulk analysis (`engine.analyzeBulk`, incl. 3.5d joint-slip pattern aggregation + nf check) + XLSX export (`report.exportResults`) + one-call `engine.runBulk` — **Headless Release** | 3.5c–3.6 | ✅ |
+| Single-workbook bulk run (`engine.runWorkbook` over the `data.makeTemplate` workbook; header-tolerant `data.loadElements`; optional `sheet` arg on all three loaders) | Step 2c | ✅ |
 | Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
 | GUI (`+gui`) | 4 | ⏳ |
 | Packaging (`.exe`) | 5 | ⏳ |

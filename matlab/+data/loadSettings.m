@@ -1,4 +1,4 @@
-function s = loadSettings(file)
+function s = loadSettings(file, sheet)
 %LOADSETTINGS  Global analysis settings (temperatures + factors) from a file.
 %   s = data.loadSettings(file) reads a small key/value settings table
 %   (.csv or .xlsx) and returns a struct with fields:
@@ -8,6 +8,12 @@ function s = loadSettings(file)
 %       Factors       (1,1) model.Factors — safety/fitting factors built
 %                     from the FSU/FSY/FSSep/FSSlip/FFU/FFY/FFSep/FFSlip
 %                     keys; any missing key keeps the model.Factors default
+%
+%   s = data.loadSettings(file, sheet) reads the given SHEET of a workbook
+%   — a sheet name (e.g. "Settings") or a 1-based index. Omitted / [] / ""
+%   keeps the default read (sheet 1 of an .xlsx, or the CSV). This is how
+%   engine.runWorkbook pulls the Settings sheet out of the single
+%   multi-sheet workbook.
 %
 %   FILE FORMAT — a TWO-COLUMN (key, value) table, one setting per row
 %   (template with the exact keys: templates/settings_template.csv):
@@ -36,6 +42,7 @@ function s = loadSettings(file)
 
 arguments
     file (1,1) string
+    sheet = []   % optional: sheet name or index (workbooks only)
 end
 
 if ~isfile(file)
@@ -43,7 +50,7 @@ if ~isfile(file)
         "Settings file not found: %s", file);
 end
 
-raw = readcell(file, "DatetimeType", "text");
+raw = readCellGrid(file, sheet);
 
 tempKeys = ["NominalTempC", "HotTempC", "ColdTempC"];
 facKeys  = ["FSU", "FSY", "FSSep", "FSSlip", "FFU", "FFY", "FFSep", "FFSlip"];

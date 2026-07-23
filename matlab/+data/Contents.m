@@ -22,7 +22,10 @@
 %                      reversible) -> struct array for engine.resolveForces;
 %                      pattern_id (optional) tags the physical bolt pattern
 %                      for joint-slip aggregation in engine.analyzeBulk.
-%                      Phase 3.5b (+3.5d pattern_id).
+%                      Header-row auto-detect like loadJointLibrary (a
+%                      friendly banner row above the MATLAB names is
+%                      tolerated). Phase 3.5b (+3.5d pattern_id; Step 2c
+%                      header tolerance).
 %   loadSettings     - GLOBAL settings: small key/value table (.csv/.xlsx)
 %                      -> struct with NominalTempC/HotTempC/ColdTempC and a
 %                      model.Factors (FSU/FSY/FSSep/FSSlip/FFU/FFY/FFSep/
@@ -36,7 +39,11 @@
 %                      (dropdown sources incl. live bolt/material keys), and
 %                      Fields (the data dictionary / tooltip text). Joints is
 %                      sheet 1, so loadJointLibrary parses the workbook
-%                      directly. Step 2b.
+%                      directly; engine.runWorkbook reads all three input
+%                      sheets by name in one call (the streamlined bulk
+%                      flow). All three loaders take an optional trailing
+%                      `sheet` argument (name or index) for workbook reads.
+%                      Step 2b (+2c runWorkbook wiring).
 %   templates/       - joint_library_template.csv + elements_template.csv +
 %                      settings_template.csv: the exact column headers/keys,
 %                      with the DABJ Section 9 joint as the first

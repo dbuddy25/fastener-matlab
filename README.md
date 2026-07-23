@@ -25,7 +25,7 @@ analysis tool, deployable as a standalone Windows executable.
 matlab/
 ├── fastenerTool.m     entry point (Phase 1 stub — prints version)
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
-├── +engine/           analysis math — the core (Phases 2–3)
+├── +engine/           analysis math — the core (Phases 2–3); bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook, Step 2c)
 ├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load later (Phase 3)
 ├── +report/           XLSX export (`report.exportResults`, Phase 3.6); PDF later (Phase 3.8)
 ├── +gui/              App Designer app — thin shell over the engine (Phase 4)
@@ -53,9 +53,23 @@ b.Pitch                      % -> 0.03125
 
 ## Headless bulk analysis (the Headless Release workflow)
 
-Describe your joints and element forces in two tables, put the global analysis
-settings (temperatures + factors) in a third, then get every margin in one
-call — no GUI involved:
+The streamlined flow is ONE workbook in, one margins workbook out — no GUI,
+no CSV splitting:
+
+```matlab
+f = data.makeTemplate("my_joints.xlsx");            % generate the fill-in template
+% ... fill the Joints / Elements / Settings sheets in Excel ...
+T = engine.runWorkbook("my_joints.xlsx", "margins.xlsx");
+```
+
+`engine.runWorkbook` reads the Joints/Elements/Settings sheets by name (both
+table readers auto-detect the header row, so the template's friendly banner
+rows need no cleanup), applies the global temperatures + factors, analyzes
+every element, and writes the results (`outFile` optional; it must differ
+from the input workbook — the tool refuses to clobber the filled sheets).
+
+If the three inputs live in separate files instead, the split form runs the
+same pipeline:
 
 ```matlab
 T = engine.runBulk("joint_library.csv", "elements.csv", "settings.csv", "margins.xlsx");
@@ -172,10 +186,13 @@ auto-detect, `AxialX/Y/Z` bolt-direction marks, boltSpec auto-lookup for
 the rated loads, On-gated washers, `Nut*`/`Helicoil*` threaded-member
 columns; no temperature columns — temps are global settings) into
 `model.Joint` objects, `data.loadElements(file)` reads an element + forces
-table (`element_id`/`joint_name`/FX..MZ per row) into the struct consumed
-by `engine.resolveForces`, and `data.loadSettings(file)` reads the global
-settings key/value file (NominalTempC/HotTempC/ColdTempC + the eight
-factor keys → a `model.Factors`). Template files with the exact column
+table (`element_id`/`joint_name`/FX..MZ per row; same header-row
+auto-detect as the joint reader, so a friendly banner row is tolerated)
+into the struct consumed by `engine.resolveForces`, and
+`data.loadSettings(file)` reads the global settings key/value file
+(NominalTempC/HotTempC/ColdTempC + the eight factor keys → a
+`model.Factors`). All three loaders take an optional trailing `sheet`
+argument (name or index) to read a named sheet of a workbook. Template files with the exact column
 headers live at `matlab/templates/` — the joint template's first row
 is the DABJ §9 class-problem joint expressed in the table schema
 (`tests/tBulkParsers.m` parses the templates and checks that row against
@@ -209,4 +226,9 @@ empty/omitted → `model.Factors()` defaults with the joints' own
 temperatures, and a `model.Factors` object in the slot is accepted for
 back-compat; a runnable reference lives at
 `matlab/examples/run_bulk_example.m`; exercised by `tests/tExport.m`).
-See `MATLAB_BUILD_GUIDE.md`.
+Step 2c adds the single-workbook entry point:
+`engine.runWorkbook(workbookFile, outFile)` runs the same pipeline (shared
+settings-apply helper — the two entry points cannot drift) on the
+Joints/Elements/Settings sheets of one `data.makeTemplate` workbook, whose
+shipped example content reproduces the DABJ §9 per-bolt margins end-to-end
+(`tests/tWorkbook.m`). See `MATLAB_BUILD_GUIDE.md`.

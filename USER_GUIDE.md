@@ -11,8 +11,8 @@ You describe bolted joints and the loads on them; the tool computes the 15 NASA-
 margins of safety for each bolt and tells you pass/fail. Two ways to use it:
 
 - **Single joint** — build one joint at the MATLAB Command Window and inspect its margins.
-- **Bulk (the main workflow)** — put many joints in one spreadsheet, their FEM element
-  forces in another, and get a margins workbook (Excel) out with one command.
+- **Bulk (the main workflow)** — fill ONE Excel workbook (joints, FEM element forces,
+  settings) and get a margins workbook (Excel) out with one command.
 
 A **margin of safety (MS)** is `strength / load − 1`: **≥ 0 passes**, **< 0 fails**.
 
@@ -134,25 +134,32 @@ FFSep, FFSlip`. Only Setting + Value are read; Description is for humans.
 
 ### Step 3 — run it
 
-`engine.runBulk` currently takes **three file paths** (a single-workbook
-`runBulk(f)` is a planned follow-up), so save each filled sheet as its own CSV
-(activate the sheet → File → Save As → CSV):
+One command, straight on the filled workbook — no CSV exports, no sheet cleanup:
 
-- **Joints** → `joints.csv` — keep or delete the friendly row; the reader
-  auto-detects the MATLAB-name header row either way.
-- **Elements** → `elements.csv` — **delete the friendly (top) row before saving**;
-  this reader expects the MATLAB names on row 1.
-- **Settings** → `settings.csv` — save as-is (key in column 1, value in column 2;
-  the Description column is ignored).
+```matlab
+T = engine.runWorkbook("my_template.xlsx", "margins.xlsx");
+```
+
+- Reads the **Joints**, **Elements**, and **Settings** sheets by name (both table
+  readers auto-detect the MATLAB-name header row, so the friendly rows stay put),
+  applies the global temperatures + factors, resolves forces, runs all 15 checks per
+  element, writes `margins.xlsx` (a **Results** sheet + a **Summary** sheet with
+  Pass/Fail/Error counts), and returns the table `T`.
+- Omit the second argument to just get `T` back without writing a file.
+- The results file must be **different** from the input workbook — the tool refuses
+  to write into the workbook it just read, so your filled sheets can't be clobbered.
+
+**Split files instead?** If your joints/elements/settings live in three separate
+files (e.g. CSVs exported from another system), the three-file form still works —
+same pipeline, same results:
 
 ```matlab
 T = engine.runBulk("joints.csv", "elements.csv", "settings.csv", "margins.xlsx");
 ```
-- Loads the three tables, applies the global temperatures + factors, resolves forces,
-  runs all 15 checks per element, writes `margins.xlsx` (a **Results** sheet + a
-  **Summary** sheet with Pass/Fail/Error counts), and returns the table `T`.
-- Omit the last arg to just get `T` back without writing a file.
-- See `matlab/examples/run_bulk_example.m` for a runnable end-to-end example.
+
+Both table readers tolerate a friendly banner row above the real header, so sheets
+saved to CSV need no cleanup either. See `matlab/examples/run_bulk_example.m` for a
+runnable end-to-end example.
 
 ### Add dropdowns & tooltips in Excel (optional, ~2 minutes)
 
