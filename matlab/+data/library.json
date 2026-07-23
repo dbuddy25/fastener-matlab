@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "description": "Hardware/material library, seeded with the DABJ course book Section 9 validation case only (Phase 2.2). JSON has no comments; each entry's 'source' field records provenance: DABJ-cited values vs standard handbook fills.",
+  "units": {
+    "length": "in",
+    "force": "lbf",
+    "stress": "psi",
+    "temperature": "degC",
+    "cte": "1/degC"
+  },
+  "materials": [
+    {
+      "key": "A-286",
+      "ftu": 160000,
+      "fty": 120000,
+      "fsu": 95000,
+      "fbru": 0,
+      "fbry": 0,
+      "e": 29100000,
+      "cte": 1.69e-05,
+      "source": "Ftu/Fty/Fsu: DABJ Sec. 9 + Appendix B Design Tables (A-286, 160 ksi). E and CTE: standard fill, not from DABJ (typical handbook values for A-286)."
+    },
+    {
+      "key": "Al 7075-T7351",
+      "ftu": 68000,
+      "fty": 57000,
+      "fsu": 39000,
+      "fbru": 121000,
+      "fbry": 94000,
+      "e": 10300000,
+      "cte": 2.32e-05,
+      "source": "Standard fill, not from DABJ. DABJ Sec. 9 says only 'aluminum alloy' joint members and works no member-strength margins; 7075-T7351 seeded as a representative alloy with typical handbook values (Fbru/Fbry at e/D = 2)."
+    }
+  ],
+  "bolts": [
+    {
+      "key": "3/8-24 UNF",
+      "nominalDiameter": 0.375,
+      "series": "UNF",
+      "tpi": 24,
+      "tensileStressArea": 0.0878,
+      "minorDiameter": 0.3209,
+      "bodyDiameter": 0.375,
+      "source": "Standard 3/8-24 UNF thread geometry (At = 0.0878 in^2, minor dia 0.3209 in). Note: DABJ Appendix B Design Tables list At = 0.0951 for 3/8 because they assume UNJF threads; the standard UNF value is used here. The DABJ Sec. 9 margins use spec allowable loads and full-diameter shear area, so this difference does not affect the Sec. 9 answers."
+    }
+  ],
+  "boltSpecs": [
+    {
+      "key": "3/8 A-286 160ksi",
+      "bolt": "3/8-24 UNF",
+      "material": "A-286",
+      "ratedUltimateLoad": 15200,
+      "ratedYieldLoad": 11400,
+      "source": "DABJ Sec. 9 (Ptu-allow = 15,200 lb given; Pty-allow = 11,400 lb per Problem 9-4, Eq. 18) and Appendix B Design Tables, 3/8 row."
+    }
+  ],
+  "nuts": [],
+  "inserts": [],
+  "washers": []
+}

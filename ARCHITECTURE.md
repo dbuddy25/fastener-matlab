@@ -6,7 +6,7 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 2.1 (model finalization).** No analysis
+**Current state: through Phase 2.2 (library seed).** No analysis
 math exists yet.
 
 ---
@@ -67,7 +67,7 @@ You don't build many joints by hand — you **describe them in a table and impor
 This is the whole product for an engineer who lives in MATLAB/Excel, no GUI required:
 
 ```matlab
-lib     = data.Library.load();                    % ⏳ 2.2 — hardware/material catalog
+lib     = data.Library.load();                    % ✅ 2.2 — hardware/material catalog
 cases   = data.loadJoints("my_joints.xlsx", lib); % ⏳ 3.5 — table → joints + load cases
 results = engine.analyzeBulk(cases, factors);     % ⏳ 3.5 — all 15 margins per joint
 writetable(results, "margins.xlsx");              % ⏳ 3.6 — answers out
@@ -88,7 +88,7 @@ matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
 ├── +engine/         ⏳ analysis math (the core)             — Phases 2–3
-├── +data/           ⏳ library + case save/load (JSON)      — Phases 2–3
+├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); ⏳ case save/load — Phase 3
 ├── +report/         ⏳ PDF + XLSX export                    — Phase 3
 ├── +gui/            ⏳ App Designer app (thin shell)        — Phase 4
 └── tests/           ✅ smoke + model tests; ⏳ validation   — throughout
@@ -153,7 +153,8 @@ Phase 2.2), not a type.
 
 - **Structural tests (✅ now):** `tests/tModel.m` proves the model constructs,
   composes, computes its derived fields (`Pitch`, `GripLength`), and rejects bad input.
-  `tFastenerToolSmoke.m` proves the entry point runs. Tests add the source folder to
+  `tests/tLibrary.m` proves the library serves the DABJ bolt/material/spec by key
+  and errors clearly on unknown keys. `tFastenerToolSmoke.m` proves the entry point runs. Tests add the source folder to
   the path via a `PathFixture`, so they pass regardless of the current folder.
 - **Numerical validation (⏳ Phase 2.3 onward):** each engine step will replay the
   validation case(s) — joints with published expected margins, seeded by the **DABJ
@@ -169,8 +170,8 @@ Phase 2.2), not a type.
 |--------------------|-------|--------|
 | Skeleton + domain model (`+model`) | 1 — Foundation | ✅ |
 | Model finalization (`PreloadSpec`, `LoadCase`, `Factors`) | 2.1 | ✅ |
-| Library seed (`+data`) | 2.2 | ⏳ next |
-| Validation answer key (DABJ §9) | 2.3 | ⏳ |
+| Library seed (`+data`) | 2.2 | ✅ |
+| Validation answer key (DABJ §9) | 2.3 | ⏳ next |
 | Preload + core margins | 2.4–2.8 | ⏳ |
 | Single-joint solver + `Result` | 2.9 | ⏳ |
 | Remaining checks + second validation wave | 3.1–3.4 | ⏳ |

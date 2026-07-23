@@ -21,7 +21,7 @@ matlab/
 ├── fastenerTool.m     entry point (Phase 1 stub — prints version)
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
 ├── +engine/           analysis math — the core (Phases 2–3)
-├── +data/             library + case save/load, JSON (Phases 2–3)
+├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); case save/load later (Phase 3)
 ├── +report/           PDF + XLSX export (Phase 3)
 ├── +gui/              App Designer app — thin shell over the engine (Phase 4)
 └── tests/             validation + smoke tests (checked vs the worked example)
@@ -55,9 +55,12 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 2.1 (model finalization) complete; next Phase 2.2 (seed the library).**
+**Phase 2.2 (library seed) complete; next Phase 2.3 (encode the DABJ validation case).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
 constructs in the Command Window (see `+model/Joint.m`, exercised by
-`tests/tModel.m`). See `MATLAB_BUILD_GUIDE.md`.
+`tests/tModel.m`). The `+data` package now holds the hardware/material library:
+`data.Library.load()` serves the DABJ case's bolt + materials by key
+(`lib.bolt("3/8-24 UNF")`, `lib.material("A-286")`, exercised by
+`tests/tLibrary.m`). See `MATLAB_BUILD_GUIDE.md`.
