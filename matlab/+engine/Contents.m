@@ -37,6 +37,21 @@
 %                      15-check Margins table (Pass|Fail|NotEvaluated),
 %                      WorstMargin/GoverningCheck, Fig. 8 Narrative, asTable().
 %                      ✅ Phase 2.9 — the engine interface contract.
+%   marginBearing    - Bolt-bearing-on-flange margin, worst layer over
+%                      ultimate/yield (NASA TM-106943 Eq. 72-74; required by
+%                      NASA-STD-5020B §4.4.2).
+%                      ✅ Phase 3.2 — allowable validated vs DABJ Ex 5-b
+%                      (Pbr = 14,760 lbf; tests/tBearing.m).
+%   marginShearTearout - Flange shear tear-out margin, worst checked layer
+%                      (NASA TM-106943 Eq. 69-71; required by NASA-STD-5020B
+%                      §4.4.2; e/D < 1.5 flagged as outside validity).
+%                      ✍️ Phase 3.2 — hand-derived pin (tests/tBearing.m).
+%   marginBearingUnderHead - Bearing under head/nut annulus vs the bolt
+%                      axial load Pb = PpMax + n·phi·PtL (NASA TM-106943
+%                      Eq. 75 area + Eq. 74 MS form; Pb per NASA-STD-5020B
+%                      Eq. 8; required by 5020B §4.4.2).
+%                      ✍️ Phase 3.2 — hand-derived pin on the Ex 8-b
+%                      geometry (tests/tBearing.m).
 %   summary          - Analysis inputs + computed preload band as one
 %                      display table (Group/Item/Value/Unit, one row per
 %                      item) — a human-readable record of what went in.
@@ -48,6 +63,6 @@
 %                      (Kb 2.39e6, Kc 4.73e6, Phi 0.336; tests/tStiffness.m).
 %
 %   Will also hold: applied-load resolution and the remaining margin checks
-%   (bearing, thread/nut/insert, tapped-hole parent-thread — Phases 3.1-3.3).
+%   (thread/nut/insert, tapped-hole parent-thread — Phase 3.3).
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

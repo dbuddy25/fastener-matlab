@@ -58,8 +58,8 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 3.1 complete (stiffness + wired into thermal preload & tension
-rupture); next 3.2 (bearing/tearout).**
+**Phase 3.2 (bearing / tear-out / under-head) complete; next 3.3
+(thread / nut / insert / tapped-hole).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -85,5 +85,16 @@ the thermal preload change from the joint stiffness (NASA TM-106943
 Eq. 10) when no `ThermalRate` override is supplied, and
 `engine.marginTensionUlt` computes the real rupture-branch margin
 (NASA-STD-5020B Eq. 10 via phi) when the Fig. 8 gate is not assured
-(the yield-side rupture form, 5020B Eq. 11, is deferred).
+(the yield-side rupture form, 5020B Eq. 11, is deferred). Phase 3.2 adds
+the three member-strength checks required by NASA-STD-5020B §4.4.2, with
+the working equations from NASA TM-106943 (Chambers): bolt bearing on
+the flanges (`engine.marginBearing`, Eq. 72-74, allowable validated
+against DABJ Example 5-b: Pbr = 14,760 lbf), flange shear tear-out
+(`engine.marginShearTearout`, Eq. 69-71, hand-derived pin; e/D < 1.5
+flagged as outside validity), and bearing under the head/nut
+(`engine.marginBearingUnderHead`, Eq. 75 annulus + Eq. 74 MS form on the
+bolt axial load Pb = PpMax + n·phi·PtL per 5020B Eq. 8, hand-derived pin
+on the Example 8-b geometry) — all wired into `analyze()`
+(`tests/tBearing.m`), with new `FlangeLayer` fields `HoleDiameter`,
+`EdgeDistance`, and `CheckShearTearout`.
 See `MATLAB_BUILD_GUIDE.md`.

@@ -14,15 +14,21 @@ function r = analyze(joint, loadCase, factors)
 %       Interaction        engine.marginInteraction  NASA-STD-5020B Eq. 20/21
 %       Separation         engine.marginSeparation   NASA-STD-5020B Eq. 19
 %       Slip               engine.marginSlip         NASA-STD-5020B Eq. 84 (joint) / Eq. 86 (single-fastener), per joint.SlipMode; Disabled -> NotEvaluated
+%       Bearing            engine.marginBearing            NASA TM-106943 Eq. 72-74 (required by 5020B §4.4.2)
+%       Bearing-under-head engine.marginBearingUnderHead   NASA TM-106943 Eq. 74/75 + 5020B Eq. 8 (Pb)
+%       Shear-tearout      engine.marginShearTearout       NASA TM-106943 Eq. 69-71 (required by 5020B §4.4.2)
 %   plus the Separation-before-rupture gate (NASA-STD-5020B Fig. 8), a
 %   boolean check reported as its own Margins row (Pass = assured) and as
 %   Result.Narrative.
 %
 %   The Margins array always advertises the FULL 15-check set (PRD 5.1);
-%   checks arriving in Phases 3.2/3.3 (bearing, bearing-under-head,
-%   shear-tearout, bolt-thread shear, nut strength, insert internal/external
-%   thread, tapped-hole parent-thread) appear with MS = NaN and Status
-%   "NotEvaluated" — real results ship without fake numbers.
+%   checks arriving in Phase 3.3 (bolt-thread shear, nut strength, insert
+%   internal/external thread, tapped-hole parent-thread) appear with
+%   MS = NaN and Status "NotEvaluated" — real results ship without fake
+%   numbers. The Phase 3.2 member checks likewise report NotEvaluated when
+%   their inputs are not configured (no EdgeDistance -> no tear-out; no
+%   HoleDiameter / stiffness geometry -> no bearing-under-head; no flange
+%   bearing allowables -> no bearing).
 %
 %   Status thresholds (bookkeeping, not equations): MS >= 0 -> "Pass",
 %   MS < 0 -> "Fail", NaN -> "NotEvaluated". WorstMargin is the minimum MS
@@ -33,7 +39,12 @@ function r = analyze(joint, loadCase, factors)
 %   reproduces all six published margins — Tension-Ultimate +0.69,
 %   Tension-Yield +0.63, Shear-Ultimate +3.18, Interaction +0.59,
 %   Separation +0.16, Slip -0.65 — with WorstMargin -0.65 governed by Slip
-%   (the book's joint slips at limit load).
+%   (the book's joint slips at limit load). On that case the Phase 3.2
+%   member checks resolve as: Shear-tearout and Bearing-under-head
+%   NotEvaluated (no EdgeDistance/HoleDiameter/frustum geometry in the §9
+%   fixture); Bearing EVALUATES (passing, ~+5.77) because the library's
+%   Al 7075-T7351 carries handbook-fill Fbru/Fbry — it does not disturb
+%   the answer key (tests/tBearing.m pins this regression).
 
 arguments
     joint    (1,1) model.Joint
@@ -52,6 +63,11 @@ su = engine.marginShearUlt(joint, d);                % NASA-STD-5020B Eq. 12/13 
 ia = engine.marginInteraction(joint, d);             % NASA-STD-5020B Eq. 20/21 solve-for-a
 sp = engine.marginSeparation(p, d);                  % NASA-STD-5020B Eq. 19
 sl = engine.marginSlip(joint, loadCase, p, factors); % NASA-STD-5020B Eq. 84 (Joint) / Eq. 86 (SingleFastener) per joint.SlipMode; Disabled -> MS NaN -> NotEvaluated
+
+% ---- The three member checks (Phase 3.2) ---------------------------------
+br = engine.marginBearing(joint, loadCase, factors);            % NASA TM-106943 Eq. 72-74 (bolt bearing; required by 5020B §4.4.2)
+to = engine.marginShearTearout(joint, loadCase, factors);       % NASA TM-106943 Eq. 69-71 (shear tear-out; required by 5020B §4.4.2)
+bh = engine.marginBearingUnderHead(joint, loadCase, factors, p); % NASA TM-106943 Eq. 74/75 + 5020B Eq. 8 Pb = PpMax + n·phi·PtL
 
 % ---- Separation-before-rupture as its own row ----------------------------
 % The gate (NASA-STD-5020B Fig. 8 / DABJ Fig. 9-9) is boolean — it has no
@@ -78,9 +94,9 @@ margins = [ ...
     entry("Separation",       sp.MS, sp.Method, ""), ...
     entry("Slip",             sl.MS, sl.Method, ""), ...
     sbr, ...
-    entry("Bearing",                   NaN, "Bearing — Phase 3.2", ""), ...
-    entry("Bearing-under-head",        NaN, "Bearing-under-head — Phase 3.2", ""), ...
-    entry("Shear-tearout",             NaN, "Shear-tearout — Phase 3.2", ""), ...
+    entry("Bearing",                   br.MS, br.Method, br.Detail), ...
+    entry("Bearing-under-head",        bh.MS, bh.Method, bh.Detail), ...
+    entry("Shear-tearout",             to.MS, to.Method, to.Detail), ...
     entry("Bolt-thread shear",         NaN, "Bolt-thread shear — Phase 3.3", ""), ...
     entry("Nut strength",              NaN, "Nut strength — Phase 3.3", ""), ...
     entry("Insert internal-thread",    NaN, "Insert internal-thread — Phase 3.3", ""), ...

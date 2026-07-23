@@ -6,14 +6,16 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 3.1 — validated single-joint engine + joint
-stiffness, wired into thermal preload and the tension rupture branch.** `engine.analyze(joint, loadCase, factors)` runs the whole engine
+**Current state: through Phase 3.2 — validated single-joint engine + joint
+stiffness + the three member-strength checks (bearing / tear-out /
+under-head).** `engine.analyze(joint, loadCase, factors)` runs the whole engine
 in one call — preload (`engine.preload`), design loads (`engine.designLoads`),
 and every built margin check (`marginTensionUlt` with the Fig. 8 gate,
 `marginBoltYield`, `marginShearUlt`, `marginInteraction`, `marginSeparation`,
-`marginSlip`) — and returns the standard `engine.Result`. One call reproduces
+`marginSlip`, `marginBearing`, `marginShearTearout`,
+`marginBearingUnderHead`) — and returns the standard `engine.Result`. One call reproduces
 all six DABJ §9 margins (+0.69 / +0.63 / +3.18 / +0.59 / +0.16 / −0.65,
-governed by the deliberate slip failure); checks arriving in Phase 3 report
+governed by the deliberate slip failure); checks arriving in Phase 3.3 report
 `NotEvaluated`. ✅ Phase 3.1a adds `engine.stiffness(joint)` — bolt/member
 stiffness (Shigley 30° conical frustum; through-bolt/nut only) and the
 stiffness factor phi (NASA-STD-5020B Eq. 9), validated against DABJ Example
@@ -28,7 +30,18 @@ answer key is untouched), and `engine.marginTensionUlt` computes the real
 rupture-branch margin (NASA-STD-5020B Eq. 10 via phi and n) when the
 Fig. 8 gate is not assured — falling back to `NotEvaluated` only if the
 stiffness geometry is missing. The yield-side rupture form (5020B Eq. 11)
-is deferred (see the TODO in `engine.marginBoltYield`).
+is deferred (see the TODO in `engine.marginBoltYield`). ✅ Phase 3.2 adds
+the three member checks NASA-STD-5020B §4.4.2 requires (5020B prints no
+member equations; the math is NASA TM-106943): `engine.marginBearing`
+(Eq. 72-74, worst flange layer over ultimate/yield; allowable validated
+vs DABJ Ex 5-b, 14,760 lbf), `engine.marginShearTearout` (Eq. 69-71,
+per-layer opt-in via `FlangeLayer.EdgeDistance`/`CheckShearTearout`;
+e/D < 1.5 flagged as outside validity; hand-derived pin), and
+`engine.marginBearingUnderHead` (Eq. 75 annulus vs the bolt axial load
+Pb = PpMax + n·phi·PtL, 5020B Eq. 8; hand-derived pin on the Ex 8-b
+geometry; NotEvaluated when the stiffness geometry is missing). New
+`FlangeLayer` fields: `HoleDiameter`, `EdgeDistance`, `CheckShearTearout`
+(`tests/tBearing.m`).
 
 ---
 
@@ -133,7 +146,7 @@ NaN-tolerant validators, so garbage fails loud instead of silently defaulting.
 | `Bolt` | Bolt geometry + threads (no material) | `NominalDiameter`, `ThreadsPerInch`, `TensileStressArea`, `MinorDiameter`, `BodyDiameter`, `HeadBearingDiameter` (washer-face dia d_wf, ✅ 3.1a); computed `Pitch`, `MinorArea`, `BodyArea` |
 | `Material` | Strength + thermal props, any role | `Ftu`,`Fty`,`Fsu`,`Fbru`,`Fbry`,`E`,`CTE` |
 | `ThreadedMember` | What the bolt threads into | `Type` (Nut/Insert/TappedHole), `Material`, `RatedUltimateLoad` |
-| `FlangeLayer` | One layer of the clamped stack | `Material`, `Thickness` |
+| `FlangeLayer` | One layer of the clamped stack | `Material`, `Thickness`; `HoleDiameter` (dh, under-head bearing annulus), `EdgeDistance` (e, tear-out), `CheckShearTearout` (per-layer opt-in) — ✅ 3.2 |
 | `Washer` | Washer under head or nut (✅ 3.1a) | `Thickness`, `OuterDiameter`; rigid in the frustum — enters kc via the contact dia dc and kb via added clamped length |
 | `Joint` | The whole joint, ties it together | `Bolt`, `BoltMaterial`, `FlangeStack`, `ThreadedMember`, `PreloadSpec`, `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, bolt spec allowables, temps (order-validated), `ShearPlane`, `SlipMode` (single-fastener default / joint / disabled slip check), `HeadWasher`/`NutWasher` + `BodyLengthInGrip` (L1) + `FrustumAngle` (stiffness inputs, ✅ 3.1a); computed `GripLength` |
 | `PreloadSpec` | Full preload definition (✅ Phase 2.1) | **Replaced the scalar `Preload`** on `Joint`: `Method` (TorqueControl/DirectPreload), `NominalTorque` + fractional `TorqueTolerance` (5020B c-factor form, Eq. 3/4/5/24; `TorqueMin`/`TorqueMax`/`CMax`/`CMin` are derived Dependent props), nut factor K, `Uncertainty` Γ, relaxation/creep, `ThermalRate`, `SeparationCritical`, `NominalPreload` |
@@ -209,7 +222,8 @@ Phase 2.2), not a type.
 | Single-joint solver + `Result` (`engine.analyze`) | 2.9 | ✅ |
 | Joint stiffness, 30° frustum (`engine.stiffness`, validated vs DABJ Ex. 8-b) | 3.1a | ✅ |
 | Stiffness wiring: thermal preload (TM-106943 Eq. 10) + tension rupture branch (5020B Eq. 10; yield-side Eq. 11 deferred) | 3.1b | ✅ |
-| Remaining checks (bearing/tearout, thread/nut/insert) + second validation wave | 3.2–3.4 | ⏳ next |
+| Member checks: bearing (TM-106943 Eq. 72-74, validated vs DABJ Ex 5-b) + shear tear-out (Eq. 69-71) + bearing-under-head (Eq. 75) | 3.2 | ✅ |
+| Remaining checks (thread/nut/insert, tapped-hole) + second validation wave | 3.3–3.4 | ⏳ next |
 | Table input + bulk analysis + XLSX (Headless Release) | 3.5–3.6 | ⏳ |
 | Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
 | GUI (`+gui`) | 4 | ⏳ |

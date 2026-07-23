@@ -12,9 +12,11 @@ This is a **living document** — every new check adds a row.
 - ⛔ **Deferred** — intentionally out of scope for now (errors clearly if invoked)
 
 **Answer-key sources**
-- **DABJ** worked examples (public): §9 (6 margins), Ex 8-b (stiffness); *untapped:*
-  Ex 5-a/5-b (bearing), Ex 6-a (thread pull-out), Ex 9-a (tension/sep-before-rupture).
-- **Hand-calc**: for paths no book covers (rupture branch, thermal-from-stiffness, single-fastener slip).
+- **DABJ** worked examples (public): §9 (6 margins), Ex 8-b (stiffness), Ex 5-b
+  (bearing allowable); *untapped:* Ex 5-a, Ex 6-a (thread pull-out), Ex 9-a
+  (tension/sep-before-rupture).
+- **Hand-calc**: for paths no book covers (rupture branch, thermal-from-stiffness,
+  single-fastener slip, tear-out & under-head margins).
 - **Group spreadsheet** (Phase 3.4, private): the real acceptance batch — flip repo private before it lands.
 
 ---
@@ -28,9 +30,9 @@ This is a **living document** — every new check adds a row.
 | 2 | Tension — yield (assured) | 5020B Eq. 15 | through-bolt | DABJ §9 | +0.63 | ✅ | tDabjCase |
 | 2r| Tension — yield (rupture branch) | 5020B Eq. 11 | — | — | — | ⏳ deferred TODO | — |
 | 3 | Shear — ultimate | 5020B Eq. 12/13/14 | body-in-shear | DABJ §9 | +3.18 | ✅ | tDabjCase |
-| 4 | Shear — tearout | 5020B / TM-106943 | — | DABJ? / hand | — | ⏳ (Phase 3.2) | — |
-| 5 | Bearing | TM-106943 Eq. 72–74 | — | DABJ Ex 5-a/5-b | — | ⏳ (Phase 3.2) | — |
-| 6 | Bearing — under-head | TM-106943 Eq. 75 | — | DABJ / hand | — | ⏳ (Phase 3.2) | — |
+| 4 | Shear — tearout | TM-106943 Eq. 69–71 (req. 5020B §4.4.2) | single layer, e/D = 2.0; caution path e/D < 1.5 | hand-calc | +3.584 (Pult 14,760) | ✍️ | tBearing |
+| 5 | Bearing | TM-106943 Eq. 72–74 (req. 5020B §4.4.2) | 3/8 bolt, 0.320-in Al fitting | DABJ Ex 5-b (allowable only) + hand-calc MS | Pbr 14,760 (book ~14,800); MS +3.584 | ✅ allowable / ✍️ MS | tBearing |
+| 6 | Bearing — under-head | TM-106943 Eq. 75 + Eq. 74 MS; Pb per 5020B Eq. 8 | Ex 8-b geometry, head side, φ = 0.3358 | hand-calc | +5.177 (Pb 3,003.7) | ✍️ | tBearing |
 | 7 | Bolt-thread shear (pull-out) | TM-106943 Eq. 63–65 | — | DABJ Ex 6-a | — | ⏳ (Phase 3.3) | — |
 | 8 | Nut strength | 5020B §4.2.2.8 (spec Pult) | — | hand / spreadsheet | — | ⏳ (Phase 3.3) | — |
 | 9 | Insert — internal/external thread | TM-106943 Eq. 76–80 | — | DABJ / hand | — | ⏳ (Phase 3.3) | — |
@@ -83,7 +85,16 @@ This is a **living document** — every new check adds a row.
 - **Yield rupture branch (Eq. 11)** — deferred TODO in `marginBoltYield`.
 - **Direct-preload & separation-critical preload** — code paths exist, no fixture.
 - **Mixed-modulus frustum** — deferred (needs slicing).
-- **Bearing / thread / insert / tapped-hole (checks 4–9, 14)** — the whole Phase 3.2/3.3 block, unbuilt.
+- **Thread / nut / insert / tapped-hole (checks 7–9, 14)** — the Phase 3.3 block, unbuilt.
+- **Tear-out & under-head margins are hand-derived only** — no public worked
+  example works these margins (DABJ Ex 5-b compares bearing allowables only);
+  group-spreadsheet cases (Phase 3.4) should upgrade rows 4/6 to ✅.
+- **Tear-out below e/D = 1.5** — computed with a CAUTION flag (outside Eq. 69–71
+  validity; Bruhn-type analysis needed); no numeric validation there.
+- **DABJ §9 + Phase 3.2 interplay** — §9's library flange (Al 7075-T7351) carries
+  handbook-fill Fbru/Fbry, so the Bearing row now EVALUATES on §9 (+5.775, Pass,
+  hand-derived); tear-out/under-head stay NotEvaluated. WorstMargin/GoverningCheck
+  (Slip −0.65) unchanged — pinned by tBearing (dabjSection9RegressionUnchanged).
 
 ## How this drives the plan
 - **Phase 3.2 / 3.3:** each new check adds a row + a fixture (DABJ Ex 5-a/5-b/6-a where available, else hand-calc).
