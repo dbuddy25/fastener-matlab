@@ -55,12 +55,15 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 2.2 (library seed) complete; next Phase 2.3 (encode the DABJ validation case).**
+**Phase 2.3 (DABJ validation case encoded) complete; next Phase 2.4 (preload math — first validated numbers).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
 constructs in the Command Window (see `+model/Joint.m`, exercised by
-`tests/tModel.m`). The `+data` package now holds the hardware/material library:
+`tests/tModel.m`). The `+data` package holds the hardware/material library:
 `data.Library.load()` serves the DABJ case's bolt + materials by key
 (`lib.bolt("3/8-24 UNF")`, `lib.material("A-286")`, exercised by
-`tests/tLibrary.m`). See `MATLAB_BUILD_GUIDE.md`.
+`tests/tLibrary.m`). The `+validation` package encodes the answer key:
+`validation.dabjSection9()` builds the DABJ §9 joint/loads/factors from the
+library and pins every published intermediate and margin (exercised by
+`tests/tDabjCase.m`). See `MATLAB_BUILD_GUIDE.md`.

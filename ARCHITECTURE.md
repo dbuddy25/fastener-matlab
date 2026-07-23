@@ -6,7 +6,7 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 2.2 (library seed).** No analysis
+**Current state: through Phase 2.3 (DABJ validation case encoded).** No analysis
 math exists yet.
 
 ---
@@ -89,6 +89,7 @@ matlab/
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
 ├── +engine/         ⏳ analysis math (the core)             — Phases 2–3
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); ⏳ case save/load — Phase 3
+├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3)
 ├── +report/         ⏳ PDF + XLSX export                    — Phase 3
 ├── +gui/            ⏳ App Designer app (thin shell)        — Phase 4
 └── tests/           ✅ smoke + model tests; ⏳ validation   — throughout
@@ -156,11 +157,14 @@ Phase 2.2), not a type.
   `tests/tLibrary.m` proves the library serves the DABJ bolt/material/spec by key
   and errors clearly on unknown keys. `tFastenerToolSmoke.m` proves the entry point runs. Tests add the source folder to
   the path via a `PathFixture`, so they pass regardless of the current folder.
-- **Numerical validation (⏳ Phase 2.3 onward):** each engine step will replay the
-  validation case(s) — joints with published expected margins, seeded by the **DABJ
-  §9 worked example** and expanded with group-spreadsheet cases in Phase 3.4 — and
-  assert a numeric match. This is the guardrail against silent drift in a
-  safety-critical tool.
+  `tests/tDabjCase.m` proves the DABJ §9 validation case builds and pins the
+  book's expected numbers.
+- **Validation answer key (✅ Phase 2.3):** `validation.dabjSection9()` encodes the
+  **DABJ §9 worked example** — the full Joint/LoadCase/Factors built from the
+  library, plus every published intermediate (preloads, design loads) and the six
+  published margins, with tolerances. Engine steps (⏳ Phase 2.4 onward) replay
+  this case — and later group-spreadsheet cases (Phase 3.4) — and assert a numeric
+  match. This is the guardrail against silent drift in a safety-critical tool.
 
 ---
 
@@ -171,8 +175,8 @@ Phase 2.2), not a type.
 | Skeleton + domain model (`+model`) | 1 — Foundation | ✅ |
 | Model finalization (`PreloadSpec`, `LoadCase`, `Factors`) | 2.1 | ✅ |
 | Library seed (`+data`) | 2.2 | ✅ |
-| Validation answer key (DABJ §9) | 2.3 | ⏳ next |
-| Preload + core margins | 2.4–2.8 | ⏳ |
+| Validation answer key (DABJ §9, `+validation`) | 2.3 | ✅ |
+| Preload + core margins | 2.4–2.8 | ⏳ next |
 | Single-joint solver + `Result` | 2.9 | ⏳ |
 | Remaining checks + second validation wave | 3.1–3.4 | ⏳ |
 | Table input + bulk analysis + XLSX (Headless Release) | 3.5–3.6 | ⏳ |
