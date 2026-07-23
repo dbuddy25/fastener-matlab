@@ -22,9 +22,12 @@
 %                      (5020A Eq. 20-23; threads-in-shear exponents
 %                      deferred to Phase 3.4).
 %                      ✅ Phase 2.7 — validated against DABJ §9 (+0.59).
+%   marginSlip       - Joint-slip margin, nf·μ·PpMin friction capacity vs
+%                      joint-level shear demand (DABJ Eq. 84).
+%                      ✅ Phase 2.8 — validated against DABJ §9 (-0.65).
 %
 %   Will also hold: bolt/member stiffness + stiffness factor, applied-load
-%   resolution, the remaining margin checks, slip, tapped-hole
+%   resolution, the remaining margin checks, tapped-hole
 %   parent-thread check, and the single-joint solver.
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

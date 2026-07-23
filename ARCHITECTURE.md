@@ -6,7 +6,7 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 2.7 (shear + interaction margins).**
+**Current state: through Phase 2.8 (slip margin).**
 `engine.preload` reproduces the DABJ §9 preloads; `engine.designLoads` and
 `engine.marginTensionUlt` (with the Fig. 8 separation-before-rupture gate)
 reproduce the design loads and the +0.69 ultimate-tension margin;
@@ -186,8 +186,8 @@ Phase 2.2), not a type.
 | Design loads + ultimate-tension margin w/ separation-before-rupture gate (`engine.designLoads`, `engine.marginTensionUlt`) | 2.5 | ✅ |
 | Separation + bolt-yield margins (`engine.marginSeparation`, `engine.marginBoltYield`) | 2.6 | ✅ |
 | Ultimate-shear + tension-shear interaction margins (`engine.marginShearUlt`, `engine.marginInteraction`) | 2.7 | ✅ |
-| Slip margin | 2.8 | ⏳ next |
-| Single-joint solver + `Result` | 2.9 | ⏳ |
+| Slip margin (`engine.marginSlip`, DABJ Eq. 84) | 2.8 | ✅ |
+| Single-joint solver + `Result` | 2.9 | ⏳ next |
 | Remaining checks + second validation wave | 3.1–3.4 | ⏳ |
 | Table input + bulk analysis + XLSX (Headless Release) | 3.5–3.6 | ⏳ |
 | Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |

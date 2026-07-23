@@ -55,7 +55,7 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 2.7 (shear + interaction) complete; next Phase 2.8 (slip margin).**
+**Phase 2.8 (slip margin) complete; next Phase 2.9 (engine.analyze + Result).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint

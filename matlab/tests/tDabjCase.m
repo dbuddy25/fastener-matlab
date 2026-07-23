@@ -7,7 +7,8 @@ classdef tDabjCase < matlab.unittest.TestCase
     %   Phase 2.4 added preloadMatchesDABJ (engine.preload vs the book);
     %   Phase 2.5 added designLoadsMatchDABJ and tensionUltMarginMatchesDABJ;
     %   Phase 2.6 added separationMarginMatchesDABJ and boltYieldMarginMatchesDABJ;
-    %   Phase 2.7 added shearUltMarginMatchesDABJ and interactionMarginMatchesDABJ.
+    %   Phase 2.7 added shearUltMarginMatchesDABJ and interactionMarginMatchesDABJ;
+    %   Phase 2.8 added slipMarginMatchesDABJ.
     %   The Expected values verified here are recorded constants from the
     %   course book, not computed results — the point is that the answer
     %   key is captured and cannot drift silently.
@@ -189,6 +190,21 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyEqual(r.a, c.Expected.InteractionA, ...
                 "AbsTol", c.Tol.MarginAbsTol);
             testCase.verifySubstring(r.Method, "Eq. 20/21");
+        end
+
+        function slipMarginMatchesDABJ(testCase)
+            % Phase 2.8: joint-level friction check (DABJ Eq. 84) with
+            % joint totals, NOT nf x per-bolt:
+            % MS = 4*0.1*6,469.75 / (1.0*(5,690 + 0.1*16,090)) - 1
+            %    = 2,587.9/7,299 - 1 = -0.65 (Solutions-23) — a deliberate
+            % FAILING margin; the book's joint slips at limit load.
+            c = validation.dabjSection9();
+            r = engine.marginSlip(c.Joint, c.LoadCase, ...
+                engine.preload(c.Joint), c.Factors);
+            testCase.verifyEqual(r.MS, c.Expected.MS_Slip, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+            testCase.verifyLessThan(r.MS, 0);
+            testCase.verifySubstring(r.Method, "Eq. 84");
         end
     end
 end
