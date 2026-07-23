@@ -58,16 +58,23 @@ flangeMats = [joint.FlangeStack.Material];
 Ec = min([flangeMats.E]);                       % softest member (conservative)
 n  = joint.LoadingPlaneFactor;
 
+% NASA-STD-5020A Fig. 8 (DABJ Fig. 9-9) — Ec > Eb/3 (member-stiffness gate)
 condStiffness = Ec > Eb/3;
+% NASA-STD-5020A Fig. 8 (DABJ Fig. 9-9) — PpMax < 0.75·Ptu_allow (preload gate;
+% [0.75, 0.85]·Ptu_allow band conservatively treated as rupture)
 condPreload   = preload.PpMax < 0.75 * PtuAllow;
+% NASA-STD-5020A Fig. 8 (DABJ Fig. 9-9) — n <= 0.9 (loading-plane-factor gate)
 condPlane     = n <= 0.9;
-condEdge      = true;   % e/D >= 1.5 ASSUMED (no edge-distance field until Phase 3.2)
+% NASA-STD-5020A Fig. 8 (DABJ Fig. 9-9) — e/D >= 1.5 (edge-distance gate);
+% ASSUMED TRUE (no edge-distance field until Phase 3.2)
+condEdge      = true;
 
 assured = condStiffness && condPreload && condPlane && condEdge;
 
 % ---- Margin ------------------------------------------------------------
 if assured
-    MS = PtuAllow / designLoads.Ptu - 1;        % 5020A Eq. 6
+    % NASA-STD-5020A Eq. 6 — MS = Ptu_allow / Ptu - 1
+    MS = PtuAllow / designLoads.Ptu - 1;
     Method = "5020A Eq. 6 (separation before rupture)";
     Decision = string(sprintf( ...
         ['Separation before rupture assured: Ec(%.3g) > Eb/3(%.3g); ' ...

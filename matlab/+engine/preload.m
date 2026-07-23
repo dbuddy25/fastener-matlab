@@ -43,13 +43,18 @@ switch ps.Method
         D  = joint.Bolt.NominalDiameter;    % in
         K  = ps.NutFactor;
         nf = joint.BoltCount;
-        PpiMax = (1 + G) * ps.TorqueMax / (K * D);           % Eq. 25
+        % NASA-STD-5020A Eq. 25 — PpiMax = (1 + Γ)·Tmax / (K·D)
+        PpiMax = (1 + G) * ps.TorqueMax / (K * D);
         if ps.SeparationCritical
-            PpiMin = (1 - G) * ps.TorqueMin / (K * D);       % Eq. 26a
+            % NASA-STD-5020A Eq. 26a (separation-critical) — PpiMin = (1 - Γ)·Tmin / (K·D)
+            PpiMin = (1 - G) * ps.TorqueMin / (K * D);
         else
-            PpiMin = (1 - G/sqrt(nf)) * ps.TorqueMin / (K * D);  % Eq. 26b
+            % NASA-STD-5020A Eq. 26b (not separation-critical) — PpiMin = (1 - Γ/√nf)·Tmin / (K·D)
+            PpiMin = (1 - G/sqrt(nf)) * ps.TorqueMin / (K * D);
         end
     case model.PreloadMethod.DirectPreload
+        % NASA-STD-5020A Eq. 25/26 uncertainty form (no numbered eq for
+        % direct preload) — PpiMax = (1 + Γ)·Pnom, PpiMin = (1 - Γ)·Pnom
         PpiMax = (1 + G) * ps.NominalPreload;
         PpiMin = (1 - G) * ps.NominalPreload;
     otherwise
@@ -60,10 +65,14 @@ end
 % ---- Thermal excursion (worst direction from reference, °C) ------------
 dT = max(joint.MaxTemperature - joint.ReferenceTemperature, ...
          joint.ReferenceTemperature - joint.MinTemperature);
+% NASA-STD-5020A thermal preload change (simplified rate model, no numbered
+% eq) — ThermalDelta = ThermalRate · dT
 ThermalDelta = ps.ThermalRate * dT;                          % lbf
 
 % ---- In-service min/max preload ----------------------------------------
+% NASA-STD-5020A Eq. 1 — PpMax = PpiMax + ThermalDelta
 PpMax = PpiMax + ThermalDelta;
+% NASA-STD-5020A Eq. 2 — PpMin = (1 - relaxation)·PpiMin - creep - ThermalDelta
 PpMin = (1 - ps.RelaxationFraction) * PpiMin - ps.CreepLoss - ThermalDelta;
 
 p = struct( ...

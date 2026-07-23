@@ -43,9 +43,12 @@ end
 
 switch joint.ShearPlane
     case model.ShearPlaneCondition.BodyInShear
-        et = 1.5;                               % tension exponent (Eq. 20/21)
+        % NASA-STD-5020A Eq. 20/21 (body in shear) — envelope Rt^1.5 + Rs^2.5 = 1
+        et = 1.5;                               % tension exponent
         es = 2.5;                               % shear exponent
     case model.ShearPlaneCondition.ThreadsInShear
+        % NASA-STD-5020A Eq. 22/23 (threads in shear) — exponents differ from
+        % Eq. 20/21; unvalidated here, so this path errors (Phase 3.4)
         error("engine:marginInteraction:threadsInShearUnvalidated", ...
             "Threads-in-shear interaction exponents need a validation case (Phase 3.4)");
     otherwise
@@ -54,14 +57,18 @@ switch joint.ShearPlane
 end
 
 shearUlt = engine.marginShearUlt(joint, designLoads);   % reuse its allowable
+% NASA-STD-5020A Eq. 20-23 load ratios — Rt = Ptu / Ptu_allow
 Rt = designLoads.Ptu / PtuAllow;
+% NASA-STD-5020A Eq. 20-23 load ratios — Rs = Psu / Psu_allow
 Rs = designLoads.Psu / shearUlt.ShearAllowable;
 
-% Scale factor a: (a*Rt)^et + (a*Rs)^es = 1. g(0) = -1 and g is strictly
-% increasing for a > 0, so the root is unique; guess 1 (root ~1.59 here).
+% NASA-STD-5020A Eq. 20/21 solve-for-a — (a·Rt)^et + (a·Rs)^es = 1.
+% g(0) = -1 and g is strictly increasing for a > 0, so the root is unique;
+% guess 1 (root ~1.59 here).
 g = @(a) (a*Rt)^et + (a*Rs)^es - 1;
 a = fzero(g, 1);
 
+% NASA-STD-5020A Eq. 20/21 solve-for-a margin — MS = a - 1
 MS = a - 1;
 
 r = struct( ...

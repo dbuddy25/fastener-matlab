@@ -24,7 +24,8 @@ arguments
     designLoads (1,1) struct
 end
 
-MS = preload.PpMin / designLoads.Psep - 1;                   % 5020A Eq. 19
+% NASA-STD-5020A Eq. 19 — MS = PpMin / Psep - 1
+MS = preload.PpMin / designLoads.Psep - 1;
 
 r = struct( ...
     "MS",     MS, ...

@@ -32,7 +32,8 @@ if isnan(PtyAllow)
         "BoltRatedYieldLoad required for bolt yield margin; (Fty/Ftu)*Ptu_allow fallback is Phase 3.");
 end
 
-MS = PtyAllow / designLoads.Pty - 1;                         % 5020A Eq. 15
+% NASA-STD-5020A Eq. 15 — MS = Pty_allow / Pty - 1
+MS = PtyAllow / designLoads.Pty - 1;
 
 r = struct( ...
     "MS",     MS, ...
