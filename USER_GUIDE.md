@@ -18,18 +18,16 @@ A **margin of safety (MS)** is `strength / load − 1`: **≥ 0 passes**, **< 0 
 
 ---
 
-## 2. One-time setup
+## 2. Setup
 
-1. Install MATLAB (R2021a or newer). Toolboxes: base MATLAB is enough for analysis;
-   Report Generator/Compiler only matter for later PDF/exe features.
-2. Get the code: `git clone https://github.com/dbuddy25/fastener-matlab.git`
-   (or **Code → Download ZIP** on that page).
-3. In MATLAB, set the **Current Folder** to the `matlab/` subfolder.
-4. Sanity check — in the Command Window:
+1. In MATLAB, set the **Current Folder** to the `matlab/` subfolder of the code you were given.
+2. Sanity check — in the Command Window:
    ```matlab
    fastenerTool          % prints the version banner
    runtests("tests")     % should be all green
    ```
+
+> Requires MATLAB R2021a or newer. Base MATLAB is enough to run analyses.
 
 ---
 
