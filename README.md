@@ -13,6 +13,9 @@ analysis tool, deployable as a standalone Windows executable.
   decisions); a living doc, updated as each phase step lands.
 - **`UNITS.md`** — the unit contract: English units (in, lbf, psi) with
   temperature in °C and CTE in 1/°C. Single source of truth for units.
+- **`VALIDATION.md`** — the validation coverage matrix: every check/scenario, its
+  answer-key source, and whether it's validated ✅ / hand-derived ✍️ / pending ⏳.
+  A living doc — every new check adds a row.
 
 ## Source layout
 
