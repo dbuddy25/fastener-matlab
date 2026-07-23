@@ -6,7 +6,8 @@ classdef tDabjCase < matlab.unittest.TestCase
     %   Engine-driven assertions are added here as each check is built;
     %   Phase 2.4 added preloadMatchesDABJ (engine.preload vs the book);
     %   Phase 2.5 added designLoadsMatchDABJ and tensionUltMarginMatchesDABJ;
-    %   Phase 2.6 added separationMarginMatchesDABJ and boltYieldMarginMatchesDABJ.
+    %   Phase 2.6 added separationMarginMatchesDABJ and boltYieldMarginMatchesDABJ;
+    %   Phase 2.7 added shearUltMarginMatchesDABJ and interactionMarginMatchesDABJ.
     %   The Expected values verified here are recorded constants from the
     %   course book, not computed results — the point is that the answer
     %   key is captured and cannot drift silently.
@@ -161,6 +162,33 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyEqual(r.MS, c.Expected.MS_BoltYield, ...
                 "AbsTol", c.Tol.MarginAbsTol);
             testCase.verifySubstring(r.Method, "Eq. 15");
+        end
+
+        function shearUltMarginMatchesDABJ(testCase)
+            % Phase 2.7: threads NOT in the shear plane, so the allowable
+            % uses the full-diameter area (5020A Eq. 14):
+            % MS = 95,000*(pi/4)*0.375^2 / 2,511.6 - 1
+            %    = 10,492.4/2,511.6 - 1 = +3.18 (Solutions-19).
+            c = validation.dabjSection9();
+            d = engine.designLoads(c.LoadCase, c.Factors);
+            r = engine.marginShearUlt(c.Joint, d);
+            testCase.verifyEqual(r.MS, c.Expected.MS_ShearUlt, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+            testCase.verifySubstring(r.Method, "Eq. 14");
+        end
+
+        function interactionMarginMatchesDABJ(testCase)
+            % Phase 2.7: solve (a*Rt)^1.5 + (a*Rs)^2.5 = 1 with
+            % Rt = 9,000/15,200 and Rs = 2,511.6/10,492.4 (body in shear):
+            % a = 1.59, MS = a - 1 = +0.59 (Solutions-20..21).
+            c = validation.dabjSection9();
+            d = engine.designLoads(c.LoadCase, c.Factors);
+            r = engine.marginInteraction(c.Joint, d);
+            testCase.verifyEqual(r.MS, c.Expected.MS_Interaction, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+            testCase.verifyEqual(r.a, c.Expected.InteractionA, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+            testCase.verifySubstring(r.Method, "Eq. 20/21");
         end
     end
 end

@@ -15,10 +15,16 @@
 %   marginBoltYield  - Bolt yield margin, spec yield allowable vs design
 %                      yield load (5020A Eq. 15).
 %                      ✅ Phase 2.6 — validated against DABJ §9 (+0.63).
+%   marginShearUlt   - Bolt ultimate-shear margin, Fsu x area by
+%                      shear-plane condition (5020A Eq. 14).
+%                      ✅ Phase 2.7 — validated against DABJ §9 (+3.18).
+%   marginInteraction- Combined tension-shear margin, solve-for-a
+%                      (5020A Eq. 20-23; threads-in-shear exponents
+%                      deferred to Phase 3.4).
+%                      ✅ Phase 2.7 — validated against DABJ §9 (+0.59).
 %
 %   Will also hold: bolt/member stiffness + stiffness factor, applied-load
-%   resolution, the remaining margin checks, interaction (5020A Eq. 20-23),
-%   separation/slip, tapped-hole parent-thread check, and the single-joint
-%   solver.
+%   resolution, the remaining margin checks, slip, tapped-hole
+%   parent-thread check, and the single-joint solver.
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.
