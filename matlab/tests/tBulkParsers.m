@@ -1,13 +1,21 @@
 classdef tBulkParsers < matlab.unittest.TestCase
     %TBULKPARSERS  Phase 3.5b acceptance: the bulk input parsers.
-    %   data.loadJointLibrary (joint-definition table -> model.Joint per row,
-    %   library keys resolved through data.Library) and data.loadElements
-    %   (element + forces table -> struct array for engine.resolveForces).
-    %   Both are exercised against the shipped template CSVs in
-    %   templates/ — the joint template's first row IS the DABJ
-    %   Section 9 class-problem joint expressed in the table schema, so the
-    %   parse is checked against the same numbers validation.dabjSection9
-    %   builds in code (structural check: field mapping, not new physics).
+    %   data.loadJointLibrary (joint-table -> model.Joint per row, library
+    %   keys resolved through data.Library; NEW layout: boltSpec
+    %   auto-lookup, AxialX/Y/Z bolt-direction marks, On-gated washers,
+    %   Nut*/Helicoil* threaded-member columns, header-row auto-detect),
+    %   data.loadElements (element + forces table -> struct array for
+    %   engine.resolveForces), and data.loadSettings (global temperatures +
+    %   factors). All are exercised against the shipped template CSVs in
+    %   templates/ — the joint template's first row IS the DABJ Section 9
+    %   class-problem joint expressed in the table schema, so the parse is
+    %   checked against the same numbers validation.dabjSection9 builds in
+    %   code (structural check: field mapping, not new physics).
+    %
+    %   Temperatures are GLOBAL: the joint table carries none, so parsed
+    %   joints keep the model default 20 degC; NominalTempC/HotTempC/
+    %   ColdTempC come from the settings file and are applied by
+    %   engine.runBulk.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -27,12 +35,22 @@ classdef tBulkParsers < matlab.unittest.TestCase
             srcDir  = fileparts(testDir);                 % .../matlab
             p = string(fullfile(srcDir, "templates", name));
         end
+
+        function f = writeTempCsv(testCase, lines)
+            %WRITETEMPCSV  Write a throwaway CSV; deleted on teardown.
+            f = string(tempname) + ".csv";
+            fid = fopen(f, "w");
+            fprintf(fid, "%s\n", lines{:});
+            fclose(fid);
+            testCase.addTeardown(@() deleteIfPresent(f));
+        end
     end
 
     methods (Test)
         function loadsJointLibrary(testCase)
             % The template's DABJ row must reproduce the §9 joint the same
-            % way validation.dabjSection9 builds it in code.
+            % way validation.dabjSection9 builds it in code (temperatures
+            % excepted — those are global settings now).
             lib = data.Library.load();
             jl  = data.loadJointLibrary( ...
                 tBulkParsers.templatePath("joint_library_template.csv"), lib);
@@ -43,11 +61,13 @@ classdef tBulkParsers < matlab.unittest.TestCase
             j = jl(idx).Joint;
             testCase.verifyClass(j, "model.Joint");
 
-            % Library-resolved pieces
+            % Library-resolved pieces; the rated loads come from the
+            % boltSpec AUTO-LOOKUP (the BoltSpec cell is blank — the
+            % library's "3/8 A-286 160ksi" entry matches Bolt+BoltMaterial)
             testCase.verifyEqual(j.Bolt.NominalDiameter, 0.375, "AbsTol", 1e-12);
             testCase.verifyEqual(j.Bolt.Series, model.ThreadSeries.UNF);
             testCase.verifyEqual(j.BoltMaterial.Name, "A-286");
-            testCase.verifyEqual(j.BoltRatedUltimateLoad, 15200);   % from boltSpec
+            testCase.verifyEqual(j.BoltRatedUltimateLoad, 15200);   % auto-lookup
             testCase.verifyEqual(j.BoltRatedYieldLoad, 11400);
 
             % Direct-column pieces
@@ -56,9 +76,10 @@ classdef tBulkParsers < matlab.unittest.TestCase
             testCase.verifyEqual(j.LoadingPlaneFactor, 0.5, "AbsTol", 1e-12);
             testCase.verifyEqual(j.ShearPlane, model.ShearPlaneCondition.BodyInShear);
             testCase.verifyEqual(j.SlipMode, model.SlipMode.Joint);
-            testCase.verifyEqual(j.BoltAxis, model.BoltAxis.Z);
+            testCase.verifyEqual(j.BoltAxis, model.BoltAxis.Z);   % AxialZ marked "X"
+            testCase.verifyEqual(j.FrustumAngle, 30);             % blank -> default
 
-            % Preload spec
+            % Preload spec (NominalTorque/PreloadLoss column names)
             testCase.verifyEqual(j.PreloadSpec.Method, model.PreloadMethod.TorqueControl);
             testCase.verifyEqual(j.PreloadSpec.NominalTorque, 470);
             testCase.verifyEqual(j.PreloadSpec.TorqueTolerance, 0.042553, "AbsTol", 1e-9);
@@ -73,18 +94,24 @@ classdef tBulkParsers < matlab.unittest.TestCase
 
             % Flange stack: FlangeCount = 2, both 0.375-in Al 7075-T7351
             testCase.verifyEqual(numel(j.FlangeStack), 2);
+            testCase.verifyEqual(j.FlangeStack(1).Name, "Upper flange");
             testCase.verifyEqual(j.FlangeStack(1).Thickness, 0.375, "AbsTol", 1e-12);
             testCase.verifyEqual(j.FlangeStack(2).Material.Name, "Al 7075-T7351");
             testCase.verifyEqual(j.GripLength, 0.75, "AbsTol", 1e-12);
 
-            % Threaded member: nut with the spec Pult as its rating
+            % Threaded member: nut, material from the NutMaterial column
             testCase.verifyEqual(j.ThreadedMember.Type, model.ThreadedMemberType.Nut);
-            testCase.verifyEqual(j.ThreadedMember.RatedUltimateLoad, 15200);
+            testCase.verifyEqual(j.ThreadedMember.Material.Name, "A-286");
 
-            % Temperatures (degC): 20 -/+ 25 degF expressed in degC
-            testCase.verifyEqual(j.ReferenceTemperature, 20, "AbsTol", 1e-12);
-            testCase.verifyEqual(j.MaxTemperature, 33.8889, "AbsTol", 1e-4);
-            testCase.verifyEqual(j.MinTemperature, 6.1111, "AbsTol", 1e-4);
+            % Washer gates FALSE -> model default (no washer)
+            testCase.verifyEqual(j.HeadWasher.Thickness, 0);
+            testCase.verifyEqual(j.NutWasher.Thickness, 0);
+
+            % No temperature columns: joints keep the model default 20 degC
+            % (engine.runBulk applies the settings temps before analysis)
+            testCase.verifyEqual(j.ReferenceTemperature, 20);
+            testCase.verifyEqual(j.MaxTemperature, 20);
+            testCase.verifyEqual(j.MinTemperature, 20);
         end
 
         function loadsElements(testCase)
@@ -116,9 +143,30 @@ classdef tBulkParsers < matlab.unittest.TestCase
             testCase.verifyEqual(el(3).ScaleFactor, 1.5, "AbsTol", 1e-12);
         end
 
-        function threadEngagementDiameterFormat(testCase)
-            % "1.5D" on a 3/8 bolt -> Le = 1.5 * 0.375 = 0.5625 in
-            % (the template's second, insert-config row).
+        function loadsSettings(testCase)
+            % The settings template carries the §9 global temperatures and
+            % the DABJ factors — the same Factors validation.dabjSection9
+            % builds in code.
+            s = data.loadSettings( ...
+                tBulkParsers.templatePath("settings_template.csv"));
+            c = validation.dabjSection9();
+
+            testCase.verifyEqual(s.NominalTempC, 20, "AbsTol", 1e-12);
+            testCase.verifyEqual(s.HotTempC, 33.8889, "AbsTol", 1e-4);
+            testCase.verifyEqual(s.ColdTempC, 6.1111, "AbsTol", 1e-4);
+
+            testCase.verifyClass(s.Factors, "model.Factors");
+            for f = ["FSU", "FSY", "FSSep", "FSSlip", "FFU", "FFY", "FFSep", "FFSlip"]
+                testCase.verifyEqual(s.Factors.(f), c.Factors.(f), ...
+                    "AbsTol", 1e-12, "Factor " + f);
+            end
+        end
+
+        function insertRowMapsHelicoilColumns(testCase)
+            % The template's second row exercises the insert configuration:
+            % HelicoilLengthRatio 1.5 on a 3/8 bolt -> Le = 0.5625 in,
+            % HelicoilParent* -> HostName/Material, the explicit BoltSpec
+            % override, the AxialX mark, and the On-gated head washer.
             lib = data.Library.load();
             jl  = data.loadJointLibrary( ...
                 tBulkParsers.templatePath("joint_library_template.csv"), lib);
@@ -128,21 +176,75 @@ classdef tBulkParsers < matlab.unittest.TestCase
 
             testCase.verifyEqual(j.ThreadedMember.Type, model.ThreadedMemberType.Insert);
             testCase.verifyEqual(j.ThreadedMember.EngagementLength, 0.5625, "AbsTol", 1e-9);
+            testCase.verifyEqual(j.ThreadedMember.HostName, "Housing");
             testCase.verifyEqual(j.ThreadedMember.Material.Name, "Al 7075-T7351");
-            testCase.verifyEqual(j.ThreadedMember.RatedUltimateLoad, 2000);
+
+            % Explicit BoltSpec cell (matches what auto-lookup would find,
+            % but exercises the override path)
+            testCase.verifyEqual(j.BoltRatedUltimateLoad, 15200);
+            testCase.verifyEqual(j.BoltRatedYieldLoad, 11400);
 
             % A few schema spot-checks on the same row
             testCase.verifyEqual(j.ShearPlane, model.ShearPlaneCondition.ThreadsInShear);
             testCase.verifyEqual(j.SlipMode, model.SlipMode.Ignored);
-            testCase.verifyEqual(j.BoltAxis, model.BoltAxis.X);
-            testCase.verifyTrue(j.PreloadSpec.SeparationCritical);
+            testCase.verifyEqual(j.BoltAxis, model.BoltAxis.X);   % AxialX TRUE
+            testCase.verifyEqual(j.FrustumAngle, 30);
             testCase.verifyEqual(numel(j.FlangeStack), 1);
+            testCase.verifyEqual(j.FlangeStack(1).Name, "Bracket flange");
             testCase.verifyEqual(j.FlangeStack(1).HoleDiameter, 0.397, "AbsTol", 1e-12);
             testCase.verifyEqual(j.FlangeStack(1).EdgeDistance, 0.75, "AbsTol", 1e-12);
+            testCase.verifyTrue(j.FlangeStack(1).CheckShearTearout);
+
+            % HeadWasherOn TRUE -> washer built from the Material/OD/ID/
+            % Thickness columns; NutWasherOn FALSE -> model default
             testCase.verifyEqual(j.HeadWasher.Thickness, 0.063, "AbsTol", 1e-12);
             testCase.verifyEqual(j.HeadWasher.OuterDiameter, 0.687, "AbsTol", 1e-12);
-            % No NutWasher columns set -> model default (zero thickness)
+            testCase.verifyEqual(j.HeadWasher.InnerDiameter, 0.391, "AbsTol", 1e-12);
+            testCase.verifyEqual(j.HeadWasher.Material.Name, "A-286");
             testCase.verifyEqual(j.NutWasher.Thickness, 0);
         end
+
+        function headerRowAutoDetect(testCase)
+            % A friendly banner row ABOVE the real header must be skipped:
+            % the reader picks the row that best matches the known column
+            % names. Also covers the no-Axial-mark default (BoltAxis Z) and
+            % the boltSpec auto-lookup on a minimal row.
+            lib = data.Library.load();
+            f = tBulkParsers.writeTempCsv(testCase, { ...
+                'My Joint Table (friendly names go here),,,', ...
+                'Name,Bolt,BoltMaterial,SlipMode', ...
+                'HDR test,3/8-24 UNF,A-286,Ignored'});
+
+            jl = data.loadJointLibrary(f, lib);
+            testCase.assertEqual(numel(jl), 1);
+            testCase.verifyEqual(jl(1).Name, "HDR test");
+            testCase.verifyEqual(jl(1).Joint.SlipMode, model.SlipMode.Ignored);
+            testCase.verifyEqual(jl(1).Joint.BoltAxis, model.BoltAxis.Z);   % none marked
+            testCase.verifyEqual(jl(1).Joint.BoltRatedUltimateLoad, 15200); % auto-lookup
+        end
+
+        function multipleAxialMarksError(testCase)
+            % Marking more than one of AxialX/AxialY/AxialZ is ambiguous
+            % and must error with a clear message.
+            lib = data.Library.load();
+            f = tBulkParsers.writeTempCsv(testCase, { ...
+                'Name,Bolt,BoltMaterial,AxialX,AxialY,AxialZ', ...
+                'Bad axes,3/8-24 UNF,A-286,X,,X'});
+
+            testCase.verifyError( ...
+                @() data.loadJointLibrary(f, lib), ...
+                "data:loadJointLibrary:multipleAxes");
+        end
     end
+end
+
+% =========================================================================
+% File-local helpers
+% =========================================================================
+
+function deleteIfPresent(f)
+%DELETEIFPRESENT  Teardown helper: remove the temp CSV if it exists.
+if isfile(f)
+    delete(f);
+end
 end

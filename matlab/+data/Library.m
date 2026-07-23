@@ -126,6 +126,31 @@ classdef Library
                        "RatedYieldLoad",    e.ratedYieldLoad);
         end
 
+        function s = boltSpecFor(obj, boltKey, materialKey)
+            %BOLTSPECFOR  Spec-rated allowables matching a bolt + material pair.
+            %   s = lib.boltSpecFor(boltKey, materialKey) returns the same
+            %   struct as boltSpec() for the FIRST boltSpec entry whose bolt
+            %   and material keys both match (case-sensitive exact, like all
+            %   library keys), or [] when no entry matches — the auto-lookup
+            %   used by data.loadJointLibrary to fill a Joint's rated loads
+            %   from its Bolt + BoltMaterial columns without an explicit
+            %   BoltSpec cell.
+            arguments
+                obj         (1,1) data.Library
+                boltKey     (1,1) string
+                materialKey (1,1) string
+            end
+            s = [];
+            for i = 1:numel(obj.BoltSpecs)
+                e = obj.BoltSpecs{i};
+                if strcmp(string(e.bolt), boltKey) && ...
+                        strcmp(string(e.material), materialKey)
+                    s = obj.boltSpec(string(e.key));
+                    return
+                end
+            end
+        end
+
         function keys = materialKeys(obj)
             %MATERIALKEYS  Available material keys, in file order.
             keys = data.Library.keyList(obj.Materials);

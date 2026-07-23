@@ -26,7 +26,7 @@ matlab/
 ├── fastenerTool.m     entry point (Phase 1 stub — prints version)
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
 ├── +engine/           analysis math — the core (Phases 2–3)
-├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); case save/load later (Phase 3)
+├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); case save/load later (Phase 3)
 ├── +report/           XLSX export (`report.exportResults`, Phase 3.6); PDF later (Phase 3.8)
 ├── +gui/              App Designer app — thin shell over the engine (Phase 4)
 ├── examples/          runnable reference scripts (`run_bulk_example.m`)
@@ -53,24 +53,39 @@ b.Pitch                      % -> 0.03125
 
 ## Headless bulk analysis (the Headless Release workflow)
 
-Describe your joints and element forces in two tables, then get every margin in
-one call — no GUI involved:
+Describe your joints and element forces in two tables, put the global analysis
+settings (temperatures + factors) in a third, then get every margin in one
+call — no GUI involved:
 
 ```matlab
-T = engine.runBulk("joint_library.csv", "elements.csv", model.Factors(), "margins.xlsx");
+T = engine.runBulk("joint_library.csv", "elements.csv", "settings.csv", "margins.xlsx");
 ```
 
 That single call loads the hardware/material library, parses the joint table
-(`data.loadJointLibrary`) and the element-forces table (`data.loadElements`),
-runs all 15 margin checks per element (`engine.analyzeBulk`), and writes the
-results to `margins.xlsx` (`report.exportResults` — a Results sheet plus a
-Summary sheet with Pass/Fail/Error counts). The factors argument is optional
-(defaults to the built-in `model.Factors()` preset); omit the output file to
-just get the results table back.
+(`data.loadJointLibrary`), the settings file (`data.loadSettings`), and the
+element-forces table (`data.loadElements`), applies the global temperatures
+(`NominalTempC`/`HotTempC`/`ColdTempC`) to every joint, runs all 15 margin
+checks per element (`engine.analyzeBulk`) with the settings-built
+`model.Factors`, and writes the results to `margins.xlsx`
+(`report.exportResults` — a Results sheet plus a Summary sheet with
+Pass/Fail/Error counts). The settings argument is optional (empty/omitted →
+the built-in `model.Factors()` preset and the joints' default temperatures);
+omit the output file to just get the results table back.
 
-- **Input templates** (exact column headers, first row = the DABJ §9 worked
-  example): `matlab/+data/templates/joint_library_template.csv` and
-  `elements_template.csv` — copy, fill in, run.
+The joint table uses the joint-table layout: `Bolt`/`BoltMaterial` library
+keys (with the rated loads auto-looked-up from a matching library boltSpec, or
+an explicit `BoltSpec` override), an `AxialX`/`AxialY`/`AxialZ` mark for the
+bolt direction, On-gated `HeadWasher*`/`NutWasher*` blocks, `Nut*` /
+`HelicoilParent*` threaded-member columns, `Flange1..4*` layer blocks, and the
+`NutFactor`/`Uncertainty`/`PreloadLoss`/`NominalTorque`/`TorqueTolerance`
+preload group — no temperature columns (those are global settings). The reader
+auto-detects the header row, so a friendly banner row above the column names
+is fine.
+
+- **Input templates** (exact column headers/keys, first joint row = the DABJ
+  §9 worked example, settings = the §9 temperatures + factors):
+  `matlab/templates/joint_library_template.csv`, `elements_template.csv`,
+  and `settings_template.csv` — copy, fill in, run.
 - **Runnable reference**: `matlab/examples/run_bulk_example.m` runs the bundled
   templates end to end and writes `bulk_results.xlsx` next to itself.
 
@@ -144,14 +159,19 @@ bolt-pattern moment distribution) — and
 `engine.loadCaseFromForces(F, axis, ...)` turns that into a per-bolt
 `model.LoadCase` (`Reversible`/`ScaleFactor` options; hand-derived 3-4-5
 pins in `tests/tForces.m`). Phase 3.5b adds the bulk input parsers:
-`data.loadJointLibrary(file, lib)` reads a joint-definition table (.csv or
-.xlsx, one row per joint, library keys resolved through `data.Library`)
-into `model.Joint` objects, and `data.loadElements(file)` reads an
-element + forces table (`element_id`/`joint_name`/FX..MZ per row) into the
-struct consumed by `engine.resolveForces`. Template files with the exact
-column headers live at `+data/templates/` — the joint template's first row
+`data.loadJointLibrary(file, lib)` reads a joint-table (.csv or .xlsx, one
+row per joint, library keys resolved through `data.Library`; header-row
+auto-detect, `AxialX/Y/Z` bolt-direction marks, boltSpec auto-lookup for
+the rated loads, On-gated washers, `Nut*`/`Helicoil*` threaded-member
+columns; no temperature columns — temps are global settings) into
+`model.Joint` objects, `data.loadElements(file)` reads an element + forces
+table (`element_id`/`joint_name`/FX..MZ per row) into the struct consumed
+by `engine.resolveForces`, and `data.loadSettings(file)` reads the global
+settings key/value file (NominalTempC/HotTempC/ColdTempC + the eight
+factor keys → a `model.Factors`). Template files with the exact column
+headers live at `matlab/templates/` — the joint template's first row
 is the DABJ §9 class-problem joint expressed in the table schema
-(`tests/tBulkParsers.m` parses both templates and checks that row against
+(`tests/tBulkParsers.m` parses the templates and checks that row against
 the same numbers `validation.dabjSection9` builds in code; the row carries
 a `ThermalRate` override, 12.978 lbf/°C, so its thermal preload matches the
 in-code build without stiffness geometry). Phase 3.5c ties it together:
@@ -175,9 +195,11 @@ Single-fastener slip — the default — evaluates normally per element.
 Phase 3.6 completes the Headless Release: `report.exportResults(T, file)`
 writes the results table to `.xlsx` (Results sheet + a Summary sheet with
 Pass/Fail/Error counts) or `.csv` by extension, and
-`engine.runBulk(jointLibFile, elementsFile, factors, outFile)` runs the
-whole pipeline — library load → parse → resolve → analyze → export — in
-one call (factors optional, defaulting to `model.Factors()`; a runnable
-reference lives at `matlab/examples/run_bulk_example.m`; exercised by
-`tests/tExport.m`).
+`engine.runBulk(jointFile, elementsFile, settingsFile, outFile)` runs the
+whole pipeline — library load → parse → apply global settings temps to
+every joint → resolve → analyze → export — in one call (settings optional:
+empty/omitted → `model.Factors()` defaults with the joints' own
+temperatures, and a `model.Factors` object in the slot is accepted for
+back-compat; a runnable reference lives at
+`matlab/examples/run_bulk_example.m`; exercised by `tests/tExport.m`).
 See `MATLAB_BUILD_GUIDE.md`.

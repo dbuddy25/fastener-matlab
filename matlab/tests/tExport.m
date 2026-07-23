@@ -1,11 +1,15 @@
 classdef tExport < matlab.unittest.TestCase
     %TEXPORT  Phase 3.6 acceptance: engine.runBulk + report.exportResults.
     %   The one-call headless workflow (files in -> results table ->
-    %   .xlsx out) must run end to end on the bundled template CSVs,
-    %   default its factors to model.Factors() when the argument is
-    %   omitted, and write an .xlsx that reads back with the same row
-    %   count. The numbers themselves are already pinned by tBulk /
-    %   tBulkParsers — this suite covers the orchestration + export shell.
+    %   .xlsx out) must run end to end on the bundled template CSVs with
+    %   the settings file supplying the global temperatures + factors
+    %   (T = engine.runBulk(jointFile, elementsFile, settingsFile,
+    %   outFile)), fall back to model.Factors() defaults when the settings
+    %   argument is empty/omitted (including the backward-tolerant
+    %   model.Factors object in that slot), and write an .xlsx that reads
+    %   back with the same row count. The numbers themselves are already
+    %   pinned by tBulk / tBulkParsers — this suite covers the
+    %   orchestration + export shell.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -29,12 +33,13 @@ classdef tExport < matlab.unittest.TestCase
 
     methods (Test)
         function runBulkEndToEnd(testCase)
-            % Templates in, results table out — one call, no error, the
-            % documented column set, and the DABJ template rows analyze
-            % clean. (Default factors: the two-argument call.)
+            % Templates in (joints + elements + settings), results table
+            % out — one call, no error, the documented column set, and the
+            % DABJ template rows analyze clean.
             T = engine.runBulk( ...
                 tExport.templatePath("joint_library_template.csv"), ...
-                tExport.templatePath("elements_template.csv"));
+                tExport.templatePath("elements_template.csv"), ...
+                tExport.templatePath("settings_template.csv"));
 
             testCase.verifyClass(T, "table");
             testCase.assertGreaterThan(height(T), 0);
@@ -63,7 +68,8 @@ classdef tExport < matlab.unittest.TestCase
             % sheet, which is written first).
             T = engine.runBulk( ...
                 tExport.templatePath("joint_library_template.csv"), ...
-                tExport.templatePath("elements_template.csv"));
+                tExport.templatePath("elements_template.csv"), ...
+                tExport.templatePath("settings_template.csv"));
 
             f = string(tempname) + ".xlsx";
             testCase.addTeardown(@() deleteIfPresent(f));
@@ -76,23 +82,30 @@ classdef tExport < matlab.unittest.TestCase
         end
 
         function runBulkDefaultFactors(testCase)
-            % Omitting factors must behave exactly like passing the
-            % built-in default preset, model.Factors().
+            % With the settings argument omitted (or empty), runBulk must
+            % behave exactly like the built-in default preset
+            % model.Factors() with the joints' own temperatures — and the
+            % backward-tolerant model.Factors object in the settings slot
+            % must match too.
             jf = tExport.templatePath("joint_library_template.csv");
             ef = tExport.templatePath("elements_template.csv");
 
-            Tdef = engine.runBulk(jf, ef);
-            Texp = engine.runBulk(jf, ef, model.Factors());
+            Tdef = engine.runBulk(jf, ef);                    % omitted
+            Temp = engine.runBulk(jf, ef, "");                % empty
+            Tfac = engine.runBulk(jf, ef, model.Factors());   % legacy slot
 
             testCase.verifyClass(Tdef, "table");
-            testCase.assertEqual(height(Tdef), height(Texp));
-            % Same margins from both calls (row 1 analyzes clean, so the
-            % values are real numbers, not NaN)
-            testCase.verifyEqual(Tdef.WorstMargin(1), Texp.WorstMargin(1), ...
+            testCase.assertEqual(height(Tdef), height(Temp));
+            testCase.assertEqual(height(Tdef), height(Tfac));
+            % Same margins from all three calls (row 1 analyzes clean, so
+            % the values are real numbers, not NaN)
+            testCase.verifyEqual(Tdef.WorstMargin(1), Temp.WorstMargin(1), ...
                 "AbsTol", 1e-12);
-            testCase.verifyEqual(Tdef.TensionUlt(1), Texp.TensionUlt(1), ...
+            testCase.verifyEqual(Tdef.WorstMargin(1), Tfac.WorstMargin(1), ...
                 "AbsTol", 1e-12);
-            testCase.verifyEqual(Tdef.GoverningCheck(1), Texp.GoverningCheck(1));
+            testCase.verifyEqual(Tdef.TensionUlt(1), Temp.TensionUlt(1), ...
+                "AbsTol", 1e-12);
+            testCase.verifyEqual(Tdef.GoverningCheck(1), Temp.GoverningCheck(1));
         end
     end
 end

@@ -1,23 +1,38 @@
 % +DATA  Data layer — hardware/material library, bulk table parsers,
-%        case save/load (JSON, later).
+%        global settings, case save/load (JSON, later).
 %
 %   Library          - catalog loader: data.Library.load() serves +model objects
-%                      by key via bolt(key)/material(key)/boltSpec(key). Phase 2.2.
+%                      by key via bolt(key)/material(key)/boltSpec(key);
+%                      boltSpecFor(boltKey, materialKey) auto-matches a
+%                      boltSpec to a bolt + material pair (or []). Phase 2.2.
 %   library.json     - the bundled library, seeded with the DABJ Section 9
 %                      validation case; self-describing (schemaVersion + units
 %                      block: in, lbf, psi, degC, 1/degC).
-%   loadJointLibrary - bulk parser: joint-definition table (.csv/.xlsx, one row
-%                      per joint; library keys resolved through a data.Library)
-%                      -> struct array of {Name, model.Joint}. Phase 3.5b.
+%   loadJointLibrary - bulk parser: joint-table (.csv/.xlsx, one row per
+%                      joint; library keys resolved through a data.Library)
+%                      -> struct array of {Name, model.Joint}. Header-row
+%                      auto-detect (tolerates a friendly banner row above
+%                      the MATLAB names); AxialX/Y/Z bolt-direction marks;
+%                      boltSpec auto-lookup for the rated loads; On-gated
+%                      washers; Nut*/Helicoil* threaded-member columns.
+%                      NO temperature columns — temps are global settings.
+%                      Phase 3.5b (new joint-table layout in Step 2a).
 %   loadElements     - bulk parser: element + forces table (element_id,
 %                      joint_name, pattern_id, load_case, FX..MZ, scale,
 %                      reversible) -> struct array for engine.resolveForces;
 %                      pattern_id (optional) tags the physical bolt pattern
 %                      for joint-slip aggregation in engine.analyzeBulk.
 %                      Phase 3.5b (+3.5d pattern_id).
-%   templates/       - joint_library_template.csv + elements_template.csv: the
-%                      exact column headers, with the DABJ Section 9 joint as
-%                      the first joint-template row (doubles as the
+%   loadSettings     - GLOBAL settings: small key/value table (.csv/.xlsx)
+%                      -> struct with NominalTempC/HotTempC/ColdTempC and a
+%                      model.Factors (FSU/FSY/FSSep/FSSlip/FFU/FFY/FFSep/
+%                      FFSlip keys; missing -> Factors defaults). Applied
+%                      to every joint by engine.runBulk. Step 2a.
+%   templates/       - joint_library_template.csv + elements_template.csv +
+%                      settings_template.csv: the exact column headers/keys,
+%                      with the DABJ Section 9 joint as the first
+%                      joint-template row and the Section 9 temperatures +
+%                      factors in the settings template (doubles as the
 %                      tBulkParsers fixture).
 %
 %   Still to come (Phase 3): analysis-case JSON round-trip; factor presets

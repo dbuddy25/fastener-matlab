@@ -1,19 +1,34 @@
-function T = runBulk(jointLibFile, elementsFile, factors, outFile)
+function T = runBulk(jointFile, elementsFile, settingsFile, outFile)
 %RUNBULK  One-call headless bulk workflow: files in -> margins out (Phase 3.6).
-%   T = engine.runBulk(jointLibFile, elementsFile, factors, outFile) runs
+%   T = engine.runBulk(jointFile, elementsFile, settingsFile, outFile) runs
 %   the whole headless pipeline in one call:
 %
-%       library load -> parse joints -> parse elements -> analyze -> export
+%       library load -> parse joints -> parse settings -> apply global
+%       temps -> parse elements -> analyze -> export
 %
 %   Inputs:
-%       jointLibFile  joint-definition table (.csv/.xlsx) for
+%       jointFile     joint-definition table (.csv/.xlsx) for
 %                     data.loadJointLibrary (template:
 %                     templates/joint_library_template.csv)
 %       elementsFile  element + forces table (.csv/.xlsx) for
 %                     data.loadElements (template:
 %                     templates/elements_template.csv)
-%       factors       model.Factors (optional; omitted or [] -> the
-%                     built-in default preset, model.Factors())
+%       settingsFile  GLOBAL settings file (.csv/.xlsx) for
+%                     data.loadSettings (template:
+%                     templates/settings_template.csv). Supplies the
+%                     analysis temperatures AND the safety/fitting factors:
+%                       - NominalTempC/HotTempC/ColdTempC are applied to
+%                         EVERY joint (ReferenceTemperature/MaxTemperature/
+%                         MinTemperature) before analysis — the joint table
+%                         carries no temperature columns
+%                       - FSU/FSY/FSSep/FSSlip/FFU/FFY/FFSep/FFSlip build
+%                         the model.Factors used for every element
+%                     Empty ("" / []) or omitted -> model.Factors() defaults
+%                     and the joints' own temperatures (model default 20
+%                     degC) are left as-is. Backward-tolerant: a
+%                     model.Factors object in this slot (the pre-Settings
+%                     signature) is used directly as the factors, with
+%                     temperatures likewise left as-is.
 %       outFile       optional .xlsx/.csv path; when given, the results
 %                     table is also written via report.exportResults
 %
@@ -26,27 +41,40 @@ function T = runBulk(jointLibFile, elementsFile, factors, outFile)
 %
 %   Headless usage (the Headless Release in one line):
 %       T = engine.runBulk("joint_library.csv", "elements.csv", ...
-%                          model.Factors(), "margins.xlsx");
+%                          "settings.csv", "margins.xlsx");
 %
 %   Orchestration only — every number comes from the already-validated
-%   pieces (data.loadJointLibrary / data.loadElements / engine.analyzeBulk
-%   / report.exportResults).
+%   pieces (data.loadJointLibrary / data.loadSettings / data.loadElements
+%   / engine.analyzeBulk / report.exportResults).
 
 arguments
-    jointLibFile (1,1) string
+    jointFile    (1,1) string
     elementsFile (1,1) string
-    factors                    = model.Factors()
-    outFile      (1,1) string  = ""
-end
-
-if isempty(factors)
-    factors = model.Factors();   % explicit [] -> built-in default preset
+    settingsFile              = ""
+    outFile      (1,1) string = ""
 end
 
 lib = data.Library.load();
-jl  = data.loadJointLibrary(jointLibFile, lib);
+jl  = data.loadJointLibrary(jointFile, lib);
 el  = data.loadElements(elementsFile);
-T   = engine.analyzeBulk(jl, el, factors);
+
+if isa(settingsFile, "model.Factors")
+    factors = settingsFile;        % legacy: a Factors object in the settings slot
+elseif isempty(settingsFile) || strlength(string(settingsFile)) == 0
+    factors = model.Factors();     % no settings -> defaults, temps as-is
+else
+    s = data.loadSettings(string(settingsFile));
+    factors = s.Factors;
+    for i = 1:numel(jl)            % global temperatures onto every joint
+        j = jl(i).Joint;
+        j.ReferenceTemperature = s.NominalTempC;
+        j.MaxTemperature       = s.HotTempC;
+        j.MinTemperature       = s.ColdTempC;
+        jl(i).Joint = j;
+    end
+end
+
+T = engine.analyzeBulk(jl, el, factors);
 
 if strlength(outFile) > 0
     report.exportResults(T, outFile);

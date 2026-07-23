@@ -119,12 +119,17 @@
 %                      ✅ Phase 3.5c/3.5d — end-to-end reproduces the DABJ
 %                      §9 per-bolt margins AND the §9 joint-slip -0.65
 %                      from a four-element pattern (tests/tBulk.m).
-%   runBulk          - One-call headless workflow: library load ->
-%                      data.loadJointLibrary + data.loadElements ->
+%   runBulk          - One-call headless workflow:
+%                      runBulk(jointFile, elementsFile, settingsFile,
+%                      outFile) — library load -> data.loadJointLibrary +
+%                      data.loadSettings (global temps applied to every
+%                      Joint + the factors) + data.loadElements ->
 %                      analyzeBulk -> optional report.exportResults.
-%                      Factors optional (default model.Factors());
+%                      settingsFile optional (empty/omitted -> default
+%                      model.Factors(), temps as-is; a model.Factors
+%                      object in the slot is accepted for back-compat);
 %                      orchestration only. The Headless Release entry
 %                      point — see matlab/examples/run_bulk_example.m.
-%                      ✅ Phase 3.6 (tests/tExport.m).
+%                      ✅ Phase 3.6 (tests/tExport.m; Step 2a settings).
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

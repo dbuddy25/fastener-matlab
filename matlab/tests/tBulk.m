@@ -1,14 +1,21 @@
 classdef tBulk < matlab.unittest.TestCase
     %TBULK  Phase 3.5c/3.5d acceptance: engine.analyzeBulk end-to-end.
-    %   The full bulk pipeline — data.loadJointLibrary (template CSV) ->
+    %   The full bulk pipeline — data.loadJointLibrary (template CSV, new
+    %   joint-table layout) + data.loadSettings (global temps + factors) ->
     %   engine.loadCaseFromForces -> engine.analyze — must reproduce the
     %   DABJ Section 9 per-bolt margins in a results-table row, handle a
     %   missing joint without throwing, and emit the documented table shape.
     %
+    %   Temperatures are GLOBAL now: the joint table carries no temperature
+    %   columns, so each test applies the settings-template temps
+    %   (NominalTempC/HotTempC/ColdTempC -> Reference/Max/MinTemperature) to
+    %   the parsed joints exactly the way engine.runBulk does, and uses the
+    %   settings-built factors (the DABJ set) for the analysis.
+    %
     %   The DABJ element's forces are chosen so the bolt-axis resolution
-    %   lands exactly on the book's per-bolt limit loads: BoltAxis = Z, so
-    %   FZ = 5590 -> PtL and FX = 1560 (FY = 0) -> PsL RSS = 1560
-    %   (Solutions-6).
+    %   lands exactly on the book's per-bolt limit loads: BoltAxis = Z (the
+    %   AxialZ mark in the template), so FZ = 5590 -> PtL and FX = 1560
+    %   (FY = 0) -> PsL RSS = 1560 (Solutions-6).
     %
     %   Joint-mode slip (Phase 3.5d): analyzeBulk aggregates the BOLT
     %   PATTERN (same PatternId-or-JointName + load case), vector-sums the
@@ -35,6 +42,25 @@ classdef tBulk < matlab.unittest.TestCase
             testDir = fileparts(mfilename("fullpath"));   % .../matlab/tests
             srcDir  = fileparts(testDir);                 % .../matlab
             p = string(fullfile(srcDir, "templates", name));
+        end
+
+        function [jl, s] = dabjLibraryWithSettings()
+            %DABJLIBRARYWITHSETTINGS  Template joints + settings, temps applied.
+            %   Parses the joint template, loads the settings template, and
+            %   applies the global temperatures to every joint — the same
+            %   pre-analysis step engine.runBulk performs.
+            lib = data.Library.load();
+            jl  = data.loadJointLibrary( ...
+                tBulk.templatePath("joint_library_template.csv"), lib);
+            s   = data.loadSettings( ...
+                tBulk.templatePath("settings_template.csv"));
+            for i = 1:numel(jl)
+                j = jl(i).Joint;
+                j.ReferenceTemperature = s.NominalTempC;
+                j.MaxTemperature       = s.HotTempC;
+                j.MinTemperature       = s.ColdTempC;
+                jl(i).Joint = j;
+            end
         end
 
         function el = dabjElement()
@@ -70,15 +96,14 @@ classdef tBulk < matlab.unittest.TestCase
     methods (Test)
         function bulkReproducesDABJPerBoltMargins(testCase)
             % Template joint library (row 1 IS the §9 joint, including the
-            % ThermalRate = 12.978 lbf/degC override) + one in-code element
-            % carrying the §9 per-bolt loads + the book's factors -> the
-            % bulk row must match the published per-bolt margins.
-            lib = data.Library.load();
-            jl  = data.loadJointLibrary( ...
-                tBulk.templatePath("joint_library_template.csv"), lib);
-            c   = validation.dabjSection9();   % same Factors + answer key
+            % ThermalRate = 12.978 lbf/degC override) + the settings
+            % template (global temps + the DABJ factors) + one in-code
+            % element carrying the §9 per-bolt loads -> the bulk row must
+            % match the published per-bolt margins.
+            [jl, s] = tBulk.dabjLibraryWithSettings();
+            c = validation.dabjSection9();   % the answer key
 
-            T = engine.analyzeBulk(jl, tBulk.dabjElement(), c.Factors);
+            T = engine.analyzeBulk(jl, tBulk.dabjElement(), s.Factors);
             testCase.assertEqual(height(T), 1);
 
             % Clean run: resolved per-bolt loads and no error
@@ -113,12 +138,10 @@ classdef tBulk < matlab.unittest.TestCase
             % Eq. 84 reproduces the book's joint-slip margin on every row:
             % MS = 4*0.1*6,469.75 / (1.0*(5,690 + 0.1*16,090)) - 1 = -0.65
             % (Solutions-23) — the deliberate failing margin, governing.
-            lib = data.Library.load();
-            jl  = data.loadJointLibrary( ...
-                tBulk.templatePath("joint_library_template.csv"), lib);
-            c   = validation.dabjSection9();
+            [jl, s] = tBulk.dabjLibraryWithSettings();
+            c = validation.dabjSection9();
 
-            T = engine.analyzeBulk(jl, tBulk.dabjPatternElements(), c.Factors);
+            T = engine.analyzeBulk(jl, tBulk.dabjPatternElements(), s.Factors);
             testCase.assertEqual(height(T), 4);
             tol = c.Tol.MarginAbsTol;
             for k = 1:4
@@ -141,16 +164,13 @@ classdef tBulk < matlab.unittest.TestCase
             % match Joint.BoltCount = 4, so the nf check refuses joint slip
             % on every row (Slip NaN + Note) while the per-bolt margins
             % still evaluate (Error stays "").
-            lib = data.Library.load();
-            jl  = data.loadJointLibrary( ...
-                tBulk.templatePath("joint_library_template.csv"), lib);
-            c   = validation.dabjSection9();
+            [jl, s] = tBulk.dabjLibraryWithSettings();
 
             els = tBulk.dabjPatternElements();
             [els(1:2).PatternId] = deal("A");
             [els(3:4).PatternId] = deal("B");
 
-            T = engine.analyzeBulk(jl, els, c.Factors);
+            T = engine.analyzeBulk(jl, els, s.Factors);
             testCase.assertEqual(height(T), 4);
             for k = 1:4
                 testCase.verifyEqual(T.Error(k), "");
@@ -164,16 +184,13 @@ classdef tBulk < matlab.unittest.TestCase
         function bulkHandlesMissingJoint(testCase)
             % An element referencing a nonexistent joint gets an Error row
             % (margins NaN) — the batch must NOT throw.
-            lib = data.Library.load();
-            jl  = data.loadJointLibrary( ...
-                tBulk.templatePath("joint_library_template.csv"), lib);
-            c   = validation.dabjSection9();
+            [jl, s] = tBulk.dabjLibraryWithSettings();
 
             el = tBulk.dabjElement();
             el.ElementId = "9002";
             el.JointName = "No such joint";
 
-            T = engine.analyzeBulk(jl, el, c.Factors);
+            T = engine.analyzeBulk(jl, el, s.Factors);
             testCase.assertEqual(height(T), 1);
             testCase.verifyEqual(T.ElementId(1), "9002");
             testCase.verifyGreaterThan(strlength(T.Error(1)), 0);
@@ -185,17 +202,14 @@ classdef tBulk < matlab.unittest.TestCase
 
         function bulkResultsTableShape(testCase)
             % One row per element; the documented column set, in order.
-            lib = data.Library.load();
-            jl  = data.loadJointLibrary( ...
-                tBulk.templatePath("joint_library_template.csv"), lib);
-            c   = validation.dabjSection9();
+            [jl, s] = tBulk.dabjLibraryWithSettings();
 
             good = tBulk.dabjElement();
             bad  = tBulk.dabjElement();
             bad.ElementId = "9002";
             bad.JointName = "No such joint";
 
-            T = engine.analyzeBulk(jl, [good, bad], c.Factors);
+            T = engine.analyzeBulk(jl, [good, bad], s.Factors);
             testCase.verifyClass(T, "table");
             testCase.assertEqual(height(T), 2);
 

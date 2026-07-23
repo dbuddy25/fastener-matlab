@@ -77,20 +77,38 @@ else max(axial, 0) — compression doesn't load the bolt in tension; PsL =
 shear; `ScaleFactor` applied before resolution; joint-level loads stay NaN
 — multi-bolt totals come from the mapping table in 3.5b). Hand-derived
 3-4-5 pins in `tests/tForces.m`.
-✅ Phase 3.5b adds the bulk input parsers — `data.loadJointLibrary(file, lib)`
-reads a joint-definition table (.csv/.xlsx, one row per joint;
-case-insensitive columns, blanks keep model defaults; Bolt / BoltMaterial /
-BoltSpec / HostMaterial / Flange{k}Material cells are LIBRARY KEYS resolved
-through `data.Library`; ThreadEngagement accepts inches or a "1.5D"
-diameter-multiple) into `{Name, model.Joint}` structs, and
-`data.loadElements(file)` reads an element + forces table
-(`element_id`, `joint_name`, `load_case`, FX..MZ, `scale`, `reversible`)
-into the struct `engine.resolveForces` consumes. Template CSVs with the
-exact headers ship at `+data/templates/`; the joint template's first row is
-the DABJ §9 class-problem joint expressed in the schema, checked against
-the `validation.dabjSection9` in-code build by `tests/tBulkParsers.m`
-(including a `ThermalRate` column → `PreloadSpec.ThermalRate` override so
-the template's thermal preload needs no stiffness geometry).
+✅ Phase 3.5b adds the bulk input parsers (reworked in Step 2a to the
+joint-table layout + global Settings) — `data.loadJointLibrary(file, lib)`
+reads a joint-table (.csv/.xlsx, one row per joint; case-insensitive
+columns, blanks keep model defaults; Bolt / BoltMaterial / BoltSpec /
+NutMaterial / HelicoilParentMaterial / washer + Flange{k}Material cells are
+LIBRARY KEYS resolved through `data.Library`) into `{Name, model.Joint}`
+structs. Layout highlights: HEADER-ROW AUTO-DETECT (the reader scans for
+the row best matching the known column-name set, so a friendly banner row
+above the MATLAB names is tolerated); the bolt direction is marked in one
+of three `AxialX`/`AxialY`/`AxialZ` cells (none → default Z, more than one
+→ error); the rated loads AUTO-LOOK-UP a library boltSpec matching the
+row's Bolt+BoltMaterial (`lib.boltSpecFor`), with an optional explicit
+`BoltSpec` override; washers are On-gated blocks
+(`{Head,Nut}WasherOn/Material/OD/ID/Thickness`); the threaded member reads
+`NutHeight`/`NutMaterial`/`NutDiameter` (Nut) or `HelicoilParentName`/
+`HelicoilParentMaterial`/`HelicoilLengthRatio` (Insert; engagement = ratio
+× nominal diameter); preload is `NutFactor`/`Uncertainty`/`PreloadLoss`/
+`NominalTorque`/`TorqueTolerance` (+ optional `ThermalRate`). The joint
+table carries NO temperature columns — temperatures are GLOBAL:
+`data.loadSettings(file)` reads a small key/value settings table
+(NominalTempC/HotTempC/ColdTempC + FSU/FSY/FSSep/FSSlip/FFU/FFY/FFSep/
+FFSlip → a `model.Factors`) and `engine.runBulk` applies the temps to
+every Joint before analysis. `data.loadElements(file)` reads an element +
+forces table (`element_id`, `joint_name`, `load_case`, FX..MZ, `scale`,
+`reversible`) into the struct `engine.resolveForces` consumes. Template
+CSVs with the exact headers ship at `matlab/templates/`; the joint
+template's first row is the DABJ §9 class-problem joint expressed in the
+schema and the settings template carries the §9 temperatures + factors,
+checked against the `validation.dabjSection9` in-code build by
+`tests/tBulkParsers.m` (including a `ThermalRate` column →
+`PreloadSpec.ThermalRate` override so the template's thermal preload needs
+no stiffness geometry).
 ✅ Phase 3.5c adds the bulk orchestrator — `engine.analyzeBulk(jointLibrary,
 elements, factors)` maps `loadCaseFromForces` → `analyze` over every
 element and returns a writetable-ready results table, one row per element:
@@ -122,10 +140,13 @@ scope as Eq. 84 itself (resultant force only).
 `.xlsx` (a Results sheet + a Summary sheet with total/Pass/Fail/Error
 counts) or `.csv` by extension, returning the resolved path (thin by
 design — the table is already export-ready; PDF comes later, Phase 3.8).
-`engine.runBulk(jointLibFile, elementsFile, factors, outFile)` is the
+`engine.runBulk(jointFile, elementsFile, settingsFile, outFile)` is the
 one-call headless workflow — library load → `loadJointLibrary` +
-`loadElements` → `analyzeBulk` → optional `exportResults` — with factors
-defaulting to `model.Factors()`. A runnable reference script lives at
+`loadSettings` (global temps applied to every Joint + the factors) +
+`loadElements` → `analyzeBulk` → optional `exportResults`. The settings
+argument is optional: empty/omitted → `model.Factors()` defaults with the
+joints' own temperatures, and a `model.Factors` object in the slot is
+accepted for back-compat. A runnable reference script lives at
 `matlab/examples/run_bulk_example.m` (runs the bundled templates, writes
 `bulk_results.xlsx` next to itself). The headless data flow is now fully
 realized end to end: files in → margins out (`tests/tExport.m`).
@@ -185,11 +206,14 @@ The single flow everything is organized around:
   → a `model.LoadCase` → `engine.analyze(joint, lc, factors)`. Each FEM
   element models one bolt (CBUSH); the resolution is a pure axis projection
   + RSS, no bolt-pattern moment distribution.
-- **Bulk (table input — ✅ 3.5b):** `data.loadJointLibrary(file, lib)` turns a
-  joint-definition table into `model.Joint` objects (library keys resolved via
-  `data.Library`), and `data.loadElements(file)` turns an element + forces table
-  into the per-element struct for `engine.resolveForces`. Template CSVs with the
-  exact column headers ship at `+data/templates/`.
+- **Bulk (table input — ✅ 3.5b, Step 2a layout):** `data.loadJointLibrary(file, lib)`
+  turns a joint-table into `model.Joint` objects (library keys resolved via
+  `data.Library`; header-row auto-detect, AxialX/Y/Z direction marks, boltSpec
+  auto-lookup, On-gated washers), `data.loadSettings(file)` supplies the GLOBAL
+  temperatures + `model.Factors`, and `data.loadElements(file)` turns an
+  element + forces table into the per-element struct for
+  `engine.resolveForces`. Template CSVs with the exact column headers ship at
+  `matlab/templates/`.
 - **Bulk (orchestrator — ✅ 3.5c/3.5d):** the same flow mapped over many elements
   → a results table: `engine.analyzeBulk(jointLibrary, elements, factors)` — one
   row per element (identity + resolved Axial/Shear + the 15 margin MS columns +
@@ -207,7 +231,7 @@ one call end to end:
 
 ```matlab
 T = engine.runBulk("my_joints.csv", "my_elements.csv", ...   % ✅ 3.6 — the whole pipeline
-                   model.Factors(), "margins.xlsx");
+                   "my_settings.csv", "margins.xlsx");
 ```
 
 which is exactly this flow, each piece independently usable:
@@ -215,8 +239,11 @@ which is exactly this flow, each piece independently usable:
 ```matlab
 lib     = data.Library.load();                          % ✅ 2.2  — hardware/material catalog
 jl      = data.loadJointLibrary("my_joints.csv", lib);  % ✅ 3.5b — table → model.Joint per row
+s       = data.loadSettings("my_settings.csv");         % ✅ 2a   — global temps + factors
+                                                        %          (runBulk applies the temps
+                                                        %           to every jl(i).Joint)
 el      = data.loadElements("my_elements.csv");         % ✅ 3.5b — element forces table
-results = engine.analyzeBulk(jl, el, factors);          % ✅ 3.5c — all 15 margins per element
+results = engine.analyzeBulk(jl, el, s.Factors);        % ✅ 3.5c — all 15 margins per element
 report.exportResults(results, "margins.xlsx");          % ✅ 3.6  — answers out (+Summary sheet)
 ```
 
@@ -235,7 +262,7 @@ matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
 ├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); `analyzeBulk` (3.5c) — the bulk orchestrator; `runBulk` (3.6) — the one-call headless workflow
-├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b); ⏳ case save/load — Phase 3
+├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b — Step 2a joint-table layout); global settings (`loadSettings` — temps + factors, Step 2a); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ✅ XLSX export (`exportResults`, 3.6); ⏳ PDF — Phase 3.8
 ├── +gui/            ⏳ App Designer app (thin shell)        — Phase 4
