@@ -6,7 +6,7 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 1 (Foundation — skeleton + data model).** No analysis
+**Current state: through Phase 2.1 (model finalization).** No analysis
 math exists yet.
 
 ---
@@ -42,7 +42,7 @@ The single flow everything is organized around:
 
 ```
   model.Joint + model.LoadCase + model.Factors  ──▶  engine.analyze(joint, loadCase, factors)
-        (✅ Joint; ⏳ 2.1)                                    (⏳ 2.9 solver)
+        (✅ Phase 2.1)                                       (⏳ 2.9 solver)
                                                                   │
                                               engine.Result  ──▶  report / gui
                                             (⏳ result object)   (⏳ Phases 3–4)
@@ -50,7 +50,7 @@ The single flow everything is organized around:
 
 - **Input:** one `model.Joint` — a fully-described joint (✅ you can build this today) —
   plus a `model.LoadCase` (the applied loads) and `model.Factors` (safety + fitting
-  factors), both passed to `analyze()` rather than stored on the Joint (⏳ Phase 2.1).
+  factors), both passed to `analyze()` rather than stored on the Joint (✅ Phase 2.1).
 - **Engine:** resolves loads, computes preload/stiffness, runs all 15 margin checks,
   applies the interaction and separation logic. (⏳ built up piece by piece, Phases 2–3.)
 - **Output:** one `engine.Result` object — the 15 margins, each with pass/fail status
@@ -98,33 +98,27 @@ Package classes reference each other with the `model.` / `engine.` prefix.
 
 ---
 
-## 4. The domain model (`+model`) — ✅ built (Phase 1)
+## 4. The domain model (`+model`) — ✅ built (Phases 1 + 2.1)
 
 The vocabulary the whole engine speaks. All are **value classes** with name-value
-constructors, input validation, and unit comments (see `UNITS.md`).
+constructors, input validation, and unit comments (see `UNITS.md`). Physical
+inputs that have no sensible default use **NaN** ("unconfigured") with
+NaN-tolerant validators, so garbage fails loud instead of silently defaulting.
 
 | Type | What it is | Notable fields |
 |------|-----------|----------------|
-| `Bolt` | Bolt geometry + threads (no material) | `NominalDiameter`, `ThreadsPerInch`, `TensileStressArea`; computed `Pitch` |
+| `Bolt` | Bolt geometry + threads (no material) | `NominalDiameter`, `ThreadsPerInch`, `TensileStressArea`, `MinorDiameter`, `BodyDiameter`; computed `Pitch`, `MinorArea`, `BodyArea` |
 | `Material` | Strength + thermal props, any role | `Ftu`,`Fty`,`Fsu`,`Fbru`,`Fbry`,`E`,`CTE` |
 | `ThreadedMember` | What the bolt threads into | `Type` (Nut/Insert/TappedHole), `Material`, `RatedUltimateLoad` |
 | `FlangeLayer` | One layer of the clamped stack | `Material`, `Thickness` |
-| `Joint` | The whole joint, ties it together | `Bolt`, `BoltMaterial`, `FlangeStack`, `ThreadedMember`, `Preload`, temps, `ShearPlane`; computed `GripLength` |
+| `Joint` | The whole joint, ties it together | `Bolt`, `BoltMaterial`, `FlangeStack`, `ThreadedMember`, `PreloadSpec`, `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, bolt spec allowables, temps (order-validated), `ShearPlane`; computed `GripLength` |
+| `PreloadSpec` | Full preload definition (✅ Phase 2.1) | **Replaced the scalar `Preload`** on `Joint`: `Method` (TorqueControl/DirectPreload), torque min/max, nut factor K, `Uncertainty` Γ, relaxation/creep, `ThermalRate`, `SeparationCritical`, `NominalPreload` |
+| `LoadCase` | Applied loads for one case (✅ Phase 2.1) | Per-bolt + joint-level limit loads (joint-level NaN → engine derives); **passed to `analyze()`, not stored on the Joint** |
+| `Factors` | Safety + fitting factors (✅ Phase 2.1) | `FSU`,`FSY`,`FSSep`,`FFU`,`FFY`,`FFSep`,`FSSlip` (DABJ defaults); also passed to `analyze()`, not stored on the Joint |
 | `ThreadSeries` | enum | `UNC`, `UNF` |
 | `ThreadedMemberType` | enum | `Nut`, `Insert`, `TappedHole` |
 | `ShearPlaneCondition` | enum | `ThreadsInShear`, `BodyInShear` |
-
-### Planned additions — ⏳ Phase 2.1 (model finalization)
-
-| Type | What it is | Notes |
-|------|-----------|-------|
-| `PreloadSpec` | Full preload definition | **Replaces the scalar `Preload`** on `Joint`: torque min/max, nut factor K, uncertainty Γ, relaxation/creep, thermal |
-| `LoadCase` | Applied loads for one case | Per-bolt + joint-level loads; **passed to `analyze()`, not stored on the Joint** |
-| `Factors` | Safety + fitting factors | Also passed to `analyze()`, not stored on the Joint |
-
-Plus field additions: `Joint` gains `BoltCount`, `FrictionCoefficient`,
-`LoadingPlaneFactor`, and bolt spec allowables; `Bolt` gains `MinorDiameter` and
-`BodyDiameter` (with dependent `MinorArea`/`BodyArea`).
+| `PreloadMethod` | enum (✅ Phase 2.1) | `TorqueControl`, `DirectPreload` |
 
 **Why one `Material` for every role:** a bolt material and a flange material are the
 same *kind* of thing; flanges just also use the bearing fields (`Fbru`/`Fbry`) that
@@ -174,8 +168,8 @@ Phase 2.2), not a type.
 | Layer / capability | Phase | Status |
 |--------------------|-------|--------|
 | Skeleton + domain model (`+model`) | 1 — Foundation | ✅ |
-| Model finalization (`PreloadSpec`, `LoadCase`, `Factors`) | 2.1 | ⏳ next |
-| Library seed (`+data`) | 2.2 | ⏳ |
+| Model finalization (`PreloadSpec`, `LoadCase`, `Factors`) | 2.1 | ✅ |
+| Library seed (`+data`) | 2.2 | ⏳ next |
 | Validation answer key (DABJ §9) | 2.3 | ⏳ |
 | Preload + core margins | 2.4–2.8 | ⏳ |
 | Single-joint solver + `Result` | 2.9 | ⏳ |

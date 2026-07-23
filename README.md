@@ -55,9 +55,9 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 1 — Foundation** complete: project skeleton plus the `+model` data model.
+**Phase 2.1 (model finalization) complete; next Phase 2.2 (seed the library).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
-`Joint`, and the enums (`ThreadSeries`, `ThreadedMemberType`,
-`ShearPlaneCondition`); a full joint constructs in the Command Window (see
-`+model/Joint.m`, exercised by `tests/tModel.m`).
-Next: **Phase 2 — Validated single-joint engine.** See `MATLAB_BUILD_GUIDE.md`.
+`Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
+`ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
+constructs in the Command Window (see `+model/Joint.m`, exercised by
+`tests/tModel.m`). See `MATLAB_BUILD_GUIDE.md`.
