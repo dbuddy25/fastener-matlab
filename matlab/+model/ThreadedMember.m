@@ -1,17 +1,24 @@
 classdef ThreadedMember
     %THREADEDMEMBER  What the bolt threads into (nut, insert, or tapped hole).
-    %   For a Nut or Insert, RatedUltimateLoad is the spec-rated Pult
-    %   (per NASA-STD-5020B §4.2.2.8). For a TappedHole, Material is the PARENT
-    %   material and RatedUltimateLoad may be 0 — parent-thread-shear is
-    %   computed later (Phase 3.3).
+    %   For a Nut, RatedUltimateLoad is the spec-rated Pult (per NASA-STD-5020B
+    %   §4.2.2.8) and Material.Fsu drives the nut internal-thread-shear check
+    %   (engine.marginNutStrength). For an Insert, RatedUltimateLoad is the
+    %   MANUFACTURER rated pull-out load (Heli-Coil spec value) consumed by
+    %   engine.marginInsert. For a TappedHole, Material is the PARENT material
+    %   whose Fsu drives the parent-thread-shear check
+    %   (engine.marginTappedParentThread); RatedUltimateLoad may stay 0.
+    %   EngagementLength is the thread engagement Le (nut thread height /
+    %   tapped depth) used by the 0.75·pi·E·Le thread-shear areas (Phase 3.3).
     %
     %   tm = model.ThreadedMember(Type=model.ThreadedMemberType.Nut, ...
-    %                             Material=nutMat, RatedUltimateLoad=4080);
+    %                             Material=nutMat, RatedUltimateLoad=4080, ...
+    %                             EngagementLength=0.3);
 
     properties
         Type              (1,1) model.ThreadedMemberType = model.ThreadedMemberType.Nut
         Material          (1,1) model.Material = model.Material()   % nut/insert/parent material
-        RatedUltimateLoad (1,1) double {mustBeNonnegative} = 0      % spec-rated Pult, lbf
+        RatedUltimateLoad (1,1) double {mustBeNonnegative} = 0      % spec-rated Pult (nut) / rated pull-out (insert), lbf
+        EngagementLength  (1,1) double {mustBePositiveOrNaN} = NaN  % thread engagement Le, in (nut height / tapped depth)
     end
 
     methods

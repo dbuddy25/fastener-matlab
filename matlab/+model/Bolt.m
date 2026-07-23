@@ -14,6 +14,7 @@ classdef Bolt
         ThreadsPerInch    (1,1) double {mustBePositiveOrNaN} = NaN     % n (TPI)
         TensileStressArea (1,1) double {mustBePositiveOrNaN} = NaN     % At, in^2
         MinorDiameter     (1,1) double {mustBePositiveOrNaN} = NaN     % minor (thread-root) diameter, in
+        PitchDiameter     (1,1) double {mustBePositiveOrNaN} = NaN     % thread pitch diameter E, in (e.g. 3/8-24 UNF = 0.3479; #10-32 UNF = 0.1697)
         BodyDiameter      (1,1) double {mustBePositiveOrNaN} = NaN     % unthreaded shank diameter, in (NaN → use NominalDiameter)
         HeadBearingDiameter (1,1) double {mustBePositiveOrNaN} = NaN   % washer-face / head bearing dia d_wf, in
     end

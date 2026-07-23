@@ -17,18 +17,27 @@ function r = analyze(joint, loadCase, factors)
 %       Bearing            engine.marginBearing            NASA TM-106943 Eq. 72-74 (required by 5020B §4.4.2)
 %       Bearing-under-head engine.marginBearingUnderHead   NASA TM-106943 Eq. 74/75 + 5020B Eq. 8 (Pb)
 %       Shear-tearout      engine.marginShearTearout       NASA TM-106943 Eq. 69-71 (required by 5020B §4.4.2)
+%       Bolt-thread shear  engine.marginBoltThreadShear    TM-106943 Eq. 63/64/65, group As = 0.75·pi·E·Le form; Pb per 5020B Eq. 8
+%       Nut strength       engine.marginNutStrength        TM-106943 Eq. 76/77 + Eq. 65, group As form (Nut config only)
+%       Insert internal    engine.marginInsert             Heli-Coil rated pull-out, 5020B §4.4.1 (Insert config only)
+%       Tapped parent      engine.marginTappedParentThread TM-106943 Eq. 79 + Eq. 65, group As form (TappedHole config only)
 %   plus the Separation-before-rupture gate (NASA-STD-5020B Fig. 8), a
 %   boolean check reported as its own Margins row (Pass = assured) and as
 %   Result.Narrative.
 %
 %   The Margins array always advertises the FULL 15-check set (PRD 5.1);
-%   checks arriving in Phase 3.3 (bolt-thread shear, nut strength, insert
-%   internal/external thread, tapped-hole parent-thread) appear with
-%   MS = NaN and Status "NotEvaluated" — real results ship without fake
-%   numbers. The Phase 3.2 member checks likewise report NotEvaluated when
-%   their inputs are not configured (no EdgeDistance -> no tear-out; no
-%   HoleDiameter / stiffness geometry -> no bearing-under-head; no flange
-%   bearing allowables -> no bearing).
+%   every check reports NotEvaluated (MS = NaN) when its inputs are not
+%   configured — real results ship without fake numbers (no EdgeDistance
+%   -> no tear-out; no HoleDiameter / stiffness geometry -> no
+%   bearing-under-head; no flange bearing allowables -> no bearing; no
+%   PitchDiameter / EngagementLength / stiffness geometry -> no thread
+%   checks; no insert rating -> no insert check). The thread-stripping
+%   pair is covered by two rows — bolt-external (bolt Fsu) and the
+%   internal side (nut or parent Fsu) — the weaker side governs through
+%   the WorstMargin pick. The "Insert external-thread" row stays
+%   NotEvaluated by design: the group uses ONE manufacturer rated
+%   pull-out (carried on the "Insert internal-thread" row), not the
+%   TM-106943 three-mode insert split.
 %
 %   Status thresholds (bookkeeping, not equations): MS >= 0 -> "Pass",
 %   MS < 0 -> "Fail", NaN -> "NotEvaluated". WorstMargin is the minimum MS
@@ -44,7 +53,9 @@ function r = analyze(joint, loadCase, factors)
 %   NotEvaluated (no EdgeDistance/HoleDiameter/frustum geometry in the §9
 %   fixture); Bearing EVALUATES (passing, ~+5.77) because the library's
 %   Al 7075-T7351 carries handbook-fill Fbru/Fbry — it does not disturb
-%   the answer key (tests/tBearing.m pins this regression).
+%   the answer key (tests/tBearing.m pins this regression). The Phase 3.3
+%   thread checks all resolve NotEvaluated on §9 (no EngagementLength; no
+%   insert/tapped configuration) — pinned by tests/tThreadShear.m.
 
 arguments
     joint    (1,1) model.Joint
@@ -69,6 +80,17 @@ br = engine.marginBearing(joint, loadCase, factors);            % NASA TM-106943
 to = engine.marginShearTearout(joint, loadCase, factors);       % NASA TM-106943 Eq. 69-71 (shear tear-out; required by 5020B §4.4.2)
 bh = engine.marginBearingUnderHead(joint, loadCase, factors, p); % NASA TM-106943 Eq. 74/75 + 5020B Eq. 8 Pb = PpMax + n·phi·PtL
 
+% ---- The four thread-strength checks (Phase 3.3) -------------------------
+% Thread-stripping is checked on BOTH sides of the engagement with the
+% group's area form As = 0.75·pi·E·Le (E = pitch dia, Le = engagement):
+% bolt-external threads (bolt Fsu) and the internal side (nut or tapped
+% parent Fsu) — the weaker side governs via the WorstMargin pick. Inserts
+% use the manufacturer rated pull-out instead (single spec value).
+bt = engine.marginBoltThreadShear(joint, loadCase, factors, p);    % TM-106943 Eq. 63 (group 0.75·pi·E·Le form) + Eq. 64/65; Pb per 5020B Eq. 8
+ns = engine.marginNutStrength(joint, loadCase, factors, p);        % TM-106943 Eq. 76/77 + Eq. 65 (group form); Nut config only
+it = engine.marginInsert(joint, loadCase, factors, p);             % Heli-Coil rated pull-out (5020B §4.4.1); Insert config only
+tp = engine.marginTappedParentThread(joint, loadCase, factors, p); % TM-106943 Eq. 79 + Eq. 65 (group form); TappedHole config only
+
 % ---- Separation-before-rupture as its own row ----------------------------
 % The gate (NASA-STD-5020B Fig. 8 / DABJ Fig. 9-9) is boolean — it has no
 % numeric MS, so its Status comes from the gate result, not the NaN rule:
@@ -83,9 +105,11 @@ end
 
 % ---- The full 15-check set (PRD 5.1) -------------------------------------
 % Insert "failure modes" (PRD check 9) is advertised as its two thread
-% failure modes (internal = bolt/insert thread, external = insert/parent
-% pull-out), matching the reference Python tool's check set — that is what
-% brings the advertised set to 15 rows.
+% failure modes (internal/external), matching the reference Python tool's
+% check set — that is what brings the advertised set to 15 rows. The
+% group's method uses ONE manufacturer rated pull-out for the whole
+% insert, carried on the internal-thread row; the external-thread row is
+% therefore NotEvaluated by design (folded into the single rating).
 margins = [ ...
     entry("Tension-Ultimate", tu.MS, tu.Method, tu.Decision), ...
     entry("Tension-Yield",    ty.MS, ty.Method, ""), ...
@@ -97,11 +121,12 @@ margins = [ ...
     entry("Bearing",                   br.MS, br.Method, br.Detail), ...
     entry("Bearing-under-head",        bh.MS, bh.Method, bh.Detail), ...
     entry("Shear-tearout",             to.MS, to.Method, to.Detail), ...
-    entry("Bolt-thread shear",         NaN, "Bolt-thread shear — Phase 3.3", ""), ...
-    entry("Nut strength",              NaN, "Nut strength — Phase 3.3", ""), ...
-    entry("Insert internal-thread",    NaN, "Insert internal-thread — Phase 3.3", ""), ...
-    entry("Insert external-thread",    NaN, "Insert external-thread — Phase 3.3", ""), ...
-    entry("Tapped-hole parent-thread", NaN, "Tapped-hole parent-thread — Phase 3.3", "")];
+    entry("Bolt-thread shear",         bt.MS, bt.Method, bt.Detail), ...
+    entry("Nut strength",              ns.MS, ns.Method, ns.Detail), ...
+    entry("Insert internal-thread",    it.MS, it.Method, it.Detail), ...
+    entry("Insert external-thread",    NaN, ...
+        "Folded into the Heli-Coil rated pull-out (single manufacturer rating; see the Insert internal-thread row)", ""), ...
+    entry("Tapped-hole parent-thread", tp.MS, tp.Method, tp.Detail)];
 
 % ---- Worst margin / governing check (thresholds, not equations) ----------
 msAll   = [margins.MS];

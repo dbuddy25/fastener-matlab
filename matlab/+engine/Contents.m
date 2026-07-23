@@ -52,6 +52,34 @@
 %                      Eq. 8; required by 5020B §4.4.2).
 %                      ✍️ Phase 3.2 — hand-derived pin on the Ex 8-b
 %                      geometry (tests/tBearing.m).
+%   boltDesignLoad   - Design bolt load for the thread checks,
+%                      Pb = PpMax + FFU·FSU·n·phi·PtL (NASA-STD-5020B Eq. 8
+%                      form; phi = 1 assumed for threaded-in configs where
+%                      the stiffness frustum is deferred — conservative).
+%                      ✍️ Phase 3.3 — exercised through the thread checks
+%                      (tests/tThreadShear.m).
+%   marginBoltThreadShear - Bolt external-thread shear over the engagement,
+%                      the GROUP'S area form As = 0.75·pi·E·Le (E = pitch
+%                      dia, Le = engagement; TM-106943 Eq. 63 basis) with
+%                      Pult = Fsu·As, MS = Pult/Pb - 1 (Eq. 64/65).
+%                      ✍️ Phase 3.3 — hand-derived pin (tests/tThreadShear.m).
+%   marginNutStrength - Nut internal-thread shear (Nut config only), same
+%                      group 0.75·pi·E·Le area with the NUT material Fsu
+%                      (TM-106943 Eq. 76/77 basis + Eq. 65 MS).
+%                      ✍️ Phase 3.3 — hand-derived pin (tests/tThreadShear.m).
+%   marginInsert     - Insert pull-out from the MANUFACTURER rated load
+%                      (Heli-Coil spec value on ThreadedMember.
+%                      RatedUltimateLoad; NASA-STD-5020B §4.4.1) —
+%                      MS = rating/Pb - 1; Insert config only.
+%                      ✍️ Phase 3.3 — hand-derived pin (tests/tThreadShear.m).
+%   marginTappedParentThread - Tapped-hole PARENT-material thread shear
+%                      (TappedHole config only), group 0.75·pi·E·Le area
+%                      with the parent Fsu (TM-106943 Eq. 79 + Eq. 65) —
+%                      closes the long-standing tapped-hole gap.
+%                      ✅ Phase 3.3 — area/allowable cross-checked vs DABJ
+%                      Ex 6-a (0.0999 vs 0.0986 in^2; 2,698 vs 2,660 lb,
+%                      both within 1.5%); MS hand-derived
+%                      (tests/tThreadShear.m).
 %   summary          - Analysis inputs + computed preload band as one
 %                      display table (Group/Item/Value/Unit, one row per
 %                      item) — a human-readable record of what went in.
@@ -62,7 +90,6 @@
 %                      ✅ Phase 3.1a — validated against DABJ Example 8-b
 %                      (Kb 2.39e6, Kc 4.73e6, Phi 0.336; tests/tStiffness.m).
 %
-%   Will also hold: applied-load resolution and the remaining margin checks
-%   (thread/nut/insert, tapped-hole parent-thread — Phase 3.3).
+%   Will also hold: applied-load resolution (table/bulk input — Phase 3.5).
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

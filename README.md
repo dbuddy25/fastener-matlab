@@ -58,8 +58,8 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 3.2 (bearing / tear-out / under-head) complete; next 3.3
-(thread / nut / insert / tapped-hole).**
+**Phase 3.3 (thread shear / nut / insert / tapped-hole) complete — all 15
+checks now implemented; next 3.5 (table input + bulk).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -96,5 +96,16 @@ flagged as outside validity), and bearing under the head/nut
 bolt axial load Pb = PpMax + n·phi·PtL per 5020B Eq. 8, hand-derived pin
 on the Example 8-b geometry) — all wired into `analyze()`
 (`tests/tBearing.m`), with new `FlangeLayer` fields `HoleDiameter`,
-`EdgeDistance`, and `CheckShearTearout`.
+`EdgeDistance`, and `CheckShearTearout`. Phase 3.3 completes the 15-check
+set with the four thread-strength checks, using the GROUP'S method: thread
+shear area `As = 0.75·π·E·Le` (E = pitch diameter, `Bolt.PitchDiameter`;
+Le = engagement, `ThreadedMember.EngagementLength`) with `Pult = Fsu·As`
+and `MS = Pult/Pb − 1` (NASA TM-106943 Eq. 63-65/76-77/79 basis; Pb per
+NASA-STD-5020B Eq. 8) — `engine.marginBoltThreadShear` (bolt Fsu),
+`engine.marginNutStrength` (nut Fsu), and
+`engine.marginTappedParentThread` (parent Fsu — closes the long-standing
+tapped-hole gap; area/allowable cross-checked vs DABJ Example 6-a within
+1.5%) — while inserts use the manufacturer (Heli-Coil) rated pull-out load
+directly (`engine.marginInsert`), one spec value on the insert
+internal-thread row (`tests/tThreadShear.m`).
 See `MATLAB_BUILD_GUIDE.md`.

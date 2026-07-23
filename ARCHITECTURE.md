@@ -6,17 +6,18 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 3.2 — validated single-joint engine + joint
-stiffness + the three member-strength checks (bearing / tear-out /
-under-head).** `engine.analyze(joint, loadCase, factors)` runs the whole engine
+**Current state: through Phase 3.3 — validated single-joint engine + joint
+stiffness + the member-strength checks + the thread-strength checks: ALL 15
+checks implemented.** `engine.analyze(joint, loadCase, factors)` runs the whole engine
 in one call — preload (`engine.preload`), design loads (`engine.designLoads`),
-and every built margin check (`marginTensionUlt` with the Fig. 8 gate,
+and every margin check (`marginTensionUlt` with the Fig. 8 gate,
 `marginBoltYield`, `marginShearUlt`, `marginInteraction`, `marginSeparation`,
-`marginSlip`, `marginBearing`, `marginShearTearout`,
-`marginBearingUnderHead`) — and returns the standard `engine.Result`. One call reproduces
+`marginSlip`, `marginBearing`, `marginShearTearout`, `marginBearingUnderHead`,
+`marginBoltThreadShear`, `marginNutStrength`, `marginInsert`,
+`marginTappedParentThread`) — and returns the standard `engine.Result`. One call reproduces
 all six DABJ §9 margins (+0.69 / +0.63 / +3.18 / +0.59 / +0.16 / −0.65,
-governed by the deliberate slip failure); checks arriving in Phase 3.3 report
-`NotEvaluated`. ✅ Phase 3.1a adds `engine.stiffness(joint)` — bolt/member
+governed by the deliberate slip failure); checks whose inputs are not
+configured report `NotEvaluated`. ✅ Phase 3.1a adds `engine.stiffness(joint)` — bolt/member
 stiffness (Shigley 30° conical frustum; through-bolt/nut only) and the
 stiffness factor phi (NASA-STD-5020B Eq. 9), validated against DABJ Example
 8-b (Kb 2.39e6 / Kc 4.73e6 / Phi 0.336, `validation.dabjExample8b` +
@@ -41,7 +42,27 @@ e/D < 1.5 flagged as outside validity; hand-derived pin), and
 Pb = PpMax + n·phi·PtL, 5020B Eq. 8; hand-derived pin on the Ex 8-b
 geometry; NotEvaluated when the stiffness geometry is missing). New
 `FlangeLayer` fields: `HoleDiameter`, `EdgeDistance`, `CheckShearTearout`
-(`tests/tBearing.m`).
+(`tests/tBearing.m`). ✅ Phase 3.3 completes the check set with the four
+thread-strength checks, using the GROUP'S method — thread-shear area
+`As = 0.75·π·E·Le` (E = thread pitch diameter, new `Bolt.PitchDiameter`;
+Le = engagement length, new `ThreadedMember.EngagementLength`), then
+`Pult = Fsu·As` and `MS = Pult/Pb − 1` (NASA TM-106943 Eq. 63-65 /
+76-77 / 79 basis — the group substitutes the 0.75·π pitch-diameter area
+on both sides; 5020B prints no thread-shear equations) against the design
+bolt load `Pb = PpMax + FFU·FSU·n·φ·PtL` (5020B Eq. 8 form,
+`engine.boltDesignLoad`; φ = 1 assumed for threaded-in configs where the
+stiffness frustum is deferred — conservative). Both sides of the
+thread-stripping pair are checked — `engine.marginBoltThreadShear` (bolt
+Fsu) vs `engine.marginNutStrength` (nut Fsu) or
+`engine.marginTappedParentThread` (parent Fsu) — and the weaker governs
+via the WorstMargin pick. The tapped-parent check closes the
+long-standing tapped-hole gap; its area/allowable are cross-checked
+against DABJ Example 6-a (0.0999 vs 0.0986 in², 2,698 vs 2,660 lb —
+within 1.5%; DABJ's 0.70 judgment knockdown is deliberately NOT applied).
+Inserts use the MANUFACTURER (Heli-Coil) rated pull-out load — one spec
+value on `ThreadedMember.RatedUltimateLoad` (`engine.marginInsert`,
+carried on the insert internal-thread row; the external-thread row stays
+NotEvaluated by design) — not a thread-shear calc (`tests/tThreadShear.m`).
 
 ---
 
@@ -87,8 +108,8 @@ The single flow everything is organized around:
   factors), both passed to `analyze()` rather than stored on the Joint (✅ Phase 2.1).
 - **Engine:** resolves loads, computes preload/stiffness, runs all 15 margin checks,
   applies the interaction and separation logic. (✅ core built and DABJ-validated
-  through Phase 2.9 — six checks live; stiffness + the remaining checks land in
-  Phases 3.1–3.3 and slot into the same `analyze()` call.)
+  through Phase 2.9; stiffness landed in 3.1, the member checks in 3.2, and the
+  thread checks in 3.3 — all 15 checks now run in the same `analyze()` call.)
 - **Output:** one `engine.Result` object — the 15 margins, each with pass/fail status
   (`Pass|Fail|NotEvaluated`), the governing equation/method, plus `WorstMargin`,
   `GoverningCheck`, the Fig 8 `Narrative`, and `asTable()`. Every consumer (report, GUI,
@@ -122,7 +143,7 @@ export (Phase 3). The GUI wraps exactly these calls later.
 matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
-├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b); ⏳ remaining checks — Phase 3
+├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; ⏳ bulk/table input — Phase 3.5
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ⏳ PDF + XLSX export                    — Phase 3
@@ -143,9 +164,9 @@ NaN-tolerant validators, so garbage fails loud instead of silently defaulting.
 
 | Type | What it is | Notable fields |
 |------|-----------|----------------|
-| `Bolt` | Bolt geometry + threads (no material) | `NominalDiameter`, `ThreadsPerInch`, `TensileStressArea`, `MinorDiameter`, `BodyDiameter`, `HeadBearingDiameter` (washer-face dia d_wf, ✅ 3.1a); computed `Pitch`, `MinorArea`, `BodyArea` |
+| `Bolt` | Bolt geometry + threads (no material) | `NominalDiameter`, `ThreadsPerInch`, `TensileStressArea`, `MinorDiameter`, `PitchDiameter` (E, thread-shear area — ✅ 3.3), `BodyDiameter`, `HeadBearingDiameter` (washer-face dia d_wf, ✅ 3.1a); computed `Pitch`, `MinorArea`, `BodyArea` |
 | `Material` | Strength + thermal props, any role | `Ftu`,`Fty`,`Fsu`,`Fbru`,`Fbry`,`E`,`CTE` |
-| `ThreadedMember` | What the bolt threads into | `Type` (Nut/Insert/TappedHole), `Material`, `RatedUltimateLoad` |
+| `ThreadedMember` | What the bolt threads into | `Type` (Nut/Insert/TappedHole), `Material`, `RatedUltimateLoad` (spec Pult / Heli-Coil rated pull-out), `EngagementLength` (Le, thread-shear area — ✅ 3.3) |
 | `FlangeLayer` | One layer of the clamped stack | `Material`, `Thickness`; `HoleDiameter` (dh, under-head bearing annulus), `EdgeDistance` (e, tear-out), `CheckShearTearout` (per-layer opt-in) — ✅ 3.2 |
 | `Washer` | Washer under head or nut (✅ 3.1a) | `Thickness`, `OuterDiameter`; rigid in the frustum — enters kc via the contact dia dc and kb via added clamped length |
 | `Joint` | The whole joint, ties it together | `Bolt`, `BoltMaterial`, `FlangeStack`, `ThreadedMember`, `PreloadSpec`, `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, bolt spec allowables, temps (order-validated), `ShearPlane`, `SlipMode` (single-fastener default / joint / disabled slip check), `HeadWasher`/`NutWasher` + `BodyLengthInGrip` (L1) + `FrustumAngle` (stiffness inputs, ✅ 3.1a); computed `GripLength` |
@@ -183,8 +204,12 @@ Phase 2.2), not a type.
   public worked example** (primary), with a second wave of cases from the group's
   spreadsheet later (Phase 3.4).
 - **Domain rules baked in** — flanges = the clamped stack only (not the threaded
-  interface); nut strength uses the spec-rated ultimate load, not a thread-stripping
-  calc; tapped-hole parent-thread shear is a distinct check (Phase 3.3).
+  interface); tapped-hole parent-thread shear is a distinct check (✅ 3.3).
+- **The group's thread-shear method** (✅ 3.3) — thread stripping uses the group's
+  practice `As = 0.75·π·E·Le` (pitch diameter × engagement, 3/4·π coefficient on
+  BOTH sides), not TM-106943's printed 5/8 external form and not DABJ §6's H28
+  tolerance form with judgment knockdown; and inserts use the MANUFACTURER
+  (Heli-Coil) rated pull-out load — one spec value — not the TM three-mode split.
 
 ---
 
@@ -223,7 +248,8 @@ Phase 2.2), not a type.
 | Joint stiffness, 30° frustum (`engine.stiffness`, validated vs DABJ Ex. 8-b) | 3.1a | ✅ |
 | Stiffness wiring: thermal preload (TM-106943 Eq. 10) + tension rupture branch (5020B Eq. 10; yield-side Eq. 11 deferred) | 3.1b | ✅ |
 | Member checks: bearing (TM-106943 Eq. 72-74, validated vs DABJ Ex 5-b) + shear tear-out (Eq. 69-71) + bearing-under-head (Eq. 75) | 3.2 | ✅ |
-| Remaining checks (thread/nut/insert, tapped-hole) + second validation wave | 3.3–3.4 | ⏳ next |
+| Thread checks: bolt-thread shear + nut strength + tapped-hole parent thread (group 0.75·π·E·Le method; tapped-parent cross-checked vs DABJ Ex 6-a) + insert via Heli-Coil rated pull-out — all 15 checks implemented | 3.3 | ✅ |
+| Second validation wave (group-spreadsheet cases) | 3.4 | ⏳ next |
 | Table input + bulk analysis + XLSX (Headless Release) | 3.5–3.6 | ⏳ |
 | Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
 | GUI (`+gui`) | 4 | ⏳ |

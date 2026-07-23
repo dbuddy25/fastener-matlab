@@ -87,6 +87,9 @@ classdef Library
             if isfield(e, "minorDiameter")
                 b.MinorDiameter = e.minorDiameter;
             end
+            if isfield(e, "pitchDiameter")
+                b.PitchDiameter = e.pitchDiameter;
+            end
             if isfield(e, "bodyDiameter")
                 b.BodyDiameter = e.bodyDiameter;
             end

@@ -40,8 +40,9 @@
       "tpi": 24,
       "tensileStressArea": 0.0878,
       "minorDiameter": 0.3209,
+      "pitchDiameter": 0.3479,
       "bodyDiameter": 0.375,
-      "source": "Standard 3/8-24 UNF thread geometry (At = 0.0878 in^2, minor dia 0.3209 in). Note: DABJ Appendix B Design Tables list At = 0.0951 for 3/8 because they assume UNJF threads; the standard UNF value is used here. The DABJ Sec. 9 margins use spec allowable loads and full-diameter shear area, so this difference does not affect the Sec. 9 answers."
+      "source": "Standard 3/8-24 UNF thread geometry (At = 0.0878 in^2, minor dia 0.3209 in, basic pitch dia E = 0.3479 in). Note: DABJ Appendix B Design Tables list At = 0.0951 for 3/8 because they assume UNJF threads; the standard UNF value is used here. The DABJ Sec. 9 margins use spec allowable loads and full-diameter shear area, so this difference does not affect the Sec. 9 answers."
     }
   ],
   "boltSpecs": [
