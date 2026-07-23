@@ -1,7 +1,7 @@
 function r = marginInteraction(joint, designLoads)
 %MARGININTERACTION  Combined tension-shear margin (NASA-STD-5020A Eq. 20-23).
 %   r = engine.marginInteraction(joint, designLoads) computes the
-%   tension-shear interaction margin for one joint by the 5020A
+%   tension-shear interaction margin for one joint by the NASA-STD-5020A
 %   "solve-for-a" method. designLoads is the struct from
 %   engine.designLoads. All loads in lbf (see UNITS.md).
 %
@@ -13,8 +13,8 @@ function r = marginInteraction(joint, designLoads)
 %   loads to the interaction envelope:
 %       (a*Rt)^et + (a*Rs)^es = 1,    MS = a - 1
 %   with exponents by shear-plane condition:
-%       BodyInShear    — et = 1.5, es = 2.5 (5020A Eq. 20/21; validated)
-%       ThreadsInShear — the 5020A exponents differ and no validation
+%       BodyInShear    — et = 1.5, es = 2.5 (NASA-STD-5020A Eq. 20/21; validated)
+%       ThreadsInShear — the NASA-STD-5020A exponents differ and no validation
 %                        case exercises them yet, so this path ERRORS
 %                        rather than return an unvalidated number
 %                        (Phase 3.4).
@@ -74,5 +74,5 @@ MS = a - 1;
 r = struct( ...
     "MS",     MS, ...
     "a",      a, ...
-    "Method", "5020A Eq. 20/21 solve-for-a (body in shear, exp 1.5/2.5)");
+    "Method", "NASA-STD-5020A Eq. 20/21 solve-for-a (body in shear, exp 1.5/2.5)");
 end

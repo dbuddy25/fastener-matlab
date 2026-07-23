@@ -1,7 +1,7 @@
 classdef ThreadedMember
     %THREADEDMEMBER  What the bolt threads into (nut, insert, or tapped hole).
     %   For a Nut or Insert, RatedUltimateLoad is the spec-rated Pult
-    %   (per 5020A §4.2.2.8). For a TappedHole, Material is the PARENT
+    %   (per NASA-STD-5020A §4.2.2.8). For a TappedHole, Material is the PARENT
     %   material and RatedUltimateLoad may be 0 — parent-thread-shear is
     %   computed later (Phase 3.3).
     %

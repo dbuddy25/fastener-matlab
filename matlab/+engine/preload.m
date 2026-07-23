@@ -14,13 +14,13 @@ function p = preload(joint)
 %                    (1 - relaxation)·PpiMin - creep - ThermalDelta
 %
 %   Preload method (PreloadSpec.Method):
-%     TorqueControl — nominal torque + tolerance, 5020A c-factor form:
+%     TorqueControl — nominal torque + tolerance, NASA-STD-5020A c-factor form:
 %         Ppi_nom = T_nom / (K·D)                                 (Eq. 24)
 %         PpiMax  = c_max·(1 + Γ)·Ppi_nom                         (Eq. 3)
 %         PpiMin  = c_min·(1 - Γ)·Ppi_nom      separation-critical (Eq. 4)
 %         PpiMin  = c_min·(1 - Γ/√nf)·Ppi_nom  otherwise           (Eq. 5)
 %       where c_max = 1 + TorqueTolerance and c_min = 1 - TorqueTolerance
-%       are the 5020A torque-tolerance factors (§4.3.1: "40 ± 2 N-m" ->
+%       are the NASA-STD-5020A torque-tolerance factors (§4.3.1: "40 ± 2 N-m" ->
 %       c_max = 1.05, c_min = 0.95), Γ = PreloadSpec.Uncertainty, and
 %       nf = joint.BoltCount.
 %     DirectPreload — nominal preload specified directly:
@@ -53,7 +53,7 @@ switch ps.Method
         nf = joint.BoltCount;
         % NASA-STD-5020A Eq. 24 — Ppi_nom = T / (Knom·D)
         PpiNom = ps.NominalTorque / (K * D);
-        % 5020A torque-tolerance factors — c_max = 1 + tol, c_min = 1 - tol
+        % NASA-STD-5020A torque-tolerance factors — c_max = 1 + tol, c_min = 1 - tol
         cMax = 1 + ps.TorqueTolerance;
         cMin = 1 - ps.TorqueTolerance;
         % NASA-STD-5020A Eq. 3 — Ppi_max = c_max·(1 + Γ)·Ppi_nom

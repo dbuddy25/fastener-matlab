@@ -29,5 +29,5 @@ MS = preload.PpMin / designLoads.Psep - 1;
 
 r = struct( ...
     "MS",     MS, ...
-    "Method", "5020A Eq. 19 (separation)");
+    "Method", "NASA-STD-5020A Eq. 19 (separation)");
 end

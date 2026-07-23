@@ -8,12 +8,12 @@ function r = analyze(joint, loadCase, factors)
 %
 %   Evaluated checks (each function carries its own point-of-use equation
 %   citations; their Method strings are surfaced in Result.Margins):
-%       Tension-Ultimate   engine.marginTensionUlt   5020A Eq. 6 + Fig. 8 gate
-%       Tension-Yield      engine.marginBoltYield    5020A Eq. 15
-%       Shear-Ultimate     engine.marginShearUlt     5020A Eq. 12/13 + Eq. 14
-%       Interaction        engine.marginInteraction  5020A Eq. 20/21
-%       Separation         engine.marginSeparation   5020A Eq. 19
-%       Slip               engine.marginSlip         5020A Eq. 84 (joint) / Eq. 86 (single-fastener), per joint.SlipMode; Disabled -> NotEvaluated
+%       Tension-Ultimate   engine.marginTensionUlt   NASA-STD-5020A Eq. 6 + Fig. 8 gate
+%       Tension-Yield      engine.marginBoltYield    NASA-STD-5020A Eq. 15
+%       Shear-Ultimate     engine.marginShearUlt     NASA-STD-5020A Eq. 12/13 + Eq. 14
+%       Interaction        engine.marginInteraction  NASA-STD-5020A Eq. 20/21
+%       Separation         engine.marginSeparation   NASA-STD-5020A Eq. 19
+%       Slip               engine.marginSlip         NASA-STD-5020A Eq. 84 (joint) / Eq. 86 (single-fastener), per joint.SlipMode; Disabled -> NotEvaluated
 %   plus the Separation-before-rupture gate (NASA-STD-5020A Fig. 8), a
 %   boolean check reported as its own Margins row (Pass = assured) and as
 %   Result.Narrative.
@@ -42,16 +42,16 @@ arguments
 end
 
 % ---- Supporting computations --------------------------------------------
-p = engine.preload(joint);                  % 5020A Eq. 3/4/5 + Eq. 24 + Eq. 1/2
-d = engine.designLoads(loadCase, factors);  % 5020A design load = FS x FF x limit
+p = engine.preload(joint);                  % NASA-STD-5020A Eq. 3/4/5 + Eq. 24 + Eq. 1/2
+d = engine.designLoads(loadCase, factors);  % NASA-STD-5020A design load = FS x FF x limit
 
 % ---- The six built margin checks (Phases 2.5-2.8) ------------------------
-tu = engine.marginTensionUlt(joint, p, d);           % 5020A Eq. 6 + Fig. 8 gate
-ty = engine.marginBoltYield(joint, d);               % 5020A Eq. 15
-su = engine.marginShearUlt(joint, d);                % 5020A Eq. 12/13 + Eq. 14
-ia = engine.marginInteraction(joint, d);             % 5020A Eq. 20/21 solve-for-a
-sp = engine.marginSeparation(p, d);                  % 5020A Eq. 19
-sl = engine.marginSlip(joint, loadCase, p, factors); % 5020A Eq. 84 (Joint) / Eq. 86 (SingleFastener) per joint.SlipMode; Disabled -> MS NaN -> NotEvaluated
+tu = engine.marginTensionUlt(joint, p, d);           % NASA-STD-5020A Eq. 6 + Fig. 8 gate
+ty = engine.marginBoltYield(joint, d);               % NASA-STD-5020A Eq. 15
+su = engine.marginShearUlt(joint, d);                % NASA-STD-5020A Eq. 12/13 + Eq. 14
+ia = engine.marginInteraction(joint, d);             % NASA-STD-5020A Eq. 20/21 solve-for-a
+sp = engine.marginSeparation(p, d);                  % NASA-STD-5020A Eq. 19
+sl = engine.marginSlip(joint, loadCase, p, factors); % NASA-STD-5020A Eq. 84 (Joint) / Eq. 86 (SingleFastener) per joint.SlipMode; Disabled -> MS NaN -> NotEvaluated
 
 % ---- Separation-before-rupture as its own row ----------------------------
 % The gate (NASA-STD-5020A Fig. 8 / DABJ Fig. 9-9) is boolean — it has no

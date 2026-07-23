@@ -37,5 +37,5 @@ MS = PtyAllow / designLoads.Pty - 1;
 
 r = struct( ...
     "MS",     MS, ...
-    "Method", "5020A Eq. 15 (bolt yield)");
+    "Method", "NASA-STD-5020A Eq. 15 (bolt yield)");
 end

@@ -24,9 +24,9 @@ function r = marginTensionUlt(joint, preload, designLoads)
 %        yet (arrives with Phase 3.2 bearing), so this condition is
 %        ASSUMED TRUE and noted in Decision.
 %
-%   If assured:  MS = Ptu_allow / designLoads.Ptu - 1   (5020A Eq. 6 —
+%   If assured:  MS = Ptu_allow / designLoads.Ptu - 1   (NASA-STD-5020A Eq. 6 —
 %   the bolt only sees the external design load). If NOT assured, the
-%   rupture equations (5020A Eq. 10/11) need the joint-stiffness factor
+%   rupture equations (NASA-STD-5020A Eq. 10/11) need the joint-stiffness factor
 %   phi, which is Phase 3.1; rather than fake it, MS = NaN with the
 %   reason in Decision.
 %
@@ -52,7 +52,7 @@ if isempty(joint.FlangeStack)
         "Joint.FlangeStack is empty; the member modulus Ec is needed for the separation-before-rupture check.");
 end
 
-% ---- Separation-before-rupture gate (5020A Fig. 8 / DABJ Fig. 9-9) -----
+% ---- Separation-before-rupture gate (NASA-STD-5020A Fig. 8 / DABJ Fig. 9-9) -----
 Eb = joint.BoltMaterial.E;
 flangeMats = [joint.FlangeStack.Material];
 Ec = min([flangeMats.E]);                       % softest member (conservative)
@@ -75,7 +75,7 @@ assured = condStiffness && condPreload && condPlane && condEdge;
 if assured
     % NASA-STD-5020A Eq. 6 — MS = Ptu_allow / Ptu - 1
     MS = PtuAllow / designLoads.Ptu - 1;
-    Method = "5020A Eq. 6 (separation before rupture)";
+    Method = "NASA-STD-5020A Eq. 6 (separation before rupture)";
     Decision = string(sprintf( ...
         ['Separation before rupture assured: Ec(%.3g) > Eb/3(%.3g); ' ...
          'PpMax(%.0f) < 0.75*Ptu_allow(%.0f); n(%.2f) <= 0.9; ' ...
@@ -94,7 +94,7 @@ else
         fails(end+1) = sprintf("n(%.2f) > 0.9", n); %#ok<AGROW>
     end
     MS = NaN;
-    Method = "5020A Eq. 10/11 (rupture) — requires stiffness, Phase 3.1";
+    Method = "NASA-STD-5020A Eq. 10/11 (rupture) — requires stiffness, Phase 3.1";
     Decision = "Separation before rupture NOT assured (rupture assumed): " + ...
         strjoin(fails, "; ") + ...
         ". Eq. 10/11 needs the joint-stiffness factor phi (Phase 3.1); MS = NaN until then.";
