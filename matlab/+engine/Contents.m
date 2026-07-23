@@ -115,5 +115,12 @@
 %                      ✅ Phase 3.5c — end-to-end reproduces the DABJ §9
 %                      per-bolt margins from the template CSV
 %                      (tests/tBulk.m).
+%   runBulk          - One-call headless workflow: library load ->
+%                      data.loadJointLibrary + data.loadElements ->
+%                      analyzeBulk -> optional report.exportResults.
+%                      Factors optional (default model.Factors());
+%                      orchestration only. The Headless Release entry
+%                      point — see matlab/examples/run_bulk_example.m.
+%                      ✅ Phase 3.6 (tests/tExport.m).
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

@@ -17,6 +17,9 @@ requiredMCRProducts.txt
 # Local project instructions (not published)
 CLAUDE.md
 
+# Example script output
+matlab/examples/bulk_results.xlsx
+
 # OS / editor
 .DS_Store
 Thumbs.db

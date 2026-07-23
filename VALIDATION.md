@@ -89,6 +89,7 @@ This is a **living document** — every new check adds a row.
 | Bulk / joint-library parser (`data.loadJointLibrary` — table → `model.Joint`; library-key resolution, "1.5D" engagement format; the template's first row is the DABJ §9 joint, cross-checked against the `dabjSection9` in-code build) | ✅ | tBulkParsers |
 | Bulk / elements parser (`data.loadElements` — element_id/joint_name/FX..MZ → forces struct; blank optionals → defaults) | ✅ | tBulkParsers |
 | Bulk end-to-end (parse→resolve→analyze: `loadJointLibrary` template + in-code element → `engine.analyzeBulk` — reproduces the DABJ §9 per-bolt margins: TensionUlt +0.69, Separation +0.16, TensionYield +0.63, ShearUlt +3.18, Interaction +0.59 — in a results-table row; missing-joint rows error-marked, not thrown) | ✅ (Phase 3.5c) | tBulk |
+| Bulk runner + XLSX export (`engine.runBulk` — one-call files-in → margins-out pipeline over the templates, default factors = `model.Factors()`; `report.exportResults` — .xlsx Results + Summary sheets / .csv by extension, write → `readtable` read-back row count verified) | ✅ (Phase 3.6) | tExport |
 | Case save/load, factor presets | ⏳ (Phase 3.7) | — |
 
 ---

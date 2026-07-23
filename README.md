@@ -25,8 +25,9 @@ matlab/
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
 ├── +engine/           analysis math — the core (Phases 2–3)
 ├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); case save/load later (Phase 3)
-├── +report/           PDF + XLSX export (Phase 3)
+├── +report/           XLSX export (`report.exportResults`, Phase 3.6); PDF later (Phase 3.8)
 ├── +gui/              App Designer app — thin shell over the engine (Phase 4)
+├── examples/          runnable reference scripts (`run_bulk_example.m`)
 └── tests/             validation + smoke tests (checked vs the worked example)
 ```
 
@@ -48,6 +49,29 @@ b.Pitch                      % -> 0.03125
 > **Note:** developed on macOS (no MATLAB there), so acceptance is verified on the
 > Windows/MATLAB work machine — `git pull` (or re-download), then run the above.
 
+## Headless bulk analysis (the Headless Release workflow)
+
+Describe your joints and element forces in two tables, then get every margin in
+one call — no GUI involved:
+
+```matlab
+T = engine.runBulk("joint_library.csv", "elements.csv", model.Factors(), "margins.xlsx");
+```
+
+That single call loads the hardware/material library, parses the joint table
+(`data.loadJointLibrary`) and the element-forces table (`data.loadElements`),
+runs all 15 margin checks per element (`engine.analyzeBulk`), and writes the
+results to `margins.xlsx` (`report.exportResults` — a Results sheet plus a
+Summary sheet with Pass/Fail/Error counts). The factors argument is optional
+(defaults to the built-in `model.Factors()` preset); omit the output file to
+just get the results table back.
+
+- **Input templates** (exact column headers, first row = the DABJ §9 worked
+  example): `matlab/+data/templates/joint_library_template.csv` and
+  `elements_template.csv` — copy, fill in, run.
+- **Runnable reference**: `matlab/examples/run_bulk_example.m` runs the bundled
+  templates end to end and writes `bulk_results.xlsx` next to itself.
+
 ## Two authoritative references
 
 - The **existing Python tool** defines *what to build* (features/workflow).
@@ -58,9 +82,9 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 3.5 complete (bulk: parse → resolve → analyzeBulk, end-to-end
-reproduces DABJ §9 per-bolt margins); next 3.6 (XLSX export) = Headless
-Release.**
+**Phase 3 Headless Release complete** — full 15-check engine + bulk table
+workflow (parse → resolve → analyze → XLSX). Next: 3.7 (case save/load,
+presets), 3.8 (PDF), then Phase 4 (GUI).
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -138,4 +162,12 @@ per-bolt margins from the template CSV (`tests/tBulk.m`). Limitation:
 per-element forces are per-bolt only, so a `SlipMode.Joint` joint's slip
 check is NotEvaluated in bulk (joint totals need bolt-pattern aggregation,
 future); single-fastener slip — the default — evaluates normally.
+Phase 3.6 completes the Headless Release: `report.exportResults(T, file)`
+writes the results table to `.xlsx` (Results sheet + a Summary sheet with
+Pass/Fail/Error counts) or `.csv` by extension, and
+`engine.runBulk(jointLibFile, elementsFile, factors, outFile)` runs the
+whole pipeline — library load → parse → resolve → analyze → export — in
+one call (factors optional, defaulting to `model.Factors()`; a runnable
+reference lives at `matlab/examples/run_bulk_example.m`; exercised by
+`tests/tExport.m`).
 See `MATLAB_BUILD_GUIDE.md`.
