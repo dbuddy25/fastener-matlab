@@ -177,7 +177,7 @@ for k = 1:n
                 lc.JointShearLimitLoad   = PsJ;
             else
                 % nf mismatch: leave joint slip NotEvaluated + say why
-                joint.SlipMode = model.SlipMode.Disabled;
+                joint.SlipMode = model.SlipMode.Ignored;
                 note(k) = sprintf( ...
                     "Joint slip not evaluated: pattern ""%s"" has %d element(s) for load case ""%s"" but Joint.BoltCount = %g.", ...
                     patKeys(k), nEl, loadCase(k), joint.BoltCount);

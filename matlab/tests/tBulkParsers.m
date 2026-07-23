@@ -133,7 +133,7 @@ classdef tBulkParsers < matlab.unittest.TestCase
 
             % A few schema spot-checks on the same row
             testCase.verifyEqual(j.ShearPlane, model.ShearPlaneCondition.ThreadsInShear);
-            testCase.verifyEqual(j.SlipMode, model.SlipMode.Disabled);
+            testCase.verifyEqual(j.SlipMode, model.SlipMode.Ignored);
             testCase.verifyEqual(j.BoltAxis, model.BoltAxis.X);
             testCase.verifyTrue(j.PreloadSpec.SeparationCritical);
             testCase.verifyEqual(numel(j.FlangeStack), 1);

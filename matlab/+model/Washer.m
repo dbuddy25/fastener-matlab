@@ -7,11 +7,17 @@ classdef Washer
     %   the fitting stack) and enter the bolt stiffness kb through the
     %   added clamped length.
     %
+    %   Material and InnerDiameter are carried for completeness (library /
+    %   template round-tripping); the current engine treats washers as rigid
+    %   and uses only Thickness + OuterDiameter.
+    %
     %   w = model.Washer(Thickness=0.078, OuterDiameter=0.687);
 
     properties
         Thickness     (1,1) double {mustBeNonnegative} = 0     % in
         OuterDiameter (1,1) double {mustBePositiveOrNaN} = NaN % in (NaN = unspecified; frustum cone diameter governs)
+        InnerDiameter (1,1) double {mustBePositiveOrNaN} = NaN % ID, in (carried for completeness; unused by the engine)
+        Material      (1,1) model.Material = model.Material()  % carried for completeness; washers are rigid in the engine
     end
 
     methods

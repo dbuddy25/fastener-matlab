@@ -18,6 +18,13 @@ function s = stiffness(joint)
 %   clamped length to kb and grow the contact diameter dc for kc, but they
 %   contribute no frustum material of their own.
 %
+%   L1 (unthreaded body length in the grip): an explicit
+%   Joint.BodyLengthInGrip is used as-is; when it is NaN a SIMPLIFIED
+%   fallback computes it from bolt length ≈ grip + nut height + 2·pitch
+%   (NASA-STD-5020B §4.7.4) minus Bolt.ThreadLength — see the inline
+%   comment. If the fallback inputs are also NaN, stiffness errors with id
+%   engine:stiffness:bodyLengthRequired (existing behavior).
+%
 %   THROUGH-BOLT (nut) configuration only in this phase. Insert/tapped-hole
 %   joints error with id engine:stiffness:threadedInDeferred; mixed flange
 %   moduli error with id engine:stiffness:mixedModulusDeferred (frustum
@@ -66,16 +73,39 @@ if isnan(dwf)
     error("engine:stiffness:headBearingDiameterRequired", ...
         "Bolt.HeadBearingDiameter (washer-face dia d_wf) is required for the member frustum.");
 end
-L1 = joint.BodyLengthInGrip;           % unthreaded body length in the clamp, in
-if isnan(L1)
-    error("engine:stiffness:bodyLengthRequired", ...
-        "Joint.BodyLengthInGrip (unthreaded body length L1 in the clamp) is required for bolt stiffness.");
-end
 
 % ---- Clamped lengths ----------------------------------------------------
 tFit  = sum([joint.FlangeStack.Thickness]);                     % fitting stack (kc uses THIS as L), in
 tWash = joint.HeadWasher.Thickness + joint.NutWasher.Thickness; % total washer thickness, in
 Lbolt = tFit + tWash;                                           % washer-inclusive clamped length for kb, in
+
+% ---- Body length in grip (L1) -------------------------------------------
+% L1 = unthreaded shank length within the clamp (falls back to computed when
+% not supplied). An explicit Joint.BodyLengthInGrip ALWAYS wins (e.g. DABJ
+% Example 8-b supplies L1 = 0.70 directly); the fallback below is a
+% SIMPLIFIED estimate:
+%   bolt length ≈ grip + nut height + 2·pitch  (NASA-STD-5020B §4.7.4)
+%   shank Ls = boltLength − ThreadLength ;  Lb = clamped length (fittings + washers)
+%   L1 = min(max(Ls,0), Lb)
+% If any required input (nut height = ThreadedMember.EngagementLength,
+% Bolt.Pitch, Bolt.ThreadLength) is NaN, L1 stays NaN and stiffness errors
+% as before (callers render NotEvaluated).
+L1 = joint.BodyLengthInGrip;           % unthreaded body length in the clamp, in
+if isnan(L1)
+    nutH = joint.ThreadedMember.EngagementLength;   % nut height, in
+    p    = joint.Bolt.Pitch;                        % thread pitch, in
+    Lthd = joint.Bolt.ThreadLength;                 % threaded length from the tip, in
+    if ~isnan(nutH) && ~isnan(p) && ~isnan(Lthd)
+        boltLen = Lbolt + nutH + 2*p;               % ≈ grip + nut height + 2·pitch
+        Ls      = boltLen - Lthd;                   % unthreaded shank length, in
+        L1      = min(max(Ls, 0), Lbolt);           % clip into the clamp
+    end
+end
+if isnan(L1)
+    error("engine:stiffness:bodyLengthRequired", ...
+        "Joint.BodyLengthInGrip (unthreaded body length L1 in the clamp) is required for bolt stiffness " + ...
+        "(or supply ThreadedMember.EngagementLength, Bolt.Pitch, and Bolt.ThreadLength for the computed fallback).");
+end
 L2    = Lbolt - L1;                                             % threaded length in the grip, in
 if L2 < 0
     error("engine:stiffness:bodyLongerThanGrip", ...

@@ -10,6 +10,7 @@ classdef FlangeLayer
     %                          HoleDiameter=0.397, EdgeDistance=0.75);
 
     properties
+        Name             (1,1) string = ""                          % cosmetic layer label (e.g. "Bracket flange")
         Material         (1,1) model.Material = model.Material()
         Thickness        (1,1) double {mustBePositive} = 0.1        % in
         HoleDiameter     (1,1) double {mustBePositiveOrNaN} = NaN   % clearance/hole diameter dh, in

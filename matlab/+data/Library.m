@@ -93,6 +93,12 @@ classdef Library
             if isfield(e, "bodyDiameter")
                 b.BodyDiameter = e.bodyDiameter;
             end
+            if isfield(e, "headBearingDiameter")
+                b.HeadBearingDiameter = e.headBearingDiameter;
+            end
+            if isfield(e, "threadLength")
+                b.ThreadLength = e.threadLength;
+            end
         end
 
         function m = material(obj, key)

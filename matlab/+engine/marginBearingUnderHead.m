@@ -26,7 +26,8 @@ function r = marginBearingUnderHead(joint, loadCase, factors, preload)
 %   and yield Fbry with FFY*FSY, using that side's flange material):
 %       Head side — dh = HeadWasher.OuterDiameter if finite, else
 %                   Bolt.HeadBearingDiameter; dt = FlangeStack(1).HoleDiameter.
-%       Nut side  — dh = NutWasher.OuterDiameter (NaN -> side skipped);
+%       Nut side  — dh = ThreadedMember.BearingDiameter if finite, else
+%                   NutWasher.OuterDiameter (both NaN -> side skipped);
 %                   dt = FlangeStack(end).HoleDiameter.
 %   A side needs finite dh AND dt (and a set Fbru/Fbry for the criterion)
 %   to be checked; Abr is clamped at >= 0. The reported margin is the
@@ -85,9 +86,15 @@ dhHead = joint.HeadWasher.OuterDiameter;
 if isnan(dhHead)
     dhHead = joint.Bolt.HeadBearingDiameter;
 end
+% Nut side: the threaded member's own bearing dia if specified, else the
+% nut washer OD (both NaN -> side skipped).
+dhNut = joint.ThreadedMember.BearingDiameter;
+if isnan(dhNut)
+    dhNut = joint.NutWasher.OuterDiameter;
+end
 sides = struct( ...
     "Name", {"head side", "nut side"}, ...
-    "dh",   {dhHead, joint.NutWasher.OuterDiameter}, ...           % NaN nut washer OD -> side skipped
+    "dh",   {dhHead, dhNut}, ...                                   % NaN dh -> side skipped
     "dt",   {joint.FlangeStack(1).HoleDiameter, joint.FlangeStack(end).HoleDiameter}, ...
     "Mat",  {joint.FlangeStack(1).Material, joint.FlangeStack(end).Material});
 

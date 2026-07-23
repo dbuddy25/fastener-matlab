@@ -111,13 +111,32 @@ classdef tModel < matlab.unittest.TestCase
 
         function slipModeDefaultsToSingleFastener(testCase)
             % The default matters: slip is assessed per-fastener unless the
-            % user explicitly selects Joint (or Disabled) mode.
+            % user explicitly selects Joint (or Ignored) mode.
             j = model.Joint();
             testCase.verifyEqual(j.SlipMode, model.SlipMode.SingleFastener);
         end
 
         function materialStrengthDefaultsAreNaN(testCase)
             testCase.verifyTrue(isnan(model.Material().Ftu));
+        end
+
+        function xlsxTemplateFieldsBuild(testCase)
+            % XLSX-template prep: the renamed enum member and the new
+            % (mostly carried-for-completeness) fields construct and hold
+            % their values. None of these change engine behavior by default.
+            testCase.verifyClass(model.SlipMode.Ignored, "model.SlipMode");
+            w = model.Washer(Thickness=0.063, OuterDiameter=0.687, ...
+                             InnerDiameter=0.406, ...
+                             Material=model.Material(Name="CRES 300", E=29e6));
+            testCase.verifyEqual(w.InnerDiameter, 0.406);
+            testCase.verifyEqual(w.Material.Name, "CRES 300");
+            fl = model.FlangeLayer(Name="Bracket flange", Thickness=0.25);
+            testCase.verifyEqual(fl.Name, "Bracket flange");
+            tm = model.ThreadedMember(BearingDiameter=0.56, HostName="Baseplate");
+            testCase.verifyEqual(tm.BearingDiameter, 0.56);
+            testCase.verifyEqual(tm.HostName, "Baseplate");
+            b = model.Bolt(ThreadLength=0.625);
+            testCase.verifyEqual(b.ThreadLength, 0.625);
         end
     end
 

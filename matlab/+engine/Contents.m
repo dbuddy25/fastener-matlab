@@ -28,7 +28,7 @@
 %   marginSlip       - Slip margin, switched on Joint.SlipMode:
 %                      single-fastener (default, per-bolt loads, NASA-STD-5020B
 %                      Eq. 86), joint (nf·μ·PpMin vs joint totals, NASA-STD-5020B
-%                      Eq. 84), or disabled (NotEvaluated).
+%                      Eq. 84), or ignored (NotEvaluated).
 %                      ✅ Phase 2.8 — validated against DABJ §9 (-0.65, joint mode).
 %   analyze          - Single-joint solver: preload + design loads + every
 %                      margin check in one call -> engine.Result.

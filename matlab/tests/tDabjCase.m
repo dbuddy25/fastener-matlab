@@ -11,7 +11,7 @@ classdef tDabjCase < matlab.unittest.TestCase
     %   Phase 2.8 added slipMarginMatchesDABJ;
     %   Phase 2.9 added analyzeReproducesAllDABJMargins (the full solver);
     %   the slip-mode toggle added singleFastenerSlipMatches and
-    %   disabledSlipNotEvaluated (fixture pinned to SlipMode.Joint).
+    %   ignoredSlipNotEvaluated (fixture pinned to SlipMode.Joint).
     %   The Expected values verified here are recorded constants from the
     %   course book, not computed results — the point is that the answer
     %   key is captured and cannot drift silently.
@@ -239,14 +239,14 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifySubstring(r.Method, "single-fastener");
         end
 
-        function disabledSlipNotEvaluated(testCase)
-            % SlipMode.Disabled -> MS = NaN (analyze renders NotEvaluated).
+        function ignoredSlipNotEvaluated(testCase)
+            % SlipMode.Ignored -> MS = NaN (analyze renders NotEvaluated).
             c = validation.dabjSection9();
             j = c.Joint;
-            j.SlipMode = model.SlipMode.Disabled;
+            j.SlipMode = model.SlipMode.Ignored;
             r = engine.marginSlip(j, c.LoadCase, engine.preload(j), c.Factors);
             testCase.verifyTrue(isnan(r.MS));
-            testCase.verifySubstring(r.Method, "disabled");
+            testCase.verifySubstring(r.Method, "ignored");
         end
 
         function analyzeReproducesAllDABJMargins(testCase)

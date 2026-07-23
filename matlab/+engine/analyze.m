@@ -13,7 +13,7 @@ function r = analyze(joint, loadCase, factors)
 %       Shear-Ultimate     engine.marginShearUlt     NASA-STD-5020B Eq. 12/13 + Eq. 14
 %       Interaction        engine.marginInteraction  NASA-STD-5020B Eq. 20/21
 %       Separation         engine.marginSeparation   NASA-STD-5020B Eq. 19
-%       Slip               engine.marginSlip         NASA-STD-5020B Eq. 84 (joint) / Eq. 86 (single-fastener), per joint.SlipMode; Disabled -> NotEvaluated
+%       Slip               engine.marginSlip         NASA-STD-5020B Eq. 84 (joint) / Eq. 86 (single-fastener), per joint.SlipMode; Ignored -> NotEvaluated
 %       Bearing            engine.marginBearing            NASA TM-106943 Eq. 72-74 (required by 5020B §4.4.2)
 %       Bearing-under-head engine.marginBearingUnderHead   NASA TM-106943 Eq. 74/75 + 5020B Eq. 8 (Pb)
 %       Shear-tearout      engine.marginShearTearout       NASA TM-106943 Eq. 69-71 (required by 5020B §4.4.2)
@@ -73,7 +73,7 @@ ty = engine.marginBoltYield(joint, d);               % NASA-STD-5020B Eq. 15
 su = engine.marginShearUlt(joint, d);                % NASA-STD-5020B Eq. 12/13 + Eq. 14
 ia = engine.marginInteraction(joint, d);             % NASA-STD-5020B Eq. 20/21 solve-for-a
 sp = engine.marginSeparation(p, d);                  % NASA-STD-5020B Eq. 19
-sl = engine.marginSlip(joint, loadCase, p, factors); % NASA-STD-5020B Eq. 84 (Joint) / Eq. 86 (SingleFastener) per joint.SlipMode; Disabled -> MS NaN -> NotEvaluated
+sl = engine.marginSlip(joint, loadCase, p, factors); % NASA-STD-5020B Eq. 84 (Joint) / Eq. 86 (SingleFastener) per joint.SlipMode; Ignored -> MS NaN -> NotEvaluated
 
 % ---- The three member checks (Phase 3.2) ---------------------------------
 br = engine.marginBearing(joint, loadCase, factors);            % NASA TM-106943 Eq. 72-74 (bolt bearing; required by 5020B §4.4.2)

@@ -47,7 +47,8 @@ function jl = loadJointLibrary(file, lib)
 %       LoadingPlaneFactor   -> Joint.LoadingPlaneFactor (n)
 %       ThreadsInShear       -> logical -> Joint.ShearPlane
 %                               (true -> ThreadsInShear, false -> BodyInShear)
-%       SlipMode             -> "Disabled" / "SingleFastener" / "Joint"
+%       SlipMode             -> "Ignored" / "SingleFastener" / "Joint"
+%                               ("Disabled" accepted as a legacy alias)
 %       BoltAxis             -> "X" / "Y" / "Z"
 %       FrustumAngle         -> Joint.FrustumAngle, deg
 %       BodyLengthInGrip     -> Joint.BodyLengthInGrip, in
@@ -273,18 +274,19 @@ end
 end
 
 function m = parseSlipMode(txt, name)
-%PARSESLIPMODE  "Disabled" / "SingleFastener" / "Joint" (spacing/case-insensitive).
+%PARSESLIPMODE  "Ignored" / "SingleFastener" / "Joint" (spacing/case-insensitive;
+%   "Disabled" accepted as a legacy alias for Ignored).
 s = lower(erase(strtrim(txt), [" ", "-", "_"]));
 switch s
-    case "disabled"
-        m = model.SlipMode.Disabled;
+    case {"ignored", "disabled"}   % "disabled" = legacy alias
+        m = model.SlipMode.Ignored;
     case {"joint", "jointslip"}
         m = model.SlipMode.Joint;
     case {"single", "singlefastener", "singlefastenerslip"}
         m = model.SlipMode.SingleFastener;
     otherwise
         error("data:loadJointLibrary:badSlipMode", ...
-            "Row ""%s"": unknown SlipMode ""%s"" (expected Disabled, SingleFastener, or Joint).", ...
+            "Row ""%s"": unknown SlipMode ""%s"" (expected Ignored, SingleFastener, or Joint).", ...
             name, txt);
 end
 end

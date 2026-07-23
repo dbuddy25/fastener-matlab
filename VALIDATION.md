@@ -51,7 +51,7 @@ This is a **living document** — every new check adds a row.
 | 10| Separation | 5020B Eq. 19 | through-bolt | DABJ §9 | +0.16 | ✅ | tDabjCase |
 | 11| Slip — joint | 5020B Eq. 84 | nf=4, joint loads | DABJ §9 | −0.65 | ✅ | tDabjCase |
 | 11a| Slip — single-fastener (default) | 5020B Eq. 86 | per-bolt loads | hand-calc | −0.6947 | ✍️ | tDabjCase |
-| 11b| Slip — disabled | — | μ or mode off | hand-calc | NaN | ✍️ | tDabjCase |
+| 11b| Slip — ignored (`SlipMode.Ignored`, renamed from `Disabled`) | — | μ or mode off | hand-calc | NaN | ✍️ | tDabjCase |
 | 12| Separation-before-rupture gate | 5020B Fig. 8 | assured path | DABJ §9 | assured | ✅ | tDabjCase |
 | 13| Tension–shear interaction (body) | 5020B Eq. 20/21 | body-in-shear, a=1.59 | DABJ §9 | +0.59 | ✅ | tDabjCase |
 | 13t| Interaction (threads-in-shear) | 5020B Eq. 22/23 | threads-in-shear | — | — | ⛔ errors (no case) | — |
@@ -73,6 +73,7 @@ This is a **living document** — every new check adds a row.
 | Feature | Governing eq | Config | Source | Expected | Status | Test |
 |---------|-------------|--------|--------|----------|--------|------|
 | kb / kc / φ (30° frustum) | Shigley / DABJ §8; φ = 5020B Eq. 9 | through-bolt (Nut) | DABJ Ex 8-b | kb 2.39e6, kc 4.73e6, φ 0.336 | ✅ | tStiffness |
+| L1 fallback (`BodyLengthInGrip` NaN → computed from bolt length ≈ grip + nut height + 2·pitch per 5020B §4.7.4, minus `Bolt.ThreadLength`; explicit L1 always wins — 8-b supplies 0.70) | 5020B §4.7.4 (bolt-length estimate) | through-bolt (Nut) | hand-calc | L1 = min(max(Lb + Le + 2p − Lthd, 0), Lb) on 8-b geometry | ✍️ | tStiffness |
 | Threaded-in (insert/tapped) frustum | DABJ §8 (threaded-in) | Insert/TappedHole | — | — | ⛔ errors (deferred) | tStiffness |
 | Mixed-modulus (frustum slicing) | DABJ §8 appendix | dissimilar members | — | — | ⛔ errors (deferred) | — |
 

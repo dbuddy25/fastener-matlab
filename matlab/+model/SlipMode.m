@@ -5,11 +5,11 @@ classdef SlipMode
     %   Joint          — joint-level slip: total friction capacity from all
     %                    nf bolts vs JOINT-TOTAL limit loads
     %                    (NASA-STD-5020B Eq. 84).
-    %   Disabled       — slip check not evaluated (MS = NaN → NotEvaluated).
+    %   Ignored        — slip check not evaluated (MS = NaN → NotEvaluated).
     %   Mirrors the reference Python tool's slip-mode selector
-    %   ["Disabled", "Single Fastener Slip", "Joint Slip"].
+    %   ["Ignored", "Single Fastener Slip", "Joint Slip"].
     enumeration
-        Disabled
+        Ignored
         SingleFastener
         Joint
     end

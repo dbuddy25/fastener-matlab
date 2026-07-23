@@ -42,6 +42,30 @@ classdef tStiffness < matlab.unittest.TestCase
             testCase.verifyEqual(s.Ec, 10e6, "AbsTol", 1e-6);
         end
 
+        function bodyLengthFallbackComputed(testCase)
+            % When BodyLengthInGrip is NaN, L1 falls back to the computed
+            % estimate: bolt length ≈ Lb + nut height + 2·pitch
+            % (NASA-STD-5020B §4.7.4), shank Ls = boltLength − ThreadLength,
+            % L1 = min(max(Ls,0), Lb) with Lb = fittings + washers
+            % (8-b: 0.94 in). An explicit L1 always wins — the 8-b answer-key
+            % test above exercises that path (L1 = 0.70 as supplied).
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.BodyLengthInGrip = NaN;
+            j.ThreadedMember.EngagementLength = 0.3;   % nut height, in
+            j.Bolt.ThreadLength = 0.5;                 % threaded length from the tip, in
+            s = engine.stiffness(j);
+            expectedL1 = min(max((0.94 + 0.3 + 2/24) - 0.5, 0), 0.94);
+            testCase.verifyEqual(s.L1, expectedL1, "AbsTol", 1e-12);
+            testCase.verifyEqual(s.L2, 0.94 - expectedL1, "AbsTol", 1e-12);
+            % Missing fallback inputs (ThreadLength / EngagementLength NaN)
+            % still error with the existing id -> callers render NotEvaluated.
+            j2 = c.Joint;
+            j2.BodyLengthInGrip = NaN;
+            testCase.verifyError(@() engine.stiffness(j2), ...
+                "engine:stiffness:bodyLengthRequired");
+        end
+
         function threadedInDeferredErrors(testCase)
             % Insert/tapped-hole frustum form is deferred — Phase 3.1 later.
             c = validation.dabjExample8b();

@@ -19,6 +19,8 @@ classdef ThreadedMember
         Material          (1,1) model.Material = model.Material()   % nut/insert/parent material
         RatedUltimateLoad (1,1) double {mustBeNonnegative} = 0      % spec-rated Pult (nut) / rated pull-out (insert), lbf
         EngagementLength  (1,1) double {mustBePositiveOrNaN} = NaN  % thread engagement Le, in (nut height / tapped depth)
+        BearingDiameter   (1,1) double {mustBePositiveOrNaN} = NaN  % nut/head bearing dia for under-nut bearing, in
+        HostName          (1,1) string = ""                         % parent/host body name (cosmetic)
     end
 
     methods

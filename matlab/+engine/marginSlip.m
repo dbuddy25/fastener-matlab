@@ -19,7 +19,7 @@ function r = marginSlip(joint, loadCase, preload, factors)
 %   (The standard's Eq. 84 carries FS only; the slip fitting factor FFslip
 %   is applied as well for consistency with Eq. 86 — its default is 1.0.)
 %
-%   Disabled — check not evaluated: MS = NaN (analyze renders NotEvaluated).
+%   Ignored — check not evaluated: MS = NaN (analyze renders NotEvaluated).
 %
 %   In both evaluated modes mu = joint.FrictionCoefficient, PpMin =
 %   preload.PpMin (worst-case min preload), and applied tension erodes the
@@ -29,7 +29,7 @@ function r = marginSlip(joint, loadCase, preload, factors)
 %   (single-fastener) or engine:marginSlip:jointLoadsRequired (joint).
 %
 %   Returned struct fields:
-%       MS      margin of safety (double; NaN when disabled or mu = 0)
+%       MS      margin of safety (double; NaN when ignored or mu = 0)
 %       Method  string: governing equation
 %
 %   Validated against the DABJ Section 9 class problem (Solutions-23, via
@@ -45,10 +45,10 @@ arguments
 end
 
 mode = joint.SlipMode;
-if mode == model.SlipMode.Disabled
+if mode == model.SlipMode.Ignored
     r = struct( ...
         "MS",     NaN, ...
-        "Method", "NASA-STD-5020B Eq. 84/86 (slip) — disabled");
+        "Method", "NASA-STD-5020B Eq. 84/86 (slip) — ignored");
     return
 end
 

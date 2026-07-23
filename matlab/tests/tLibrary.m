@@ -49,6 +49,16 @@ classdef tLibrary < matlab.unittest.TestCase
             testCase.verifyEqual(s.Material, "A-286");
         end
 
+        function boltCarriesHeadBearingAndThreadLength(testCase)
+            % XLSX-template prep: the library maps headBearingDiameter
+            % (d_wf = 0.523 per DABJ Example 8-b) and threadLength (assumed
+            % 0.625 in; see the entry's source note) onto the model.Bolt.
+            lib = data.Library.load();
+            b = lib.bolt("3/8-24 UNF");
+            testCase.verifyEqual(b.HeadBearingDiameter, 0.523, "AbsTol", 1e-12);
+            testCase.verifyEqual(b.ThreadLength, 0.625, "AbsTol", 1e-12);
+        end
+
         function unknownKeyErrors(testCase)
             lib = data.Library.load();
             testCase.verifyError(@() lib.material("NoSuchThing"), ...
