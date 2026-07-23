@@ -87,8 +87,16 @@ classdef tModel < matlab.unittest.TestCase
         end
 
         function rejectsUnknownProperty(testCase)
-            testCase.verifyError(@() model.Bolt(Nonsense=1), ...
-                "MATLAB:unrecognizedStringChoice");
+            % Passing a name that isn't a Bolt property must error. The exact
+            % MATLAB error id varies by release, so assert only that it throws.
+            threw = false;
+            try
+                model.Bolt(Nonsense=1); %#ok<NASGU>
+            catch
+                threw = true;
+            end
+            testCase.verifyTrue(threw, ...
+                "Constructing model.Bolt with an unknown property should error.");
         end
 
         function rejectsSwappedTemperatures(testCase)
