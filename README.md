@@ -55,8 +55,8 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 2.9 (engine.analyze + Result) complete — the validated single-joint
-engine is done; next Phase 3.1 (joint stiffness).**
+**Phase 3.1a (joint stiffness, 30° frustum) complete; next 3.1b (wire
+stiffness into thermal preload + tension rupture branch).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -73,4 +73,9 @@ loads, and six DABJ-validated margin checks, and
 returning the standard `engine.Result` — the 15-check margin table
 (`Pass|Fail|NotEvaluated`), `WorstMargin`/`GoverningCheck`, the Fig. 8
 narrative, and `asTable()` for export (one `analyze()` call reproduces all
-six DABJ §9 margins in `tests/tDabjCase.m`). See `MATLAB_BUILD_GUIDE.md`.
+six DABJ §9 margins in `tests/tDabjCase.m`). `engine.stiffness(joint)`
+computes bolt/member stiffness and the stiffness factor phi (Shigley 30°
+conical frustum; phi per NASA-STD-5020A Eq. 9), validated against DABJ
+Example 8-b via `validation.dabjExample8b()` (exercised by
+`tests/tStiffness.m`); it is not yet wired into preload/margins (3.1b).
+See `MATLAB_BUILD_GUIDE.md`.

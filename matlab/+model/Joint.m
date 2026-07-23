@@ -37,6 +37,10 @@ classdef Joint
         MaxTemperature        (1,1) double = 20                               % °C
         ShearPlane            (1,1) model.ShearPlaneCondition = model.ShearPlaneCondition.ThreadsInShear
         SlipMode              (1,1) model.SlipMode = model.SlipMode.SingleFastener   % slip check mode (default single-fastener)
+        HeadWasher            (1,1) model.Washer = model.Washer()             % washer under the bolt head (rigid in the frustum)
+        NutWasher             (1,1) model.Washer = model.Washer()             % washer under the nut (rigid in the frustum)
+        BodyLengthInGrip      (1,1) double {mustBePositiveOrNaN} = NaN        % unthreaded body length within the clamp, L1 (in)
+        FrustumAngle          (1,1) double {mustBePositive} = 30              % conical-frustum half-angle (deg)
     end
 
     properties (Dependent)

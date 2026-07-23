@@ -6,14 +6,21 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 2.9 — validated single-joint engine complete.**
-`engine.analyze(joint, loadCase, factors)` runs the whole engine in one call —
-preload (`engine.preload`), design loads (`engine.designLoads`), and every
-built margin check (`marginTensionUlt` with the Fig. 8 gate, `marginBoltYield`,
-`marginShearUlt`, `marginInteraction`, `marginSeparation`, `marginSlip`) —
-and returns the standard `engine.Result`. One call reproduces all six DABJ §9
-margins (+0.69 / +0.63 / +3.18 / +0.59 / +0.16 / −0.65, governed by the
-deliberate slip failure); checks arriving in Phase 3 report `NotEvaluated`.
+**Current state: through Phase 3.1a — validated single-joint engine + joint
+stiffness.** `engine.analyze(joint, loadCase, factors)` runs the whole engine
+in one call — preload (`engine.preload`), design loads (`engine.designLoads`),
+and every built margin check (`marginTensionUlt` with the Fig. 8 gate,
+`marginBoltYield`, `marginShearUlt`, `marginInteraction`, `marginSeparation`,
+`marginSlip`) — and returns the standard `engine.Result`. One call reproduces
+all six DABJ §9 margins (+0.69 / +0.63 / +3.18 / +0.59 / +0.16 / −0.65,
+governed by the deliberate slip failure); checks arriving in Phase 3 report
+`NotEvaluated`. ✅ Phase 3.1a adds `engine.stiffness(joint)` — bolt/member
+stiffness (Shigley 30° conical frustum; through-bolt/nut only) and the
+stiffness factor phi (NASA-STD-5020A Eq. 9), validated against DABJ Example
+8-b (Kb 2.39e6 / Kc 4.73e6 / Phi 0.336, `validation.dabjExample8b` +
+`tests/tStiffness.m`), with new model fields to support it (`model.Washer`,
+`Bolt.HeadBearingDiameter`, `Joint.HeadWasher`/`NutWasher`/
+`BodyLengthInGrip`/`FrustumAngle`). Not yet wired into preload/margins (3.1b).
 
 ---
 
@@ -94,9 +101,9 @@ export (Phase 3). The GUI wraps exactly these calls later.
 matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
-├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9); ⏳ stiffness + remaining checks — Phase 3
+├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a); ⏳ stiffness wiring + remaining checks — Phase 3
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); ⏳ case save/load — Phase 3
-├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3)
+├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ⏳ PDF + XLSX export                    — Phase 3
 ├── +gui/            ⏳ App Designer app (thin shell)        — Phase 4
 └── tests/           ✅ smoke + model tests; ⏳ validation   — throughout
@@ -115,11 +122,12 @@ NaN-tolerant validators, so garbage fails loud instead of silently defaulting.
 
 | Type | What it is | Notable fields |
 |------|-----------|----------------|
-| `Bolt` | Bolt geometry + threads (no material) | `NominalDiameter`, `ThreadsPerInch`, `TensileStressArea`, `MinorDiameter`, `BodyDiameter`; computed `Pitch`, `MinorArea`, `BodyArea` |
+| `Bolt` | Bolt geometry + threads (no material) | `NominalDiameter`, `ThreadsPerInch`, `TensileStressArea`, `MinorDiameter`, `BodyDiameter`, `HeadBearingDiameter` (washer-face dia d_wf, ✅ 3.1a); computed `Pitch`, `MinorArea`, `BodyArea` |
 | `Material` | Strength + thermal props, any role | `Ftu`,`Fty`,`Fsu`,`Fbru`,`Fbry`,`E`,`CTE` |
 | `ThreadedMember` | What the bolt threads into | `Type` (Nut/Insert/TappedHole), `Material`, `RatedUltimateLoad` |
 | `FlangeLayer` | One layer of the clamped stack | `Material`, `Thickness` |
-| `Joint` | The whole joint, ties it together | `Bolt`, `BoltMaterial`, `FlangeStack`, `ThreadedMember`, `PreloadSpec`, `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, bolt spec allowables, temps (order-validated), `ShearPlane`, `SlipMode` (single-fastener default / joint / disabled slip check); computed `GripLength` |
+| `Washer` | Washer under head or nut (✅ 3.1a) | `Thickness`, `OuterDiameter`; rigid in the frustum — enters kc via the contact dia dc and kb via added clamped length |
+| `Joint` | The whole joint, ties it together | `Bolt`, `BoltMaterial`, `FlangeStack`, `ThreadedMember`, `PreloadSpec`, `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, bolt spec allowables, temps (order-validated), `ShearPlane`, `SlipMode` (single-fastener default / joint / disabled slip check), `HeadWasher`/`NutWasher` + `BodyLengthInGrip` (L1) + `FrustumAngle` (stiffness inputs, ✅ 3.1a); computed `GripLength` |
 | `PreloadSpec` | Full preload definition (✅ Phase 2.1) | **Replaced the scalar `Preload`** on `Joint`: `Method` (TorqueControl/DirectPreload), `NominalTorque` + fractional `TorqueTolerance` (5020A c-factor form, Eq. 3/4/5/24; `TorqueMin`/`TorqueMax`/`CMax`/`CMin` are derived Dependent props), nut factor K, `Uncertainty` Γ, relaxation/creep, `ThermalRate`, `SeparationCritical`, `NominalPreload` |
 | `LoadCase` | Applied loads for one case (✅ Phase 2.1) | Per-bolt + joint-level limit loads (joint-level NaN → engine derives); **passed to `analyze()`, not stored on the Joint** |
 | `Factors` | Safety + fitting factors (✅ Phase 2.1) | `FSU`,`FSY`,`FSSep`,`FFU`,`FFY`,`FFSep`,`FSSlip` (DABJ defaults); also passed to `analyze()`, not stored on the Joint |
@@ -191,7 +199,8 @@ Phase 2.2), not a type.
 | Ultimate-shear + tension-shear interaction margins (`engine.marginShearUlt`, `engine.marginInteraction`) | 2.7 | ✅ |
 | Slip margin (`engine.marginSlip`, DABJ Eq. 84) | 2.8 | ✅ |
 | Single-joint solver + `Result` (`engine.analyze`) | 2.9 | ✅ |
-| Stiffness, remaining checks + second validation wave | 3.1–3.4 | ⏳ next |
+| Joint stiffness, 30° frustum (`engine.stiffness`, validated vs DABJ Ex. 8-b) | 3.1a | ✅ |
+| Stiffness wiring (thermal preload + rupture branch), remaining checks + second validation wave | 3.1b–3.4 | ⏳ next |
 | Table input + bulk analysis + XLSX (Headless Release) | 3.5–3.6 | ⏳ |
 | Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
 | GUI (`+gui`) | 4 | ⏳ |

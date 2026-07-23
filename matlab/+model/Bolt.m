@@ -15,6 +15,7 @@ classdef Bolt
         TensileStressArea (1,1) double {mustBePositiveOrNaN} = NaN     % At, in^2
         MinorDiameter     (1,1) double {mustBePositiveOrNaN} = NaN     % minor (thread-root) diameter, in
         BodyDiameter      (1,1) double {mustBePositiveOrNaN} = NaN     % unthreaded shank diameter, in (NaN → use NominalDiameter)
+        HeadBearingDiameter (1,1) double {mustBePositiveOrNaN} = NaN   % washer-face / head bearing dia d_wf, in
     end
 
     properties (Dependent)

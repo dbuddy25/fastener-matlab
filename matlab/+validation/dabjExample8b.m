@@ -1,0 +1,93 @@
+function c = dabjExample8b()
+%DABJEXAMPLE8B  DABJ Example 8-b (joint stiffness), as a validation case.
+%   c = validation.dabjExample8b() returns a struct encoding the DABJ
+%   (Design and Analysis of Bolted Joints, Instar/ATI, Dec 2025) Example
+%   8-b worked stiffness problem — the answer key for engine.stiffness
+%   (Phase 3.1a: 30° conical frustum, through-bolt/nut configuration).
+%
+%   Fields:
+%       Name      "DABJ Example 8-b (joint stiffness)"
+%       Joint     model.Joint — the 3/8-24 A-286 through-bolted aluminum joint
+%       Expected  struct      — the book's published Kb / Kc / Phi
+%       Tol       struct      — tolerances for asserting against Expected
+%       Source    string      — DABJ pages transcribed
+%
+%   -------------------------------------------------------------------------
+%   Where each input comes from (printed DABJ page numbers, pp. 8-18..8-21):
+%     - 3/8-24 bolt, D = 0.375 in, At = 0.0878 in^2, full-diameter body
+%       (As = pi/4*0.375^2 = 0.1104 in^2), washer-face (head bearing)
+%       diameter d_wf = 0.523 in (p. 8-18).
+%     - Bolt material: A-286, Eb = 29e6 psi as printed in the example
+%       (p. 8-18). NOTE: constructed INLINE, not from the library — the
+%       library's A-286 carries the handbook fill E = 29.1e6, and the
+%       book's printed answers (2.39e6 / 4.73e6 / 0.336) are computed with
+%       the example's own 29e6 / 10e6 moduli.
+%     - Members: two 0.40-in aluminum fittings, Ec = 10e6 psi (p. 8-18);
+%       fitting stack L = 0.80 in (kc uses THIS length, not the
+%       washer-inclusive grip).
+%     - Washers (rigid in the frustum): head washer 0.078 thick, 0.687 OD;
+%       nut washer 0.062 thick, 0.625 OD (p. 8-18). Washer-inclusive
+%       clamped length for kb = 0.80 + 0.140 = 0.940 in.
+%     - Unthreaded body length in the grip L1 = 0.70 in (p. 8-19), so the
+%       threaded length in the grip L2 = 0.940 - 0.70 = 0.240 in.
+%     - Frustum half-angle 30 deg (DABJ §8 / Shigley conical-frustum method).
+%     - Through-bolt with nut; loading-plane factor n = 0.5 (p. 8-21).
+%
+%   Expected (the book's printed numbers):
+%     - Kb  = 2.39e6 lbf/in  (Eq. 8.1c, p. 8-19)
+%     - Kc  = 4.73e6 lbf/in  (Eq. 8.1e-f, p. 8-20; contact dia
+%             dc = 0.523 + 2*tan(30)*0.070 = 0.604 in, below the 0.625
+%             smaller washer OD)
+%     - Phi = 0.336          (stiffness factor, p. 8-21; NASA-STD-5020A Eq. 9)
+%   -------------------------------------------------------------------------
+
+% ---- Materials: INLINE with the example's printed moduli (see header) ----
+bm = model.Material(Name="A-286 (Example 8-b, E=29e6)", ...
+    Ftu=160000, Fty=120000, Fsu=95000, E=29e6, CTE=1.69e-5);
+fm = model.Material(Name="Aluminum (Example 8-b, E=10e6)", ...
+    Ftu=68000, Fty=57000, Fsu=39000, E=10e6, CTE=2.32e-5);
+
+% ---- Bolt (p. 8-18) ------------------------------------------------------
+b = model.Bolt( ...
+    Designation         = "3/8-24 UNF (Example 8-b)", ...
+    NominalDiameter     = 0.375, ...
+    Series              = model.ThreadSeries.UNF, ...
+    ThreadsPerInch      = 24, ...
+    TensileStressArea   = 0.0878, ...
+    MinorDiameter       = 0.3209, ...
+    BodyDiameter        = 0.375, ...
+    HeadBearingDiameter = 0.523);    % washer-face dia d_wf
+
+% ---- The joint (pp. 8-18..8-21) ------------------------------------------
+j = model.Joint( ...
+    Name               = "DABJ Example 8-b stiffness joint", ...
+    Bolt               = b, ...
+    BoltMaterial       = bm, ...
+    FlangeStack        = [model.FlangeLayer(Material=fm, Thickness=0.40), ...
+                          model.FlangeLayer(Material=fm, Thickness=0.40)], ...
+    HeadWasher         = model.Washer(Thickness=0.078, OuterDiameter=0.687), ...
+    NutWasher          = model.Washer(Thickness=0.062, OuterDiameter=0.625), ...
+    BodyLengthInGrip   = 0.70, ...   % L1 (p. 8-19)
+    FrustumAngle       = 30, ...
+    ThreadedMember     = model.ThreadedMember( ...
+                             Type     = model.ThreadedMemberType.Nut, ...
+                             Material = bm), ...
+    LoadingPlaneFactor = 0.5);       % n (p. 8-21)
+
+% ---- The answer key: the book's published numbers ------------------------
+expected = struct( ...
+    "Kb",  2.39e6, ...   % lbf/in (p. 8-19)
+    "Kc",  4.73e6, ...   % lbf/in (p. 8-20)
+    "Phi", 0.336);       % dimensionless (p. 8-21)
+
+% Book values are rounded to 3 significant figures; exact recomputation
+% (Kb 2.3892e6, Kc 4.7253e6, Phi 0.3358) must still pass.
+tol = struct("RelTol", 0.005, "PhiAbsTol", 0.005);
+
+c = struct( ...
+    "Name",     "DABJ Example 8-b (joint stiffness)", ...
+    "Joint",    j, ...
+    "Expected", expected, ...
+    "Tol",      tol, ...
+    "Source",   "DABJ Example 8-b, pp. 8-18..8-21");
+end
