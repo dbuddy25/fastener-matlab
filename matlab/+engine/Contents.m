@@ -34,6 +34,9 @@
 %                      15-check Margins table (Pass|Fail|NotEvaluated),
 %                      WorstMargin/GoverningCheck, Fig. 8 Narrative, asTable().
 %                      ✅ Phase 2.9 — the engine interface contract.
+%   summary          - Analysis inputs + computed preload band as one
+%                      display table (Group/Item/Value/Unit, one row per
+%                      item) — a human-readable record of what went in.
 %
 %   Will also hold: bolt/member stiffness + stiffness factor, applied-load
 %   resolution, and the remaining margin checks (bearing, thread/nut/insert,
