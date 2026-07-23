@@ -104,6 +104,13 @@ classdef tModel < matlab.unittest.TestCase
                 "model:Joint:temperatureOrder");
         end
 
+        function slipModeDefaultsToSingleFastener(testCase)
+            % The default matters: slip is assessed per-fastener unless the
+            % user explicitly selects Joint (or Disabled) mode.
+            j = model.Joint();
+            testCase.verifyEqual(j.SlipMode, model.SlipMode.SingleFastener);
+        end
+
         function materialStrengthDefaultsAreNaN(testCase)
             testCase.verifyTrue(isnan(model.Material().Ftu));
         end

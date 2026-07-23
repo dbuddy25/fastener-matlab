@@ -119,7 +119,7 @@ NaN-tolerant validators, so garbage fails loud instead of silently defaulting.
 | `Material` | Strength + thermal props, any role | `Ftu`,`Fty`,`Fsu`,`Fbru`,`Fbry`,`E`,`CTE` |
 | `ThreadedMember` | What the bolt threads into | `Type` (Nut/Insert/TappedHole), `Material`, `RatedUltimateLoad` |
 | `FlangeLayer` | One layer of the clamped stack | `Material`, `Thickness` |
-| `Joint` | The whole joint, ties it together | `Bolt`, `BoltMaterial`, `FlangeStack`, `ThreadedMember`, `PreloadSpec`, `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, bolt spec allowables, temps (order-validated), `ShearPlane`; computed `GripLength` |
+| `Joint` | The whole joint, ties it together | `Bolt`, `BoltMaterial`, `FlangeStack`, `ThreadedMember`, `PreloadSpec`, `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, bolt spec allowables, temps (order-validated), `ShearPlane`, `SlipMode` (single-fastener default / joint / disabled slip check); computed `GripLength` |
 | `PreloadSpec` | Full preload definition (✅ Phase 2.1) | **Replaced the scalar `Preload`** on `Joint`: `Method` (TorqueControl/DirectPreload), torque min/max, nut factor K, `Uncertainty` Γ, relaxation/creep, `ThermalRate`, `SeparationCritical`, `NominalPreload` |
 | `LoadCase` | Applied loads for one case (✅ Phase 2.1) | Per-bolt + joint-level limit loads (joint-level NaN → engine derives); **passed to `analyze()`, not stored on the Joint** |
 | `Factors` | Safety + fitting factors (✅ Phase 2.1) | `FSU`,`FSY`,`FSSep`,`FFU`,`FFY`,`FFSep`,`FSSlip` (DABJ defaults); also passed to `analyze()`, not stored on the Joint |
@@ -127,6 +127,7 @@ NaN-tolerant validators, so garbage fails loud instead of silently defaulting.
 | `ThreadedMemberType` | enum | `Nut`, `Insert`, `TappedHole` |
 | `ShearPlaneCondition` | enum | `ThreadsInShear`, `BodyInShear` |
 | `PreloadMethod` | enum (✅ Phase 2.1) | `TorqueControl`, `DirectPreload` |
+| `SlipMode` | enum | `SingleFastener` (default; 5020A Eq. 86), `Joint` (5020A Eq. 84, joint totals), `Disabled` |
 
 **Why one `Material` for every role:** a bolt material and a flange material are the
 same *kind* of thing; flanges just also use the bearing fields (`Fbru`/`Fbry`) that

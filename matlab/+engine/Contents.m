@@ -22,9 +22,11 @@
 %                      (5020A Eq. 20-23; threads-in-shear exponents
 %                      deferred to Phase 3.4).
 %                      ✅ Phase 2.7 — validated against DABJ §9 (+0.59).
-%   marginSlip       - Joint-slip margin, nf·μ·PpMin friction capacity vs
-%                      joint-level shear demand (NASA-STD-5020A Eq. 86).
-%                      ✅ Phase 2.8 — validated against DABJ §9 (-0.65).
+%   marginSlip       - Slip margin, switched on Joint.SlipMode:
+%                      single-fastener (default, per-bolt loads, 5020A
+%                      Eq. 86), joint (nf·μ·PpMin vs joint totals, 5020A
+%                      Eq. 84), or disabled (NotEvaluated).
+%                      ✅ Phase 2.8 — validated against DABJ §9 (-0.65, joint mode).
 %   analyze          - Single-joint solver: preload + design loads + every
 %                      margin check in one call -> engine.Result.
 %                      ✅ Phase 2.9 — one call reproduces all 6 DABJ §9 margins.

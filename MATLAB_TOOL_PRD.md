@@ -57,7 +57,7 @@ The engine MUST compute all of the following per joint and return a full result 
 | 8 | Nut strength | Use spec-rated ultimate load from library, **not** a thread-stripping calc (5020A §4.2.2.8) |
 | 9 | Insert failure modes | |
 | 10 | Separation margin | |
-| 11 | Slip margin | |
+| 11 | Slip margin | Mode toggle: single-fastener (default, 5020A Eq. 86) / joint (Eq. 84) / disabled |
 | 12 | Separation-before-rupture | 5020A Fig 8 decision tree |
 | 13 | Combined tension–shear interaction | 5020A **Eq. 20–23**, correct per-mode exponents |
 | 14 | Tapped-hole parent-material thread shear | Soft-parent case; hand-validate if no answer-key case covers it |

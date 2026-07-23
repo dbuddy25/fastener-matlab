@@ -36,6 +36,7 @@ classdef Joint
         MinTemperature        (1,1) double = 20                               % °C
         MaxTemperature        (1,1) double = 20                               % °C
         ShearPlane            (1,1) model.ShearPlaneCondition = model.ShearPlaneCondition.ThreadsInShear
+        SlipMode              (1,1) model.SlipMode = model.SlipMode.SingleFastener   % slip check mode (default single-fastener)
     end
 
     properties (Dependent)

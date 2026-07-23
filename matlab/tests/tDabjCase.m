@@ -9,7 +9,9 @@ classdef tDabjCase < matlab.unittest.TestCase
     %   Phase 2.6 added separationMarginMatchesDABJ and boltYieldMarginMatchesDABJ;
     %   Phase 2.7 added shearUltMarginMatchesDABJ and interactionMarginMatchesDABJ;
     %   Phase 2.8 added slipMarginMatchesDABJ;
-    %   Phase 2.9 added analyzeReproducesAllDABJMargins (the full solver).
+    %   Phase 2.9 added analyzeReproducesAllDABJMargins (the full solver);
+    %   the slip-mode toggle added singleFastenerSlipMatches and
+    %   disabledSlipNotEvaluated (fixture pinned to SlipMode.Joint).
     %   The Expected values verified here are recorded constants from the
     %   course book, not computed results — the point is that the answer
     %   key is captured and cannot drift silently.
@@ -194,18 +196,44 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function slipMarginMatchesDABJ(testCase)
-            % Phase 2.8: joint-level friction check (NASA-STD-5020A Eq. 86) with
-            % joint totals, NOT nf x per-bolt:
+            % Phase 2.8: joint-level friction check (NASA-STD-5020A Eq. 84) with
+            % joint totals, NOT nf x per-bolt — the fixture Joint is pinned to
+            % SlipMode.Joint because the book works JOINT slip (Solutions-22..23):
             % MS = 4*0.1*6,469.75 / (1.0*(5,690 + 0.1*16,090)) - 1
             %    = 2,587.9/7,299 - 1 = -0.65 (Solutions-23) — a deliberate
             % FAILING margin; the book's joint slips at limit load.
             c = validation.dabjSection9();
+            testCase.verifyEqual(c.Joint.SlipMode, model.SlipMode.Joint);
             r = engine.marginSlip(c.Joint, c.LoadCase, ...
                 engine.preload(c.Joint), c.Factors);
             testCase.verifyEqual(r.MS, c.Expected.MS_Slip, ...
                 "AbsTol", c.Tol.MarginAbsTol);
             testCase.verifyLessThan(r.MS, 0);
-            testCase.verifySubstring(r.Method, "Eq. 86");
+            testCase.verifySubstring(r.Method, "Eq. 84");
+        end
+
+        function singleFastenerSlipMatches(testCase)
+            % Single-fastener slip (NASA-STD-5020A Eq. 86, the tool DEFAULT)
+            % on the DABJ joint with PER-BOLT limit loads. HAND-DERIVED, not
+            % a book value (the book only works joint slip):
+            % MS = 0.1*6,469.75 / (1.0*1.0*(1,560 + 0.1*5,590)) - 1
+            %    = 646.975/2,119 - 1 = -0.6947
+            c = validation.dabjSection9();
+            j = c.Joint;
+            j.SlipMode = model.SlipMode.SingleFastener;
+            r = engine.marginSlip(j, c.LoadCase, engine.preload(j), c.Factors);
+            testCase.verifyEqual(r.MS, -0.6947, "AbsTol", 0.01);
+            testCase.verifySubstring(r.Method, "single-fastener");
+        end
+
+        function disabledSlipNotEvaluated(testCase)
+            % SlipMode.Disabled -> MS = NaN (analyze renders NotEvaluated).
+            c = validation.dabjSection9();
+            j = c.Joint;
+            j.SlipMode = model.SlipMode.Disabled;
+            r = engine.marginSlip(j, c.LoadCase, engine.preload(j), c.Factors);
+            testCase.verifyTrue(isnan(r.MS));
+            testCase.verifySubstring(r.Method, "disabled");
         end
 
         function analyzeReproducesAllDABJMargins(testCase)
