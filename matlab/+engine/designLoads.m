@@ -4,6 +4,11 @@ function d = designLoads(loadCase, factors)
 %   and separation safety factors (FS) and fitting factors (FF) to the
 %   per-bolt limit loads. All loads in lbf (see UNITS.md).
 %
+%   Governing definition: NASA-STD-5020A design-factor application —
+%   design load = FS x FF x limit load (per 5020A design-factor
+%   requirements; DABJ Section 9 applies this to form Ptu/Pty/Psu/Psep).
+%   These design loads feed every downstream margin (Eq. 6/14/15/19/20-23).
+%
 %   Returned struct fields (all lbf):
 %       Ptu   design ultimate tension    = FSU  * FFU  * PtL
 %       Pty   design yield tension       = FSY  * FFY  * PtL
@@ -21,9 +26,10 @@ arguments
     factors  (1,1) model.Factors
 end
 
+% NASA-STD-5020A design-factor application: design load = FS x FF x limit load
 d = struct( ...
-    "Ptu",  factors.FSU   * factors.FFU   * loadCase.BoltTensileLimitLoad, ...
-    "Pty",  factors.FSY   * factors.FFY   * loadCase.BoltTensileLimitLoad, ...
-    "Psu",  factors.FSU   * factors.FFU   * loadCase.BoltShearLimitLoad, ...
-    "Psep", factors.FSSep * factors.FFSep * loadCase.BoltTensileLimitLoad);
+    "Ptu",  factors.FSU   * factors.FFU   * loadCase.BoltTensileLimitLoad, ... % 5020A design ultimate tension (FSU*FFU*PtL)
+    "Pty",  factors.FSY   * factors.FFY   * loadCase.BoltTensileLimitLoad, ... % 5020A design yield tension (FSY*FFY*PtL)
+    "Psu",  factors.FSU   * factors.FFU   * loadCase.BoltShearLimitLoad, ...   % 5020A design ultimate shear (FSU*FFU*PsL)
+    "Psep", factors.FSSep * factors.FFSep * loadCase.BoltTensileLimitLoad);    % 5020A separation load (FSSep*FFSep*PtL)
 end

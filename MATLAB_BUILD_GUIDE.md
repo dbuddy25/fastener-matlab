@@ -188,6 +188,21 @@ cases = data.loadJoints("table.xlsx", lib)         % table rows reference librar
 
 `NotEvaluated` as a first-class status lets the engine ship real results with only some checks live — no fake numbers, no rework as the rest land.
 
+## Code conventions
+
+**Equation traceability (required).** Everywhere an equation is implemented, the
+point-of-use comment must carry all three together: the **reference document**
+(e.g. NASA-STD-5020A, DABJ), the **equation number** if one exists, and the
+**equation written out**. The reference + number are also surfaced in each
+function's `Method` string (and thus in `Result`, reports, and the GUI). Example:
+
+```matlab
+% NASA-STD-5020A Eq. 19 — MS = PpMin / Psep - 1
+MS = preload.PpMin / designLoads.Psep - 1;
+```
+
+No bare equation number without the written formula; no formula without the citation.
+
 ## Verification strategy (applies throughout)
 - Every engine step replays the validation case(s) and asserts a numeric match (margins to ±0.01) — the guardrail against silent drift in a safety-critical tool.
 - The GUI (Phase 4) is verified by manual walkthrough of each tab (it holds no logic to unit-test).
