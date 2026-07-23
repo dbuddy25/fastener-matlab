@@ -72,50 +72,103 @@ min/max preload) if you want to double-check what went in.
 
 ## 4. Quick start B — BULK analysis (the main workflow)
 
-You need **two spreadsheets** (CSV or XLSX). Templates live in
-`matlab/templates/` — copy them and edit.
+### Step 1 — generate the fill-in workbook
+```matlab
+f = data.makeTemplate("my_template.xlsx");
+```
+This writes one .xlsx with five sheets:
 
-### Step 1 — Joint library table (one row per joint)
-`joint_library_template.csv`. Key columns (blank = use default):
+| Sheet | What it is |
+|-------|------------|
+| **Joints** | one row per joint definition — **fill this** |
+| **Elements** | one row per FEM element × load case — **fill this** |
+| **Settings** | global temperatures + safety/fitting factors — **fill this** |
+| **Lists** | dropdown sources (bolt keys, material keys, SlipMode, ThreadedMember, TRUE/FALSE) for Excel Data Validation |
+| **Fields** | the **data dictionary**: every column's MATLAB name, friendly name, meaning, units, and default — use it for lookups and tooltips |
+
+**Joints and Elements have a TWO-ROW header:** row 1 is friendly display names
+("Bolt Size", "Slip Check", …) and is **informational only**; row 2 is the
+MATLAB column names the readers actually key on. The workbook ships with the
+example rows filled in (the DABJ §9 class-problem nut joint + a Helicoil-insert
+joint) — overwrite or extend them. Plain single-header CSVs (the ones in
+`matlab/templates/`) work exactly the same way.
+
+### Step 2 — fill the three input sheets
+
+**Joints** (blank cell = use the default; the `Fields` sheet documents every column):
 
 | Group | Columns | Meaning |
 |-------|---------|---------|
-| **Identity** | `Name` | unique joint name (referenced by the elements table) |
-| **Bolt & materials** | `Bolt`, `BoltMaterial`, `HostMaterial`, `BoltSpec` | library keys (e.g. `3/8-24 UNF`, `A-286`). `BoltSpec` (e.g. `3/8 A-286 160ksi`) fills the rated ult/yield loads. `HostMaterial` = the nut/insert/tapped-parent material |
-| **Threaded member** | `ThreadedMember`, `ThreadEngagement`, `InsertRating` | `Nut` / `Insert` / `TappedHole`. Engagement `Le` as inches or `"1.5D"`. `InsertRating` = HeliCoil rated pull-out (inserts only) |
-| **Preload** | `Torque`, `TorqueTolerance`, `NutFactor`, `Uncertainty`, `Relaxation`, `ThermalRate`, `SeparationCritical` | nominal torque (in-lbf) ± tolerance (fraction, e.g. 0.0426); K; Γ; relaxation fraction; thermal rate (lbf/°C, **0 = compute from stiffness**); TRUE/FALSE |
-| **Temperatures (°C)** | `AssemblyTempC`, `HotTempC`, `ColdTempC` | assembly + hot/cold service temps |
-| **Joint config** | `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, `ThreadsInShear`, `SlipMode`, `BoltAxis`, `FrustumAngle`, `BodyLengthInGrip`, `HeadBearingDiameter` | # bolts; μ; n; TRUE/FALSE; `Disabled`/`SingleFastener`/`Joint`; **`X`/`Y`/`Z` (the fastener axial direction — required for force resolution)**; 30; L1; head bearing dia |
-| **Washers** | `HeadWasherThickness/OD`, `NutWasherThickness/OD` | in |
-| **Flanges** | `FlangeCount`, `Flange{1..4}Material/Thickness/HoleDia/EdgeDist/Tearout` | the clamped stack, up to 4 layers. `Tearout` TRUE/FALSE runs the tear-out check on that layer |
+| **Identity** | `Name` | unique joint name (referenced by the Elements sheet's `joint_name`) |
+| **Bolt & spec** | `Bolt`, `BoltMaterial`, `BoltSpec` | library keys (see `Lists`, e.g. `3/8-24 UNF`, `A-286`). `BoltSpec` is optional — **blank auto-looks-up** the spec matching Bolt + BoltMaterial for the rated ult/yield loads |
+| **Config** | `FrustumAngle`, `ThreadsInShear`, `SlipMode`, `ThreadedMember`, `BoltCount`, `FrictionCoefficient`, `LoadingPlaneFactor`, `FlangeCount`, `BodyLengthInGrip` | frustum half-angle (30); TRUE/FALSE; `Ignored`/`SingleFastener`/`Joint`; `Nut`/`Insert`/`TappedHole`; nf; μ; n; # clamped layers; L1 |
+| **Bolt axis** | `AxialX` / `AxialY` / `AxialZ` | mark **exactly one** cell (`X` or TRUE) — the fastener axial direction for force resolution. None marked → Z |
+| **Preload** | `NutFactor`, `Uncertainty`, `PreloadLoss`, `NominalTorque`, `TorqueTolerance`, `ThermalRate` | K; Γ; relaxation fraction; nominal torque (in-lbf); fractional tolerance (e.g. 0.0426); lbf/°C (**blank/0 = compute from stiffness**) |
+| **Threaded member details** | `NutHeight`, `NutMaterial`, `NutDiameter` — or `HelicoilParentName`, `HelicoilParentMaterial`, `HelicoilLengthRatio` | fill the group matching `ThreadedMember` (nut vs insert). `HelicoilLengthRatio` is in bolt diameters (1.5 = 1.5D) |
+| **Washers** | `HeadWasherOn` + `HeadWasherMaterial/OD/ID/Thickness`, and the `NutWasher*` twins | the `…On` gate must be TRUE for the washer to exist |
+| **Flanges** | `Flange{1..4}Name/Material/HoleDia/Thickness/Tearout/EdgeDist` | the clamped stack, up to 4 layers. `Tearout` TRUE/FALSE runs the tear-out check on that layer |
 
-### Step 2 — Elements + forces table (one row per FEM element × load case)
-`elements_template.csv`:
+> **No temperature columns** — temperatures are global and live on the
+> **Settings** sheet; they're applied to every joint at run time.
+
+**Elements** (one row per FEM element × load case):
 
 | Column | Meaning |
 |--------|---------|
 | `element_id` | FEM element id |
-| `joint_name` | which joint definition (from table 1) applies |
+| `joint_name` | which joint definition (Joints sheet `Name`) applies |
 | `pattern_id` | *(optional)* physical joint instance — bolts sharing a `pattern_id` are one bolt pattern (used for **joint-mode slip**). Blank → uses `joint_name` |
 | `load_case` | *(optional)* name/label for the load case |
-| `FX, FY, FZ` | element forces (lbf) — resolved onto the joint's `BoltAxis` into tension + shear |
+| `FX, FY, FZ` | element forces (lbf) — resolved onto the joint's axial direction into tension + shear |
 | `MX, MY, MZ` | *(optional)* moments (in-lbf) — informational only for now |
 | `scale` | *(optional)* multiplier (e.g. 3σ), default 1 |
 | `reversible` | *(optional)* TRUE → tension taken as `abs(axial)` |
 
 **How forces become loads:** each FEM element = one bolt. The tool projects `(FX,FY,FZ)`
-onto the joint's `BoltAxis` → the along-axis part is **tension**, the two sideways parts
-combine (√) into **shear**.
+onto the joint's axial direction (the `Axial…` mark) → the along-axis part is **tension**,
+the two sideways parts combine (√) into **shear**.
 
-### Step 3 — Run it (one command)
+**Settings** — `Setting | Value | Description` rows: `NominalTempC`/`HotTempC`/`ColdTempC`
+(global temperatures, °C) and the eight factors `FSU, FSY, FSSep, FSSlip, FFU, FFY,
+FFSep, FFSlip`. Only Setting + Value are read; Description is for humans.
+
+### Step 3 — run it
+
+`engine.runBulk` currently takes **three file paths** (a single-workbook
+`runBulk(f)` is a planned follow-up), so save each filled sheet as its own CSV
+(activate the sheet → File → Save As → CSV):
+
+- **Joints** → `joints.csv` — keep or delete the friendly row; the reader
+  auto-detects the MATLAB-name header row either way.
+- **Elements** → `elements.csv` — **delete the friendly (top) row before saving**;
+  this reader expects the MATLAB names on row 1.
+- **Settings** → `settings.csv` — save as-is (key in column 1, value in column 2;
+  the Description column is ignored).
+
 ```matlab
-T = engine.runBulk("joint_library.csv", "elements.csv", model.Factors(), "margins.xlsx");
+T = engine.runBulk("joints.csv", "elements.csv", "settings.csv", "margins.xlsx");
 ```
-- Loads both tables, resolves forces, runs all 15 checks per element, writes `margins.xlsx`
-  (a **Results** sheet + a **Summary** sheet with Pass/Fail/Error counts), and returns the
-  table `T`.
-- Omit the last two args to just get `T` back without writing a file.
+- Loads the three tables, applies the global temperatures + factors, resolves forces,
+  runs all 15 checks per element, writes `margins.xlsx` (a **Results** sheet + a
+  **Summary** sheet with Pass/Fail/Error counts), and returns the table `T`.
+- Omit the last arg to just get `T` back without writing a file.
 - See `matlab/examples/run_bulk_example.m` for a runnable end-to-end example.
+
+### Add dropdowns & tooltips in Excel (optional, ~2 minutes)
+
+The **Lists** sheet is a ready-made dropdown source and the **Fields** sheet is
+the tooltip text. In Excel:
+
+1. **Dropdowns** — select the cells of a column you want constrained (e.g. the
+   `BoltMaterial` data cells on the Joints sheet) → **Data → Data Validation** →
+   Allow: **List** → Source: point at the matching Lists column, e.g.
+   `=Lists!$E$2:$E$3` for materials (column E = `Materials`; extend the row range
+   as the library grows). Repeat with `=Lists!$A$2:$A$4` (ThreadedMember),
+   `=Lists!$B$2:$B$4` (SlipMode), `=Lists!$C$2:$C$3` (TRUE/FALSE),
+   `=Lists!$D$2:$D$n` (Bolts).
+2. **Hover tooltips** — in the same Data Validation dialog, open the
+   **Input Message** tab and paste the column's Description from the **Fields**
+   sheet. Excel shows it whenever a cell in that column is selected.
 
 ---
 
@@ -153,8 +206,9 @@ is meant to grow.
 - **Insert / tapped-hole joints:** the stiffness model is through-bolt only, so those
   configs use a conservative `φ = 1`, and a pure-insert row may come back **Error** (stiffness
   deferred). Bolt/nut/tapped-parent thread checks still evaluate.
-- **HeliCoil insert ratings:** you must supply real manufacturer pull-out numbers via
-  `InsertRating` — the tool doesn't ship a HeliCoil rating table.
+- **HeliCoil insert ratings:** you must supply real manufacturer pull-out numbers
+  (`ThreadedMember.RatedUltimateLoad`, set in code — the joint table doesn't carry an
+  insert-rating column yet) — the tool doesn't ship a HeliCoil rating table.
 - **Joint-mode slip in bulk:** only evaluates when a pattern's element count equals its
   `BoltCount` (otherwise refused with a `Note`). Default `SingleFastener` slip always runs.
 - **Threads-in-shear interaction, yield rupture branch, mixed-modulus stiffness:** deferred

@@ -26,7 +26,7 @@ matlab/
 ├── fastenerTool.m     entry point (Phase 1 stub — prints version)
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
 ├── +engine/           analysis math — the core (Phases 2–3)
-├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); case save/load later (Phase 3)
+├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load later (Phase 3)
 ├── +report/           XLSX export (`report.exportResults`, Phase 3.6); PDF later (Phase 3.8)
 ├── +gui/              App Designer app — thin shell over the engine (Phase 4)
 ├── examples/          runnable reference scripts (`run_bulk_example.m`)
@@ -82,6 +82,13 @@ preload group — no temperature columns (those are global settings). The reader
 auto-detects the header row, so a friendly banner row above the column names
 is fine.
 
+- **Workbook template generator**: `data.makeTemplate("my_template.xlsx")`
+  writes a five-sheet fill-in workbook — Joints/Elements/Settings input sheets
+  (two-row header: friendly names above the MATLAB column names), a `Lists`
+  sheet with the dropdown sources (bolt/material keys pulled live from the
+  library), and a `Fields` sheet: the full data dictionary (MATLAB name,
+  friendly name, description, units, default per column — the Excel
+  Data-Validation tooltip text). See USER_GUIDE.md §4.
 - **Input templates** (exact column headers/keys, first joint row = the DABJ
   §9 worked example, settings = the §9 temperatures + factors):
   `matlab/templates/joint_library_template.csv`, `elements_template.csv`,

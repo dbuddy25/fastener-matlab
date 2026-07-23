@@ -28,6 +28,15 @@
 %                      model.Factors (FSU/FSY/FSSep/FSSlip/FFU/FFY/FFSep/
 %                      FFSlip keys; missing -> Factors defaults). Applied
 %                      to every joint by engine.runBulk. Step 2a.
+%   makeTemplate     - workbook generator: data.makeTemplate(outFile) writes
+%                      the five-sheet .xlsx fill-in template — Joints +
+%                      Elements (two-row header: friendly names above the
+%                      MATLAB column names, shipped example rows included),
+%                      Settings (Setting | Value | Description), Lists
+%                      (dropdown sources incl. live bolt/material keys), and
+%                      Fields (the data dictionary / tooltip text). Joints is
+%                      sheet 1, so loadJointLibrary parses the workbook
+%                      directly. Step 2b.
 %   templates/       - joint_library_template.csv + elements_template.csv +
 %                      settings_template.csv: the exact column headers/keys,
 %                      with the DABJ Section 9 joint as the first

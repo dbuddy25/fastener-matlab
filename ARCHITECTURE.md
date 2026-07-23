@@ -108,7 +108,17 @@ schema and the settings template carries the §9 temperatures + factors,
 checked against the `validation.dabjSection9` in-code build by
 `tests/tBulkParsers.m` (including a `ThermalRate` column →
 `PreloadSpec.ThermalRate` override so the template's thermal preload needs
-no stiffness geometry).
+no stiffness geometry). ✅ Step 2b adds the workbook generator:
+`data.makeTemplate(outFile)` writes a five-sheet .xlsx — Joints/Elements
+(two-row header: friendly display names above the MATLAB column names the
+readers key on, plus the shipped example rows), Settings
+(Setting | Value | Description), `Lists` (dropdown sources: ThreadedMember/
+SlipMode/Boolean plus bolt + material keys pulled live from
+`data.Library.load()`), and `Fields` (the data dictionary: MATLAB name,
+friendly name, description, units, valid/default per input column — the
+Data-Validation tooltip text). Joints is written first so
+`data.loadJointLibrary(f, lib)` parses the workbook directly
+(`tests/tMakeTemplate.m`).
 ✅ Phase 3.5c adds the bulk orchestrator — `engine.analyzeBulk(jointLibrary,
 elements, factors)` maps `loadCaseFromForces` → `analyze` over every
 element and returns a writetable-ready results table, one row per element:
@@ -213,7 +223,9 @@ The single flow everything is organized around:
   temperatures + `model.Factors`, and `data.loadElements(file)` turns an
   element + forces table into the per-element struct for
   `engine.resolveForces`. Template CSVs with the exact column headers ship at
-  `matlab/templates/`.
+  `matlab/templates/`; `data.makeTemplate(outFile)` (✅ Step 2b) generates the
+  five-sheet fill-in workbook (Joints/Elements/Settings + `Lists` dropdown
+  sources + the `Fields` data dictionary).
 - **Bulk (orchestrator — ✅ 3.5c/3.5d):** the same flow mapped over many elements
   → a results table: `engine.analyzeBulk(jointLibrary, elements, factors)` — one
   row per element (identity + resolved Axial/Shear + the 15 margin MS columns +
@@ -262,7 +274,7 @@ matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
 ├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); `analyzeBulk` (3.5c) — the bulk orchestrator; `runBulk` (3.6) — the one-call headless workflow
-├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b — Step 2a joint-table layout); global settings (`loadSettings` — temps + factors, Step 2a); ⏳ case save/load — Phase 3
+├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b — Step 2a joint-table layout); global settings (`loadSettings` — temps + factors, Step 2a); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields sheets, Step 2b); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ✅ XLSX export (`exportResults`, 3.6); ⏳ PDF — Phase 3.8
 ├── +gui/            ⏳ App Designer app (thin shell)        — Phase 4
