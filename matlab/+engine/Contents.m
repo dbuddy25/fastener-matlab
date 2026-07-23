@@ -25,9 +25,16 @@
 %   marginSlip       - Joint-slip margin, nf·μ·PpMin friction capacity vs
 %                      joint-level shear demand (DABJ Eq. 84).
 %                      ✅ Phase 2.8 — validated against DABJ §9 (-0.65).
+%   analyze          - Single-joint solver: preload + design loads + every
+%                      margin check in one call -> engine.Result.
+%                      ✅ Phase 2.9 — one call reproduces all 6 DABJ §9 margins.
+%   Result           - Standard result object: Preload, DesignLoads, the
+%                      15-check Margins table (Pass|Fail|NotEvaluated),
+%                      WorstMargin/GoverningCheck, Fig. 8 Narrative, asTable().
+%                      ✅ Phase 2.9 — the engine interface contract.
 %
 %   Will also hold: bolt/member stiffness + stiffness factor, applied-load
-%   resolution, the remaining margin checks, tapped-hole
-%   parent-thread check, and the single-joint solver.
+%   resolution, and the remaining margin checks (bearing, thread/nut/insert,
+%   tapped-hole parent-thread — Phases 3.1-3.3).
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

@@ -55,7 +55,8 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 2.8 (slip margin) complete; next Phase 2.9 (engine.analyze + Result).**
+**Phase 2.9 (engine.analyze + Result) complete — the validated single-joint
+engine is done; next Phase 3.1 (joint stiffness).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -66,4 +67,10 @@ constructs in the Command Window (see `+model/Joint.m`, exercised by
 `tests/tLibrary.m`). The `+validation` package encodes the answer key:
 `validation.dabjSection9()` builds the DABJ §9 joint/loads/factors from the
 library and pins every published intermediate and margin (exercised by
-`tests/tDabjCase.m`). See `MATLAB_BUILD_GUIDE.md`.
+`tests/tDabjCase.m`). The `+engine` package computes the preloads, design
+loads, and six DABJ-validated margin checks, and
+`engine.analyze(joint, loadCase, factors)` runs them all in one call,
+returning the standard `engine.Result` — the 15-check margin table
+(`Pass|Fail|NotEvaluated`), `WorstMargin`/`GoverningCheck`, the Fig. 8
+narrative, and `asTable()` for export (one `analyze()` call reproduces all
+six DABJ §9 margins in `tests/tDabjCase.m`). See `MATLAB_BUILD_GUIDE.md`.

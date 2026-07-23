@@ -8,7 +8,8 @@ classdef tDabjCase < matlab.unittest.TestCase
     %   Phase 2.5 added designLoadsMatchDABJ and tensionUltMarginMatchesDABJ;
     %   Phase 2.6 added separationMarginMatchesDABJ and boltYieldMarginMatchesDABJ;
     %   Phase 2.7 added shearUltMarginMatchesDABJ and interactionMarginMatchesDABJ;
-    %   Phase 2.8 added slipMarginMatchesDABJ.
+    %   Phase 2.8 added slipMarginMatchesDABJ;
+    %   Phase 2.9 added analyzeReproducesAllDABJMargins (the full solver).
     %   The Expected values verified here are recorded constants from the
     %   course book, not computed results — the point is that the answer
     %   key is captured and cannot drift silently.
@@ -206,5 +207,48 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyLessThan(r.MS, 0);
             testCase.verifySubstring(r.Method, "Eq. 84");
         end
+
+        function analyzeReproducesAllDABJMargins(testCase)
+            % Phase 2.9: ONE engine.analyze call reproduces every published
+            % DABJ margin, names the governing check (the deliberate slip
+            % failure), and advertises the full 15-check set (unbuilt
+            % checks -> NotEvaluated).
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            testCase.verifyClass(r, "engine.Result");
+            tol = c.Tol.MarginAbsTol;
+            % The six published margins, pulled from Result.Margins by name
+            testCase.verifyEqual(marginMS(r, "Tension-Ultimate"), ...
+                c.Expected.MS_TensionUlt, "AbsTol", tol);
+            testCase.verifyEqual(marginMS(r, "Tension-Yield"), ...
+                c.Expected.MS_BoltYield, "AbsTol", tol);
+            testCase.verifyEqual(marginMS(r, "Shear-Ultimate"), ...
+                c.Expected.MS_ShearUlt, "AbsTol", tol);
+            testCase.verifyEqual(marginMS(r, "Interaction"), ...
+                c.Expected.MS_Interaction, "AbsTol", tol);
+            testCase.verifyEqual(marginMS(r, "Separation"), ...
+                c.Expected.MS_Separation, "AbsTol", tol);
+            testCase.verifyEqual(marginMS(r, "Slip"), ...
+                c.Expected.MS_Slip, "AbsTol", tol);
+            % Worst margin = the slip failure, and it is named as governing
+            testCase.verifyEqual(r.WorstMargin, c.Expected.MS_Slip, ...
+                "AbsTol", tol);
+            testCase.verifyEqual(r.GoverningCheck, "Slip");
+            % Narrative carries the Fig. 8 decision (gate assured here)
+            testCase.verifySubstring(r.Narrative, ...
+                "Separation before rupture assured");
+            % Full 15-check set, writetable-ready
+            t = r.asTable();
+            testCase.verifyClass(t, "table");
+            testCase.verifySize(t, [15 4]);
+        end
     end
+end
+
+% ---- Local helpers --------------------------------------------------------
+function ms = marginMS(r, name)
+%MARGINMS  Look up one margin's MS by Name from Result.Margins.
+mask = [r.Margins.Name] == name;
+assert(nnz(mask) == 1, "margin ""%s"" not found exactly once", name);
+ms = r.Margins(mask).MS;
 end

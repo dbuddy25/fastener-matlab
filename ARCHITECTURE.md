@@ -6,14 +6,14 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 2.8 (slip margin).**
-`engine.preload` reproduces the DABJ §9 preloads; `engine.designLoads` and
-`engine.marginTensionUlt` (with the Fig. 8 separation-before-rupture gate)
-reproduce the design loads and the +0.69 ultimate-tension margin;
-`engine.marginSeparation` and `engine.marginBoltYield` reproduce the +0.16
-separation and +0.63 bolt-yield margins; `engine.marginShearUlt` and
-`engine.marginInteraction` reproduce the +3.18 ultimate-shear and +0.59
-tension-shear interaction margins.
+**Current state: through Phase 2.9 — validated single-joint engine complete.**
+`engine.analyze(joint, loadCase, factors)` runs the whole engine in one call —
+preload (`engine.preload`), design loads (`engine.designLoads`), and every
+built margin check (`marginTensionUlt` with the Fig. 8 gate, `marginBoltYield`,
+`marginShearUlt`, `marginInteraction`, `marginSeparation`, `marginSlip`) —
+and returns the standard `engine.Result`. One call reproduces all six DABJ §9
+margins (+0.69 / +0.63 / +3.18 / +0.59 / +0.16 / −0.65, governed by the
+deliberate slip failure); checks arriving in Phase 3 report `NotEvaluated`.
 
 ---
 
@@ -48,22 +48,23 @@ The single flow everything is organized around:
 
 ```
   model.Joint + model.LoadCase + model.Factors  ──▶  engine.analyze(joint, loadCase, factors)
-        (✅ Phase 2.1)                                       (⏳ 2.9 solver)
+        (✅ Phase 2.1)                                       (✅ 2.9 solver)
                                                                   │
                                               engine.Result  ──▶  report / gui
-                                            (⏳ result object)   (⏳ Phases 3–4)
+                                            (✅ 2.9 result object) (⏳ Phases 3–4)
 ```
 
 - **Input:** one `model.Joint` — a fully-described joint (✅ you can build this today) —
   plus a `model.LoadCase` (the applied loads) and `model.Factors` (safety + fitting
   factors), both passed to `analyze()` rather than stored on the Joint (✅ Phase 2.1).
 - **Engine:** resolves loads, computes preload/stiffness, runs all 15 margin checks,
-  applies the interaction and separation logic. (⏳ built up piece by piece, Phases 2–3.)
+  applies the interaction and separation logic. (✅ core built and DABJ-validated
+  through Phase 2.9 — six checks live; stiffness + the remaining checks land in
+  Phases 3.1–3.3 and slot into the same `analyze()` call.)
 - **Output:** one `engine.Result` object — the 15 margins, each with pass/fail status
   (`Pass|Fail|NotEvaluated`), the governing equation/method, plus `WorstMargin`,
   `GoverningCheck`, the Fig 8 `Narrative`, and `asTable()`. Every consumer (report, GUI,
-  bulk table) reads this *one* shape, so nothing re-derives numbers. (⏳ defined
-  alongside the solver, Phase 2.9.)
+  bulk table) reads this *one* shape, so nothing re-derives numbers. (✅ Phase 2.9.)
 - **Bulk:** the same flow mapped over many joints/load cases → a results table:
   `engine.analyzeBulk(cases, factors)`. (⏳ Phase 3.5.)
 
@@ -93,7 +94,7 @@ export (Phase 3). The GUI wraps exactly these calls later.
 matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
-├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7); ⏳ rest — Phases 2–3
+├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9); ⏳ stiffness + remaining checks — Phase 3
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3)
 ├── +report/         ⏳ PDF + XLSX export                    — Phase 3
@@ -142,8 +143,9 @@ Phase 2.2), not a type.
   early. The GUI is **committed**, but it only wires controls to the already-tested
   headless API — no logic lives in it. This keeps the no-GUI path first-class and
   makes the GUI cheaper and more robust to build.
-- **One `Result` object** (⏳) — every consumer reads the same computed output; no
-  double-math between report and GUI.
+- **One `Result` object** (✅ 2.9) — every consumer reads the same computed output; no
+  double-math between report and GUI. Unbuilt checks report `NotEvaluated` (a
+  first-class status), so real results ship without fake numbers.
 - **Units: English + °C** — inch/lbf/psi with temperature in °C and CTE in 1/°C. One
   contract, documented in `UNITS.md`; conversion only at the GUI boundary.
 - **Validate against a known-good answer key, not the Python tool** — the Python app
@@ -187,8 +189,8 @@ Phase 2.2), not a type.
 | Separation + bolt-yield margins (`engine.marginSeparation`, `engine.marginBoltYield`) | 2.6 | ✅ |
 | Ultimate-shear + tension-shear interaction margins (`engine.marginShearUlt`, `engine.marginInteraction`) | 2.7 | ✅ |
 | Slip margin (`engine.marginSlip`, DABJ Eq. 84) | 2.8 | ✅ |
-| Single-joint solver + `Result` | 2.9 | ⏳ next |
-| Remaining checks + second validation wave | 3.1–3.4 | ⏳ |
+| Single-joint solver + `Result` (`engine.analyze`) | 2.9 | ✅ |
+| Stiffness, remaining checks + second validation wave | 3.1–3.4 | ⏳ next |
 | Table input + bulk analysis + XLSX (Headless Release) | 3.5–3.6 | ⏳ |
 | Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
 | GUI (`+gui`) | 4 | ⏳ |
