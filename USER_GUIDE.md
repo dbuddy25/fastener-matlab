@@ -73,7 +73,7 @@ min/max preload) if you want to double-check what went in.
 ## 4. Quick start B — BULK analysis (the main workflow)
 
 You need **two spreadsheets** (CSV or XLSX). Templates live in
-`matlab/+data/templates/` — copy them and edit.
+`matlab/templates/` — copy them and edit.
 
 ### Step 1 — Joint library table (one row per joint)
 `joint_library_template.csv`. Key columns (blank = use default):

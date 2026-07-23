@@ -11,7 +11,7 @@ function jl = loadJointLibrary(file, lib)
 %   lib.bolt(key) / lib.material(key) / lib.boltSpec(key).
 %
 %   Column schema (case-insensitive names; a template with the exact
-%   headers lives at +data/templates/joint_library_template.csv — the
+%   headers lives at templates/joint_library_template.csv — the
 %   first row is the DABJ Section 9 class-problem joint). Optional columns
 %   may be omitted entirely or left blank per-row; blanks keep the +model
 %   defaults. Rows with an empty Name are skipped.

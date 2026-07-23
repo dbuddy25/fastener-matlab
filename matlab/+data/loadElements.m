@@ -21,7 +21,7 @@ function el = loadElements(file)
 %                                    (default false)
 %
 %   Column schema (case-insensitive; template with exact headers at
-%   +data/templates/elements_template.csv):
+%   templates/elements_template.csv):
 %       element_id, joint_name, pattern_id (optional), load_case (optional),
 %       FX, FY, FZ, MX (opt), MY (opt), MZ (opt), scale (opt),
 %       reversible (opt)

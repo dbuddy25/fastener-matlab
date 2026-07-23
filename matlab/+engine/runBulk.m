@@ -8,10 +8,10 @@ function T = runBulk(jointLibFile, elementsFile, factors, outFile)
 %   Inputs:
 %       jointLibFile  joint-definition table (.csv/.xlsx) for
 %                     data.loadJointLibrary (template:
-%                     +data/templates/joint_library_template.csv)
+%                     templates/joint_library_template.csv)
 %       elementsFile  element + forces table (.csv/.xlsx) for
 %                     data.loadElements (template:
-%                     +data/templates/elements_template.csv)
+%                     templates/elements_template.csv)
 %       factors       model.Factors (optional; omitted or [] -> the
 %                     built-in default preset, model.Factors())
 %       outFile       optional .xlsx/.csv path; when given, the results

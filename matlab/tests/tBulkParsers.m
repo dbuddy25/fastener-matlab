@@ -4,7 +4,7 @@ classdef tBulkParsers < matlab.unittest.TestCase
     %   library keys resolved through data.Library) and data.loadElements
     %   (element + forces table -> struct array for engine.resolveForces).
     %   Both are exercised against the shipped template CSVs in
-    %   +data/templates/ — the joint template's first row IS the DABJ
+    %   templates/ — the joint template's first row IS the DABJ
     %   Section 9 class-problem joint expressed in the table schema, so the
     %   parse is checked against the same numbers validation.dabjSection9
     %   builds in code (structural check: field mapping, not new physics).
@@ -25,7 +25,7 @@ classdef tBulkParsers < matlab.unittest.TestCase
         function p = templatePath(name)
             testDir = fileparts(mfilename("fullpath"));   % .../matlab/tests
             srcDir  = fileparts(testDir);                 % .../matlab
-            p = string(fullfile(srcDir, "+data", "templates", name));
+            p = string(fullfile(srcDir, "templates", name));
         end
     end
 

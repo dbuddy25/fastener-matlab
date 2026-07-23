@@ -34,7 +34,7 @@ classdef tBulk < matlab.unittest.TestCase
         function p = templatePath(name)
             testDir = fileparts(mfilename("fullpath"));   % .../matlab/tests
             srcDir  = fileparts(testDir);                 % .../matlab
-            p = string(fullfile(srcDir, "+data", "templates", name));
+            p = string(fullfile(srcDir, "templates", name));
         end
 
         function el = dabjElement()

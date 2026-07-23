@@ -8,7 +8,7 @@
 %   summary.
 %
 %   To analyze your own hardware, copy the two templates from
-%   matlab/+data/templates/, fill them in, and point the calls below at
+%   matlab/templates/, fill them in, and point the calls below at
 %   your copies:
 %       T = engine.runBulk("my_joints.csv", "my_elements.csv", ...
 %                          model.Factors(), "margins.xlsx");
@@ -20,8 +20,8 @@ exampleDir = fileparts(mfilename("fullpath"));   % .../matlab/examples
 matlabDir  = fileparts(exampleDir);              % .../matlab
 addpath(matlabDir);                              % +model/+data/+engine/+report
 
-jointFile    = fullfile(matlabDir, "+data", "templates", "joint_library_template.csv");
-elementsFile = fullfile(matlabDir, "+data", "templates", "elements_template.csv");
+jointFile    = fullfile(matlabDir, "templates", "joint_library_template.csv");
+elementsFile = fullfile(matlabDir, "templates", "elements_template.csv");
 outFile      = fullfile(exampleDir, "bulk_results.xlsx");
 
 T = engine.runBulk(jointFile, elementsFile, model.Factors(), outFile);
