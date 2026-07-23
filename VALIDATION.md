@@ -86,7 +86,9 @@ This is a **living document** — every new check adds a row.
 | Solver `analyze()` + `Result` (15-row) | ✅ | tDabjCase |
 | Entry-point stub | ✅ | tFastenerToolSmoke |
 | Bulk / force resolution (`resolveForces` + `loadCaseFromForces` — bolt-axis projection, hand-derived 3-4-5) | ✍️ (Phase 3.5a) | tForces |
-| Bulk / table input | ⏳ (Phase 3.5b) | — |
+| Bulk / joint-library parser (`data.loadJointLibrary` — table → `model.Joint`; library-key resolution, "1.5D" engagement format; the template's first row is the DABJ §9 joint, cross-checked against the `dabjSection9` in-code build) | ✅ | tBulkParsers |
+| Bulk / elements parser (`data.loadElements` — element_id/joint_name/FX..MZ → forces struct; blank optionals → defaults) | ✅ | tBulkParsers |
+| Bulk analysis (`analyzeBulk`) | ⏳ (Phase 3.5c) | — |
 | Case save/load, factor presets | ⏳ (Phase 3.7) | — |
 
 ---

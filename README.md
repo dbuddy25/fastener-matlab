@@ -24,7 +24,7 @@ matlab/
 ├── fastenerTool.m     entry point (Phase 1 stub — prints version)
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
 ├── +engine/           analysis math — the core (Phases 2–3)
-├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); case save/load later (Phase 3)
+├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); case save/load later (Phase 3)
 ├── +report/           PDF + XLSX export (Phase 3)
 ├── +gui/              App Designer app — thin shell over the engine (Phase 4)
 └── tests/             validation + smoke tests (checked vs the worked example)
@@ -58,8 +58,8 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 3.5a (FEM force resolution: bolt-axis projection) complete; next 3.5b
-(joint-library + element table parsers).**
+**Phase 3.5b (bulk parsers: joint library + elements) complete; next 3.5c
+(analyzeBulk).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -115,5 +115,14 @@ the two transverse forces (single-fastener CBUSH projection; no
 bolt-pattern moment distribution) — and
 `engine.loadCaseFromForces(F, axis, ...)` turns that into a per-bolt
 `model.LoadCase` (`Reversible`/`ScaleFactor` options; hand-derived 3-4-5
-pins in `tests/tForces.m`).
+pins in `tests/tForces.m`). Phase 3.5b adds the bulk input parsers:
+`data.loadJointLibrary(file, lib)` reads a joint-definition table (.csv or
+.xlsx, one row per joint, library keys resolved through `data.Library`)
+into `model.Joint` objects, and `data.loadElements(file)` reads an
+element + forces table (`element_id`/`joint_name`/FX..MZ per row) into the
+struct consumed by `engine.resolveForces`. Template files with the exact
+column headers live at `+data/templates/` — the joint template's first row
+is the DABJ §9 class-problem joint expressed in the table schema
+(`tests/tBulkParsers.m` parses both templates and checks that row against
+the same numbers `validation.dabjSection9` builds in code).
 See `MATLAB_BUILD_GUIDE.md`.

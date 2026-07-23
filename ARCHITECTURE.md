@@ -6,9 +6,9 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 3.5a — validated single-joint engine + joint
+**Current state: through Phase 3.5b — validated single-joint engine + joint
 stiffness + the member-strength checks + the thread-strength checks (ALL 15
-checks implemented) + FEM force resolution.** `engine.analyze(joint, loadCase, factors)` runs the whole engine
+checks implemented) + FEM force resolution + bulk input parsers.** `engine.analyze(joint, loadCase, factors)` runs the whole engine
 in one call — preload (`engine.preload`), design loads (`engine.designLoads`),
 and every margin check (`marginTensionUlt` with the Fig. 8 gate,
 `marginBoltYield`, `marginShearUlt`, `marginInteraction`, `marginSeparation`,
@@ -75,6 +75,18 @@ else max(axial, 0) — compression doesn't load the bolt in tension; PsL =
 shear; `ScaleFactor` applied before resolution; joint-level loads stay NaN
 — multi-bolt totals come from the mapping table in 3.5b). Hand-derived
 3-4-5 pins in `tests/tForces.m`.
+✅ Phase 3.5b adds the bulk input parsers — `data.loadJointLibrary(file, lib)`
+reads a joint-definition table (.csv/.xlsx, one row per joint;
+case-insensitive columns, blanks keep model defaults; Bolt / BoltMaterial /
+BoltSpec / HostMaterial / Flange{k}Material cells are LIBRARY KEYS resolved
+through `data.Library`; ThreadEngagement accepts inches or a "1.5D"
+diameter-multiple) into `{Name, model.Joint}` structs, and
+`data.loadElements(file)` reads an element + forces table
+(`element_id`, `joint_name`, `load_case`, FX..MZ, `scale`, `reversible`)
+into the struct `engine.resolveForces` consumes. Template CSVs with the
+exact headers ship at `+data/templates/`; the joint template's first row is
+the DABJ §9 class-problem joint expressed in the schema, checked against
+the `validation.dabjSection9` in-code build by `tests/tBulkParsers.m`.
 
 ---
 
@@ -131,8 +143,13 @@ The single flow everything is organized around:
   → a `model.LoadCase` → `engine.analyze(joint, lc, factors)`. Each FEM
   element models one bolt (CBUSH); the resolution is a pure axis projection
   + RSS, no bolt-pattern moment distribution.
+- **Bulk (table input — ✅ 3.5b):** `data.loadJointLibrary(file, lib)` turns a
+  joint-definition table into `model.Joint` objects (library keys resolved via
+  `data.Library`), and `data.loadElements(file)` turns an element + forces table
+  into the per-element struct for `engine.resolveForces`. Template CSVs with the
+  exact column headers ship at `+data/templates/`.
 - **Bulk (rest):** the same flow mapped over many joints/load cases → a results
-  table: `engine.analyzeBulk(cases, factors)`. (⏳ Phase 3.5b.)
+  table: `engine.analyzeBulk(cases, factors)`. (⏳ Phase 3.5c.)
 
 ### Headless usage — the primary path (⏳ Headless Release)
 
@@ -140,10 +157,11 @@ You don't build many joints by hand — you **describe them in a table and impor
 This is the whole product for an engineer who lives in MATLAB/Excel, no GUI required:
 
 ```matlab
-lib     = data.Library.load();                    % ✅ 2.2 — hardware/material catalog
-cases   = data.loadJoints("my_joints.xlsx", lib); % ⏳ 3.5 — table → joints + load cases
-results = engine.analyzeBulk(cases, factors);     % ⏳ 3.5 — all 15 margins per joint
-writetable(results, "margins.xlsx");              % ⏳ 3.6 — answers out
+lib     = data.Library.load();                          % ✅ 2.2  — hardware/material catalog
+jl      = data.loadJointLibrary("my_joints.csv", lib);  % ✅ 3.5b — table → model.Joint per row
+el      = data.loadElements("my_elements.csv");         % ✅ 3.5b — element forces table
+results = engine.analyzeBulk(jl, el, factors);          % ⏳ 3.5c — all 15 margins per element
+writetable(results, "margins.xlsx");                    % ⏳ 3.6  — answers out
 ```
 
 For the few-by-hand case, library lookups keep it terse:
@@ -160,8 +178,8 @@ export (Phase 3). The GUI wraps exactly these calls later.
 matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
-├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); ⏳ table parsers + bulk — Phase 3.5b
-├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); ⏳ case save/load — Phase 3
+├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); ⏳ `analyzeBulk` — Phase 3.5c
+├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ⏳ PDF + XLSX export                    — Phase 3
 ├── +gui/            ⏳ App Designer app (thin shell)        — Phase 4
@@ -269,7 +287,8 @@ Phase 2.2), not a type.
 | Thread checks: bolt-thread shear + nut strength + tapped-hole parent thread (group 0.75·π·E·Le method; tapped-parent cross-checked vs DABJ Ex 6-a) + insert via Heli-Coil rated pull-out — all 15 checks implemented | 3.3 | ✅ |
 | Second validation wave (group-spreadsheet cases) | 3.4 | ⏳ |
 | FEM force resolution (`engine.resolveForces` + `loadCaseFromForces`, `Joint.BoltAxis`) | 3.5a | ✅ |
-| Table input (joint-library + element table parsers) + bulk analysis + XLSX (Headless Release) | 3.5b–3.6 | ⏳ next |
+| Table input (`data.loadJointLibrary` + `data.loadElements` + template CSVs) | 3.5b | ✅ |
+| Bulk analysis (`engine.analyzeBulk`) + XLSX export (Headless Release) | 3.5c–3.6 | ⏳ next |
 | Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
 | GUI (`+gui`) | 4 | ⏳ |
 | Packaging (`.exe`) | 5 | ⏳ |
