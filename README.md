@@ -83,8 +83,9 @@ just get the results table back.
 ## Status
 
 **Phase 3 Headless Release complete** — full 15-check engine + bulk table
-workflow (parse → resolve → analyze → XLSX). Next: 3.7 (case save/load,
-presets), 3.8 (PDF), then Phase 4 (GUI).
+workflow (parse → resolve → analyze → XLSX), including joint-slip
+bolt-pattern aggregation with the nf check (3.5d). Next: 3.7 (case
+save/load, presets), 3.8 (PDF), then Phase 4 (GUI).
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -158,10 +159,17 @@ writetable-ready results table — one row per element with the resolved
 per-bolt Axial/Shear, all 15 margin MS columns, WorstMargin/GoverningCheck,
 and an Error column (a missing joint or a failed analyze marks the row,
 never aborts the batch). The end-to-end run reproduces the DABJ §9
-per-bolt margins from the template CSV (`tests/tBulk.m`). Limitation:
-per-element forces are per-bolt only, so a `SlipMode.Joint` joint's slip
-check is NotEvaluated in bulk (joint totals need bolt-pattern aggregation,
-future); single-fastener slip — the default — evaluates normally.
+per-bolt margins from the template CSV (`tests/tBulk.m`). Phase 3.5d adds
+joint-slip bolt-pattern aggregation: for a `SlipMode.Joint` joint the
+orchestrator groups the element's pattern (optional `pattern_id` elements
+column — the physical joint instance — falling back to the joint name),
+vector-sums the scaled forces into the NASA-STD-5020B Eq. 84 joint totals,
+and evaluates joint slip ONLY when the pattern's element count equals
+`Joint.BoltCount` (the nf check — a mismatch leaves Slip NaN with a `Note`
+column saying why, never a silently wrong margin). A four-element pattern
+splitting the §9 joint totals reproduces the book's joint-slip −0.65
+end-to-end; pattern torsion is not modeled (same scope as Eq. 84).
+Single-fastener slip — the default — evaluates normally per element.
 Phase 3.6 completes the Headless Release: `report.exportResults(T, file)`
 writes the results table to `.xlsx` (Results sheet + a Summary sheet with
 Pass/Fail/Error counts) or `.csv` by extension, and

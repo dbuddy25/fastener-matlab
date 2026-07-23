@@ -100,10 +100,23 @@ missing joint or a failed analyze marks that row with the message and NaN
 margins — the batch never aborts). The headless data flow is now fully
 wired: `loadJointLibrary` + `loadElements` → `analyzeBulk` → table.
 End-to-end the pipeline reproduces the DABJ §9 per-bolt margins from the
-template CSV (`tests/tBulk.m`). Limitation: bulk is single-fastener by
-nature (each FEM element = one bolt, per-bolt loads only), so a
-`SlipMode.Joint` joint's slip check is NotEvaluated in bulk — joint-level
-totals need bolt-pattern aggregation (future work).
+template CSV (`tests/tBulk.m`).
+✅ Phase 3.5d adds joint-slip bolt-pattern aggregation to `analyzeBulk`:
+per-element loads are per-bolt (each FEM element = one bolt), so for a
+`SlipMode.Joint` joint the orchestrator groups the element's BOLT PATTERN —
+same `pattern_id` (new optional elements column, the physical joint
+instance; blank → JointName, i.e. one joint name = one pattern) + same
+joint + same load case — vector-sums the scaled force components (by
+equilibrium the CBUSH forces sum to the interface load), and projects the
+total onto the bolt axis for the Eq. 84 joint totals. The **nf check**
+gates it: joint slip evaluates ONLY when the pattern's element count equals
+`Joint.BoltCount` (Eq. 84's capacity nf) — a mismatch (missing/filtered
+rows, or a reused joint name without `pattern_id`) leaves Slip NaN with the
+new `Note` column saying why, instead of a silently wrong margin. A
+four-element pattern splitting the §9 joint totals reproduces the book's
+joint-slip −0.65 end-to-end (`tests/tBulk.m`). Pattern torsion (moment
+about the bolt axis at the pattern centroid) is not modeled — the same
+scope as Eq. 84 itself (resultant force only).
 ✅ Phase 3.6 completes the Headless Release — the `+report` area now exists:
 `report.exportResults(T, file)` writes the analyzeBulk results table to
 `.xlsx` (a Results sheet + a Summary sheet with total/Pass/Fail/Error
@@ -177,12 +190,14 @@ The single flow everything is organized around:
   `data.Library`), and `data.loadElements(file)` turns an element + forces table
   into the per-element struct for `engine.resolveForces`. Template CSVs with the
   exact column headers ship at `+data/templates/`.
-- **Bulk (orchestrator — ✅ 3.5c):** the same flow mapped over many elements → a
-  results table: `engine.analyzeBulk(jointLibrary, elements, factors)` — one row
-  per element (identity + resolved Axial/Shear + the 15 margin MS columns +
-  WorstMargin/GoverningCheck + Error; bad rows are marked, never abort the
-  batch). Joint-mode slip is NotEvaluated in bulk (per-bolt loads only; joint
-  totals need pattern aggregation — future).
+- **Bulk (orchestrator — ✅ 3.5c/3.5d):** the same flow mapped over many elements
+  → a results table: `engine.analyzeBulk(jointLibrary, elements, factors)` — one
+  row per element (identity + resolved Axial/Shear + the 15 margin MS columns +
+  WorstMargin/GoverningCheck + Error + Note; bad rows are marked, never abort
+  the batch). Joint-mode slip aggregates the bolt pattern (`pattern_id`, or
+  joint name when blank) into the Eq. 84 joint totals, gated by the nf check
+  (pattern element count must equal `Joint.BoltCount`; mismatch → Slip NaN +
+  Note). Pattern torsion not modeled (Eq. 84 scope).
 
 ### Headless usage — the primary path (✅ Headless Release, Phase 3.6)
 
@@ -330,7 +345,7 @@ Phase 2.2), not a type.
 | Second validation wave (group-spreadsheet cases) | 3.4 | ⏳ |
 | FEM force resolution (`engine.resolveForces` + `loadCaseFromForces`, `Joint.BoltAxis`) | 3.5a | ✅ |
 | Table input (`data.loadJointLibrary` + `data.loadElements` + template CSVs) | 3.5b | ✅ |
-| Bulk analysis (`engine.analyzeBulk`) + XLSX export (`report.exportResults`) + one-call `engine.runBulk` — **Headless Release** | 3.5c–3.6 | ✅ |
+| Bulk analysis (`engine.analyzeBulk`, incl. 3.5d joint-slip pattern aggregation + nf check) + XLSX export (`report.exportResults`) + one-call `engine.runBulk` — **Headless Release** | 3.5c–3.6 | ✅ |
 | Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
 | GUI (`+gui`) | 4 | ⏳ |
 | Packaging (`.exe`) | 5 | ⏳ |

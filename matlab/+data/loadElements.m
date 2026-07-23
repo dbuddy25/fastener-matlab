@@ -8,6 +8,11 @@ function el = loadElements(file)
 %       JointName    (1,1) string  — key into the joint library
 %                                    (data.loadJointLibrary row Name)
 %       LoadCaseName (1,1) string  — load case label (default "")
+%       PatternId    (1,1) string  — bolt-pattern (physical joint instance)
+%                                    identifier for joint-slip aggregation
+%                                    (default "" -> engine.analyzeBulk falls
+%                                    back to JointName, i.e. one joint name
+%                                    = one physical pattern)
 %       Forces       struct        — FX, FY, FZ (lbf), MX, MY, MZ (in-lbf);
 %                                    missing columns/blanks -> 0. Feed to
 %                                    engine.resolveForces / loadCaseFromForces.
@@ -17,8 +22,9 @@ function el = loadElements(file)
 %
 %   Column schema (case-insensitive; template with exact headers at
 %   +data/templates/elements_template.csv):
-%       element_id, joint_name, load_case (optional), FX, FY, FZ,
-%       MX (opt), MY (opt), MZ (opt), scale (opt), reversible (opt)
+%       element_id, joint_name, pattern_id (optional), load_case (optional),
+%       FX, FY, FZ, MX (opt), MY (opt), MZ (opt), scale (opt),
+%       reversible (opt)
 %
 %   Rows with a blank element_id or joint_name are skipped. Extra columns
 %   are ignored.
@@ -43,7 +49,8 @@ T = readtable(file, "TextType", "string");
 names = string(T.Properties.VariableNames);
 
 el = struct("ElementId", {}, "JointName", {}, "LoadCaseName", {}, ...
-            "Forces", {}, "ScaleFactor", {}, "Reversible", {});
+            "PatternId", {}, "Forces", {}, "ScaleFactor", {}, ...
+            "Reversible", {});
 for r = 1:height(T)
     id    = getText(T, names, r, "element_id", "");
     joint = getText(T, names, r, "joint_name", "");
@@ -60,6 +67,7 @@ for r = 1:height(T)
         "ElementId",    id, ...
         "JointName",    joint, ...
         "LoadCaseName", getText(T, names, r, "load_case", ""), ...
+        "PatternId",    getText(T, names, r, "pattern_id", ""), ...
         "Forces",       F, ...
         "ScaleFactor",  getNum(T, names, r, "scale", 1), ...
         "Reversible",   getLogical(T, names, r, "reversible", false)); %#ok<AGROW>

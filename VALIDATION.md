@@ -89,6 +89,7 @@ This is a **living document** — every new check adds a row.
 | Bulk / joint-library parser (`data.loadJointLibrary` — table → `model.Joint`; library-key resolution, "1.5D" engagement format; the template's first row is the DABJ §9 joint, cross-checked against the `dabjSection9` in-code build) | ✅ | tBulkParsers |
 | Bulk / elements parser (`data.loadElements` — element_id/joint_name/FX..MZ → forces struct; blank optionals → defaults) | ✅ | tBulkParsers |
 | Bulk end-to-end (parse→resolve→analyze: `loadJointLibrary` template + in-code element → `engine.analyzeBulk` — reproduces the DABJ §9 per-bolt margins: TensionUlt +0.69, Separation +0.16, TensionYield +0.63, ShearUlt +3.18, Interaction +0.59 — in a results-table row; missing-joint rows error-marked, not thrown) | ✅ (Phase 3.5c) | tBulk |
+| Bulk joint-slip pattern aggregation (four-element §9 pattern → vector-summed joint totals 16,090 / 5,690 lb → Eq. 84 reproduces the book's joint-slip −0.65 on every pattern row, governing; nf check: element count ≠ `Joint.BoltCount` → Slip NaN + Note, pinned via `pattern_id` split) | ✅ (Phase 3.5d) | tBulk |
 | Bulk runner + XLSX export (`engine.runBulk` — one-call files-in → margins-out pipeline over the templates, default factors = `model.Factors()`; `report.exportResults` — .xlsx Results + Summary sheets / .csv by extension, write → `readtable` read-back row count verified) | ✅ (Phase 3.6) | tExport |
 | Case save/load, factor presets | ⏳ (Phase 3.7) | — |
 
@@ -112,11 +113,15 @@ This is a **living document** — every new check adds a row.
   exercised indirectly by the tThreadShear fixtures (PpMax pinned); no dedicated
   fixture, and separation-critical still has none.
 - **Mixed-modulus frustum** — deferred (needs slicing).
-- **Joint-mode slip in bulk** — `engine.analyzeBulk` carries PER-BOLT loads only
-  (each FEM element = one bolt), so a `SlipMode.Joint` joint's slip check is
-  NotEvaluated in bulk (the §9 joint-slip −0.65 is validated in single-joint
-  mode only, tDabjCase). Joint totals need bolt-pattern aggregation (future);
-  the SingleFastener default evaluates normally in bulk.
+- **Joint-mode slip in bulk: CLOSED for force resultants (Phase 3.5d)** —
+  `analyzeBulk` aggregates the bolt pattern (`pattern_id`, or joint name when
+  blank) into the Eq. 84 joint totals and reproduces the §9 joint-slip −0.65
+  end-to-end (tBulk); the nf check (pattern element count must equal
+  `Joint.BoltCount`) refuses to evaluate mismatched patterns (Slip NaN + Note).
+  Remaining caveats: pattern TORSION (moment about the bolt axis at the pattern
+  centroid) is not modeled — same scope as Eq. 84 (resultant force only) — and
+  one `JointName` reused for several physical joints needs `pattern_id` set, or
+  the nf check will (correctly) refuse to aggregate.
 - **Tear-out & under-head margins are hand-derived only** — no public worked
   example works these margins (DABJ Ex 5-b compares bearing allowables only);
   group-spreadsheet cases (Phase 3.4) should upgrade rows 4/6 to ✅.

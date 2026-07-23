@@ -95,6 +95,7 @@ classdef tBulkParsers < matlab.unittest.TestCase
             testCase.verifyEqual(el(1).ElementId, "1001");
             testCase.verifyEqual(el(1).JointName, "DABJ Sec. 9 class problem");
             testCase.verifyEqual(el(1).LoadCaseName, "Liftoff");
+            testCase.verifyEqual(el(1).PatternId, "PLATE-1");
             testCase.verifyEqual(el(1).Forces.FX, 300);
             testCase.verifyEqual(el(1).Forces.FY, 400);
             testCase.verifyEqual(el(1).Forces.FZ, 1200);
@@ -106,8 +107,10 @@ classdef tBulkParsers < matlab.unittest.TestCase
             testCase.verifyEqual(el(2).Forces.MX, 10);
             testCase.verifyTrue(el(2).Reversible);
 
-            % Blank optional cells fall back: MX/MY/MZ -> 0; scale reads 1.5
+            % Blank optional cells fall back: MX/MY/MZ -> 0; scale reads 1.5;
+            % blank pattern_id -> "" (analyzeBulk falls back to JointName)
             testCase.verifyEqual(el(3).JointName, "Example insert joint");
+            testCase.verifyEqual(el(3).PatternId, "");
             testCase.verifyEqual(el(3).Forces.MX, 0);
             testCase.verifyEqual(el(3).Forces.MZ, 0);
             testCase.verifyEqual(el(3).ScaleFactor, 1.5, "AbsTol", 1e-12);

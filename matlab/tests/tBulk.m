@@ -1,5 +1,5 @@
 classdef tBulk < matlab.unittest.TestCase
-    %TBULK  Phase 3.5c acceptance: engine.analyzeBulk end-to-end.
+    %TBULK  Phase 3.5c/3.5d acceptance: engine.analyzeBulk end-to-end.
     %   The full bulk pipeline — data.loadJointLibrary (template CSV) ->
     %   engine.loadCaseFromForces -> engine.analyze — must reproduce the
     %   DABJ Section 9 per-bolt margins in a results-table row, handle a
@@ -8,8 +8,15 @@ classdef tBulk < matlab.unittest.TestCase
     %   The DABJ element's forces are chosen so the bolt-axis resolution
     %   lands exactly on the book's per-bolt limit loads: BoltAxis = Z, so
     %   FZ = 5590 -> PtL and FX = 1560 (FY = 0) -> PsL RSS = 1560
-    %   (Solutions-6). Joint-mode slip cannot evaluate in bulk (per-bolt
-    %   loads only, no joint totals) -> the Slip column is NaN by design.
+    %   (Solutions-6).
+    %
+    %   Joint-mode slip (Phase 3.5d): analyzeBulk aggregates the BOLT
+    %   PATTERN (same PatternId-or-JointName + load case), vector-sums the
+    %   element forces into the joint totals, and evaluates Eq. 84 ONLY
+    %   when the pattern's element count equals Joint.BoltCount (the nf
+    %   check). A four-element pattern splitting the §9 joint totals must
+    %   reproduce the book's joint-slip margin (-0.65, Solutions-23); a
+    %   count mismatch must leave Slip NaN with a Note saying why.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -42,6 +49,22 @@ classdef tBulk < matlab.unittest.TestCase
                 "ScaleFactor",  1, ...
                 "Reversible",   false);
         end
+
+        function els = dabjPatternElements()
+            %DABJPATTERNELEMENTS  The §9 four-bolt pattern as four elements.
+            %   Forces split the book's JOINT totals evenly (Solutions-22,
+            %   option 1): sum FZ = 4 x 4022.5 = 16,090 lb -> PtL_joint and
+            %   sum FX = 4 x 1422.5 = 5,690 lb -> PsL_joint, so the
+            %   aggregation pre-pass reproduces the Eq. 84 inputs exactly.
+            proto = tBulk.dabjElement();
+            proto.LoadCaseName = "DABJ Sec. 9 joint totals";
+            proto.Forces = struct("FX", 1422.5, "FY", 0, "FZ", 4022.5, ...
+                                  "MX", 0, "MY", 0, "MZ", 0);
+            els = repmat(proto, 1, 4);
+            for i = 1:4
+                els(i).ElementId = "910" + i;   % "9101".."9104"
+            end
+        end
     end
 
     methods (Test)
@@ -71,11 +94,71 @@ classdef tBulk < matlab.unittest.TestCase
             testCase.verifyEqual(T.ShearUlt(1),     c.Expected.MS_ShearUlt,    "AbsTol", tol);   % +3.18
             testCase.verifyEqual(T.Interaction(1),  c.Expected.MS_Interaction, "AbsTol", tol);   % +0.59
 
-            % Slip: the §9 joint is SlipMode.Joint, but bulk has PER-BOLT
-            % loads only (no joint totals per element), so joint-mode slip
-            % is NotEvaluated in bulk -> NaN by design (the book's -0.65
-            % joint-slip margin needs pattern aggregation, future work).
+            % Slip: the §9 joint is SlipMode.Joint with BoltCount = 4, but
+            % this pattern has only ONE element -> the nf check refuses to
+            % aggregate (1 ~= 4) and joint slip is NotEvaluated, with the
+            % Note column saying why (see bulkJointSlipFromPatternAggregation
+            % for the full four-element pattern that DOES evaluate).
             testCase.verifyTrue(isnan(T.Slip(1)));
+            testCase.verifyGreaterThan(strlength(T.Note(1)), 0);
+            testCase.verifySubstring(T.Note(1), "BoltCount");
+        end
+
+        function bulkJointSlipFromPatternAggregation(testCase)
+            % Phase 3.5d: four elements sharing the §9 joint (pattern key
+            % defaults to JointName) and load case, forces splitting the
+            % book's joint totals evenly. The pre-pass counts 4 elements =
+            % Joint.BoltCount (nf check passes), vector-sums the forces to
+            % PtL_joint = 16,090 / PsL_joint = 5,690 lb (Solutions-22), and
+            % Eq. 84 reproduces the book's joint-slip margin on every row:
+            % MS = 4*0.1*6,469.75 / (1.0*(5,690 + 0.1*16,090)) - 1 = -0.65
+            % (Solutions-23) — the deliberate failing margin, governing.
+            lib = data.Library.load();
+            jl  = data.loadJointLibrary( ...
+                tBulk.templatePath("joint_library_template.csv"), lib);
+            c   = validation.dabjSection9();
+
+            T = engine.analyzeBulk(jl, tBulk.dabjPatternElements(), c.Factors);
+            testCase.assertEqual(height(T), 4);
+            tol = c.Tol.MarginAbsTol;
+            for k = 1:4
+                testCase.verifyEqual(T.Error(k), "");
+                testCase.verifyEqual(T.Note(k), "");   % nf check satisfied
+                testCase.verifyEqual(T.Slip(k), c.Expected.MS_Slip, ...
+                    "AbsTol", tol);                    % -0.65, Eq. 84
+                testCase.verifyEqual(T.WorstMargin(k), c.Expected.MS_Slip, ...
+                    "AbsTol", tol);
+                testCase.verifyEqual(T.GoverningCheck(k), "Slip");
+            end
+            % Per-bolt resolution unchanged by the aggregation
+            testCase.verifyEqual(T.Axial(1), 4022.5, "AbsTol", 1e-9);
+            testCase.verifyEqual(T.Shear(1), 1422.5, "AbsTol", 1e-9);
+        end
+
+        function bulkPatternIdSplitsAndNfCheck(testCase)
+            % PatternId defines the PHYSICAL joint instance: the same four
+            % elements split into two 2-bolt patterns ("A"/"B") no longer
+            % match Joint.BoltCount = 4, so the nf check refuses joint slip
+            % on every row (Slip NaN + Note) while the per-bolt margins
+            % still evaluate (Error stays "").
+            lib = data.Library.load();
+            jl  = data.loadJointLibrary( ...
+                tBulk.templatePath("joint_library_template.csv"), lib);
+            c   = validation.dabjSection9();
+
+            els = tBulk.dabjPatternElements();
+            [els(1:2).PatternId] = deal("A");
+            [els(3:4).PatternId] = deal("B");
+
+            T = engine.analyzeBulk(jl, els, c.Factors);
+            testCase.assertEqual(height(T), 4);
+            for k = 1:4
+                testCase.verifyEqual(T.Error(k), "");
+                testCase.verifyTrue(isnan(T.Slip(k)));
+                testCase.verifyGreaterThan(strlength(T.Note(k)), 0);
+                testCase.verifySubstring(T.Note(k), "BoltCount");
+                testCase.verifyFalse(isnan(T.TensionUlt(k)));   % rest still ran
+            end
         end
 
         function bulkHandlesMissingJoint(testCase)
@@ -123,7 +206,7 @@ classdef tBulk < matlab.unittest.TestCase
                 "NutStrength", "InsertInternal", "InsertExternal", ...
                 "Separation", "Slip", "SepBeforeRupture", "Interaction", ...
                 "TappedParent", ...
-                "WorstMargin", "GoverningCheck", "Error"];
+                "WorstMargin", "GoverningCheck", "Error", "Note"];
             testCase.verifyEqual( ...
                 string(T.Properties.VariableNames), expectedVars);
 

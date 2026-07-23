@@ -19,8 +19,10 @@ function T = runBulk(jointLibFile, elementsFile, factors, outFile)
 %
 %   Output: the engine.analyzeBulk results table — one row per element
 %   (identity, resolved per-bolt Axial/Shear, the 15 margin MS columns,
-%   WorstMargin/GoverningCheck, Error). See engine.analyzeBulk for the
-%   column details and the joint-slip-in-bulk limitation.
+%   WorstMargin/GoverningCheck, Error, Note). See engine.analyzeBulk for
+%   the column details and the joint-slip bolt-pattern aggregation (the
+%   nf check: joint slip evaluates only when the pattern's element count
+%   equals Joint.BoltCount; otherwise Slip is NaN with a Note).
 %
 %   Headless usage (the Headless Release in one line):
 %       T = engine.runBulk("joint_library.csv", "elements.csv", ...

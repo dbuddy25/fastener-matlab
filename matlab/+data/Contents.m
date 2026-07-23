@@ -10,8 +10,11 @@
 %                      per joint; library keys resolved through a data.Library)
 %                      -> struct array of {Name, model.Joint}. Phase 3.5b.
 %   loadElements     - bulk parser: element + forces table (element_id,
-%                      joint_name, load_case, FX..MZ, scale, reversible) ->
-%                      struct array for engine.resolveForces. Phase 3.5b.
+%                      joint_name, pattern_id, load_case, FX..MZ, scale,
+%                      reversible) -> struct array for engine.resolveForces;
+%                      pattern_id (optional) tags the physical bolt pattern
+%                      for joint-slip aggregation in engine.analyzeBulk.
+%                      Phase 3.5b (+3.5d pattern_id).
 %   templates/       - joint_library_template.csv + elements_template.csv: the
 %                      exact column headers, with the DABJ Section 9 joint as
 %                      the first joint-template row (doubles as the

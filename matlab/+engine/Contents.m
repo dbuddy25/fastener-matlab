@@ -108,13 +108,17 @@
 %                      writetable-ready results-table row per element
 %                      (identity, resolved per-bolt Axial/Shear, the 15
 %                      margin MS columns, WorstMargin/GoverningCheck,
-%                      Error). Bad rows are error-marked, never abort the
-%                      batch; Joint-mode slip is NotEvaluated in bulk
-%                      (per-bolt loads only — joint totals need pattern
-%                      aggregation, future).
-%                      ✅ Phase 3.5c — end-to-end reproduces the DABJ §9
-%                      per-bolt margins from the template CSV
-%                      (tests/tBulk.m).
+%                      Error, Note). Bad rows are error-marked, never abort
+%                      the batch. Joint-mode slip (3.5d): the element's
+%                      bolt pattern (pattern_id, or joint name when blank)
+%                      is aggregated — scaled forces vector-summed into the
+%                      Eq. 84 joint totals — and evaluated ONLY when the
+%                      pattern's element count equals Joint.BoltCount (the
+%                      nf check); a mismatch leaves Slip NaN with a Note.
+%                      Pattern torsion not modeled (Eq. 84 scope).
+%                      ✅ Phase 3.5c/3.5d — end-to-end reproduces the DABJ
+%                      §9 per-bolt margins AND the §9 joint-slip -0.65
+%                      from a four-element pattern (tests/tBulk.m).
 %   runBulk          - One-call headless workflow: library load ->
 %                      data.loadJointLibrary + data.loadElements ->
 %                      analyzeBulk -> optional report.exportResults.
