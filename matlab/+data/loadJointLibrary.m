@@ -36,6 +36,9 @@ function jl = loadJointLibrary(file, lib)
 %       NutFactor            -> PreloadSpec.NutFactor (K)
 %       Uncertainty          -> PreloadSpec.Uncertainty (Gamma)
 %       Relaxation           -> PreloadSpec.RelaxationFraction
+%       ThermalRate          -> PreloadSpec.ThermalRate, lbf/degC — thermal
+%                               preload change per degree (blank/0 -> compute
+%                               from CTE/stiffness in engine.preload)
 %       SeparationCritical   -> PreloadSpec.SeparationCritical (logical)
 %       AssemblyTempC        -> Joint.ReferenceTemperature, degC
 %       HotTempC / ColdTempC -> Joint.MaxTemperature / MinTemperature, degC
@@ -149,6 +152,8 @@ v = getNum(T, names, r, "Uncertainty", NaN);
 if ~isnan(v), ps.Uncertainty = v; end
 v = getNum(T, names, r, "Relaxation", NaN);
 if ~isnan(v), ps.RelaxationFraction = v; end
+v = getNum(T, names, r, "ThermalRate", NaN);
+if ~isnan(v), ps.ThermalRate = v; end
 if hasVal(T, names, r, "SeparationCritical")
     ps.SeparationCritical = getLogical(T, names, r, "SeparationCritical", false);
 end

@@ -65,6 +65,10 @@ classdef tBulkParsers < matlab.unittest.TestCase
             testCase.verifyEqual(j.PreloadSpec.NutFactor, 0.15, "AbsTol", 1e-12);
             testCase.verifyEqual(j.PreloadSpec.Uncertainty, 0.25, "AbsTol", 1e-12);
             testCase.verifyEqual(j.PreloadSpec.RelaxationFraction, 0.05, "AbsTol", 1e-12);
+            % ThermalRate override (12.978 = 7.21 lbf/degF x 1.8), so the
+            % template's thermal preload matches the dabjSection9 in-code
+            % build without needing stiffness geometry
+            testCase.verifyEqual(j.PreloadSpec.ThermalRate, 12.978, "AbsTol", 1e-9);
             testCase.verifyFalse(j.PreloadSpec.SeparationCritical);
 
             % Flange stack: FlangeCount = 2, both 0.375-in Al 7075-T7351

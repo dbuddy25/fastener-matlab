@@ -6,7 +6,7 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 3.5b — validated single-joint engine + joint
+**Current state: through Phase 3.5c — validated single-joint engine + joint
 stiffness + the member-strength checks + the thread-strength checks (ALL 15
 checks implemented) + FEM force resolution + bulk input parsers.** `engine.analyze(joint, loadCase, factors)` runs the whole engine
 in one call — preload (`engine.preload`), design loads (`engine.designLoads`),
@@ -86,7 +86,22 @@ diameter-multiple) into `{Name, model.Joint}` structs, and
 into the struct `engine.resolveForces` consumes. Template CSVs with the
 exact headers ship at `+data/templates/`; the joint template's first row is
 the DABJ §9 class-problem joint expressed in the schema, checked against
-the `validation.dabjSection9` in-code build by `tests/tBulkParsers.m`.
+the `validation.dabjSection9` in-code build by `tests/tBulkParsers.m`
+(including a `ThermalRate` column → `PreloadSpec.ThermalRate` override so
+the template's thermal preload needs no stiffness geometry).
+✅ Phase 3.5c adds the bulk orchestrator — `engine.analyzeBulk(jointLibrary,
+elements, factors)` maps `loadCaseFromForces` → `analyze` over every
+element and returns a writetable-ready results table, one row per element:
+ElementId/JointName/LoadCase, the resolved per-bolt Axial/Shear, the 15
+margin MS columns, WorstMargin/GoverningCheck, and an Error column (a
+missing joint or a failed analyze marks that row with the message and NaN
+margins — the batch never aborts). The headless data flow is now fully
+wired: `loadJointLibrary` + `loadElements` → `analyzeBulk` → table.
+End-to-end the pipeline reproduces the DABJ §9 per-bolt margins from the
+template CSV (`tests/tBulk.m`). Limitation: bulk is single-fastener by
+nature (each FEM element = one bolt, per-bolt loads only), so a
+`SlipMode.Joint` joint's slip check is NotEvaluated in bulk — joint-level
+totals need bolt-pattern aggregation (future work).
 
 ---
 
@@ -148,8 +163,12 @@ The single flow everything is organized around:
   `data.Library`), and `data.loadElements(file)` turns an element + forces table
   into the per-element struct for `engine.resolveForces`. Template CSVs with the
   exact column headers ship at `+data/templates/`.
-- **Bulk (rest):** the same flow mapped over many joints/load cases → a results
-  table: `engine.analyzeBulk(cases, factors)`. (⏳ Phase 3.5c.)
+- **Bulk (orchestrator — ✅ 3.5c):** the same flow mapped over many elements → a
+  results table: `engine.analyzeBulk(jointLibrary, elements, factors)` — one row
+  per element (identity + resolved Axial/Shear + the 15 margin MS columns +
+  WorstMargin/GoverningCheck + Error; bad rows are marked, never abort the
+  batch). Joint-mode slip is NotEvaluated in bulk (per-bolt loads only; joint
+  totals need pattern aggregation — future).
 
 ### Headless usage — the primary path (⏳ Headless Release)
 
@@ -160,7 +179,7 @@ This is the whole product for an engineer who lives in MATLAB/Excel, no GUI requ
 lib     = data.Library.load();                          % ✅ 2.2  — hardware/material catalog
 jl      = data.loadJointLibrary("my_joints.csv", lib);  % ✅ 3.5b — table → model.Joint per row
 el      = data.loadElements("my_elements.csv");         % ✅ 3.5b — element forces table
-results = engine.analyzeBulk(jl, el, factors);          % ⏳ 3.5c — all 15 margins per element
+results = engine.analyzeBulk(jl, el, factors);          % ✅ 3.5c — all 15 margins per element
 writetable(results, "margins.xlsx");                    % ⏳ 3.6  — answers out
 ```
 
@@ -178,7 +197,7 @@ export (Phase 3). The GUI wraps exactly these calls later.
 matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
-├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); ⏳ `analyzeBulk` — Phase 3.5c
+├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); `analyzeBulk` (3.5c) — the bulk orchestrator
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ⏳ PDF + XLSX export                    — Phase 3

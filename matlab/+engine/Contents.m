@@ -103,7 +103,17 @@
 %                      ScaleFactor (applied before resolution); joint-level
 %                      loads stay NaN.
 %                      ✍️ Phase 3.5a — hand-derived pins (tests/tForces.m).
-%
-%   Will also hold: table/bulk input parsers (Phase 3.5b).
+%   analyzeBulk      - Bulk orchestrator: joint library (data.loadJointLibrary)
+%                      + elements (data.loadElements) + factors → one
+%                      writetable-ready results-table row per element
+%                      (identity, resolved per-bolt Axial/Shear, the 15
+%                      margin MS columns, WorstMargin/GoverningCheck,
+%                      Error). Bad rows are error-marked, never abort the
+%                      batch; Joint-mode slip is NotEvaluated in bulk
+%                      (per-bolt loads only — joint totals need pattern
+%                      aggregation, future).
+%                      ✅ Phase 3.5c — end-to-end reproduces the DABJ §9
+%                      per-bolt margins from the template CSV
+%                      (tests/tBulk.m).
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

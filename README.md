@@ -58,8 +58,9 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 3.5b (bulk parsers: joint library + elements) complete; next 3.5c
-(analyzeBulk).**
+**Phase 3.5 complete (bulk: parse → resolve → analyzeBulk, end-to-end
+reproduces DABJ §9 per-bolt margins); next 3.6 (XLSX export) = Headless
+Release.**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -124,5 +125,17 @@ struct consumed by `engine.resolveForces`. Template files with the exact
 column headers live at `+data/templates/` — the joint template's first row
 is the DABJ §9 class-problem joint expressed in the table schema
 (`tests/tBulkParsers.m` parses both templates and checks that row against
-the same numbers `validation.dabjSection9` builds in code).
+the same numbers `validation.dabjSection9` builds in code; the row carries
+a `ThermalRate` override, 12.978 lbf/°C, so its thermal preload matches the
+in-code build without stiffness geometry). Phase 3.5c ties it together:
+`engine.analyzeBulk(jointLibrary, elements, factors)` maps the pipeline
+(`loadCaseFromForces` → `analyze`) over every element and returns a
+writetable-ready results table — one row per element with the resolved
+per-bolt Axial/Shear, all 15 margin MS columns, WorstMargin/GoverningCheck,
+and an Error column (a missing joint or a failed analyze marks the row,
+never aborts the batch). The end-to-end run reproduces the DABJ §9
+per-bolt margins from the template CSV (`tests/tBulk.m`). Limitation:
+per-element forces are per-bolt only, so a `SlipMode.Joint` joint's slip
+check is NotEvaluated in bulk (joint totals need bolt-pattern aggregation,
+future); single-fastener slip — the default — evaluates normally.
 See `MATLAB_BUILD_GUIDE.md`.
