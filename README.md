@@ -58,8 +58,8 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 3.3 (thread shear / nut / insert / tapped-hole) complete — all 15
-checks now implemented; next 3.5 (table input + bulk).**
+**Phase 3.5a (FEM force resolution: bolt-axis projection) complete; next 3.5b
+(joint-library + element table parsers).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -107,5 +107,13 @@ NASA-STD-5020B Eq. 8) — `engine.marginBoltThreadShear` (bolt Fsu),
 tapped-hole gap; area/allowable cross-checked vs DABJ Example 6-a within
 1.5%) — while inserts use the manufacturer (Heli-Coil) rated pull-out load
 directly (`engine.marginInsert`), one spec value on the insert
-internal-thread row (`tests/tThreadShear.m`).
+internal-thread row (`tests/tThreadShear.m`). Phase 3.5a adds FEM force
+resolution: `engine.resolveForces(F, axis)` projects one element's 6-DOF
+force vector onto the bolt axis (`model.BoltAxis`, new `Joint.BoltAxis`
+field, default Z) — axial = signed force along the axis, shear = RSS of
+the two transverse forces (single-fastener CBUSH projection; no
+bolt-pattern moment distribution) — and
+`engine.loadCaseFromForces(F, axis, ...)` turns that into a per-bolt
+`model.LoadCase` (`Reversible`/`ScaleFactor` options; hand-derived 3-4-5
+pins in `tests/tForces.m`).
 See `MATLAB_BUILD_GUIDE.md`.

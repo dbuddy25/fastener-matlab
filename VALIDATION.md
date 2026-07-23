@@ -85,7 +85,8 @@ This is a **living document** — every new check adds a row.
 | Inputs summary table | ✅ | tSummary |
 | Solver `analyze()` + `Result` (15-row) | ✅ | tDabjCase |
 | Entry-point stub | ✅ | tFastenerToolSmoke |
-| Bulk / table input | ⏳ (Phase 3.5) | — |
+| Bulk / force resolution (`resolveForces` + `loadCaseFromForces` — bolt-axis projection, hand-derived 3-4-5) | ✍️ (Phase 3.5a) | tForces |
+| Bulk / table input | ⏳ (Phase 3.5b) | — |
 | Case save/load, factor presets | ⏳ (Phase 3.7) | — |
 
 ---

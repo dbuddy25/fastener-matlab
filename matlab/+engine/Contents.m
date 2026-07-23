@@ -89,7 +89,21 @@
 %                      only; insert/tapped frustum deferred.
 %                      ✅ Phase 3.1a — validated against DABJ Example 8-b
 %                      (Kb 2.39e6, Kc 4.73e6, Phi 0.336; tests/tStiffness.m).
+%   resolveForces    - Resolve a FEM element's 6-DOF force vector onto the
+%                      bolt axis: axial = signed F along the axis, shear =
+%                      RSS of the two transverse forces, bending = RSS of
+%                      the transverse moments (informational); torsion
+%                      ignored. Single-fastener (CBUSH) projection — a
+%                      geometric identity, no 5020B equation.
+%                      ✍️ Phase 3.5a — hand-derived 3-4-5 pins
+%                      (tests/tForces.m).
+%   loadCaseFromForces - Convenience: element forces + bolt axis → a
+%                      model.LoadCase with per-bolt PtL/PsL set. Options
+%                      Name / Reversible (PtL = |axial| vs max(axial,0)) /
+%                      ScaleFactor (applied before resolution); joint-level
+%                      loads stay NaN.
+%                      ✍️ Phase 3.5a — hand-derived pins (tests/tForces.m).
 %
-%   Will also hold: applied-load resolution (table/bulk input — Phase 3.5).
+%   Will also hold: table/bulk input parsers (Phase 3.5b).
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

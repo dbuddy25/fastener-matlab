@@ -36,6 +36,7 @@ classdef Joint
         MinTemperature        (1,1) double = 20                               % °C
         MaxTemperature        (1,1) double = 20                               % °C
         ShearPlane            (1,1) model.ShearPlaneCondition = model.ShearPlaneCondition.ThreadsInShear
+        BoltAxis              (1,1) model.BoltAxis = model.BoltAxis.Z      % fastener axial direction (for FEM force resolution)
         SlipMode              (1,1) model.SlipMode = model.SlipMode.SingleFastener   % slip check mode (default single-fastener)
         HeadWasher            (1,1) model.Washer = model.Washer()             % washer under the bolt head (rigid in the frustum)
         NutWasher             (1,1) model.Washer = model.Washer()             % washer under the nut (rigid in the frustum)

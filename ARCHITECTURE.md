@@ -6,9 +6,9 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 3.3 — validated single-joint engine + joint
-stiffness + the member-strength checks + the thread-strength checks: ALL 15
-checks implemented.** `engine.analyze(joint, loadCase, factors)` runs the whole engine
+**Current state: through Phase 3.5a — validated single-joint engine + joint
+stiffness + the member-strength checks + the thread-strength checks (ALL 15
+checks implemented) + FEM force resolution.** `engine.analyze(joint, loadCase, factors)` runs the whole engine
 in one call — preload (`engine.preload`), design loads (`engine.designLoads`),
 and every margin check (`marginTensionUlt` with the Fig. 8 gate,
 `marginBoltYield`, `marginShearUlt`, `marginInteraction`, `marginSeparation`,
@@ -63,6 +63,18 @@ Inserts use the MANUFACTURER (Heli-Coil) rated pull-out load — one spec
 value on `ThreadedMember.RatedUltimateLoad` (`engine.marginInsert`,
 carried on the insert internal-thread row; the external-thread row stays
 NotEvaluated by design) — not a thread-shear calc (`tests/tThreadShear.m`).
+✅ Phase 3.5a adds FEM force resolution — `engine.resolveForces(F, axis)`
+projects one element's 6-DOF force vector onto the bolt axis (new
+`model.BoltAxis` enum + `Joint.BoltAxis` field, default Z): axial = signed
+force along the axis, shear = RSS of the two transverse forces, bending =
+RSS of the transverse moments (informational; torsion ignored). This is a
+single-fastener (CBUSH) geometric projection — no bolt-pattern moment
+distribution, no 5020B equation. `engine.loadCaseFromForces(F, axis, ...)`
+wraps it into a per-bolt `model.LoadCase` (PtL = |axial| if `Reversible`,
+else max(axial, 0) — compression doesn't load the bolt in tension; PsL =
+shear; `ScaleFactor` applied before resolution; joint-level loads stay NaN
+— multi-bolt totals come from the mapping table in 3.5b). Hand-derived
+3-4-5 pins in `tests/tForces.m`.
 
 ---
 
@@ -114,8 +126,13 @@ The single flow everything is organized around:
   (`Pass|Fail|NotEvaluated`), the governing equation/method, plus `WorstMargin`,
   `GoverningCheck`, the Fig 8 `Narrative`, and `asTable()`. Every consumer (report, GUI,
   bulk table) reads this *one* shape, so nothing re-derives numbers. (✅ Phase 2.9.)
-- **Bulk:** the same flow mapped over many joints/load cases → a results table:
-  `engine.analyzeBulk(cases, factors)`. (⏳ Phase 3.5.)
+- **Bulk (front of the pipe — ✅ 3.5a):** FEM element forces → per-bolt loads:
+  `engine.resolveForces(F, joint.BoltAxis)` → `engine.loadCaseFromForces(...)`
+  → a `model.LoadCase` → `engine.analyze(joint, lc, factors)`. Each FEM
+  element models one bolt (CBUSH); the resolution is a pure axis projection
+  + RSS, no bolt-pattern moment distribution.
+- **Bulk (rest):** the same flow mapped over many joints/load cases → a results
+  table: `engine.analyzeBulk(cases, factors)`. (⏳ Phase 3.5b.)
 
 ### Headless usage — the primary path (⏳ Headless Release)
 
@@ -143,7 +160,7 @@ export (Phase 3). The GUI wraps exactly these calls later.
 matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
-├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; ⏳ bulk/table input — Phase 3.5
+├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); ⏳ table parsers + bulk — Phase 3.5b
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ⏳ PDF + XLSX export                    — Phase 3
@@ -178,6 +195,7 @@ NaN-tolerant validators, so garbage fails loud instead of silently defaulting.
 | `ShearPlaneCondition` | enum | `ThreadsInShear`, `BodyInShear` |
 | `PreloadMethod` | enum (✅ Phase 2.1) | `TorqueControl`, `DirectPreload` |
 | `SlipMode` | enum | `SingleFastener` (default; 5020B Eq. 86), `Joint` (5020B Eq. 84, joint totals), `Disabled` |
+| `BoltAxis` | enum (✅ 3.5a) | `X`, `Y`, `Z` — global axis the fastener acts axially along; `Joint.BoltAxis` (default `Z`) drives `engine.resolveForces` |
 
 **Why one `Material` for every role:** a bolt material and a flange material are the
 same *kind* of thing; flanges just also use the bearing fields (`Fbru`/`Fbry`) that
@@ -249,8 +267,9 @@ Phase 2.2), not a type.
 | Stiffness wiring: thermal preload (TM-106943 Eq. 10) + tension rupture branch (5020B Eq. 10; yield-side Eq. 11 deferred) | 3.1b | ✅ |
 | Member checks: bearing (TM-106943 Eq. 72-74, validated vs DABJ Ex 5-b) + shear tear-out (Eq. 69-71) + bearing-under-head (Eq. 75) | 3.2 | ✅ |
 | Thread checks: bolt-thread shear + nut strength + tapped-hole parent thread (group 0.75·π·E·Le method; tapped-parent cross-checked vs DABJ Ex 6-a) + insert via Heli-Coil rated pull-out — all 15 checks implemented | 3.3 | ✅ |
-| Second validation wave (group-spreadsheet cases) | 3.4 | ⏳ next |
-| Table input + bulk analysis + XLSX (Headless Release) | 3.5–3.6 | ⏳ |
+| Second validation wave (group-spreadsheet cases) | 3.4 | ⏳ |
+| FEM force resolution (`engine.resolveForces` + `loadCaseFromForces`, `Joint.BoltAxis`) | 3.5a | ✅ |
+| Table input (joint-library + element table parsers) + bulk analysis + XLSX (Headless Release) | 3.5b–3.6 | ⏳ next |
 | Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
 | GUI (`+gui`) | 4 | ⏳ |
 | Packaging (`.exe`) | 5 | ⏳ |
