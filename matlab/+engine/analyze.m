@@ -8,7 +8,7 @@ function r = analyze(joint, loadCase, factors)
 %
 %   Evaluated checks (each function carries its own point-of-use equation
 %   citations; their Method strings are surfaced in Result.Margins):
-%       Tension-Ultimate   engine.marginTensionUlt   NASA-STD-5020B Eq. 6 + Fig. 8 gate
+%       Tension-Ultimate   engine.marginTensionUlt   NASA-STD-5020B Eq. 6 (assured) / Eq. 10 (rupture) + Fig. 8 gate
 %       Tension-Yield      engine.marginBoltYield    NASA-STD-5020B Eq. 15
 %       Shear-Ultimate     engine.marginShearUlt     NASA-STD-5020B Eq. 12/13 + Eq. 14
 %       Interaction        engine.marginInteraction  NASA-STD-5020B Eq. 20/21
@@ -46,7 +46,7 @@ p = engine.preload(joint);                  % NASA-STD-5020B Eq. 3/4/5 + Eq. 24 
 d = engine.designLoads(loadCase, factors);  % NASA-STD-5020B design load = FS x FF x limit
 
 % ---- The six built margin checks (Phases 2.5-2.8) ------------------------
-tu = engine.marginTensionUlt(joint, p, d);           % NASA-STD-5020B Eq. 6 + Fig. 8 gate
+tu = engine.marginTensionUlt(joint, p, d);           % NASA-STD-5020B Eq. 6 / Eq. 10 + Fig. 8 gate
 ty = engine.marginBoltYield(joint, d);               % NASA-STD-5020B Eq. 15
 su = engine.marginShearUlt(joint, d);                % NASA-STD-5020B Eq. 12/13 + Eq. 14
 ia = engine.marginInteraction(joint, d);             % NASA-STD-5020B Eq. 20/21 solve-for-a

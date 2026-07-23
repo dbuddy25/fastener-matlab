@@ -1,14 +1,16 @@
 % +ENGINE  Analysis math — the core (GUI-independent, headless-capable).
 %
 %   preload          - Min/max bolt preload incl. thermal (NASA-STD-5020B Eq. 3/4/5
-%                      + Eq. 24 + Eq. 1/2; thermal change per TM-106943 Eq. 10).
+%                      + Eq. 24 + Eq. 1/2; thermal change per TM-106943 Eq. 10 —
+%                      stiffness-based since Phase 3.1b, with the ThermalRate
+%                      override retained).
 %                      ✅ Phase 2.4 — validated against DABJ §9 (tests/tDabjCase.m).
 %   designLoads      - Design ultimate/yield/separation loads from limit loads
 %                      x safety/fitting factors.
 %                      ✅ Phase 2.5 — validated against DABJ §9.
 %   marginTensionUlt - Ultimate-tension margin with the NASA-STD-5020B Fig. 8
-%                      separation-before-rupture gate (Eq. 6; rupture path
-%                      deferred to Phase 3.1 stiffness).
+%                      separation-before-rupture gate (Eq. 6 assured; Eq. 10
+%                      rupture via the stiffness factor phi since Phase 3.1b).
 %                      ✅ Phase 2.5 — validated against DABJ §9 (+0.69).
 %   marginSeparation - Joint-separation margin, min preload vs separation
 %                      load (NASA-STD-5020B Eq. 19).

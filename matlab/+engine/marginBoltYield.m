@@ -32,6 +32,9 @@ if isnan(PtyAllow)
         "BoltRatedYieldLoad required for bolt yield margin; (Fty/Ftu)*Ptu_allow fallback is Phase 3.");
 end
 
+% TODO: yield rupture branch (NASA-STD-5020B Eq. 11) deferred — needs the Fig. 8
+% gate result (see engine.marginTensionUlt); tracked for a follow-up.
+
 % NASA-STD-5020B Eq. 15 — MS = Pty_allow / Pty - 1
 MS = PtyAllow / designLoads.Pty - 1;
 

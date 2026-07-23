@@ -5,8 +5,9 @@ classdef tStiffness < matlab.unittest.TestCase
     %   Kc = 4.73e6 lbf/in, Phi = 0.336. Insert/tapped-hole joints error
     %   (that frustum form is deferred within Phase 3.1). Phase 3.1b wiring
     %   is exercised here too: the stiffness-based thermal preload path
-    %   (thermalFromStiffness), against a HAND-DERIVED number, not a book
-    %   value.
+    %   (thermalFromStiffness) and the Eq. 10 tension rupture branch
+    %   (tensionRuptureBranch) — both against HAND-DERIVED numbers, not
+    %   book values.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -82,6 +83,39 @@ classdef tStiffness < matlab.unittest.TestCase
             % (hot-only, members grow more than the bolt), so
             % PpMin = 0.95*1500 = 1425 exactly.
             testCase.verifyEqual(p.PpMin, 1425, "AbsTol", 1e-9);
+        end
+
+        function tensionRuptureBranch(testCase)
+            % Phase 3.1b: when the Fig. 8 gate fails, the ultimate-tension
+            % margin switches to NASA-STD-5020B Eq. 10 —
+            % P'tu = (Ptu_allow - Pp_max)/(n·phi), MS = P'tu/Ptu - 1 —
+            % with phi from engine.stiffness.
+            % HAND-DERIVED expected value (no book number): the Example 8-b
+            % geometry gives phi = Kb/(Kb+Kc) = 2.3892e6/7.1145e6 = 0.3358
+            % and the fixture n = 0.5. With Ptu_allow = 10,000 lbf and
+            % PpMax = 8,000 lbf (direct preload, zero uncertainty, no
+            % thermal excursion), the preload gate fails
+            % (8,000 >= 0.75·10,000 = 7,500) -> rupture branch. PtL = 2,000
+            % with the DABJ default factors (FSU 1.4, FFU 1.15) gives
+            % Ptu = 3,220 lbf, so:
+            %   P'tu = (10,000 - 8,000)/(0.5·0.3358) = 11,911 lbf
+            %   MS   = 11,911/3,220 - 1 = +2.699
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.BoltRatedUltimateLoad = 10000;
+            j.PreloadSpec = model.PreloadSpec( ...
+                Method         = model.PreloadMethod.DirectPreload, ...
+                NominalPreload = 8000, ...
+                Uncertainty    = 0);      % PpMax = 8,000 exactly
+            lc  = model.LoadCase(Name = "rupture-branch check", ...
+                BoltTensileLimitLoad = 2000, BoltShearLimitLoad = 0);
+            fac = model.Factors();        % DABJ defaults: FSU 1.4, FFU 1.15
+            p = engine.preload(j);
+            d = engine.designLoads(lc, fac);
+            r = engine.marginTensionUlt(j, p, d);
+            testCase.verifyFalse(r.SeparationBeforeRupture);
+            testCase.verifySubstring(r.Method, "Eq. 10");
+            testCase.verifyEqual(r.MS, 2.699, "AbsTol", 0.01);
         end
     end
 end

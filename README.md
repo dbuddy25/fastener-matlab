@@ -55,8 +55,8 @@ b.Pitch                      % -> 0.03125
 
 ## Status
 
-**Phase 3.1a (joint stiffness, 30° frustum) complete; next 3.1b (wire
-stiffness into thermal preload + tension rupture branch).**
+**Phase 3.1 complete (stiffness + wired into thermal preload & tension
+rupture); next 3.2 (bearing/tearout).**
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -77,5 +77,10 @@ six DABJ §9 margins in `tests/tDabjCase.m`). `engine.stiffness(joint)`
 computes bolt/member stiffness and the stiffness factor phi (Shigley 30°
 conical frustum; phi per NASA-STD-5020B Eq. 9), validated against DABJ
 Example 8-b via `validation.dabjExample8b()` (exercised by
-`tests/tStiffness.m`); it is not yet wired into preload/margins (3.1b).
+`tests/tStiffness.m`), and is wired in (3.1b): `engine.preload` computes
+the thermal preload change from the joint stiffness (NASA TM-106943
+Eq. 10) when no `ThermalRate` override is supplied, and
+`engine.marginTensionUlt` computes the real rupture-branch margin
+(NASA-STD-5020B Eq. 10 via phi) when the Fig. 8 gate is not assured
+(the yield-side rupture form, 5020B Eq. 11, is deferred).
 See `MATLAB_BUILD_GUIDE.md`.

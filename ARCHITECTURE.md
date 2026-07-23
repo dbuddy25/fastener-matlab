@@ -6,8 +6,8 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 3.1a — validated single-joint engine + joint
-stiffness.** `engine.analyze(joint, loadCase, factors)` runs the whole engine
+**Current state: through Phase 3.1 — validated single-joint engine + joint
+stiffness, wired into thermal preload and the tension rupture branch.** `engine.analyze(joint, loadCase, factors)` runs the whole engine
 in one call — preload (`engine.preload`), design loads (`engine.designLoads`),
 and every built margin check (`marginTensionUlt` with the Fig. 8 gate,
 `marginBoltYield`, `marginShearUlt`, `marginInteraction`, `marginSeparation`,
@@ -20,7 +20,15 @@ stiffness factor phi (NASA-STD-5020B Eq. 9), validated against DABJ Example
 8-b (Kb 2.39e6 / Kc 4.73e6 / Phi 0.336, `validation.dabjExample8b` +
 `tests/tStiffness.m`), with new model fields to support it (`model.Washer`,
 `Bolt.HeadBearingDiameter`, `Joint.HeadWasher`/`NutWasher`/
-`BodyLengthInGrip`/`FrustumAngle`). Not yet wired into preload/margins (3.1b).
+`BodyLengthInGrip`/`FrustumAngle`). ✅ Phase 3.1b wires it in:
+`engine.preload` computes the thermal preload change from the joint
+stiffness (NASA TM-106943 Eq. 10, thickness-weighted member CTE) when no
+`ThermalRate` override is set (the DABJ §9 case keeps its override, so the
+answer key is untouched), and `engine.marginTensionUlt` computes the real
+rupture-branch margin (NASA-STD-5020B Eq. 10 via phi and n) when the
+Fig. 8 gate is not assured — falling back to `NotEvaluated` only if the
+stiffness geometry is missing. The yield-side rupture form (5020B Eq. 11)
+is deferred (see the TODO in `engine.marginBoltYield`).
 
 ---
 
@@ -101,7 +109,7 @@ export (Phase 3). The GUI wraps exactly these calls later.
 matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
-├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a); ⏳ stiffness wiring + remaining checks — Phase 3
+├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b); ⏳ remaining checks — Phase 3
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ⏳ PDF + XLSX export                    — Phase 3
@@ -200,7 +208,8 @@ Phase 2.2), not a type.
 | Slip margin (`engine.marginSlip`, DABJ Eq. 84) | 2.8 | ✅ |
 | Single-joint solver + `Result` (`engine.analyze`) | 2.9 | ✅ |
 | Joint stiffness, 30° frustum (`engine.stiffness`, validated vs DABJ Ex. 8-b) | 3.1a | ✅ |
-| Stiffness wiring (thermal preload + rupture branch), remaining checks + second validation wave | 3.1b–3.4 | ⏳ next |
+| Stiffness wiring: thermal preload (TM-106943 Eq. 10) + tension rupture branch (5020B Eq. 10; yield-side Eq. 11 deferred) | 3.1b | ✅ |
+| Remaining checks (bearing/tearout, thread/nut/insert) + second validation wave | 3.2–3.4 | ⏳ next |
 | Table input + bulk analysis + XLSX (Headless Release) | 3.5–3.6 | ⏳ |
 | Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
 | GUI (`+gui`) | 4 | ⏳ |

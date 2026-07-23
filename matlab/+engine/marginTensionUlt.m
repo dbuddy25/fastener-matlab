@@ -7,8 +7,9 @@ function r = marginTensionUlt(joint, preload, designLoads)
 %   struct from engine.designLoads. All loads in lbf (see UNITS.md).
 %
 %   Returned struct fields:
-%       MS                      margin of safety (double; NaN if rupture
-%                               path — see below)
+%       MS                      margin of safety (double; NaN only if the
+%                               rupture path needs stiffness geometry the
+%                               joint does not carry — see below)
 %       SeparationBeforeRupture logical: gate result
 %       Decision                string trace of the gate evaluation
 %       Method                  string: governing equation
@@ -25,10 +26,16 @@ function r = marginTensionUlt(joint, preload, designLoads)
 %        ASSUMED TRUE and noted in Decision.
 %
 %   If assured:  MS = Ptu_allow / designLoads.Ptu - 1   (NASA-STD-5020B Eq. 6 —
-%   the bolt only sees the external design load). If NOT assured, the
-%   rupture equations (NASA-STD-5020B Eq. 10/11) need the joint-stiffness factor
-%   phi, which is Phase 3.1; rather than fake it, MS = NaN with the
-%   reason in Decision.
+%   the bolt only sees the external design load). If NOT assured, rupture
+%   governs: the bolt carries the max preload PLUS its share of the applied
+%   load, so the margin uses the joint-stiffness factor phi from
+%   engine.stiffness (NASA-STD-5020B Eq. 9) and the loading-plane factor n:
+%       P'tu = (Ptu_allow - Pp_max)/(n·phi),  MS = P'tu/Ptu - 1
+%   (NASA-STD-5020B Eq. 10). If engine.stiffness cannot run (threaded-in
+%   configuration or missing frustum geometry), the check reports MS = NaN
+%   with the reason in Decision rather than crashing the analysis. The
+%   yield-side rupture form (NASA-STD-5020B Eq. 11) is deferred — see
+%   engine.marginBoltYield.
 %
 %   Ptu_allow = joint.BoltRatedUltimateLoad and is required to be set;
 %   the At*Ftu fallback for an unset allowable is Phase 3.
@@ -93,11 +100,27 @@ else
     if ~condPlane
         fails(end+1) = sprintf("n(%.2f) > 0.9", n); %#ok<AGROW>
     end
-    MS = NaN;
-    Method = "NASA-STD-5020B Eq. 10/11 (rupture) — requires stiffness, Phase 3.1";
-    Decision = "Separation before rupture NOT assured (rupture assumed): " + ...
-        strjoin(fails, "; ") + ...
-        ". Eq. 10/11 needs the joint-stiffness factor phi (Phase 3.1); MS = NaN until then.";
+    gateTrace = "Separation before rupture NOT assured (rupture assumed): " + ...
+        strjoin(fails, "; ");
+    try
+        s   = engine.stiffness(joint);   % errors for threaded-in / missing geometry
+        phi = s.Phi;                     % NASA-STD-5020B Eq. 9 — phi = kb/(kb + kc)
+        % NASA-STD-5020B Eq. 10 — P'tu = (Ptu_allow - Pp_max)/(n·phi);
+        % MS = P'tu/Ptu - 1 (bolt carries the preload plus n·phi of the load)
+        Pprime = (PtuAllow - preload.PpMax) / (n * phi);
+        MS = Pprime / designLoads.Ptu - 1;
+        Method = "NASA-STD-5020B Eq. 10 (rupture — bolt sees preload + n·phi·load)";
+        Decision = gateTrace + string(sprintf( ...
+            ". -> Eq. 10 with phi = %.4g (NASA-STD-5020B Eq. 9), n = %.2f.", phi, n));
+    catch stiffErr
+        % Stiffness unavailable (threaded-in configuration or missing
+        % frustum geometry) — report NotEvaluated, do not crash analyze.
+        MS = NaN;
+        Method = "NASA-STD-5020B Eq. 10 (rupture) — stiffness geometry required";
+        Decision = gateTrace + ...
+            ". Eq. 10 needs phi from engine.stiffness, which could not run: " + ...
+            string(stiffErr.message);
+    end
 end
 
 r = struct( ...
