@@ -34,7 +34,7 @@ function f = makeTemplate(outFile)
 %                   (Input Message) text for Data Validation.
 %
 %   Example:
-%       f  = data.makeTemplate("my_template.xlsx");
+%       f  = data.makeTemplate("analysis_template.xlsx");
 %       jl = data.loadJointLibrary(f, data.Library.load());   % Joints sheet
 %
 %   Joints is written FIRST so plain data.loadJointLibrary(f, lib) — which

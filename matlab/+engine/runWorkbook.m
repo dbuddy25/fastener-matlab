@@ -22,9 +22,9 @@ function T = runWorkbook(workbookFile, outFile)
 %   (or pass "") to just get T back.
 %
 %   The streamlined bulk flow (see USER_GUIDE.md Section 4):
-%       f = data.makeTemplate("my_joints.xlsx");   % generate the template
+%       f = data.makeTemplate("analysis_template.xlsx");   % generate the template
 %       % ... fill the Joints / Elements / Settings sheets in Excel ...
-%       T = engine.runWorkbook("my_joints.xlsx", "margins.xlsx");
+%       T = engine.runWorkbook("analysis_template.xlsx", "margins.xlsx");
 %
 %   Split input files instead? engine.runBulk(jointFile, elementsFile,
 %   settingsFile, outFile) is the same pipeline over three separate

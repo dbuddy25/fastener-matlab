@@ -79,8 +79,8 @@ function T = analyzeBulk(jointLibrary, elements, factors)
 %
 %   Example (the Headless Release flow):
 %       lib = data.Library.load();
-%       jl  = data.loadJointLibrary("my_joints.csv", lib);
-%       el  = data.loadElements("my_elements.csv");
+%       jl  = data.loadJointLibrary("joints.csv", lib);
+%       el  = data.loadElements("elements.csv");
 %       T   = engine.analyzeBulk(jl, el, factors);
 %       writetable(T, "margins.xlsx");
 

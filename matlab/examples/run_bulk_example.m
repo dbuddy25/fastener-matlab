@@ -12,7 +12,7 @@
 %   To analyze your own hardware, copy the three templates from
 %   matlab/templates/, fill them in, and point the calls below at
 %   your copies:
-%       T = engine.runBulk("my_joints.csv", "my_elements.csv", ...
+%       T = engine.runBulk("joints.csv", "elements.csv", ...
 %                          "my_settings.csv", "margins.xlsx");
 %
 %   Run from anywhere — paths resolve relative to this script, and the

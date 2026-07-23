@@ -104,7 +104,7 @@ function jl = loadJointLibrary(file, lib, sheet)
 %
 %   Example:
 %       lib = data.Library.load();
-%       jl  = data.loadJointLibrary("my_joints.csv", lib);
+%       jl  = data.loadJointLibrary("joints.csv", lib);
 %       jl(1).Joint    % -> model.Joint, ready for engine.analyze
 
 arguments

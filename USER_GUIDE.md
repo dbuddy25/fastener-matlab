@@ -74,7 +74,7 @@ min/max preload) if you want to double-check what went in.
 
 ### Step 1 — generate the fill-in workbook
 ```matlab
-f = data.makeTemplate("my_template.xlsx");
+f = data.makeTemplate("analysis_template.xlsx");
 ```
 This writes one .xlsx with five sheets:
 
@@ -137,7 +137,7 @@ FFSep, FFSlip`. Only Setting + Value are read; Description is for humans.
 One command, straight on the filled workbook — no CSV exports, no sheet cleanup:
 
 ```matlab
-T = engine.runWorkbook("my_template.xlsx", "margins.xlsx");
+T = engine.runWorkbook("analysis_template.xlsx", "margins.xlsx");
 ```
 
 - Reads the **Joints**, **Elements**, and **Settings** sheets by name (both table
