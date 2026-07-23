@@ -18,8 +18,10 @@ function r = marginInteraction(joint, designLoads)
 %                        case exercises them yet, so this path ERRORS
 %                        rather than return an unvalidated number
 %                        (Phase 3.4).
-%   The root is found with fzero from a starting guess of 1: g(a) is
-%   -1 at a = 0 and strictly increasing, so the root is unique.
+%   The root is found with fzero on a positive bracket [0, hi]: g(a) is
+%   -1 at a = 0 and strictly increasing, so the root is unique. Bracketing
+%   (rather than a scalar guess) keeps fzero from probing a < 0, where a
+%   non-integer power of a negative base is complex and aborts the search.
 %
 %   Returned struct fields:
 %       MS      margin of safety (double)
@@ -63,10 +65,19 @@ Rt = designLoads.Ptu / PtuAllow;
 Rs = designLoads.Psu / shearUlt.ShearAllowable;
 
 % NASA-STD-5020B Eq. 20/21 solve-for-a — (a·Rt)^et + (a·Rs)^es = 1.
-% g(0) = -1 and g is strictly increasing for a > 0, so the root is unique;
-% guess 1 (root ~1.59 here).
+% g(0) = -1 and g is strictly increasing for a > 0, so the root is unique.
+% Solve on a POSITIVE bracket [0, hi] so fzero never evaluates a < 0 (a
+% negative base to a non-integer power is complex and aborts the search).
 g = @(a) (a*Rt)^et + (a*Rs)^es - 1;
-a = fzero(g, 1);
+if Rt <= 0 && Rs <= 0
+    a = Inf;                          % no applied load -> infinite margin
+else
+    hi = 1;
+    while g(hi) < 0 && hi < 1e12
+        hi = 2 * hi;                  % expand until g(hi) > 0 brackets the root
+    end
+    a = fzero(g, [0, hi]);
+end
 
 % NASA-STD-5020B Eq. 20/21 solve-for-a margin — MS = a - 1
 MS = a - 1;
