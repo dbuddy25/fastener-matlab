@@ -68,6 +68,24 @@ r.GoverningCheck     % which check governs
 `engine.summary(j, lc, f)` prints a table of all the **inputs** (incl. the computed
 min/max preload) if you want to double-check what went in.
 
+### PDF report
+
+Once you have a joint, load case, and factors, generate a single-joint PDF
+report (requires the **MATLAB Report Generator** toolbox):
+
+```matlab
+report.singleJointReport(j, lc, f, "report.pdf")
+```
+
+This builds a title page, an Inputs table, Preload and Design Loads
+tables, the 15-row Margins of Safety table (the governing check bolded,
+any `Fail` rows in red, plus a "Governing: ..." callout), the
+NASA-STD-5020B Fig. 8 separation-before-rupture narrative, and a
+Governing Equations table (the equation citation behind every evaluated
+check — traceable back to the standard, not a full worked derivation).
+If Report Generator isn't installed/licensed, the call errors clearly
+instead of failing deep inside an undefined-class error.
+
 ---
 
 ## 4. Quick start B — BULK analysis (the main workflow)

@@ -6,7 +6,9 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 3.6 — the HEADLESS RELEASE is complete.
+**Current state: through Phase 3.6 (Headless Release) + Phase 3.8 (single-joint
+PDF report) — Phase 3.7 (case save/load, presets) remains ⏳.
+the HEADLESS RELEASE is complete.
 Validated single-joint engine + joint stiffness + the member-strength checks +
 the thread-strength checks (ALL 15 checks implemented) + FEM force resolution +
 bulk input parsers + the bulk orchestrator + XLSX export + the one-call
@@ -176,6 +178,23 @@ clobber the filled sheets). The template's shipped example content is the
 DABJ §9 case (Elements row 1001 carries the §9 per-bolt limit loads), so
 a fresh template reproduces the published per-bolt margins end-to-end
 (`tests/tWorkbook.m`).
+✅ Phase 3.8 adds the single-joint PDF report:
+`report.singleJointReport(joint, loadCase, factors, file)` runs
+`engine.analyze` and builds one PDF via **MATLAB Report Generator**
+(`mlreportgen.report.*` + `mlreportgen.dom.*`) — a title page ("Bolted
+Joint Analysis" + the joint Name + "per NASA-STD-5020B"), an Inputs
+chapter (`engine.summary` as a `MATLABTable`), Preload and Design Loads
+chapters (small Field/Value tables), a Margins of Safety chapter
+(`r.asTable()`, the row matching `r.GoverningCheck` bolded, `Fail` rows in
+red, plus a "Governing: ..." callout), a Separation-before-rupture chapter
+(`r.Narrative`), and a Governing Equations chapter (Name + Method for
+every EVALUATED check — equation citations only; full step-by-step
+symbolic derivations are a follow-up, not built here). Requires the Report
+Generator toolbox — errors with id
+`report:singleJointReport:reportGenRequired` (not a bare undefined-class
+error) if it is not installed/licensed; `tests/tPdfReport.m` guards on
+toolbox availability and SKIPS (via `assumeTrue`) rather than failing when
+it's absent.
 
 ---
 
@@ -300,7 +319,7 @@ matlab/
 ├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); `analyzeBulk` (3.5c) — the bulk orchestrator; `runBulk` (3.6) — the one-call headless workflow; `runWorkbook` (Step 2c) — the single-workbook entry point (shared settings-apply helper with `runBulk`)
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b — Step 2a joint-table layout); global settings (`loadSettings` — temps + factors, Step 2a); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields sheets, Step 2b); ⏳ case save/load — Phase 3
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
-├── +report/         ✅ XLSX export (`exportResults`, 3.6); ⏳ PDF — Phase 3.8
+├── +report/         ✅ XLSX export (`exportResults`, 3.6); single-joint PDF report (`singleJointReport`, 3.8, via MATLAB Report Generator)
 ├── +gui/            ⏳ App Designer app (thin shell)        — Phase 4
 ├── examples/        ✅ runnable headless reference (`run_bulk_example.m`, 3.6)
 └── tests/           ✅ smoke + model tests; ⏳ validation   — throughout
@@ -410,7 +429,8 @@ Phase 2.2), not a type.
 | Table input (`data.loadJointLibrary` + `data.loadElements` + template CSVs) | 3.5b | ✅ |
 | Bulk analysis (`engine.analyzeBulk`, incl. 3.5d joint-slip pattern aggregation + nf check) + XLSX export (`report.exportResults`) + one-call `engine.runBulk` — **Headless Release** | 3.5c–3.6 | ✅ |
 | Single-workbook bulk run (`engine.runWorkbook` over the `data.makeTemplate` workbook; header-tolerant `data.loadElements`; optional `sheet` arg on all three loaders) | Step 2c | ✅ |
-| Case save/load, presets, PDF reports | 3.7–3.8 | ⏳ |
+| Case save/load, factor presets | 3.7 | ⏳ |
+| Single-joint PDF report (`report.singleJointReport`, via MATLAB Report Generator) | 3.8 | ✅ |
 | GUI (`+gui`) | 4 | ⏳ |
 | Packaging (`.exe`) | 5 | ⏳ |
 

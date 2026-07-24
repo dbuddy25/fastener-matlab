@@ -96,6 +96,7 @@ This is a **living document** — every new check adds a row.
 | Workbook template generator (`data.makeTemplate` — five-sheet .xlsx: Joints/Elements two-row headers (friendly + MATLAB names) with the shipped example rows, Settings Setting|Value|Description, Lists dropdown sources from `data.Library`, Fields data dictionary; generated Joints sheet parse-back through `data.loadJointLibrary` reproduces the DABJ §9 row — BoltCount 4, SlipMode Joint, torque 470 — and the insert row) | ✅ (Step 2b) | tMakeTemplate |
 | Single-workbook end-to-end (`engine.runWorkbook` on a fresh `data.makeTemplate` workbook — Joints/Elements/Settings sheets read by name, shared settings-apply with `runBulk`; the template's Elements row 1001 carries the §9 per-bolt limit loads, so the untouched workbook reproduces the DABJ §9 per-bolt margins: TensionUlt +0.69, Separation +0.16, TensionYield +0.63, ShearUlt +3.18, Interaction +0.59; outFile write → read-back row count verified; outFile == input workbook refused) | ✅ (Step 2c) | tWorkbook |
 | Case save/load, factor presets | ⏳ (Phase 3.7) | — |
+| Single-joint PDF report (`report.singleJointReport` — title page, inputs, preload, design loads, 15-row margins table w/ governing-row + Fail-row emphasis, Fig. 8 narrative, governing-equations citation table; requires MATLAB Report Generator, errors with a clear id when absent) | ✅ structural (generates a non-empty PDF on the DABJ §9 case; no PDF-content assertions), skip-guarded when Report Generator is unavailable | tPdfReport |
 
 ---
 

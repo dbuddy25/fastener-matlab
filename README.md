@@ -27,7 +27,7 @@ matlab/
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
 ├── +engine/           analysis math — the core (Phases 2–3); bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook, Step 2c)
 ├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load later (Phase 3)
-├── +report/           XLSX export (`report.exportResults`, Phase 3.6); PDF later (Phase 3.8)
+├── +report/           XLSX export (`report.exportResults`, Phase 3.6); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
 ├── +gui/              App Designer app — thin shell over the engine (Phase 4)
 ├── examples/          runnable reference scripts (`run_bulk_example.m`)
 └── tests/             validation + smoke tests (checked vs the worked example)
@@ -122,8 +122,9 @@ is fine.
 
 **Phase 3 Headless Release complete** — full 15-check engine + bulk table
 workflow (parse → resolve → analyze → XLSX), including joint-slip
-bolt-pattern aggregation with the nf check (3.5d). Next: 3.7 (case
-save/load, presets), 3.8 (PDF), then Phase 4 (GUI).
+bolt-pattern aggregation with the nf check (3.5d). Phase 3.8 (single-joint
+PDF report, `report.singleJointReport`) is also done. Next: 3.7 (case
+save/load, presets), then Phase 4 (GUI).
 The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
 `Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
 `ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
@@ -232,3 +233,14 @@ settings-apply helper — the two entry points cannot drift) on the
 Joints/Elements/Settings sheets of one `data.makeTemplate` workbook, whose
 shipped example content reproduces the DABJ §9 per-bolt margins end-to-end
 (`tests/tWorkbook.m`). See `MATLAB_BUILD_GUIDE.md`.
+Phase 3.8 adds the single-joint PDF report:
+`report.singleJointReport(joint, loadCase, factors, file)` runs
+`engine.analyze` and builds one PDF (via MATLAB Report Generator) — title
+page, inputs, preload, design loads, the 15-row margins table (governing
+row bold, Fail rows red, plus a "Governing: ..." callout), the Fig. 8
+separation-before-rupture narrative, and a governing-equations (citation)
+table for every evaluated check. Equation citations only — full
+step-by-step symbolic derivations are a follow-up. Errors with id
+`report:singleJointReport:reportGenRequired` if Report Generator isn't
+installed/licensed; the test (`tests/tPdfReport.m`) skips rather than
+fails in that case.
