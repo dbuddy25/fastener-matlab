@@ -26,7 +26,7 @@ matlab/
 ├── fastenerTool.m     entry point (Phase 1 stub — prints version)
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
 ├── +engine/           analysis math — the core (Phases 2–3); bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook, Step 2c)
-├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load later (Phase 3)
+├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`, Phase 3.7); factor presets (`factorPreset`/`saveFactorPreset`, Phase 3.7)
 ├── +report/           XLSX export (`report.exportResults`, Phase 3.6); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
 ├── +gui/              App Designer app — thin shell over the engine (Phase 4)
 ├── examples/          runnable reference scripts (`run_bulk_example.m`)
@@ -244,3 +244,19 @@ step-by-step symbolic derivations are a follow-up. Errors with id
 `report:singleJointReport:reportGenRequired` if Report Generator isn't
 installed/licensed; the test (`tests/tPdfReport.m`) skips rather than
 fails in that case.
+Phase 3.7 adds case save/load + factor presets: `data.toStruct`/
+`data.fromStruct` are a generic recursive model-object↔struct converter
+(every `+model` class shares one implementation — Dependent properties are
+never written back, enums round-trip by member name, object arrays like
+`FlangeStack` are detected from the property's declared default
+cardinality so a single-layer stack still round-trips as an array).
+`data.saveCase`/`data.loadCase` wrap a `Joint` (+ optional
+`LoadCase`/`Factors`/`Name`) in a `schemaVersion`-tagged JSON file
+(`ConvertInfAndNaN=false` so NaN "unconfigured" sentinels survive);
+lossless — re-`engine.analyze`-ing a save→load copy of the DABJ §9 case
+reproduces every published margin (`tests/tCaseIO.m`).
+`data.factorPresets()` holds the built-in (protected) presets
+(`"NASA-STD-5020B"` plus two named alternates); `data.factorPreset(name)`
+resolves built-in-or-user by name; `data.saveFactorPreset(name, factors,
+file)` writes a user preset (default path under `userpath()`) and refuses
+to overwrite a built-in name.

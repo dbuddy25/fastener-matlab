@@ -86,6 +86,47 @@ check — traceable back to the standard, not a full worked derivation).
 If Report Generator isn't installed/licensed, the call errors clearly
 instead of failing deep inside an undefined-class error.
 
+### Save / load a case
+
+Once you've built a `Joint` (and, usually, a `LoadCase` and `Factors`),
+save the whole case to one JSON file so you can reopen it later without
+retyping anything:
+
+```matlab
+f = data.saveCase(struct(Joint=j, LoadCase=lc, Factors=f, Name="Demo"), "demo_case.json");
+
+% ... later, in a new session ...
+c = data.loadCase("demo_case.json");
+r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+```
+
+`Name` is the only optional cosmetic field — `LoadCase` and `Factors` are
+also optional (a case can be just a `Joint`). The round trip is lossless:
+re-analyzing a loaded case reproduces the exact same margins as the
+original, including "unconfigured" (`NaN`) fields.
+
+### Factor presets
+
+Rather than typing out `model.Factors(...)` every time, pull a named
+preset:
+
+```matlab
+fac = data.factorPreset("NASA-STD-5020B");   % the built-in standard set
+```
+
+To save your own program-specific factor set for reuse:
+
+```matlab
+data.saveFactorPreset("My Program Factors", model.Factors(FSU=1.5, FFU=1.2));
+fac = data.factorPreset("My Program Factors");   % pulls it back, anywhere
+```
+
+User presets are saved under your MATLAB `userpath()` folder and persist
+across sessions. Built-in preset names (like `"NASA-STD-5020B"`) are
+protected — you can't accidentally overwrite one; `data.saveFactorPreset`
+errors clearly if you try. Run `data.factorPresets()` to see every
+built-in preset name available.
+
 ---
 
 ## 4. Quick start B — BULK analysis (the main workflow)

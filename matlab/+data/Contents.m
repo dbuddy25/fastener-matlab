@@ -1,5 +1,5 @@
 % +DATA  Data layer — hardware/material library, bulk table parsers,
-%        global settings, case save/load (JSON, later).
+%        global settings, case save/load (JSON), factor presets.
 %
 %   Library          - catalog loader: data.Library.load() serves +model objects
 %                      by key via bolt(key)/material(key)/boltSpec(key);
@@ -51,5 +51,39 @@
 %                      factors in the settings template (doubles as the
 %                      tBulkParsers fixture).
 %
-%   Still to come (Phase 3): analysis-case JSON round-trip; factor presets
-%   (built-in + user). Reference: MATLAB_BUILD_GUIDE.md, Phases 2-3.
+%   toStruct/fromStruct - generic recursive model.* <-> struct converter
+%                      (Phase 3.7). toStruct(obj) tags a struct with
+%                      x_class = "model.Xxx" and writes every SETTABLE
+%                      property (Dependent props like Pitch/GripLength/
+%                      TorqueMax/CMin are skipped via metaclass
+%                      introspection — never written back); enums become
+%                      {x_class, x_enum-member-name}; object arrays (e.g.
+%                      Joint.FlangeStack) become {x_class:"array",
+%                      x_elemClass, x_elements} — array-ness is detected
+%                      from the PROPERTY's declared default cardinality, so
+%                      a single-element array still round-trips as an
+%                      array. fromStruct(s) is the exact inverse, rebuilding
+%                      via each class's name-value constructor. Adding a
+%                      new +model field later needs no changes here.
+%   saveCase/loadCase  - case save/load (Phase 3.7): saveCase(caseStruct,
+%                      file) serializes {Joint, LoadCase?, Factors?, Name?}
+%                      via toStruct into a schemaVersion-tagged JSON file
+%                      (jsonencode ConvertInfAndNaN=false so the model's
+%                      NaN "unconfigured" sentinels survive); loadCase(file)
+%                      is the inverse via fromStruct. Lossless: re-running
+%                      engine.analyze on a save->load copy reproduces the
+%                      original margins (tests/tCaseIO.m).
+%   factorPresets      - the BUILT-IN (protected) factor presets, name ->
+%                      model.Factors: "NASA-STD-5020B" (matches
+%                      validation.dabjSection9 / model.Factors() defaults)
+%                      plus two named alternates. Phase 3.7.
+%   factorPreset       - factorPreset(name) resolves a built-in OR user
+%                      preset by name (built-in checked first; clear error
+%                      + name list if unknown). Phase 3.7.
+%   saveFactorPreset   - saveFactorPreset(name, factors, file?) writes a
+%                      USER factor preset to a JSON file (default path
+%                      under userpath(), repo-local fallback if userpath()
+%                      is empty); refuses to overwrite a built-in name.
+%                      Phase 3.7.
+%
+%   Reference: MATLAB_BUILD_GUIDE.md, Phases 2-3.

@@ -6,9 +6,8 @@ built today and where it is headed. Each section is tagged:
 - ✅ **Built** — exists and tested now
 - ⏳ **Planned** — designed, not yet implemented (phase noted)
 
-**Current state: through Phase 3.6 (Headless Release) + Phase 3.8 (single-joint
-PDF report) — Phase 3.7 (case save/load, presets) remains ⏳.
-the HEADLESS RELEASE is complete.
+**Current state: through Phase 3.8 (single-joint PDF report) + Phase 3.7
+(case save/load, factor presets) — the HEADLESS RELEASE is complete.
 Validated single-joint engine + joint stiffness + the member-strength checks +
 the thread-strength checks (ALL 15 checks implemented) + FEM force resolution +
 bulk input parsers + the bulk orchestrator + XLSX export + the one-call
@@ -195,6 +194,33 @@ Generator toolbox — errors with id
 error) if it is not installed/licensed; `tests/tPdfReport.m` guards on
 toolbox availability and SKIPS (via `assumeTrue`) rather than failing when
 it's absent.
+✅ Phase 3.7 adds case save/load + factor presets, closing out Phase 3:
+`data.toStruct(obj)`/`data.fromStruct(s)` are a GENERIC, recursive
+model-object ↔ struct converter — every `+model` class round-trips through
+one shared implementation (add a field to a model class later and it "just
+works" here, nothing to touch). Dependent properties (`Pitch`,
+`GripLength`, `TorqueMax`/`Min`, `CMax`/`Min`, ...) are never written back:
+`toStruct` finds SETTABLE properties via `metaclass` (`~[props.Dependent] &
+strcmp({props.SetAccess},'public')`) and only serializes those. Enums
+serialize as `{x_class, x_enum}` (class + member name) and rebuild via
+`enumeration(class)` name lookup — no `eval`. Object ARRAYS (`Joint.FlangeStack`)
+are detected from the PROPERTY's declared default cardinality
+(`numel(p.DefaultValue) ~= 1`), not the live instance's count, so a
+single-layer stack still round-trips as an array, not a bare scalar.
+`data.saveCase(caseStruct, file)` / `data.loadCase(file)` wrap `Joint` (+
+optional `LoadCase`/`Factors`/`Name`) in a `schemaVersion`-tagged JSON file
+via `jsonencode(...,"ConvertInfAndNaN",false)` so the model's NaN
+"unconfigured" sentinels survive the round trip instead of collapsing to
+`null`. Lossless, proven by re-`engine.analyze`-ing a save→load copy of the
+DABJ §9 case and diffing every published margin (`tests/tCaseIO.m`).
+`data.factorPresets()` holds the BUILT-IN (protected) presets —
+`"NASA-STD-5020B"` (the standard set, matching `validation.dabjSection9` /
+`model.Factors()` defaults) plus two named alternates;
+`data.factorPreset(name)` resolves built-in-or-user by name (clear error +
+name list if unknown); `data.saveFactorPreset(name, factors, file)` writes
+a USER preset to a JSON file (default path under `userpath()`, with a
+repo-local fallback when `userpath()` is empty) and refuses to shadow a
+built-in name.
 
 ---
 
@@ -317,7 +343,7 @@ matlab/
 ├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
 ├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginBoltYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); `analyzeBulk` (3.5c) — the bulk orchestrator; `runBulk` (3.6) — the one-call headless workflow; `runWorkbook` (Step 2c) — the single-workbook entry point (shared settings-apply helper with `runBulk`)
-├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b — Step 2a joint-table layout); global settings (`loadSettings` — temps + factors, Step 2a); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields sheets, Step 2b); ⏳ case save/load — Phase 3
+├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b — Step 2a joint-table layout); global settings (`loadSettings` — temps + factors, Step 2a); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields sheets, Step 2b); generic model↔struct serialization (`toStruct`/`fromStruct`, 3.7); case save/load (`saveCase`/`loadCase`, 3.7); factor presets (`factorPresets`/`factorPreset`/`saveFactorPreset`, 3.7)
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ✅ XLSX export (`exportResults`, 3.6); single-joint PDF report (`singleJointReport`, 3.8, via MATLAB Report Generator)
 ├── +gui/            ⏳ App Designer app (thin shell)        — Phase 4
