@@ -179,10 +179,14 @@ flowchart LR
     style E fill:#f8d7da
 ```
 
-`stiffness` now refuses ONE configuration outright — stacks whose flanges differ
-in modulus (`mixedModulusDeferred`). Insert and tapped-hole joints compute via
-the shortened grip `L = t1 + D/2`; they reach the diagram above only when their
-frustum geometry is incomplete. Green means unaffected, amber means conservative
+`stiffness` no longer refuses any CONFIGURATION outright. Insert and
+tapped-hole joints compute via the shortened grip `L = t1 + D/2`; a
+mixed-modulus flange stack computes via the thickness-weighted harmonic-mean
+member modulus `Ebar` (NASA TM-106943 Eq. 34 — see `STIFFNESS_PLAN.md` §3 and
+`TOOL_DIFFERENCES.md` §7.5 for the approximation's measured error bound).
+`stiffness` still errors on missing DATA (e.g. no `HeadBearingDiameter`, no
+`BodyLengthInGrip`/fallback inputs, an empty `FlangeStack`); a joint reaches
+the diagram above only then. Green means unaffected, amber means conservative
 fallback, red means the row reports not-evaluated. Only the amber and red paths
 lose anything, and only one of them loses the whole analysis.
 

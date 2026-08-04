@@ -33,7 +33,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 2 | 4.2.1 | Program-specified factors of safety | IMPLEMENTED | `model.Factors` → `engine.designLoads` |
 | 3 | 4.2.2 | Fitting factor | IMPLEMENTED | `model.Factors` FFU/FFY/FFSep/FFSlip |
 | 4 | 4.2.3 | Separation FS per Figure 1 | IMPLEMENTED (value applied; Fig. 1 tree not encoded — see note) | `engine.marginSeparation`, Eq. 19 |
-| 5 | 4.3.1 | Max/min preload incl. variation, relaxation, creep, temperature | IMPLEMENTED (except mixed-modulus stacks — see note) | `engine.preload` — creep not applicable, see below |
+| 5 | 4.3.1 | Max/min preload incl. variation, relaxation, creep, temperature | IMPLEMENTED | `engine.preload` — creep not applicable, see below |
 | 6 | 4.3.2 | Nominal preload substantiated by 6-set test program | OUT-OF-SCOPE | Test program; torque/nut factor are trusted inputs |
 | 7 | 4.3.3 | Preload variation Γ per Table 3 | OMITTED-BY-DECISION | Γ comes from the procedure's torque spec — see below |
 | 8 | 4.4.1 | Ultimate design loads, µ = 0 in analysis | IMPLEMENTED | `engine.designLoads`, `engine.marginTensionUlt` |

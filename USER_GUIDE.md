@@ -287,8 +287,13 @@ is meant to grow.
   insert-rating column yet) — the tool doesn't ship a HeliCoil rating table.
 - **Joint-mode slip in bulk:** only evaluates when a pattern's element count equals its
   `BoltCount` (otherwise refused with a `Note`). Default `SingleFastener` slip always runs.
-- **Threads-in-shear interaction, yield rupture branch, mixed-modulus stiffness:** deferred
-  (will error or NotEvaluated) until a validation case exists.
+- **Threads-in-shear interaction, yield rupture branch:** deferred (will error or
+  NotEvaluated) until a validation case exists.
+- **Mixed-modulus stiffness:** computes via a thickness-weighted harmonic-mean
+  member modulus (NASA TM-106943 Eq. 34) rather than exact per-layer slicing —
+  exact for the ordinary two-plate joint, up to +23%/−14% off on `kc`/`phi`
+  (unconservative for bolt tension) for stacks with soft layers at both
+  bearing faces. See `TOOL_DIFFERENCES.md` §7.5.
 - Many margins are **hand-derived** (no public worked example) — see the ✍️ rows in
   `VALIDATION.md`. Treat those as engineering-checked, not textbook-certified.
 

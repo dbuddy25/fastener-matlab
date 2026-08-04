@@ -43,9 +43,21 @@ function s = stiffness(joint)
 %   the engaged threads. Its kb drops the threaded end's +0.4D in favour of
 %   h = min(D/2, t2/2); the tapped member thickness t2 is not carried by the
 %   model, so h = D/2 is assumed (DABJ's "usually, h = D/2") and recorded in
-%   the returned Method. Mixed flange moduli still error with id
-%   engine:stiffness:mixedModulusDeferred (per-layer frustum slicing is
-%   deferred — see STIFFNESS_PLAN.md Job B).
+%   the returned Method.
+%
+%   MIXED-MODULUS flange stacks are supported via a thickness-weighted
+%   harmonic-mean member modulus Ebar (NASA TM-106943 Eq. 34; see
+%   STIFFNESS_PLAN.md Section 3). Ebar is a property of the CLAMPED STACK
+%   (denominator sums flange-layer t_i/E_i; numerator is tFit), so on the
+%   threaded-in branch the D/2 extension into the tapped/insert member
+%   inherits the clamped-stack Ebar rather than the tapped member's own
+%   modulus — DABJ's literal reading of the shortened-grip rule. Ebar
+%   reduces EXACTLY to a single E for a uniform stack (see the reduction
+%   self-check in tests/tStiffness.m) and is exact in general whenever
+%   material boundaries coincide with the frustum knee; it can read up to
+%   +23% high on kc / -14% low on phi for stacks with soft layers at BOTH
+%   bearing faces — UNCONSERVATIVE for bolt tension. See
+%   TOOL_DIFFERENCES.md Section 7.5.
 %
 %   Returned struct fields:
 %       Kb    bolt stiffness, lbf/in
@@ -54,7 +66,10 @@ function s = stiffness(joint)
 %       L1    unthreaded body length in the grip, in (traceability)
 %       L2    threaded length in the grip, in (traceability)
 %       Dc    frustum contact diameter at the fitting face, in (traceability)
-%       Ec    common member (flange) modulus, psi (traceability)
+%       Ec    member (flange) modulus, psi (traceability) — the
+%             thickness-weighted harmonic mean Ebar = tFit / sum(t_i/E_i)
+%             over the flange stack (NASA TM-106943 Eq. 34); equals a
+%             single E exactly for a uniform stack
 %       Lc    frustum length actually used for kc, in (traceability —
 %             tFit for a nut joint, tFit + D/2 for a threaded-in joint)
 %       Method  string: the governing frustum forms used, incl. the
@@ -81,7 +96,10 @@ function s = stiffness(joint)
 %                               rows, Kc + Lb); threadedInShortensGripAndDropsPoint4D
 %                               (branch selection vs the nut case);
 %                               threadedInThermalPreloadRuns (the path that
-%                               used to throw); mixedModulusStillDeferred.
+%                               used to throw); mixedModulusReducesToUniform,
+%                               mixedModulusSplitInvariance,
+%                               mixedModulusBounded, mixedModulusMonotonic,
+%                               mixedModulusThermalPreloadAndAnalyzeRun.
 %
 %   Validation status/coverage: see VALIDATION.md (Stiffness, rows 1-4).
 
@@ -201,13 +219,24 @@ else
 end
 
 % ---- Member (frustum) stiffness ----------------------------------------
-% Require a uniform member modulus (per-layer frustum slicing is deferred).
-memberE = arrayfun(@(fl) fl.Material.E, joint.FlangeStack);
-if any(abs(memberE - memberE(1)) > 1e-9 * abs(memberE(1)))
-    error("engine:stiffness:mixedModulusDeferred", ...
-        "Flange layers have different moduli; per-layer frustum slicing is deferred — see STIFFNESS_PLAN.md Job B.");
-end
-Ec = memberE(1);                       % common member modulus, psi
+% Thickness-weighted harmonic-mean member modulus — NASA TM-106943 Eq. 34:
+%   Ebar = tFit / sum(t_i / E_i)          (t_i, E_i over joint.FlangeStack)
+% 5020B Eq. 9 takes kc as a given input and never prints how to compute a
+% mixed-modulus member's effective modulus, so citing the supplement here
+% is legitimate per CLAUDE.md's document-hierarchy rule. The frustum
+% expression below is UNCHANGED (Shigley geometry, d1 = d2 = Dc per
+% STIFFNESS_PLAN.md Section 3.1 — a general asymmetric d1/d2 form was
+% considered and rejected: DABJ Example 8-b uses an AVERAGED contact
+% diameter from different head/nut washers and would move off the answer
+% key under separate d1/d2). Ebar reduces to a single E exactly for a
+% uniform stack (tFit/sum(t_i/E) = tFit/(tFit/E) = E), is exact whenever
+% material boundaries coincide with the frustum knee, and is unconservative
+% (kc high / phi low) by up to 23%/14% for stacks with soft layers at both
+% bearing faces — see STIFFNESS_PLAN.md Section 3.2 and TOOL_DIFFERENCES.md
+% Section 7.5.
+memberT = [joint.FlangeStack.Thickness];                    % in
+memberE = arrayfun(@(fl) fl.Material.E, joint.FlangeStack);  % psi
+Ec = tFit / sum(memberT ./ memberE);   % Ebar, member modulus, psi
 
 if threadedIn
     % Shigley & Mischke, threaded-in clamp stiffness (see also DABJ §8
@@ -216,9 +245,10 @@ if threadedIn
     %   L = t1 + D/2
     % t1 is the through-hole member stack (tFit) and D/2 reaches to the
     % midpoint of the engaged threads, where the far frustum is taken to
-    % start. Conditions the method carries: D < t2, one modulus across the
-    % clamped members (enforced above), and members deep enough to capture
-    % the frustums.
+    % start. Conditions the method carries: D < t2 and members deep enough
+    % to capture the frustums; a mixed-modulus flange stack is folded into
+    % Ec = Ebar below (NASA TM-106943 Eq. 34) rather than requiring one
+    % modulus.
     L  = tFit + D/2;                   % in
     % ONE washer, under the head — a threaded-in joint has no nut washer,
     % so the two-washer average below would understate the spread. DABJ
@@ -271,14 +301,20 @@ if threadedIn
         "Shigley conical frustum, %.4g deg half-angle (threaded-in): " + ...
         "kb = Eb*[(L1+0.4D)/As + (L2+h)/At]^-1 with h = D/2 ASSUMED " + ...
         "(h = min(D/2, t2/2); tapped member thickness t2 not modelled); " + ...
-        "kc over the shortened grip L = t1 + D/2 = %.4g in; " + ...
+        "kc over the shortened grip L = t1 + D/2 = %.4g in, Ec = Ebar = " + ...
+        "tFit/sum(t_i/E_i) over the clamped flange stack (NASA TM-106943 " + ...
+        "Eq. 34; the D/2 extension inherits this clamped-stack Ebar rather " + ...
+        "than the tapped member's own modulus); " + ...
         "phi = kb/(kb+kc) per NASA-STD-5020B Eq. 9. " + ...
         "Validated against DABJ Table 8-3 (slide 8-26).", ang, L));
 else
     method = string(sprintf( ...
         "Shigley conical frustum, %.4g deg half-angle (through-bolt): " + ...
         "kb = Eb*[(L1+0.4D)/As + (L2+0.4D)/At]^-1; " + ...
-        "kc symmetric back-to-back over the fitting stack L = %.4g in; " + ...
+        "kc symmetric back-to-back over the fitting stack L = %.4g in, " + ...
+        "Ec = Ebar = tFit/sum(t_i/E_i) over the clamped flange stack " + ...
+        "(NASA TM-106943 Eq. 34; equals a single E exactly for a uniform " + ...
+        "stack); " + ...
         "phi = kb/(kb+kc) per NASA-STD-5020B Eq. 9. " + ...
         "Validated against DABJ Example 8-b.", ang, L));
 end

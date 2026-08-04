@@ -101,13 +101,15 @@ the tool can honestly be used for:
 
 | Rank | Item | Why it outranks this |
 |---|---|---|
-| 1 | **Bolt-bending guard** | `fbu = 0` in every interaction criterion. 5020B §4.4.4 exempts close-tolerance and interference fits — but **nothing checks that condition**, so a clearance-fit or gapped joint reads non-conservatively and SILENTLY. Highest risk, and the cheap fix is detection (refuse or warn on the geometry that needs it), not implementing bending |
-| 2 | **Job B — mixed-modulus stiffness** | A steel fitting on an aluminium panel is refused outright; with a temperature excursion the whole analysis errors. Highest value: method is settled and error bounds measured (`STIFFNESS_PLAN.md`) |
+| 1 | ~~Bolt-bending guard~~ — **DONE** | `fbu = 0` in every interaction criterion, which 5020B §4.4.4 permits only conditionally. Nothing checked the condition, so a clearance-fit or gapped joint read non-conservatively and SILENTLY. Now recorded per joint via `model.ShearTransferCondition`: the exemption is reported ASSUMED or VERIFIED, and a `ClearanceOrGapped` joint returns NotEvaluated rather than a criterion missing a term. No bending physics was added |
+| 2 | ~~Job B — mixed-modulus stiffness~~ — **DONE** | A steel fitting on an aluminium panel used to be refused outright; it now computes via a thickness-weighted harmonic-mean member modulus (NASA TM-106943 Eq. 34, `STIFFNESS_PLAN.md` §3), exact for the ordinary two-plate joint and bounded-but-unconservative (+23%/−14% on kc/phi) otherwise |
 | 3 | **Phase 3.4 independent validation** | Every margin is currently checked against fixtures written by the same author as the code. Self-consistency, not independent agreement |
 | 4 | **Phase 5 packaging** | Needed before anyone can use it without MATLAB |
 | 5 | This document | |
 
-Note the ordering of 1 and 2: **bending is the higher risk, Job B is the higher
-value.** A refused joint is a visible, safe failure; a silently unconservative
-margin is not. The bending *guard* is small enough that it should not wait
-behind Job B.
+Note the ordering of 1 and 2 while Job B was open: **bending is the higher
+risk, Job B was the higher value.** A refused joint is a visible, safe
+failure; a silently unconservative margin is not — which is also why Job B's
+harmonic-mean approximation itself needs watching (see `TOOL_DIFFERENCES.md`
+§7.5): it is unconservative for bolt tension on stacks with soft layers at
+both bearing faces.

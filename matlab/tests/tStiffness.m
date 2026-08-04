@@ -4,8 +4,13 @@ classdef tStiffness < matlab.unittest.TestCase
     %   8-b published stiffnesses (validation.dabjExample8b): Kb = 2.39e6,
     %   Kc = 4.73e6 lbf/in, Phi = 0.336. Insert/tapped-hole joints are
     %   covered against a SECOND answer key, DABJ Table 8-3 (slide 8-26),
-    %   via the shortened grip L = t1 + D/2; only MIXED FLANGE MODULI
-    %   remain deferred (STIFFNESS_PLAN.md Job B). Phase 3.1b wiring
+    %   via the shortened grip L = t1 + D/2. MIXED FLANGE MODULI (Job B,
+    %   STIFFNESS_PLAN.md Section 3) are covered by self-checks only --
+    %   no external fixture exists -- via the thickness-weighted
+    %   harmonic-mean member modulus Ebar (NASA TM-106943 Eq. 34):
+    %   mixedModulusReducesToUniform, mixedModulusSplitInvariance,
+    %   mixedModulusBounded, mixedModulusMonotonic, and
+    %   mixedModulusThermalPreloadAndAnalyzeRun. Phase 3.1b wiring
     %   is exercised here too: the stiffness-based thermal preload path
     %   (thermalFromStiffness) and the Eq. 10 tension rupture branch
     %   (tensionRuptureBranch) — both against HAND-DERIVED numbers, not
@@ -196,20 +201,128 @@ classdef tStiffness < matlab.unittest.TestCase
             testCase.verifyNotEqual(p.PpMax, 2500);
         end
 
-        function mixedModulusStillDeferred(testCase)
-            % Job B is NOT in scope here: per-layer frustum slicing for a
-            % stack whose layers differ in modulus remains deferred, and the
-            % guard must still fire (on the threaded-in branch too, so the
-            % new branch cannot smuggle a mixed stack through).
+        function mixedModulusReducesToUniform(testCase)
+            % Job B: Ebar = tFit/sum(t_i/E_i) collapses EXACTLY to a single
+            % E when every layer shares that modulus (tFit/(tFit/E) = E),
+            % even when the layers are built from two DIFFERENT Material
+            % objects (different Name/strengths) that merely happen to
+            % share E -- proving the collapse keys off E, not object
+            % identity. Must reproduce Example 8-b's Kc exactly (self vs.
+            % self, not a book tolerance).
             c = validation.dabjExample8b();
             j = c.Joint;
             j.FlangeStack(2).Material = model.Material( ...
-                Name="Steel", Ftu=180000, Fty=160000, Fsu=108000, E=29e6);
-            testCase.verifyError(@() engine.stiffness(j), ...
-                "engine:stiffness:mixedModulusDeferred");
-            j.ThreadedMember.Type = model.ThreadedMemberType.Insert;
-            testCase.verifyError(@() engine.stiffness(j), ...
-                "engine:stiffness:mixedModulusDeferred");
+                Name="Aluminum (same E, different object)", ...
+                Ftu=70000, Fty=58000, Fsu=40000, E=10e6, CTE=2.32e-5);
+            s     = engine.stiffness(j);
+            sBase = engine.stiffness(c.Joint);
+            testCase.verifyEqual(s.Ec, 10e6, "AbsTol", 1e-6);
+            testCase.verifyEqual(s.Kc, sBase.Kc, "RelTol", 1e-12);
+        end
+
+        function mixedModulusSplitInvariance(testCase)
+            % Job B: Ebar depends only on total thickness and each layer's
+            % t/E, both invariant under splitting one layer into several
+            % THINNER layers of the SAME material -- so kc (and Ec) must
+            % not move at all when a 0.40 in layer is split into two 0.20
+            % in layers, alongside a second, different-modulus layer.
+            c     = validation.dabjExample8b();
+            alum  = c.Joint.FlangeStack(1).Material;             % E = 10e6
+            steel = model.Material(Name="Steel (mixed-modulus test)", ...
+                Ftu=180000, Fty=160000, Fsu=108000, E=29e6, CTE=1.17e-5);
+            jWhole = c.Joint;
+            jWhole.FlangeStack = [ ...
+                model.FlangeLayer(Material=alum,  Thickness=0.40), ...
+                model.FlangeLayer(Material=steel, Thickness=0.40)];
+            jSplit = c.Joint;
+            jSplit.FlangeStack = [ ...
+                model.FlangeLayer(Material=alum,  Thickness=0.20), ...
+                model.FlangeLayer(Material=alum,  Thickness=0.20), ...
+                model.FlangeLayer(Material=steel, Thickness=0.40)];
+            sWhole = engine.stiffness(jWhole);
+            sSplit = engine.stiffness(jSplit);
+            testCase.verifyEqual(sSplit.Ec, sWhole.Ec, "RelTol", 1e-12);
+            testCase.verifyEqual(sSplit.Kc, sWhole.Kc, "RelTol", 1e-12);
+        end
+
+        function mixedModulusBounded(testCase)
+            % Job B: a mixed stack's kc must lie strictly between the
+            % all-E_min and all-E_max uniform results (Example 8-b's
+            % aluminum E = 10e6 vs. a 29e6 "steel" swap-in, same geometry
+            % otherwise) -- Ebar is a weighted mean of the two moduli, and
+            % kc is monotonic in Ec (see mixedModulusMonotonic below), so
+            % it cannot fall outside the uniform bracket.
+            c     = validation.dabjExample8b();
+            alum  = c.Joint.FlangeStack(1).Material;             % E = 10e6
+            steel = model.Material(Name="Steel (mixed-modulus test)", ...
+                Ftu=180000, Fty=160000, Fsu=108000, E=29e6, CTE=1.17e-5);
+            jMin = c.Joint;                                      % both layers E = 10e6
+            jMax = c.Joint;
+            jMax.FlangeStack = [ ...
+                model.FlangeLayer(Material=steel, Thickness=0.40), ...
+                model.FlangeLayer(Material=steel, Thickness=0.40)];
+            jMix = c.Joint;
+            jMix.FlangeStack = [ ...
+                model.FlangeLayer(Material=alum,  Thickness=0.40), ...
+                model.FlangeLayer(Material=steel, Thickness=0.40)];
+            sMin = engine.stiffness(jMin);
+            sMax = engine.stiffness(jMax);
+            sMix = engine.stiffness(jMix);
+            testCase.verifyGreaterThan(sMix.Kc, sMin.Kc);
+            testCase.verifyLessThan(sMix.Kc, sMax.Kc);
+        end
+
+        function mixedModulusMonotonic(testCase)
+            % Job B: raising any one layer's E must not lower kc (Ebar is
+            % increasing in each E_i, and kc is increasing in Ec). Same
+            % geometry as mixedModulusBounded, one layer's modulus raised
+            % from 15e6 to 20e6 with the other layer (E = 10e6) unchanged.
+            c    = validation.dabjExample8b();
+            alum = c.Joint.FlangeStack(1).Material;               % E = 10e6
+            lo   = model.Material(Name="Mid-modulus (lo)", E=15e6, CTE=1.2e-5);
+            hi   = model.Material(Name="Mid-modulus (hi)", E=20e6, CTE=1.2e-5);
+            jLo = c.Joint;
+            jLo.FlangeStack = [ ...
+                model.FlangeLayer(Material=alum, Thickness=0.40), ...
+                model.FlangeLayer(Material=lo,   Thickness=0.40)];
+            jHi = c.Joint;
+            jHi.FlangeStack = [ ...
+                model.FlangeLayer(Material=alum, Thickness=0.40), ...
+                model.FlangeLayer(Material=hi,   Thickness=0.40)];
+            sLo = engine.stiffness(jLo);
+            sHi = engine.stiffness(jHi);
+            testCase.verifyGreaterThan(sHi.Kc, sLo.Kc);
+        end
+
+        function mixedModulusThermalPreloadAndAnalyzeRun(testCase)
+            % REGRESSION: before Job B, engine.stiffness refused any mixed-
+            % modulus flange stack with engine:stiffness:mixedModulusDeferred,
+            % which propagated (unguarded) through engine.preload's thermal
+            % path and failed the WHOLE analysis for a temperature-excursion
+            % joint -- exactly the failure mode Job A fixed for threaded-in
+            % joints. Confirm both engine.preload and engine.analyze now
+            % simply compute on a mixed-modulus joint with a thermal
+            % excursion.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.FlangeStack(2).Material = model.Material( ...
+                Name="Steel (mixed-modulus test)", ...
+                Ftu=180000, Fty=160000, Fsu=108000, E=29e6, CTE=1.17e-5);
+            j.PreloadSpec = model.PreloadSpec( ...
+                Method=model.PreloadMethod.DirectPreload, ...
+                NominalPreload=2000, Uncertainty=0.25);
+            j.MinTemperature = -54;        % °C (see UNITS.md — engine is °C)
+            j.MaxTemperature = 71;
+            p = engine.preload(j);
+            testCase.verifyFalse(isnan(p.PpMax), ...
+                "thermal preload must evaluate for a mixed-modulus joint");
+            testCase.verifyFalse(isnan(p.PpMin));
+
+            lc  = model.LoadCase(Name = "mixed-modulus analyze smoke", ...
+                BoltTensileLimitLoad = 2000, BoltShearLimitLoad = 0);
+            fac = model.Factors();
+            r = engine.analyze(j, lc, fac);   % must not throw
+            testCase.verifyGreaterThan(numel(r.Margins), 0);
         end
 
         function kcAtNonDefaultFrustumAngle(testCase)

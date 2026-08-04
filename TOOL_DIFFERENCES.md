@@ -449,23 +449,12 @@ The plumbing is already half-present: `resolveForces` derives a bending value an
 `loadCaseFromForces` discards it, and the GUI's Applied Loads group has a Bending
 input with no model field behind it.
 
-### 7.5 Stiffness still refuses a mixed-modulus flange stack
-`engine.stiffness` used to refuse two configurations. Threaded-in joints now
-compute; one refusal remains:
-
-| Error id | Refuses |
-|---|---|
-| `engine:stiffness:mixedModulusDeferred` | **any stack whose flanges differ in modulus** — per-layer frustum slicing is deferred (`STIFFNESS_PLAN.md` Job B) |
-
-A steel fitting bolted to an aluminium panel therefore gets no `phi` — and
-without `phi` there is no Eq. 10 rupture branch, no stiffness-dependent thread
-design load, and with any temperature excursion `engine.preload` throws and the
-whole analysis fails. That joint is ordinary, not exotic.
-
-Inserts and tapped holes are no longer in this bucket. They use the same
-symmetric back-to-back frustum fed a shortened grip, `L = t1 + D/2` (Shigley &
-Mischke; see also DABJ slide 8-23), with `kb` dropping the threaded end's
-`+0.4D` in favour of `h = min(D/2, t2/2)`. Two consequences worth stating:
+### 7.5 Stiffness's mixed-modulus flange stack: harmonic-mean, not exact
+`engine.stiffness` used to refuse two configurations. Both now compute.
+Threaded-in joints (inserts, tapped holes) use the same symmetric back-to-back
+frustum fed a shortened grip, `L = t1 + D/2` (Shigley & Mischke; see also DABJ
+slide 8-23), with `kb` dropping the threaded end's `+0.4D` in favour of
+`h = min(D/2, t2/2)`. Two consequences worth stating:
 
 - **A threaded-in joint missing frustum geometry still falls back to `phi = 1`**
   in `engine.boltDesignLoad`. That is now a missing-DATA bound, not a deferred
@@ -475,6 +464,41 @@ Mischke; see also DABJ slide 8-23), with `kb` dropping the threaded end's
 - **`t2`, the tapped member thickness, is not modelled**, so `h = D/2` is
   assumed per DABJ's "usually, h = D/2". This is unconservative only when the
   tapped member is thinner than the bolt diameter.
+
+**A mixed-modulus flange stack** (e.g. a steel fitting bolted to an aluminium
+panel) used to error outright with `engine:stiffness:mixedModulusDeferred` —
+no `phi`, no Eq. 10 rupture branch, no stiffness-dependent thread design load,
+and with any temperature excursion `engine.preload` threw and the whole
+analysis failed. That joint is ordinary, not exotic. It now computes via a
+thickness-weighted harmonic-mean member modulus (`STIFFNESS_PLAN.md` §3;
+NASA TM-106943 Eq. 34, cited because NASA-STD-5020B Eq. 9 takes `kc` as a given
+input and never prints how to compute it for a mixed stack):
+
+    Ebar = tFit / sum(t_i / E_i)        over the clamped flange layers
+
+fed into the SAME (unchanged) frustum expression in place of the uniform `Ec`.
+This is a known approximation, not exact per-layer slicing, with a measured and
+characterised error:
+
+- **Exact** whenever every material boundary lands on the frustum knee plane —
+  the ordinary two-plate joint, which is most real work — because `Ebar`
+  reduces identically to a single `E` there.
+- **Errs up to +23% on `kc` / −14% on `phi`** for stacks with soft layers at
+  BOTH bearing faces (measured, per-layer-exact vs. `Ebar`-collapsed
+  cross-check; see `STIFFNESS_PLAN.md` §3.2). The error is in the
+  **UNCONSERVATIVE** direction for bolt tension (`kc` reads high, so `phi`
+  reads low, so the bolt is credited a smaller share of the applied load than
+  it actually carries).
+- Its failure mode is order-blindness: `Ebar` weights layers by thickness
+  alone, while true series compliance weights by `∫dx/A(x)`, and `A` is
+  smallest at the bearing faces — so `Ebar` cannot distinguish a stack from its
+  face-reversed twin, even though the exact result can differ by ~20%+ between
+  them.
+- No mixed-modulus answer-key fixture exists in any reference document
+  (`STIFFNESS_PLAN.md` §3.4); `tests/tStiffness.m` covers it with self-checks
+  only — reduction to the uniform case, split invariance, bounding between the
+  all-`E_min`/all-`E_max` uniform results, and monotonicity in each layer's
+  `E`.
 
 ### 7.6 Washer convention: the washer spreads the cone, it is not a member
 The frustum's clamped length `L` is the fitting stack only (`+ D/2` on the

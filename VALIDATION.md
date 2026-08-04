@@ -119,7 +119,7 @@ This is a **living document** — every new check adds a row.
 | `FrustumAngle` domain guard: (0°, 90°) exclusive | physical/numerical domain of `kc`'s `tand(alpha)` | `model.Joint` validator | hand-calc | `tand(90)` is singular and `tand(alpha>90)` goes negative, either of which would silently corrupt `kc`/`phi` and every downstream margin; the validator (`mustBePositive, mustBeLessThan(..., 90)`) rejects both before they reach `engine.stiffness`. GUI numeric field's `Limits`/`UpperLimitInclusive` match. All shipped fixtures/seed data use 30° or 45°, well inside the bound. | ✍️ | tModel (`rejectsFrustumAngleAtOrAboveNinety`, `acceptsFrustumAngleInValidRange`) |
 | L1 fallback (`BodyLengthInGrip` NaN → computed from bolt length ≈ grip + nut height + 2·pitch per 5020B §4.7.4, minus `Bolt.ThreadLength`; explicit L1 always wins — 8-b supplies 0.70) | 5020B §4.7.4 (bolt-length estimate) | through-bolt (Nut) | hand-calc | L1 = min(max(Lb + Le + 2p − Lthd, 0), Lb) on 8-b geometry | ✍️ | tStiffness |
 | Threaded-in (insert/tapped) frustum: shortened grip `L = t1 + D/2`; `kb` swaps the threaded end's `+0.4D` for `h = min(D/2, t2/2)`, `h = D/2` assumed (`t2` not modelled) | Shigley & Mischke; φ = 5020B Eq. 9 | Insert/TappedHole | DABJ Table 8-3 (slide 8-26) | 2 rows pinned — NAS 1956 kc 4.532347e6, NAS 1958 kc 7.472956e6; both reproduce +0.15% (the book's own rounded 1.81 coefficient). Single-washer spread `dc = dwf + 2·tan30°·tw`, NOT the nut case's two-washer average | ✅ | tStiffness (`threadedInMatchesDabjTable83`, `threadedInShortensGripAndDropsPoint4D`, `threadedInThermalPreloadRuns`) |
-| Mixed-modulus (frustum slicing) | Shigley frustum, per layer, series-combined | dissimilar members | **no fixture exists** — DABJ's §8 appendix (Example 8-c) works a SAME-material joint and demonstrates slicing mechanics only; SAND2008-0371 App. C prints only a top-level `km`. See `STIFFNESS_PLAN.md` §4.3 | — | ⛔ errors (deferred — Job B) | — |
+| Mixed-modulus (thickness-weighted harmonic mean `Ebar`, fed into the unchanged frustum) | `Ebar = tFit/sum(t_i/E_i)`, NASA TM-106943 Eq. 34; `kc`/φ via the same Shigley frustum / 5020B Eq. 9 | dissimilar flange members | **no external fixture exists** — DABJ's §8 appendix (Example 8-c) works a SAME-material joint and demonstrates slicing mechanics only; SAND2008-0371 App. C prints only a top-level `km`. See `STIFFNESS_PLAN.md` §3.4 | Self-checks only: reduction to Example 8-b's `kc` for equal moduli (exact to machine precision), split invariance, `kc` bounded strictly between the all-`E_min`/all-`E_max` uniform results, monotonic in each layer's `E`. Measured (per-layer-exact vs. `Ebar`) error bound: exact when material boundaries coincide with the frustum knee; up to +23% high on `kc` / −14% low on φ — unconservative for bolt tension — for soft-at-both-faces stacks (`STIFFNESS_PLAN.md` §3.2) | ✍️ (self-checks, no answer key) | tStiffness (`mixedModulusReducesToUniform`, `mixedModulusSplitInvariance`, `mixedModulusBounded`, `mixedModulusMonotonic`, `mixedModulusThermalPreloadAndAnalyzeRun`) |
 
 ## Structural / non-numeric
 
@@ -303,7 +303,7 @@ This is a **living document** — every new check adds a row.
 - **Direct-preload & separation-critical preload** — direct-preload is now
   exercised indirectly by the tThreadShear fixtures (PpMax pinned); no dedicated
   fixture, and separation-critical still has none.
-- **Mixed-modulus frustum** — deferred (needs slicing).
+- **Mixed-modulus frustum** — implemented via the thickness-weighted harmonic-mean `Ebar` (NASA TM-106943 Eq. 34), not per-layer slicing; covered by self-checks (reduction, split invariance, bounding, monotonicity) rather than an external answer key — see the Stiffness table row above and `STIFFNESS_PLAN.md` §3.
 - **Joint-mode slip in bulk: CLOSED for force resultants (Phase 3.5d)** —
   `analyzeBulk` aggregates the bolt pattern (`pattern_id`, or joint name when
   blank) into the Eq. 84 joint totals and reproduces the §9 joint-slip −0.65
@@ -344,5 +344,5 @@ This is a **living document** — every new check adds a row.
 
 ## How this drives the plan
 - **Phase 3.2 / 3.3:** each new check adds a row + a fixture (DABJ Ex 5-a/5-b/6-a where available, else hand-calc). ✅ done through 3.3 — all 15 checks implemented.
-- **Phase 3.4 (second wave):** pull additional acceptance cases specifically to fill ⏳/✍️ rows — especially threaded-in and mixed-modulus.
+- **Phase 3.4 (second wave):** pull additional acceptance cases specifically to fill ⏳/✍️ rows — especially a mixed-modulus external answer key (none exists yet; the Stiffness row is self-checks only).
 - **Phase 5.3 (final validation):** re-run this entire matrix against the packaged `.exe`.

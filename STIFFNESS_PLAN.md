@@ -1,8 +1,12 @@
-# Member Stiffness (`kc`) — Job A landed, Job B next
+# Member Stiffness (`kc`) — Job A and Job B both landed
 
 > Originally written 2026-08-03 as a two-job handoff. Rewritten 2026-08-04:
 > **Job A (threaded-in) is implemented**; Job B (mixed modulus) has a settled
-> method and measured error bounds but is not built.
+> method and measured error bounds but is not built. Updated 2026-08-04:
+> **Job B is now implemented too**, exactly as decided in Section 3.2 below —
+> the thickness-weighted harmonic-mean `Ebar` (NASA TM-106943 Eq. 34), not the
+> general asymmetric d1/d2 frustum of Section 3.1 (that form was deliberately
+> NOT adopted — see the note at the top of Section 3).
 >
 > **Read `CLAUDE.md` first.** Conventions there govern — especially the
 > equation-traceability rule and the document hierarchy.
@@ -82,9 +86,35 @@ the `Method` strings must name the document, not just the surname.
 
 ---
 
-## 3. Job B — mixed modulus. Method settled; not built.
+## 3. Job B — mixed modulus. Landed.
 
-### 3.1 The general (asymmetric) frustum form
+**What landed:** `engine.stiffness` no longer refuses a flange stack whose
+layers differ in modulus. Per the decision in Section 3.2, it computes the
+thickness-weighted harmonic mean `Ebar = tFit / sum(t_i / E_i)` over
+`joint.FlangeStack` and feeds it into the SAME (unchanged) frustum expression
+in place of the uniform `Ec` — cited to NASA TM-106943 Eq. 34, per
+`CLAUDE.md`'s document-hierarchy rule (5020B Eq. 9 takes `kc` as a given input
+and never prints how to compute it for a mixed stack). The general asymmetric
+d1/d2 frustum of Section 3.1 was NOT adopted (see the note there — it would
+move DABJ Example 8-b off the published answer key); `Dc` stays the existing
+single averaged contact diameter. On the threaded-in branch the `D/2`
+extension inherits the clamped-stack `Ebar` rather than the tapped member's
+own modulus — DABJ's literal reading of the shortened-grip rule, noted in the
+returned `Method` string.
+
+Because `Ebar` reduces to a single `E` exactly for a uniform stack
+(`tFit/(tFit/E) = E`), every existing pinned number (DABJ Example 8-b, both
+DABJ Table 8-3 rows, and everything downstream) is unchanged. Validated by the
+self-checks from Section 3.4 (`tests/tStiffness.m`:
+`mixedModulusReducesToUniform`, `mixedModulusSplitInvariance`,
+`mixedModulusBounded`, `mixedModulusMonotonic`,
+`mixedModulusThermalPreloadAndAnalyzeRun`) — there is still no external
+mixed-modulus answer key. The measured error bound from Section 3.2 (exact at
+the frustum knee; up to +23% high on `kc` / −14% low on `phi`, unconservative
+for bolt tension, for soft-at-both-faces stacks) is recorded in
+`TOOL_DIFFERENCES.md` §7.5.
+
+### 3.1 The general (asymmetric) frustum form — considered, NOT implemented
 
 SAND2008-0371 Eq. (18) is the Shigley frustum for one cone. Written for a
 back-to-back pair with *different* bearing diameters at the two faces, and with

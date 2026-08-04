@@ -413,10 +413,11 @@ Fan-in, highest first: **`stiffness` 6** · `preload` 4 · `boltDesignLoad` 4 ·
 **`engine.stiffness` is the most depended-on function in the engine, and it was
 also the most configuration-restricted.** Insert and tapped-hole joints now
 COMPUTE — the threaded-in frustum uses the same closed form fed a shortened grip
-`L = t1 + D/2` (Shigley & Mischke; validated against DABJ Table 8-3). One
-restriction remains: any stack whose flanges differ in modulus is still refused
-(`engine:stiffness:mixedModulusDeferred`), pending the per-layer slicing of
-`STIFFNESS_PLAN.md` Job B. See `TOOL_DIFFERENCES.md` §7.5.
+`L = t1 + D/2` (Shigley & Mischke; validated against DABJ Table 8-3). The last
+restriction is now gone too: a mixed-modulus flange stack now computes via a
+thickness-weighted harmonic-mean member modulus (NASA TM-106943 Eq. 34), exact
+when material boundaries coincide with the frustum knee and bounded-but-
+unconservative otherwise. See `TOOL_DIFFERENCES.md` §7.5.
 
 **But fan-in overstates the blast radius, and this section originally did too.**
 A call edge shows who *asks* for stiffness, not who *fails* without it. Most
