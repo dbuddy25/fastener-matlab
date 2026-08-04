@@ -1,0 +1,31 @@
+# MATLAB
+*.asv
+*.m~
+*.mex*
+*.mlx.autosave
+slprj/
+codegen/
+*.slxc
+
+# MATLAB Compiler / deployment output
+*.exe
+mccExcludedFiles.log
+readme.txt
+requiredMCRProducts.txt
+*.prj.autosave
+
+# Local project instructions (not published)
+CLAUDE.md
+
+# Example script output
+matlab/examples/bulk_results.xlsx
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Reference standards and vendor documents (not redistributable)
+*.pdf

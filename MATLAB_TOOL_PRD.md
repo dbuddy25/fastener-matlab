@@ -1,0 +1,139 @@
+# PRD — MATLAB Fastener Analysis Tool
+
+**Status:** Draft for implementation · **Standard:** NASA-STD-5020B
+**Companion docs:** `MATLAB_BUILD_GUIDE.md` (build sequence & phases), `MATLAB_TOOL_DECK_OUTLINE.md` (project overview deck)
+
+> This PRD is the *requirements* spec — **what** the tool must do and the rules it must obey. The build guide is the *sequence* — the order to build it in (five phases). Read them together: a requirement here maps to one or more phase steps there.
+
+---
+
+## 1. Purpose
+
+Build a **new, ground-up MATLAB application** for NASA-STD-5020B bolted-joint margin-of-safety analysis, deployable as a standalone Windows executable. It replaces manual, worksheet-by-worksheet joint checking with a scriptable engine that carries the governing equation and its citation alongside every number, so a margin can be defended in a design review and re-verified automatically after any change.
+
+## 2. Two authoritative references (do not conflate)
+
+| Reference | Its role | Used for |
+|-----------|----------|----------|
+| **NASA-STD-5020B** (plus the supplements it defers to) | Governing standard | *What* to build — the checks, equations, and rules |
+| **Validation "answer key"** — the **DABJ course book §9 public worked example** | Numerical acceptance reference | *Whether the numbers are right* — validation |
+
+**Rule:** All numeric acceptance is against the answer key — the DABJ §9 worked example first, and documented hand derivations for the checks it does not reach. Never validate a margin against another implementation of the same standard: agreeing with it proves only that the arithmetic was reproduced, errors included.
+
+## 3. Users & primary use cases
+
+- **Stress/mechanical engineer** analyzing a bolted joint against 5020B.
+- **UC1:** Analyze a single joint → 15 margin checks + pass/fail + governing equations.
+- **UC2:** Analyze a matrix of FEM element forces / load cases (bulk) → results table + export.
+- **UC3:** Manage material/hardware libraries; save & reopen analysis cases.
+- **UC4:** Produce PDF (single-joint, with derivations) and Excel (bulk) reports for design review.
+- **UC5:** Run the analysis **headless** from a MATLAB script (no GUI).
+
+## 4. Scope
+
+### In scope (v1)
+- Full 5020B margin engine (15 checks), preload (incl. thermal), force resolution, interaction, separation/slip, separation-before-rupture, tapped-hole parent-thread check.
+- JSON hardware/material library + JSON case save/load.
+- PDF + Excel reporting.
+- App Designer GUI (11 tabs) with °C/°F toggle and joint/decision-tree visuals.
+- Standalone Windows `.exe` via MATLAB Compiler.
+
+### Out of scope (v1)
+- Non-Windows packaging.
+- Fatigue/fracture life analysis.
+- Multi-user / networked database (JSON local files only; SQLite is an optional later swap).
+
+## 5. Functional requirements
+
+### 5.1 Analysis engine (core — GUI-independent, headless-capable)
+The engine MUST compute all of the following per joint and return a full result object:
+
+| # | Check | Notes |
+|---|-------|-------|
+| 1–2 | Tension margin — ultimate & yield | |
+| 3–4 | Shear margin — ultimate & shear-tearout | |
+| 5–6 | Bearing — bearing & bearing-under-head | |
+| 7 | Bolt-thread shear | |
+| 8 | Nut strength | Use spec-rated ultimate load from library, **not** a thread-stripping calc (5020B §4.4.1) |
+| 9 | Insert failure modes | |
+| 10 | Separation margin | |
+| 11 | Slip margin | Mode toggle: single-fastener (default, 5020B Eq. 86) / joint (Eq. 84) / disabled |
+| 12 | Separation-before-rupture | 5020B Fig 8 decision tree |
+| 13 | Combined tension–shear interaction | 5020B **Eq. 20–23**, correct per-mode exponents |
+| 14 | Tapped-hole parent-material thread shear | Soft-parent case; hand-validate if no answer-key case covers it |
+| 15 | (Solver) end-to-end single-joint analysis | Assembles all above |
+
+Plus supporting computations: preload (incl. thermal), bolt/member stiffness + stiffness factor, applied-load resolution into axial + shear, and a 5020B Fig 8 decision-narrative generator.
+
+### 5.2 Bulk analysis
+- Map FEM elements → joints and run the full check set across a matrix of elements/load cases.
+- Output a results table suitable for Excel export.
+
+### 5.3 Data layer
+- **Library loader:** load bolts, materials (strengths, CTE), nuts, inserts, washers, torque specs from JSON; lookup by key.
+- **Case save/load:** lossless JSON round-trip of an analysis case.
+- **Factor presets:** built-in (protected) + user-defined safety-factor presets.
+
+### 5.4 Reporting
+- **Excel:** bulk results → `.xlsx` (`writetable`/`writecell`).
+- **PDF (Report Generator):** single-joint summary + all margins + step-by-step worked-equation derivations.
+
+### 5.5 GUI (App Designer `uifigure`, Phase 4 — after the Headless Release)
+11 tabs, each wired to the engine and independently usable:
+Project & Factors · Joint Config · Single-Joint Analysis (+results) · Defined Joints · Element Mapping · Element Forces/import · Bulk Analysis (+table +XLSX) · Bolt Sizing · Materials & Hardware DB editor · User Guide · References.
+Plus: °C/°F unit toggle at the GUI boundary, joint schematic + decision-tree diagram on `uiaxes`, light/dark theming, version/build stamping.
+
+## 6. Domain model (engine types)
+
+- **Bolt geometry** — size, thread series, pitch, areas.
+- **Material properties** — ultimate/yield strengths, CTE (1/°C).
+- **Joint definition** — clamped flange stack; threaded-member type (nut | insert | tapped hole) + its material; preload spec; temperatures.
+- **Preload spec** (`PreloadSpec`) — torque min/max, nut factor K, uncertainty Γ, relaxation, thermal; replaces a scalar preload value.
+- **Load case** (`LoadCase`) — applied per-bolt + joint-level loads for one analysis case; passed to the engine alongside the joint.
+- **Factors** (`Factors`) — safety + fitting factors; passed to the engine, not stored on the joint.
+- **Enums** — threaded-member type; shear-plane condition (threads-in-shear vs body-in-shear).
+- **Project metadata**; **result object** (per-check margins + governing equations + decision narrative).
+
+> **Note:** the engine consumes per-bolt loads already resolved upstream; bolt-pattern/FEM load distribution is out of engine scope.
+
+## 7. Engineering ground rules (must be exactly right)
+
+- **Interaction:** NASA-STD-5020B **Eq. 20–23** — *not* the simpler R²+R² form. Different exponents for threads-in-shear vs body-in-shear.
+- **Thermal preload:** included, per TFSR 5.
+- **Separation-before-rupture:** 5020B Figure 8 decision tree. The **0.75–0.85 × Ptu** intermediate preload band conservatively assumes rupture when bolt-elongation data is unavailable.
+- **Temperature:** engine works internally in **°C** (CTE data is 1/°C); all other units are US customary (in, lbf, psi). The GUI may display °F, converting at the boundary.
+- **Bolt length for nut config:** grip + nut height + 2·pitch.
+- **Flanges** = the clamped stack only (not the threaded interface). Insert/tapped-hole material is **independent** of the flanges.
+
+## 8. Non-functional requirements
+
+- **Architecture:** `+engine/`, `+data/`, `+report/`, `+gui/`, `tests/`. Engine MUST run headless from the console with zero GUI dependency.
+- **Data format:** JSON for library and cases (SQLite via Database Toolbox is an acceptable later alternative; JSON keeps packaging simple).
+- **Licensing (confirmed available):** MATLAB Compiler (standalone `.exe`), Report Generator (PDF), Database Toolbox (optional).
+- **Deployment:** standalone Windows `.exe`; bundle the library JSON. End users install the free MATLAB Runtime (~1 GB, one-time) — two installs, not one.
+
+## 9. Validation & acceptance
+
+- **Primary answer key:** the **DABJ course book §9 public worked example** — a fully worked joint with published inputs and expected margins (preload, tension, separation, yield, shear, interaction, slip). Being public, it lets the repo stay public. Encoded as an executable validation case (Phase 2.3); it is the acceptance spec for the Phase 2 engine.
+- **Checks the primary key doesn't reach (Phase 3.4):** bearing, inserts, and tapped holes are outside the DABJ example. They are pinned by documented hand derivations; any cross-check against non-public case data is run locally and only the *outcome* is recorded (verified, agreement within X%, inputs not in repo) — no non-public numbers enter the repository.
+- **Per step:** every engine/data step replays the validation case(s) and asserts a numeric match within tolerance — the guardrail against silent drift in a safety-critical tool.
+- **Tapped-hole parent-thread (check 14):** if no answer-key case covers it, validate with a documented hand computation.
+- **GUI:** verified by manual walkthrough of each tab.
+- **Release gate:** re-run the full validation set against the **packaged** app; all margins must agree before release.
+
+## 10. Sequencing decision — headless-first, then GUI (both committed)
+
+**Decided:** build a usable **Headless Release** (Phase 3) first, then the GUI. The
+tool must be fully operable from the MATLAB Command Window — *load a library → import
+a table of joints → bulk-analyze → export margins to XLSX* — with no GUI (the validated
+engine plus table input, bulk analysis, and XLSX export). The **GUI (Phase 4) is a
+committed deliverable**, built next as a **thin shell over the headless API**: every
+control calls an already-tested function, and no analysis logic lives in the GUI.
+Headless-first makes the no-GUI path first-class and makes the GUI cheaper/more robust
+to build — it is not a substitute for the GUI.
+
+## 11. Open items
+
+- Find or derive an independent answer key for the bearing / insert / tapped-hole checks (Phase 3.4) — the checks the DABJ example does not cover.
+- Confirm insert failure-mode set to model (NASM 33537 scope).
+- Define the joint-input table schema (columns) for the Phase 3.5 loader.
