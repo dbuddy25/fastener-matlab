@@ -58,7 +58,12 @@
 %                      (R = 0.483642, Pass; book's own a = 1.59 solve-for-a
 %                      kept as the secondary field). ✍️ ThreadsInShear —
 %                      hand-derived (tests/tDabjCase.m; DABJ §9 has no
-%                      threads-in-shear example).
+%                      threads-in-shear example). Joint.ShearTransferCondition
+%                      (NASA-STD-5020B §4.4.4) gates the fbu=0 omission:
+%                      NotDeclared (default)/CloseToleranceOrInterference
+%                      compute the identical R with ASSUMED/VERIFIED wording;
+%                      ClearanceOrGapped reports NotEvaluated (R = NaN, no
+%                      throw) since bending is not implemented.
 %   marginSlip       - Slip margin, switched on Joint.SlipMode:
 %                      single-fastener (default, per-bolt loads, NASA-STD-5020B
 %                      Eq. 86), joint (nf·μ·PpMin vs joint totals, NASA-STD-5020B

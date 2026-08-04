@@ -404,22 +404,34 @@ The GUI's Applied Loads group has an Axial / Shear / Bending row per
 not wired to a model field.
 
 **DECIDED (2026-07-31): omitted deliberately, deferred to a later version.**
-The joints in scope are predominantly **close-tolerance fits**, and §4.4.4 names
-exactly that case: *"if shear is not transferred across gaps or non load carrying
-spacers, or if interference or close tolerance fits are used, then typically
-there is no need to account for bolt bending caused by the shear loading."* The
-omission is therefore standard-sanctioned for the joints being analysed — not an
-unresolved gap.
+No bending physics (`M·c/I`) is implemented anywhere in this tool. §4.4.4 makes
+the omission conditional, though, not an unconditional simplification — so the
+gap that remained after the 2026-07-31 decision was that nothing recorded
+*which* case a given joint was in.
 
-> ⚠️ **The condition travels with the decision.** The exemption is conditional,
-> and the tool does not check the condition. For a joint where shear IS
-> transferred across a gap or a non-load-carrying spacer, or where there is
-> clearance between bolt and hole, §4.4.4 says bending **should** be considered —
-> and the interaction row will read non-conservatively, silently. Anyone
-> analysing a clearance-fit or gapped joint needs to know that. It is not
-> flagged in the tool today.
+**UPDATED (2026-08-04): the condition is now an explicit, recorded
+determination, not a silent global assumption.** `model.Joint` gained
+`ShearTransferCondition` (`model.ShearTransferCondition`: `NotDeclared` default,
+`CloseToleranceOrInterference`, `ClearanceOrGapped`), and `engine.marginInteraction`
+branches on it:
 
-**If it is built later, three decisions are already scoped:**
+| `ShearTransferCondition` | Behavior |
+|---|---|
+| `NotDeclared` (default) | Computes `R = Rt^et + Rs^es` exactly as before (byte-identical to every existing fixture). `Method`/`Detail` state the §4.4.4 exemption is **ASSUMED, not verified**, and name the property to set. |
+| `CloseToleranceOrInterference` | Same computation, same `R` — the analyst has confirmed §4.4.4's exemption condition holds (interference/close-tolerance fit, no shear across a gap/spacer). `Method`/`Detail` state the exemption is **VERIFIED**. |
+| `ClearanceOrGapped` | The analyst has confirmed §4.4.4's exemption does **not** apply. Bending still is not implemented, so the criterion cannot be evaluated conservatively: `R = NaN`, `Pass = false`, **NotEvaluated, no throw**. `Detail` explains why. |
+
+This mirrors the existing ASSUMED/VERIFIED pattern for the Fig. 8 `e/D`
+precondition (`engine.private.separationBeforeRuptureGate`) — same vocabulary,
+same idea: an unrecorded input degrades the result from "verified" to "assumed,"
+it does not silently pick a side. `NotDeclared` is still the default (nothing
+forces an analyst to declare it), so a joint that IS clearance-fit or gapped and
+is never told so still reads the fbu=0 result — but now with an ASSUMED, not
+VERIFIED, label on it, and a `ClearanceOrGapped` declaration turns that into an
+honest NotEvaluated rather than a wrong number. Bending physics itself
+(`M·c/I`) is still not built — see the three still-open decisions below.
+
+**If bending physics is built later, three decisions are already scoped:**
 1. **Eq. 20/22 or Eq. 21/23** — bending inside the tension bracket against `Ftu`,
    or broken out against `Fbu` (allowable flexural stress) crediting plastic
    bending. `Fbu` is not in the material table, so Eq. 20/22 is both the
@@ -429,10 +441,9 @@ unresolved gap.
    threads-in-shear joint the stressed section is the minor diameter, and 5020B
    is pointed that tension and shear peak at the same section there — so nominal
    `D` is arguably unconservative in that configuration.
-3. **Whether the joint declares its fit class**, so the exemption above becomes
-   an explicit per-joint statement rather than a global assumption. This is what
-   would make the omission defensible in review: "we included bending" and "we
-   correctly determined bending did not apply" are different claims.
+3. ~~Whether the joint declares its fit class~~ — **DONE** (this update):
+   `Joint.ShearTransferCondition`, wired through `engine.marginInteraction` and
+   the Joint Config GUI panel.
 
 The plumbing is already half-present: `resolveForces` derives a bending value and
 `loadCaseFromForces` discards it, and the GUI's Applied Loads group has a Bending
@@ -510,11 +521,13 @@ There is one system tensile allowable and one Figure 8 gate, not two — a secon
 pull-out gate would count the same failure twice.
 
 Three things the tool does not do, on purpose and with the reason written down:
-bolt bending is omitted (the joints in scope are close-tolerance fits, which
-§4.4.4 exempts — but nothing checks that condition, so a gapped or clearance-fit
-joint reads non-conservatively and silently); tapped-hole yield is not evaluated;
-and a flange stack of two different moduli is refused outright rather than
-answered with a frustum that does not apply to it.
+bolt bending is omitted (no `M·c/I` anywhere) — §4.4.4 conditionally exempts
+close-tolerance/interference fits, and `Joint.ShearTransferCondition` now makes
+that determination explicit per joint (ASSUMED by default, VERIFIED when
+declared close-tolerance/interference, NotEvaluated rather than a silent wrong
+number when declared clearance/gapped); tapped-hole yield is not evaluated; and
+a flange stack of two different moduli is refused outright rather than answered
+with a frustum that does not apply to it.
 
 The one open item that could change a number you care about: pairing DABJ's rated
 loads with a UNRF NAS entry mismatches the thread area by ~8% — safe in the

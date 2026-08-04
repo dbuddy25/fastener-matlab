@@ -16,7 +16,7 @@
 | 1 | Tension-Ultimate | **5020B Eq. 6** (separation first) or **Eq. 7/10** (rupture first) | Fastening-system minimum — bolt, nut, insert or tapped parent, §4.4.1 | `FF·FSU·PtL`; Eq. 10 adds preload and `n·φ` | No tensile load; or rupture branch needed and stiffness unavailable |
 | 2 | Tension-Yield | **5020B Eq. 15** (separation first) or **Eq. 16/17** (yield first) — same Fig. 8 gate as row 1; **Eq. 18** for the allowable when unrated | Bolt rated yield, else `(Fty/Ftu)·Ptu-allow` | `FF·FSY·PtL`; Eq. 17 adds preload and `n·φ` | No bolt yield allowable derivable; or the yield-first branch needed and stiffness unavailable |
 | 3 | Shear-Ultimate | **5020B Eq. 12** (body) / **Eq. 13** (threads) allowable, **Eq. 14** MS | `Fsu ×` shank area or minor-diameter area, by shear plane | `FF·FSU·PsL` | No shear load or no `Fsu` |
-| 4 | Interaction | **5020B Eq. 20/21** (body, 2.5 / 1.5) · **Eq. 22/23** (threads, 1.2 / 2.0) | Bolt's own ultimate — *not* the system minimum | Ratio at design loads | Bolt ultimate allowable unavailable |
+| 4 | Interaction | **5020B Eq. 20/21** (body, 2.5 / 1.5) · **Eq. 22/23** (threads, 1.2 / 2.0) | Bolt's own ultimate — *not* the system minimum | Ratio at design loads | Bolt ultimate allowable unavailable; or `Joint.ShearTransferCondition = ClearanceOrGapped` (§4.4.4 bending required, not implemented — see "What the tool does not carry" below) |
 | 5 | Separation | **5020B Eq. 19** | Minimum preload | `FF·FSsep·PtL` | No preload or no tensile load |
 | 6 | Slip | **5020B Eq. 84/86** | Friction × clamp force | Per slip mode | Slip ignored, or joint-level loads missing in Joint mode |
 | 7 | Bearing | **TM-106943 Eq. 72–74**, required by 5020B §4.4.2 | `Fbru` / `Fbry` × `D·t`, worst flange layer | `FF·FS·PsL` | No shear load, no hole diameter, or no layer carries an allowable |
@@ -108,7 +108,7 @@ it takes the conservative branch.
 
 | | |
 |---|---|
-| **Bolt bending** | `fbu = 0` in every interaction criterion. Omitted deliberately — 5020B §4.4.4 says it typically is not needed for close-tolerance or interference fits. **A joint with real clearance, or shear across a gap or spacer, does need it**, and the tool does not check that condition |
+| **Bolt bending** | `fbu = 0` in every interaction criterion — no `M·c/I` physics anywhere. 5020B §4.4.4 says it typically is not needed for close-tolerance or interference fits, and needed when shear crosses a gap/spacer or the fit has clearance. `Joint.ShearTransferCondition` (`model.ShearTransferCondition`) now records which case applies: `NotDeclared` (default) computes `fbu = 0` with the exemption marked ASSUMED, not verified; `CloseToleranceOrInterference` computes the same result with it marked VERIFIED; `ClearanceOrGapped` reports the Interaction row as **NotEvaluated** (`R = NaN`) instead of a silently non-conservative number |
 | **Exact stiffness for mixed-modulus stacks** | A stack whose flanges differ in modulus gets NO stiffness factor: `Pb` is NaN and the thread checks report NotEvaluated, and with a temperature excursion the whole analysis errors. Inserts and tapped holes are no longer in this bucket — they compute via the shortened grip `L = t1 + D/2` — but a threaded-in joint MISSING frustum geometry still falls back to a conservative `phi = 1` |
 
 See `TOOL_DIFFERENCES.md` §7 for the detail and the decisions behind each.

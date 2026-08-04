@@ -292,6 +292,83 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifySubstring(r.Method, "Eq. 20/21");
         end
 
+        function shearTransferNotDeclaredReproducesTodayR(testCase)
+            % NASA-STD-5020B §4.4.4 bolt-bending exemption guard.
+            % NotDeclared is model.Joint's own default (unchanged fixture,
+            % same as interactionMarginMatchesDABJ) -- this is the
+            % REGRESSION pin: R, Pass and a must be byte-identical to that
+            % test's numbers, with the exemption reported as ASSUMED, not
+            % verified (mirrors tStiffness.m's
+            % edgeDistanceUnknownIsAssumedNotVerified).
+            c = validation.dabjSection9();
+            testCase.verifyEqual(c.Joint.ShearTransferCondition, ...
+                model.ShearTransferCondition.NotDeclared);
+            d = engine.designLoads(c.LoadCase, c.Factors);
+            r = engine.marginInteraction(c.Joint, d);
+            testCase.verifyEqual(r.R, 0.483642, "AbsTol", 1e-4);
+            testCase.verifyTrue(r.Pass);
+            testCase.verifyEqual(r.a, c.Expected.InteractionA, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+            testCase.verifySubstring(r.Method, "Eq. 20/21");
+            testCase.verifySubstring(r.Detail, "ASSUMED");
+            testCase.verifySubstring(r.Detail, "ShearTransferCondition");
+            testCase.verifyFalse(contains(r.Detail, "VERIFIED"));
+        end
+
+        function shearTransferVerifiedGivesSameRWithVerifiedWording(testCase)
+            % CloseToleranceOrInterference computes EXACTLY the same
+            % R/Pass/a as NotDeclared (the numeric criterion never depends
+            % on this property -- only the wording does) but reports the
+            % §4.4.4 exemption as VERIFIED (mirrors
+            % tStiffness.m's edgeDistanceVerifiedAssuresGate).
+            c = validation.dabjSection9();
+            c.Joint.ShearTransferCondition = ...
+                model.ShearTransferCondition.CloseToleranceOrInterference;
+            d = engine.designLoads(c.LoadCase, c.Factors);
+            r = engine.marginInteraction(c.Joint, d);
+            testCase.verifyEqual(r.R, 0.483642, "AbsTol", 1e-4);
+            testCase.verifyTrue(r.Pass);
+            testCase.verifyEqual(r.a, c.Expected.InteractionA, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+            testCase.verifySubstring(r.Method, "Eq. 20/21");
+            testCase.verifySubstring(r.Detail, "VERIFIED");
+            testCase.verifyFalse(contains(r.Detail, "ASSUMED"));
+        end
+
+        function shearTransferClearanceOrGappedIsNotEvaluated(testCase)
+            % ClearanceOrGapped -- §4.4.4's exemption does NOT apply,
+            % and bolt bending is not implemented, so the criterion cannot
+            % be evaluated conservatively: R = NaN, Pass = false, NO throw.
+            c = validation.dabjSection9();
+            c.Joint.ShearTransferCondition = ...
+                model.ShearTransferCondition.ClearanceOrGapped;
+            d = engine.designLoads(c.LoadCase, c.Factors);
+            r = engine.marginInteraction(c.Joint, d);   % must not throw
+            testCase.verifyTrue(isnan(r.R));
+            testCase.verifyFalse(r.Pass);
+            testCase.verifyTrue(isnan(r.a));
+            testCase.verifySubstring(r.Detail, "4.4.4");
+            testCase.verifySubstring(r.Detail, "ClearanceOrGapped");
+            testCase.verifySubstring(r.Detail, "Not evaluated");
+        end
+
+        function shearTransferClearanceOrGappedAnalyzeCompletes(testCase)
+            % A ClearanceOrGapped joint must complete a full
+            % engine.analyze call -- NaN interaction R must not crash
+            % analysis and must not be picked as the governing worst
+            % margin (mirrors tBulk.bulkFailingInteractionVisibleButNeverGoverns
+            % for the ordinary-fail case).
+            c = validation.dabjSection9();
+            c.Joint.ShearTransferCondition = ...
+                model.ShearTransferCondition.ClearanceOrGapped;
+            res = engine.analyze(c.Joint, c.LoadCase, c.Factors);   % must not throw
+            resNames = [res.Margins.Name];
+            m = res.Margins(find(resNames == "Interaction", 1));
+            testCase.verifyTrue(isnan(m.R));
+            testCase.verifyEqual(m.Status, "NotEvaluated");
+            testCase.verifyNotEqual(res.GoverningCheck, "Interaction");
+        end
+
         function threadsInShearInteractionHandDerived(testCase)
             % Threads-in-shear interaction (NASA-STD-5020B Eq. 22/23,
             % exp 2.0/1.2). DABJ §9 has no threads-in-shear worked

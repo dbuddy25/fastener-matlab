@@ -39,7 +39,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 8 | 4.4.1 | Ultimate design loads, µ = 0 in analysis | IMPLEMENTED | `engine.designLoads`, `engine.marginTensionUlt` |
 | 9 | 4.4.2 | Yield design loads | IMPLEMENTED | `engine.marginTensionYield`, Eq. 15/16/17, Eq. 18 |
 | 10 | 4.4.3 | Separation loads | IMPLEMENTED | `engine.marginSeparation`, Eq. 19 |
-| 11 | 4.4.4 | Combination of loads — **incl. bending** | OMITTED-BY-DECISION | `TOOL_DIFFERENCES.md` §7.4; `fbu = 0`. Condition unchecked — see below |
+| 11 | 4.4.4 | Combination of loads — **incl. bending** | OMITTED-BY-DECISION | `TOOL_DIFFERENCES.md` §7.4; `fbu = 0`. Condition now recorded per joint (`Joint.ShearTransferCondition`) — see below |
 | 12 | 4.4.5 | Preload included when rupture precedes separation | IMPLEMENTED | `separationBeforeRuptureGate`, `boltDesignLoad` |
 | 13 | 4.4.6a | Friction credited only at limit/yield | IMPLEMENTED (structurally) | µ appears only in `marginSlip`; no ultimate check calls it |
 | 14 | 4.4.6b | µ ≤ 0.20 / ≤ 0.10 absent test substantiation | OMITTED-BY-DECISION | Working practice keeps µ at 0.10–0.20 — see below |
@@ -281,21 +281,35 @@ in `engine.marginTappedParentThread`.
 
 ### TFSR 11 — bolt bending
 
-`fbu = 0` in every interaction criterion. Recorded in `TOOL_DIFFERENCES.md`
-§7.4, resting on §4.4.4's statement that bending typically need not be
-considered for close-tolerance or interference fits.
+`fbu = 0` in every interaction criterion — no bending physics (`M·c/I`) is
+implemented anywhere in this tool. Recorded in `TOOL_DIFFERENCES.md` §7.4,
+resting on §4.4.4's statement that bending typically need not be considered
+for close-tolerance or interference fits.
 
-The decision is sound for close-tolerance joints. The residual risk is that
-**the exemption is conditional and nothing checks the condition.** `model.Joint`
-has no fit-class field, `marginInteraction` applies `fbu = 0` unconditionally,
-and the Warnings machinery — which does fire for bolt length and preload —
-never fires for this. A joint with real clearance, or shear across a gap or
-spacer, is exactly the case §4.4.4 says needs bending, and it receives a
-silently non-conservative interaction result.
+The decision is sound for close-tolerance joints. The residual risk used to be
+that **the exemption is conditional and nothing checked the condition** —
+`model.Joint` had no fit-class field, `marginInteraction` applied `fbu = 0`
+unconditionally regardless of configuration, and a joint with real clearance,
+or shear transferred across a gap or spacer, received a silently
+non-conservative interaction result with no warning.
+
+**Closed (2026-08-04):** `model.Joint.ShearTransferCondition`
+(`model.ShearTransferCondition`) now records the §4.4.4 determination per
+joint, and `engine.marginInteraction` branches on it: `NotDeclared` (default)
+computes exactly as before with the exemption marked ASSUMED, not verified;
+`CloseToleranceOrInterference` computes the same result marked VERIFIED;
+`ClearanceOrGapped` reports the Interaction row as **NotEvaluated**
+(`R = NaN`, no throw) instead of a wrong number. Bending physics itself is
+still not implemented — a `ClearanceOrGapped` joint gets an honest "cannot
+evaluate," not a computed answer — so TFSR 11 is not fully closed, but the
+silent-failure mode is: the exemption no longer travels unrecorded, and
+`NotDeclared` (still the default when an analyst has not looked at this) is
+now visibly ASSUMED rather than indistinguishable from a verified result.
 
 TFSR 11 also explicitly names bending among the loads whose interaction shall
-be accounted for, so this is a deliberate deviation from a shall, not from
-guidance.
+be accounted for, so the remaining `fbu = 0` computation (on the
+`NotDeclared`/`CloseToleranceOrInterference` paths) is still a deliberate
+deviation from a shall, not from guidance.
 
 ### TFSR 15 — fatigue
 

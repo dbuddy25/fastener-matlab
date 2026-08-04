@@ -97,6 +97,7 @@ This is a **living document** — every new check adds a row.
 | 12c| Gate e/D condition — unknown, assumed | 5020B Appendix A.5 | no layer's EdgeDistance set (default; Ex 8-b geometry) | hand-calc | assured, Trace "e/D >= 1.5 ASSUMED" (not "VERIFIED") | ✍️ | tStiffness |
 | 13| Tension–shear interaction (body) | 5020B Eq. 20/21 | body-in-shear | DABJ §9 | R = 0.483642, Pass (book's own a=1.59 kept as secondary field) | ✅ | tDabjCase |
 | 13t| Interaction (threads-in-shear) | 5020B Eq. 22/23 | threads-in-shear, exp 2.0/1.2 | hand-calc | R = 0.517580 (synthetic), 0.611964 (DABJ bolt geometry) — both Pass | ✍️ | tDabjCase |
+| 13g| Interaction — §4.4.4 bolt-bending exemption guard | 5020B §4.4.4 (`Joint.ShearTransferCondition`) | NotDeclared (default, ASSUMED) / CloseToleranceOrInterference (VERIFIED) both reproduce DABJ §9's R; ClearanceOrGapped | DABJ §9 (R) + hand-calc (guard) | NotDeclared & CloseToleranceOrInterference: R = 0.483642, Pass, Detail says ASSUMED / VERIFIED; ClearanceOrGapped: R = NaN, Pass = false, no throw, `engine.analyze` completes (Interaction row NotEvaluated, never governs) | ✍️ | tDabjCase |
 | 14| Tapped-hole parent-thread shear | TM-106943 Eq. 79 + Eq. 65 basis, As form (parent Fsu) | #10-32 A-286 in 0.250-in 6061-T651 (DABJ Ex 6-a), φ = 1 assumed | DABJ Ex 6-a (area/allowable, un-knocked) + hand-calc MS | As 0.0999 (book 0.0986) in²; Pult 2,698 (book 2,660) lb — both ≤1.5%; MS +0.425 (Pb 1,894) | ✅ area/allowable / ✍️ MS | tThreadShear |
 
 ## Preload
@@ -266,6 +267,27 @@ This is a **living document** — every new check adds a row.
   `tests/tBulk.m`/`tests/tWorkbook.m`/`tests/tExport.m` assert the bulk table's
   `InteractionR` column carries the real ratio, cross-checked against
   `engine.marginInteraction` directly.
+- **Interaction §4.4.4 bolt-bending exemption — now an explicit, recorded
+  determination, not a silent global assumption.** NASA-STD-5020B §4.4.4 makes
+  the `fbu = 0` omission CONDITIONAL: exempt for close-tolerance/interference
+  fits, but bending "should be considered" when shear is transferred across a
+  gap/non-load-carrying spacer or there is clearance between bolt and joint.
+  `model.Joint` gained `ShearTransferCondition` (`model.ShearTransferCondition`:
+  `NotDeclared` default / `CloseToleranceOrInterference` / `ClearanceOrGapped`),
+  and `engine.marginInteraction` branches on it, mirroring the Fig. 8 `e/D`
+  ASSUMED/VERIFIED distinction directly above: `NotDeclared` computes the
+  fbu=0 form exactly as before (byte-identical R/Pass/a on every existing
+  fixture — pure regression) with the exemption reported ASSUMED, not
+  verified; `CloseToleranceOrInterference` computes the identical numeric
+  result with the exemption reported VERIFIED; `ClearanceOrGapped` reports
+  NotEvaluated (`R = NaN`, `Pass = false`, no throw) since bending physics is
+  still not implemented and the criterion cannot be evaluated conservatively
+  for that configuration. `engine.analyze` completes without error on a
+  `ClearanceOrGapped` joint — the NaN R already flows through the existing
+  `isnan(R) -> NotEvaluated` / `MS = NaN` machinery Interaction has always
+  used, so it was never picked as the governing worst margin even before this
+  change (`entry()`'s `iaRow.MS` is NaN by design regardless of `R`). See
+  row 13g and `TOOL_DIFFERENCES.md` §7.4 / `COMPLIANCE.md` TFSR 11.
 - **Yield rupture branch (Eq. 16/17) — ✅ RESOLVED**, implemented in
   `marginTensionYield` sharing the Fig. 8 gate with `marginTensionUlt` (row 2r).
   The stale TODO/VALIDATION.md citation of "Eq. 11" (the ultimate-side P'sep

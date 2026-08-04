@@ -63,6 +63,36 @@ function r = marginInteraction(joint, designLoads)
 %   number for — see the module header of engine.resolveForces /
 %   engine.Contents for the fuller account.
 %
+%   NASA-STD-5020B §4.4.4 makes the fbu = 0 omission CONDITIONAL, not an
+%   unconditional simplification: "if shear is not transferred across
+%   gaps or non load carrying spacers, or if interference or close
+%   tolerance fits are used, then typically there is no need to account
+%   for bolt bending caused by the shear loading. However, if the shear
+%   is transferred across gaps or non load carrying spacers, or if there
+%   are clearances between the bolt and joint, interaction of loads,
+%   including non-negligible bending, should be considered." This
+%   function does not compute bending (no M*c/I anywhere in this tool —
+%   TOOL_DIFFERENCES.md §7.4) — instead, joint.ShearTransferCondition
+%   (model.ShearTransferCondition) turns the exemption from a silent,
+%   unconditional assumption into an explicit, recorded determination:
+%       NotDeclared                  — default. R computed exactly as the
+%                                      fbu=0 form above; Method/Detail say
+%                                      the §4.4.4 exemption is ASSUMED, not
+%                                      verified, and name the property.
+%       CloseToleranceOrInterference — analyst has confirmed §4.4.4's
+%                                      exemption condition holds. R
+%                                      computed identically to NotDeclared
+%                                      (same numeric result); Method/Detail
+%                                      say the exemption is VERIFIED.
+%       ClearanceOrGapped            — analyst has confirmed §4.4.4's
+%                                      exemption does NOT apply. Since fbu
+%                                      is not implemented, the criterion
+%                                      cannot be evaluated conservatively:
+%                                      R = NaN, Pass = false, NO throw —
+%                                      NotEvaluated, exactly like the
+%                                      bolt-allowable-unavailable path
+%                                      just above.
+%
 %   SECONDARY, INFORMATIONAL field "a": the load-scale factor solving
 %   (a*Rt)^et + (a*Rs)^es = 1 — "how far could BOTH design loads scale,
 %   together, before the envelope is reached." It is NOT a margin of
@@ -83,16 +113,21 @@ function r = marginInteraction(joint, designLoads)
 %
 %   Returned struct fields:
 %       R       double — the interaction ratio, Rt^et + Rs^es (NaN = not
-%               evaluated)
+%               evaluated — either the bolt ultimate allowable is
+%               unavailable, or joint.ShearTransferCondition is
+%               ClearanceOrGapped, see the §4.4.4 note above)
 %       Pass    logical — R <= 1 (the Eq. 20-23 criterion). Only meaningful
 %               when R is not NaN — check isnan(R) first to distinguish
 %               "not evaluated" from a genuine fail.
 %       a       double — SECONDARY, informational load-scale factor (see
 %               above). NOT a margin of safety; NaN if not evaluated.
-%       Method  string: governing equation + exponents
+%       Method  string: governing equation + exponents, plus the §4.4.4
+%               bolt-bending exemption's ASSUMED/VERIFIED/not-evaluated
+%               status
 %       Detail  string: R's value and pass/fail, the bolt ultimate
-%               allowable's basis (rated/derived) and arithmetic, or the
-%               not-evaluated reason
+%               allowable's basis (rated/derived) and arithmetic, the
+%               §4.4.4 exemption determination (and which property to set
+%               to change it), or the not-evaluated reason
 %
 %   Call graph:
 %       Precedents (calls)      engine.marginShearUlt (reused
@@ -104,7 +139,14 @@ function r = marginInteraction(joint, designLoads)
 %                               body-in-shear R/a pin),
 %                               threadsInShearInteractionHandDerived,
 %                               interactionExponentsDifferFromBodyInShear,
-%                               threadsInShearUsesMinorAreaForShearAllowable;
+%                               threadsInShearUsesMinorAreaForShearAllowable,
+%                               shearTransferNotDeclaredReproducesTodayR,
+%                               shearTransferVerifiedGivesSameRWithVerifiedWording,
+%                               shearTransferClearanceOrGappedIsNotEvaluated,
+%                               shearTransferClearanceOrGappedAnalyzeCompletes
+%                               (the §4.4.4 ASSUMED/VERIFIED/not-evaluated
+%                               trio, mirroring the Fig. 8 e/D trio in
+%                               tests/tStiffness.m);
 %                               tests/tBoltAllowable.m —
 %                               ratedOnlyUsesSpecRatingEverywhere,
 %                               derivedOnlyUsesAtFtuAndEq18,
@@ -126,12 +168,34 @@ function r = marginInteraction(joint, designLoads)
 %                               pin a value against this function
 %                               directly).
 %
-%   Validation status/coverage: see VALIDATION.md (Margin checks, rows 13
-%   and 13t).
+%   Validation status/coverage: see VALIDATION.md (Margin checks, rows 13,
+%   13t, and 13g).
 
 arguments
     joint       (1,1) model.Joint
     designLoads (1,1) struct
+end
+
+% NASA-STD-5020B §4.4.4 — "if the shear is transferred across gaps or non
+% load carrying spacers, or if there are clearances between the bolt and
+% joint, interaction of loads, including non-negligible bending, should be
+% considered." This tool has no fbu term anywhere (see the NO-BENDING-TERM
+% / §4.4.4 note above), so when the analyst has recorded that this
+% configuration is exactly the one §4.4.4 flags, the Eq. 20-23 criterion
+% cannot be evaluated conservatively -- NotEvaluated, no throw, checked
+% BEFORE the bolt-allowable lookup below so the reason is never masked by
+% an unrelated "allowable unavailable" message.
+if joint.ShearTransferCondition == model.ShearTransferCondition.ClearanceOrGapped
+    r = struct("R", NaN, "Pass", false, "a", NaN, ...
+        "Method", "NASA-STD-5020B Eq. 20-23 — not evaluated (§4.4.4 bending required)", ...
+        "Detail", "Not evaluated: NASA-STD-5020B §4.4.4 requires bolt bending " + ...
+            "to be considered for this configuration (Joint.ShearTransferCondition " + ...
+            "= ClearanceOrGapped -- shear transferred across a gap/non-load-carrying " + ...
+            "spacer, or clearance between the bolt and joint); this tool implements " + ...
+            "no bolt-bending term (fbu), so the Eq. 20-23 interaction criterion cannot " + ...
+            "be evaluated conservatively. Set Joint.ShearTransferCondition to " + ...
+            "CloseToleranceOrInterference only if the §4.4.4 exemption is verified true.");
+    return
 end
 
 % DELIBERATELY the BOLT's own allowable, NOT the NASA-STD-5020B §4.4.1
@@ -216,8 +280,28 @@ if Pass
 else
     passText = "does NOT satisfy";
 end
-detail = string(sprintf("R = %.6f %s the NASA-STD-5020B Eq. 20-23 criterion (R <= 1); a = %.6f (informational load-scale factor, not a margin); bolt %s.", ...
-    R, passText, a, bt.Ult.Note));
+
+% NASA-STD-5020B §4.4.4 bolt-bending exemption note (see the module-header
+% §4.4.4 note above; ClearanceOrGapped already returned NotEvaluated above,
+% so only the two "compute exactly as today" branches reach here). Both
+% branches produce the IDENTICAL numeric R, a — only the ASSUMED/VERIFIED
+% wording differs, mirroring engine.private.separationBeforeRuptureGate's
+% own e/D ASSUMED-vs-VERIFIED distinction.
+switch joint.ShearTransferCondition
+    case model.ShearTransferCondition.CloseToleranceOrInterference
+        bendingNote = "§4.4.4 bolt-bending exemption VERIFIED (fbu = 0; " + ...
+            "Joint.ShearTransferCondition = CloseToleranceOrInterference)";
+        methodLabel = methodLabel + " -- §4.4.4 bending VERIFIED exempt";
+    otherwise   % NotDeclared (the default)
+        bendingNote = "§4.4.4 bolt-bending exemption ASSUMED, not confirmed " + ...
+            "(fbu = 0; Joint.ShearTransferCondition = NotDeclared -- set it " + ...
+            "to CloseToleranceOrInterference or ClearanceOrGapped to record " + ...
+            "the determination)";
+        methodLabel = methodLabel + " -- §4.4.4 bending ASSUMED, not confirmed";
+end
+
+detail = string(sprintf("R = %.6f %s the NASA-STD-5020B Eq. 20-23 criterion (R <= 1); a = %.6f (informational load-scale factor, not a margin); bolt %s. ", ...
+    R, passText, a, bt.Ult.Note)) + bendingNote + ".";
 
 r = struct( ...
     "R",      R, ...
