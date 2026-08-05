@@ -117,7 +117,7 @@ classdef tGui2SetupPages < matlab.uitest.TestCase
             testCase.App.navigateTo("Factors");
             page = testCase.App.page("Factors");
 
-            % A loaded case (or a preset) can carry unequal per-check FFs —
+            % A loaded case can carry unequal per-check FFs —
             % assign one directly, as File > Open would.
             testCase.App.State.Factors = model.Factors( ...
                 FSU=1.4, FSY=1.25, FSSep=1.0, FSSlip=1.0, ...
@@ -145,73 +145,6 @@ classdef tGui2SetupPages < matlab.uitest.TestCase
             testCase.App.State.Factors = model.Factors(FSU=1.6);
             testCase.verifyFalse(testCase.App.State.IsDirty, ...
                 'A direct AppState.Factors assignment (and the refresh it triggers) must not mark dirty.');
-        end
-
-        function choosingABuiltInPresetAppliesItAndMarksDirty(testCase)
-            testCase.App.navigateTo("Factors");
-            page = testCase.App.page("Factors");
-
-            items = page.presetDropdown().Items;
-            testCase.assumeGreaterThan(numel(items), 1, ...
-                'No built-in presets available to choose from.');
-            chosenName = string(items{2});   % Items{1} is the placeholder
-
-            testCase.choose(page.presetDropdown(), items{2});
-
-            expected = data.factorPreset(chosenName);
-            testCase.verifyEqual(testCase.App.State.Factors.FSU, expected.FSU);
-            testCase.verifyEqual(testCase.App.State.Factors.FFU, expected.FFU);
-            testCase.verifyTrue(testCase.App.State.IsDirty, ...
-                'Applying a preset is a case edit and must mark dirty.');
-            testCase.verifyEqual(char(page.presetDropdown().Value), ...
-                char(items{1}), ...
-                'The preset dropdown should reset to the placeholder after applying.');
-        end
-
-        function presetMechanismRoundTripsThroughSaveAndLoad(testCase)
-            % data.saveFactorPreset / data.factorPreset both accept a file
-            % override, but FactorsPage calls the default-path forms — as
-            % production must — so driving Save/Load through the page's own
-            % controls necessarily touches the REAL user preset file. Back
-            % it up and restore it exactly, the same discipline tGui2Shell
-            % uses for gui2.recentFiles, so running this suite never leaves
-            % test junk in a real preset store.
-            %
-            % Saving must NOT raise a modal: a uialert here would block
-            % every gesture below it, and the failure looks like an
-            % unrelated assertion further down rather than a stuck dialog.
-            % FactorsPage reports a successful save through the status bar
-            % for exactly this reason (gui2.Page.setStatus).
-            testCase.isolatePresetFile();
-
-            testCase.App.navigateTo("Factors");
-            page = testCase.App.page("Factors");
-
-            presetName = "gui2-setup-pages-test-preset";
-
-            testCase.App.State.Factors = model.Factors( ...
-                FSU=2.5, FSY=1.25, FSSep=1.0, FSSlip=1.0, ...
-                FFU=1.15, FFY=1.15, FFSep=1.15, FFSlip=1.15);
-
-            testCase.type(page.presetNameField(), presetName);
-            testCase.press(page.saveButton());
-
-            % Prove the save actually reached storage, independent of this
-            % page's own read path.
-            saved = data.factorPreset(presetName);
-            testCase.verifyEqual(saved.FSU, 2.5);
-
-            % Change the field, then load the saved preset back to prove
-            % the round trip through the GUI's own Load control.
-            testCase.type(page.fsuField(), 1.0);
-            testCase.verifyEqual(testCase.App.State.Factors.FSU, 1.0);
-
-            testCase.press(page.loadButton());
-
-            testCase.verifyEqual(page.fsuField().Value, 2.5, ...
-                'Load by name did not repopulate the FSU field from the saved preset.');
-            testCase.verifyEqual(testCase.App.State.Factors.FSU, 2.5, ...
-                'Load by name did not commit the loaded preset into AppState.');
         end
     end
 
@@ -275,47 +208,6 @@ classdef tGui2SetupPages < matlab.uitest.TestCase
                 'NominalTempC', 21, 'HotTempC', 70, 'ColdTempC', -40);
             testCase.verifyFalse(testCase.App.State.IsDirty, ...
                 'A direct AppState.Settings assignment (and the refresh it triggers) must not mark dirty.');
-        end
-    end
-
-    % ---- Preset-file isolation -------------------------------------------------
-    methods (Access = private)
-        function isolatePresetFile(testCase)
-            p = tGui2SetupPages.presetsFilePath();
-            if isfile(p)
-                backup = string(tempname) + ".json";
-                copyfile(p, backup);
-                testCase.addTeardown(@() restore(backup, p));
-            else
-                testCase.addTeardown(@() removeIfPresent(p));
-            end
-
-            function restore(from, to)
-                copyfile(from, to);
-                delete(from);
-            end
-            function removeIfPresent(q)
-                if isfile(q)
-                    delete(q);
-                end
-            end
-        end
-    end
-
-    methods (Static, Access = private)
-        function p = presetsFilePath()
-            %PRESETSFILEPATH  Mirrors +data/private/userFactorPresetsPath.m's
-            %   DOCUMENTED resolution (its own header comment states the
-            %   exact rule) purely to locate the file for backup/restore.
-            %   Never used to read or write preset content — that stays
-            %   entirely behind data.factorPreset / data.saveFactorPreset.
-            up = userpath();
-            if isempty(up) || strlength(string(up)) == 0
-                dataDir = fileparts(which('data.factorPresets'));
-                p = string(fullfile(dataDir, 'user_factor_presets.json'));
-            else
-                p = string(fullfile(char(up), 'fastener_factor_presets.json'));
-            end
         end
     end
 end

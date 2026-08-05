@@ -1,16 +1,19 @@
 classdef FactorsPage < gui2.Page
-    %FACTORSPAGE  Safety + fitting factors, and the factor-preset mechanism
+    %FACTORSPAGE  The fitting factor and the four factors of safety
     %   (GUI2_SPEC.md Section 3, "Factors").
     %
-    %   Four safety-of-factor fields map 1:1 onto model.Factors (FSU / FSY /
+    %   Fitting factor first, then Factors of Safety: one FF multiplies
+    %   every FS below it, so reading order matches the arithmetic. Each
+    %   row is name | symbol | value.
+    %
+    %   Four factor-of-safety fields map 1:1 onto model.Factors (FSU / FSY /
     %   FSSep / FSSlip). NASA-STD-5020B 4.2.2 [TFSR 3] defines ONE fitting
     %   factor that multiplies every factor of safety, so the GUI exposes a
     %   single FF field while model.Factors keeps its four FF slots
     %   (FFU/FFY/FFSep/FFSlip) as the engine mechanism — single-FF mode
     %   writes that one field into all four on commit.
     %
-    %   MIXED-FF PRESERVATION. A loaded case (or applied preset) can carry
-    %   UNEQUAL per-check fitting factors — the DABJ fixture is FFU=1.15,
+    %   MIXED-FF PRESERVATION. A loaded case can carry UNEQUAL per-check fitting factors — the DABJ fixture is FFU=1.15,
     %   the rest 1.0. Collapsing that onto one field and writing it back
     %   would silently change the loaded margins. So an unequal set is kept
     %   verbatim in LoadedFittingFactors (page-local, not case state — it is
@@ -20,10 +23,11 @@ classdef FactorsPage < gui2.Page
     %   applyFactors/buildFactors exactly (GUI2_HARVEST.md source: that
     %   file's rationale comments).
     %
-    %   PRESETS. data.factorPreset / data.factorPresets / data.saveFactorPreset
-    %   are the ONLY preset storage — this page never reads or writes the
-    %   preset files itself. See the note above buildPresetGroup for the one
-    %   place that API falls short of what a picker dropdown wants.
+    %   NO PRESET UI YET. data.factorPreset / factorPresets /
+    %   factorPresetNames / saveFactorPreset are all in place and tested
+    %   (tCaseIO), but the picker is deliberately deferred — this page is
+    %   worth more small. When it returns it binds to that API and reads or
+    %   writes no preset file itself.
     %
     %   Backed by AppState.Factors (model.Factors), fires FactorsChanged.
 
@@ -32,15 +36,13 @@ classdef FactorsPage < gui2.Page
         FFField
         MixedLabel
         LoadedFittingFactors = double.empty(1, 0)
-
-        PresetDropdown
-        PresetNameField
-        SaveButton
-        LoadButton
     end
 
     properties (Constant, Access = private)
-        PresetPlaceholder = "Apply a built-in preset…"
+        % Shared by both factor grids so the name / symbol / value columns
+        % line up between the panels. A trailing '1x' absorbs the slack:
+        % a value box stretched across the page reads as a text field.
+        RowColumns = {'fit', 60, 90, '1x'}
     end
 
     methods
@@ -64,8 +66,8 @@ classdef FactorsPage < gui2.Page
             g.RowSpacing  = 8;
             g.Scrollable  = 'on';
 
-            obj.buildFactorsGroup(g, 1);
-            obj.buildPresetGroup(g, 2);
+            obj.buildFittingGroup(g, 1);
+            obj.buildSafetyGroup(g, 2);
 
             obj.listenTo('FactorsChanged', @() obj.refresh());
         end
@@ -81,36 +83,17 @@ classdef FactorsPage < gui2.Page
 
     % ---- Layout -------------------------------------------------------
     methods (Access = private)
-        function buildFactorsGroup(obj, parent, row)
-            panel = uipanel(parent, 'Title', 'Analysis Factors');
+        function buildFittingGroup(obj, parent, row)
+            %BUILDFITTINGGROUP  The fitting factor, first on the page.
+            %   First because one FF multiplies every factor of safety
+            %   below it — reading order matches the arithmetic.
+            panel = uipanel(parent, 'Title', 'Fitting Factor');
             panel.Layout.Row = row;
-            g = uigridlayout(panel, [8 2]);
-            g.ColumnWidth = {'fit', '1x'};
-            g.RowHeight   = repmat({'fit'}, 1, 8);
+            g = uigridlayout(panel, [2 4]);
+            g.ColumnWidth = gui2.FactorsPage.RowColumns;
+            g.RowHeight   = {'fit', 'fit'};
             g.RowSpacing  = 4;
             g.Padding     = [6 6 6 6];
-
-            h = uilabel(g, 'Text', 'Safety factors', 'FontWeight', 'bold');
-            h.Layout.Row = 1;
-            h.Layout.Column = [1 2];
-
-            safetyNames  = ["FSU", "FSY", "FSSep", "FSSlip"];
-            safetyLabels = ["FSU — ultimate FS", "FSY — yield FS", ...
-                            "FSSep — separation FS", "FSSlip — slip FS"];
-            safetyTips   = ["Ultimate factor of safety (model.Factors.FSU).", ...
-                            "Yield factor of safety (model.Factors.FSY).", ...
-                            "Separation factor of safety (model.Factors.FSSep).", ...
-                            "Slip factor of safety (model.Factors.FSSlip)."];
-            obj.SafetyFields = struct();
-            for i = 1:numel(safetyNames)
-                f = obj.addNumeric(g, 1 + i, char(safetyLabels(i)), safetyTips(i));
-                obj.SafetyFields.(safetyNames(i)) = f;
-                obj.bindEdit(f, @(~, ~) obj.commitFromControls());
-            end
-
-            h = uilabel(g, 'Text', 'Fitting factor', 'FontWeight', 'bold');
-            h.Layout.Row = 6;
-            h.Layout.Column = [1 2];
 
             % NASA-STD-5020B 4.2.2 [TFSR 3] — one fitting factor multiplies
             % every factor of safety (FF is a program-level policy knob, not
@@ -120,93 +103,76 @@ classdef FactorsPage < gui2.Page
                 'one factor multiplies every factor of safety — ultimate, ' ...
                 'yield, separation, slip. A minimum of 1.15 is recommended ' ...
                 'for ultimate. Commits into all four model.Factors FF slots ' ...
-                'unless a loaded case or preset carried unequal values — see ' ...
-                'the banner below.'];
-            obj.FFField = obj.addNumeric(g, 7, 'FF — fitting factor', ffTip);
+                'unless a loaded case carried unequal values — see the ' ...
+                'banner below.'];
+            obj.FFField = obj.addFactorRow(g, 1, 'Fitting Factor', 'FF', ffTip);
             obj.bindEdit(obj.FFField, @(~, ~) obj.onFittingFactorEdited());
 
             obj.MixedLabel = uilabel(g, 'Text', '', 'WordWrap', 'on');
-            obj.MixedLabel.Layout.Row    = 8;
-            obj.MixedLabel.Layout.Column = [1 2];
+            obj.MixedLabel.Layout.Row    = 2;
+            obj.MixedLabel.Layout.Column = [1 4];
             obj.MixedLabel.VerticalAlignment = 'top';
             obj.MixedLabel.BackgroundColor   = gui2.palette('bannerWarnBg');
             obj.MixedLabel.FontColor         = gui2.palette('bannerWarnFg');
-            obj.MixedLabel.Visible = 'off';
+            obj.MixedLabel.Visible           = 'off';
         end
 
-        % Preset mechanism.
-        %
-        % data.factorPresetNames() enumerates BOTH stores — built-ins and
-        % user-saved presets — so the dropdown lists everything that
-        % data.factorPreset can resolve. Built-ins first, then user
-        % presets, each group sorted (see builtInPresetNames).
-        %
-        % That enumerator was added for this page. Before it, +data exposed
-        % only factorPreset (lookup by exact name), factorPresets (built-in
-        % map) and saveFactorPreset (write), with the on-disk reader and the
-        % path resolver both under +data/private — so a user could save a
-        % preset and then never see it listed. The alternative was parsing
-        % data.factorPreset's error text for its "Available: ..." list,
-        % which is fragile in the worst way: a wording change in an error
-        % string would silently break the dropdown at runtime with no test
-        % to catch it.
-        %
-        % The "load by name" field stays regardless — it is how a preset
-        % gets loaded when the analyst already knows the name.
-        function buildPresetGroup(obj, parent, row)
-            panel = uipanel(parent, 'Title', 'Factor Presets');
+        function buildSafetyGroup(obj, parent, row)
+            %BUILDSAFETYGROUP  The four factors of safety.
+            panel = uipanel(parent, 'Title', 'Factors of Safety');
             panel.Layout.Row = row;
-            g = uigridlayout(panel, [3 3]);
-            g.ColumnWidth = {'fit', '1x', 'fit'};
-            g.RowHeight   = {'fit', 'fit', 'fit'};
+            g = uigridlayout(panel, [4 4]);
+            g.ColumnWidth = gui2.FactorsPage.RowColumns;
+            g.RowHeight   = repmat({'fit'}, 1, 4);
             g.RowSpacing  = 4;
             g.Padding     = [6 6 6 6];
 
-            lb = uilabel(g, 'Text', 'Built-in:');
-            lb.Layout.Row    = 1;
-            lb.Layout.Column = 1;
-            names = obj.builtInPresetNames();
-            obj.PresetDropdown = uidropdown(g, ...
-                'Items', cellstr([gui2.FactorsPage.PresetPlaceholder, names]));
-            obj.PresetDropdown.Layout.Row    = 1;
-            obj.PresetDropdown.Layout.Column = [2 3];
-            obj.bindEdit(obj.PresetDropdown, @(~, ~) obj.onPresetDropdownChanged());
+            % Property name, displayed name, displayed symbol.
+            spec = { ...
+                "FSY",    'Yield',      'FSy'; ...
+                "FSU",    'Ultimate',   'FSu'; ...
+                "FSSep",  'Separation', 'FSsep'; ...
+                "FSSlip", 'Slip',       'FSslip'};
+            tips = [ ...
+                "Yield factor of safety (model.Factors.FSY).", ...
+                "Ultimate factor of safety (model.Factors.FSU).", ...
+                "Separation factor of safety (model.Factors.FSSep).", ...
+                "Slip factor of safety (model.Factors.FSSlip)."];
 
-            lb = uilabel(g, 'Text', 'Preset name:');
-            lb.Layout.Row    = 2;
-            lb.Layout.Column = 1;
-            obj.PresetNameField = uieditfield(g, 'text');
-            obj.PresetNameField.Layout.Row    = 2;
-            obj.PresetNameField.Layout.Column = [2 3];
-            obj.PresetNameField.Tooltip = ['Type a preset name, then Save ' ...
-                'the current factors under it, or Load a previously saved ' ...
-                'one (built-in or your own) by its exact name.'];
-            % Not bound through bindEdit — typing a name is not a case
-            % edit; only Save/Load below act on AppState.
-
-            obj.SaveButton = uibutton(g, 'push', 'Text', 'Save as preset');
-            obj.SaveButton.Layout.Row    = 3;
-            obj.SaveButton.Layout.Column = 2;
-            obj.SaveButton.ButtonPushedFcn = @(~, ~) obj.onSavePreset();
-
-            obj.LoadButton = uibutton(g, 'push', 'Text', 'Load by name');
-            obj.LoadButton.Layout.Row    = 3;
-            obj.LoadButton.Layout.Column = 3;
-            obj.LoadButton.ButtonPushedFcn = @(~, ~) obj.onLoadByName();
+            obj.SafetyFields = struct();
+            for i = 1:size(spec, 1)
+                f = obj.addFactorRow(g, i, spec{i, 2}, spec{i, 3}, tips(i));
+                obj.SafetyFields.(spec{i, 1}) = f;
+                obj.bindEdit(f, @(~, ~) obj.commitFromControls());
+            end
         end
 
-        function c = addNumeric(obj, g, row, labelText, tip)
-            lb = uilabel(g, 'Text', labelText);
+        function c = addFactorRow(obj, g, row, nameText, symbolText, tip)
+            %ADDFACTORROW  Name | symbol | value, one row of a factor grid.
+            lb = uilabel(g, 'Text', nameText);
             lb.Layout.Row    = row;
             lb.Layout.Column = 1;
+
+            sym = uilabel(g, 'Text', symbolText, 'FontAngle', 'italic');
+            sym.Layout.Row    = row;
+            sym.Layout.Column = 2;
+
+            c = obj.addNumeric(g, row, 3, tip);
+            if strlength(string(tip)) > 0
+                lb.Tooltip  = tip;
+                sym.Tooltip = tip;
+            end
+        end
+
+        function c = addNumeric(~, g, row, col, tip)
+            %ADDNUMERIC  One positive-only numeric field.
             c = uieditfield(g, 'numeric');
             c.Layout.Row    = row;
-            c.Layout.Column = 2;
+            c.Layout.Column = col;
             c.Limits = [0 Inf];
             c.LowerLimitInclusive = 'off';   % model.Factors: mustBePositive
             if strlength(string(tip)) > 0
-                c.Tooltip  = tip;
-                lb.Tooltip = tip;
+                c.Tooltip = tip;
             end
         end
     end
@@ -268,93 +234,6 @@ classdef FactorsPage < gui2.Page
             obj.commitFromControls();
         end
 
-        function onPresetDropdownChanged(obj)
-            name = string(obj.PresetDropdown.Value);
-            % Reset to the neutral placeholder immediately (no event fires
-            % from a programmatic Value set) — the dropdown is a trigger,
-            % not a persistent "this preset is active" indicator, since
-            % further hand-edits would make that claim false.
-            obj.PresetDropdown.Value = char(gui2.FactorsPage.PresetPlaceholder);
-            if name == gui2.FactorsPage.PresetPlaceholder
-                return
-            end
-            obj.applyPresetByName(name);
-        end
-
-        function onLoadByName(obj)
-            name = strtrim(string(obj.PresetNameField.Value));
-            if strlength(name) == 0
-                uialert(obj.figureHandle(), ...
-                    'Enter a preset name to load.', 'No preset name');
-                return
-            end
-            % A push-button action is not routed through bindEdit, so mark
-            % dirty explicitly — applying a preset IS a case edit
-            % (GUI2_HARVEST.md A4).
-            obj.State.markDirty();
-            obj.applyPresetByName(name);
-        end
-
-        function applyPresetByName(obj, name)
-            try
-                fac = data.factorPreset(name);
-            catch err
-                uialert(obj.figureHandle(), err.message, 'Preset not found');
-                return
-            end
-            obj.setFactorControls(fac);
-            obj.commitFromControls();
-        end
-
-        function onSavePreset(obj)
-            name = strtrim(string(obj.PresetNameField.Value));
-            if strlength(name) == 0
-                uialert(obj.figureHandle(), ...
-                    'Enter a name for the preset before saving.', 'No preset name');
-                return
-            end
-            try
-                data.saveFactorPreset(name, obj.factorsFromControls());
-            catch err
-                uialert(obj.figureHandle(), err.message, 'Save preset failed');
-                return
-            end
-            obj.refreshBuiltInDropdown();
-            % Status bar, NOT a modal: a success dialog interrupts a user
-            % who already knows what they clicked, and it blocks the App
-            % Testing Framework's gestures so the next press or type in a
-            % test silently does nothing. uialert stays for the error paths
-            % above, which the user does have to acknowledge.
-            obj.setStatus(sprintf('Saved factor preset "%s".', name));
-        end
-
-        function refreshBuiltInDropdown(obj)
-            % Built-in names never change at runtime, but re-derive anyway
-            % rather than assume — cheap, and matches "never a stale cached
-            % list" everywhere else dropdowns repopulate.
-            obj.PresetDropdown.Items = ...
-                cellstr([gui2.FactorsPage.PresetPlaceholder, obj.builtInPresetNames()]);
-        end
-
-        function names = builtInPresetNames(~)
-            %BUILTINPRESETNAMES  Every selectable preset, built-in and saved.
-            %   Named for what the dropdown started as; it now lists user
-            %   presets too, via data.factorPresetNames. Without that
-            %   enumerator a user could save a preset and never see it in
-            %   the picker — the user-preset store is otherwise
-            %   undiscoverable from outside +data.
-            %
-            %   Built-ins first, then user presets, each group sorted. The
-            %   grouping is deliberate: a preset an analyst saved is a
-            %   different kind of thing from a published factor set, and
-            %   interleaving them alphabetically would hide that.
-            [all, builtIn] = data.factorPresetNames();
-            names = [sort(all(builtIn)), sort(all(~builtIn))];
-        end
-
-        function fig = figureHandle(obj)
-            fig = ancestor(obj.Root, 'figure');
-        end
     end
 
     % ---- Test seams ---------------------------------------------------
@@ -375,20 +254,8 @@ classdef FactorsPage < gui2.Page
             lbl = obj.MixedLabel;
         end
 
-        function dd = presetDropdown(obj)
-            dd = obj.PresetDropdown;
-        end
 
-        function f = presetNameField(obj)
-            f = obj.PresetNameField;
-        end
 
-        function b = saveButton(obj)
-            b = obj.SaveButton;
-        end
 
-        function b = loadButton(obj)
-            b = obj.LoadButton;
-        end
     end
 end
