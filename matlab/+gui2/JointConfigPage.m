@@ -149,9 +149,9 @@ classdef JointConfigPage < gui2.Page
         % controls mid-marshal.
         Refreshing (1,1) logical = false
 
-        % The AppState.CaseGeneration this page last repopulated from.
-        % -1 = never, so the first refresh always runs.
-        AppliedGeneration (1,1) double = -1
+        % False until this page has populated its controls from AppState at
+        % least once. See refreshOnNavigate.
+        HasApplied (1,1) logical = false
     end
 
     methods
@@ -231,26 +231,29 @@ classdef JointConfigPage < gui2.Page
             obj.listenTo('SettingsChanged', @() obj.commitJoint());
         end
 
+        function tf = refreshOnNavigate(obj)
+            %REFRESHONNAVIGATE  Repopulate on the FIRST navigation only.
+            %   THE CONTROLS ARE THE TRUTH ON THIS PAGE, not State.Joint.
+            %   buildJoint refuses to marshal until every required selection
+            %   is made, so on a fresh case no commit succeeds and
+            %   State.Joint stays at its blank default. Repopulating from it
+            %   on every navigation wiped everything typed the moment the
+            %   analyst visited another page and came back.
+            %
+            %   A genuine external replacement - File > New or File > Open -
+            %   still lands: applyCaseStruct fires JointChanged and this
+            %   page's own listener calls refresh() directly. Only the
+            %   navigation path is suppressed, which is the only path that
+            %   was destroying input.
+            tf = ~obj.HasApplied;
+        end
+
         function refresh(obj)
             %REFRESH  AppState.Joint + LoadCase -> controls. Never dirty.
             if ~obj.IsBuilt || obj.Refreshing
                 return
             end
-            % THE CONTROLS ARE THE TRUTH ON THIS PAGE, not State.Joint.
-            % buildJoint refuses to marshal until every required selection
-            % is made, so on a fresh case no commit succeeds and State.Joint
-            % stays at its blank default. Repopulating from it on every
-            % navigation would wipe everything typed so far the moment the
-            % analyst visited another page and came back.
-            %
-            % So repopulate ONLY when the case was replaced under us - File >
-            % New or File > Open, which bump CaseGeneration. Everything else
-            % (an echo of our own commit, a navigation, a library refresh)
-            % leaves the controls alone.
-            if obj.State.CaseGeneration == obj.AppliedGeneration
-                return
-            end
-            obj.AppliedGeneration = obj.State.CaseGeneration;
+            obj.HasApplied = true;
             obj.Refreshing = true;
             c = onCleanup(@() obj.clearRefreshing()); %#ok<NASGU>
             obj.applyJoint(obj.State.Joint);

@@ -146,13 +146,6 @@ classdef AppState < handle
         % Non-empty when the library failed to load; the message is shown
         % once, non-blocking, after the window is visible.
         LibraryLoadError (1,1) string = ""
-
-        % Bumped by applyCaseStruct - i.e. File > New and File > Open, the
-        % only EXTERNAL replacements of case state. A page whose controls
-        % are the working truth (Joint Config marshals from them) uses this
-        % to tell "the case was replaced under me, repopulate" from "my own
-        % edit came back round", and must repopulate ONLY on the former.
-        CaseGeneration (1,1) double = 0
     end
 
     methods
@@ -348,7 +341,6 @@ classdef AppState < handle
         end
 
         function applyCaseStruct(obj, st)
-            obj.CaseGeneration = obj.CaseGeneration + 1;
             %APPLYCASESTRUCT  Restore whole state from a deserialized case.
             %   THE deserializer path (GUI2_HARVEST.md A7). File > New,
             %   File > Open and every reset come through here, so no

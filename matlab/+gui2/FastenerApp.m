@@ -247,7 +247,9 @@ classdef FastenerApp < handle
             % Refresh AFTER the card is visible so the page sizes its
             % widgets against real geometry.
             try
-                entry.Page.refresh();
+                if entry.Page.refreshOnNavigate()
+                    entry.Page.refresh();
+                end
             catch err
                 uialert(app.Fig, err.message, 'Page refresh failed');
             end
