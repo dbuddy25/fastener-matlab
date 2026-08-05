@@ -56,6 +56,18 @@ classdef (Abstract) Page < handle
         IsBuilt (1,1) logical = false
     end
 
+    properties (Access = private)
+        % Route to the shell's status bar, injected by gui2.FastenerApp via
+        % attachStatus. A page never holds a reference to the app itself —
+        % that would let it reach the rail and other pages' widgets, which
+        % Section 5 forbids. One function handle is the whole contract.
+        %
+        % Empty until attached, so a page constructed outside a shell (a
+        % unit test building one in isolation) still works: setStatus is a
+        % no-op rather than an error.
+        StatusFcn = function_handle.empty
+    end
+
     properties (Access = protected)
         % The container build() was given. Held so refresh() can reach the
         % widgets without every subclass storing it again.
@@ -108,8 +120,41 @@ classdef (Abstract) Page < handle
         end
     end
 
+    % ---- Page-facing helpers. Called by subclasses. ----------------------
+    methods (Access = protected, Sealed)
+        function setStatus(obj, msg)
+            %SETSTATUS  Write a one-line message to the shell's status bar.
+            %   The route every page uses for INFORMATIONAL outcomes —
+            %   "Saved preset X", "Loaded 42 elements". Errors belong in
+            %   uialert; routine success does not.
+            %
+            %   A modal dialog for a successful action is wrong twice over:
+            %   it interrupts a user who already knows what they clicked,
+            %   and it blocks the App Testing Framework's gestures, so the
+            %   next press or type in a test silently does nothing. Use
+            %   uialert only where the user genuinely must acknowledge
+            %   something before continuing.
+            if isempty(obj.StatusFcn)
+                return
+            end
+            obj.StatusFcn(string(msg));
+        end
+    end
+
     % ---- Shell-facing plumbing. Called by gui2.FastenerApp only. ---------
     methods (Sealed)
+        function attachStatus(obj, fcn)
+            %ATTACHSTATUS  Give the page its route to the status bar.
+            %   Called once by the shell as it registers the page. Pages
+            %   never receive the app itself (Section 5: no page may reach
+            %   another page's widgets or the rail).
+            arguments
+                obj (1,1) gui2.Page
+                fcn (1,1) function_handle
+            end
+            obj.StatusFcn = fcn;
+        end
+
         function buildOnce(obj, parent)
             %BUILDONCE  Build the page if it has not been built.
             %   The shell's lazy-construction guarantee lives here, not in

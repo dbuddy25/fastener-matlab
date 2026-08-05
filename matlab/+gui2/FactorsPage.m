@@ -136,22 +136,23 @@ classdef FactorsPage < gui2.Page
 
         % Preset mechanism.
         %
-        % data.factorPresets() is a public, reliable enumerator for the
-        % BUILT-IN presets (a containers.Map), so those populate the
-        % dropdown directly. There is deliberately NO equivalent public
-        % enumerator for USER-saved presets — +data exposes only
-        % factorPreset (lookup by exact name), factorPresets (built-in
-        % map), and saveFactorPreset (write); the on-disk reader
-        % (loadUserFactorPresets) and the path resolver are BOTH under
-        % +data/private, unreachable from +gui2. Rather than parse
-        % data.factorPreset's error-message text to fish out its
-        % "Available: ..." list — a real option, but fragile: a wording
-        % change in that error string would silently break the dropdown at
-        % runtime with no test to catch it — this page exposes a
-        % "load by name" text field for ANY saved preset (built-in or
-        % user), and the dropdown as a quick-pick for the built-ins only.
-        % See GUI2_SPEC.md open items / the step-2 report for the
-        % public-API gap this works around.
+        % data.factorPresetNames() enumerates BOTH stores — built-ins and
+        % user-saved presets — so the dropdown lists everything that
+        % data.factorPreset can resolve. Built-ins first, then user
+        % presets, each group sorted (see builtInPresetNames).
+        %
+        % That enumerator was added for this page. Before it, +data exposed
+        % only factorPreset (lookup by exact name), factorPresets (built-in
+        % map) and saveFactorPreset (write), with the on-disk reader and the
+        % path resolver both under +data/private — so a user could save a
+        % preset and then never see it listed. The alternative was parsing
+        % data.factorPreset's error text for its "Available: ..." list,
+        % which is fragile in the worst way: a wording change in an error
+        % string would silently break the dropdown at runtime with no test
+        % to catch it.
+        %
+        % The "load by name" field stays regardless — it is how a preset
+        % gets loaded when the analyst already knows the name.
         function buildPresetGroup(obj, parent, row)
             panel = uipanel(parent, 'Title', 'Factor Presets');
             panel.Layout.Row = row;
@@ -319,8 +320,12 @@ classdef FactorsPage < gui2.Page
                 return
             end
             obj.refreshBuiltInDropdown();
-            uialert(obj.figureHandle(), sprintf('Saved preset "%s".', name), ...
-                'Preset saved', 'Icon', 'success');
+            % Status bar, NOT a modal: a success dialog interrupts a user
+            % who already knows what they clicked, and it blocks the App
+            % Testing Framework's gestures so the next press or type in a
+            % test silently does nothing. uialert stays for the error paths
+            % above, which the user does have to acknowledge.
+            obj.setStatus(sprintf('Saved factor preset "%s".', name));
         end
 
         function refreshBuiltInDropdown(obj)
@@ -332,8 +337,19 @@ classdef FactorsPage < gui2.Page
         end
 
         function names = builtInPresetNames(~)
-            m = data.factorPresets();
-            names = sort(string(keys(m)));
+            %BUILTINPRESETNAMES  Every selectable preset, built-in and saved.
+            %   Named for what the dropdown started as; it now lists user
+            %   presets too, via data.factorPresetNames. Without that
+            %   enumerator a user could save a preset and never see it in
+            %   the picker — the user-preset store is otherwise
+            %   undiscoverable from outside +data.
+            %
+            %   Built-ins first, then user presets, each group sorted. The
+            %   grouping is deliberate: a preset an analyst saved is a
+            %   different kind of thing from a published factor set, and
+            %   interleaving them alphabetically would hide that.
+            [all, builtIn] = data.factorPresetNames();
+            names = [sort(all(builtIn)), sort(all(~builtIn))];
         end
 
         function fig = figureHandle(obj)

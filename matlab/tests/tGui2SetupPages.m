@@ -169,13 +169,19 @@ classdef tGui2SetupPages < matlab.uitest.TestCase
         end
 
         function presetMechanismRoundTripsThroughSaveAndLoad(testCase)
-            % data.saveFactorPreset / data.factorPreset write to and read
-            % from the REAL user factor-presets file (there is no
-            % file-override parameter reachable from the GUI — see
-            % FactorsPage's header comment on the preset-API gap). Back it
-            % up and restore it exactly, the same discipline tGui2Shell
-            % uses for gui2.recentFiles, so running this suite never
-            % leaves test junk in a real preset store.
+            % data.saveFactorPreset / data.factorPreset both accept a file
+            % override, but FactorsPage calls the default-path forms — as
+            % production must — so driving Save/Load through the page's own
+            % controls necessarily touches the REAL user preset file. Back
+            % it up and restore it exactly, the same discipline tGui2Shell
+            % uses for gui2.recentFiles, so running this suite never leaves
+            % test junk in a real preset store.
+            %
+            % Saving must NOT raise a modal: a uialert here would block
+            % every gesture below it, and the failure looks like an
+            % unrelated assertion further down rather than a stuck dialog.
+            % FactorsPage reports a successful save through the status bar
+            % for exactly this reason (gui2.Page.setStatus).
             testCase.isolatePresetFile();
 
             testCase.App.navigateTo("Factors");

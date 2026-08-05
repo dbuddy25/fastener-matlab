@@ -28,7 +28,7 @@ classdef FastenerApp < handle
 
     properties (Constant, Access = private)
         % Rail geometry.
-        RailWidth   = 145
+        RailWidth   = 155
         RailRowH    = 30
         RailSectionH = 26
 
@@ -362,6 +362,11 @@ classdef FastenerApp < handle
                     'HorizontalAlignment', 'center');
                 gl.Layout.Row    = rows(i);
                 gl.Layout.Column = 2;
+
+                % The page's only route back into the shell. A function
+                % handle, not the app: a page that held the app could reach
+                % the rail and other pages' widgets, which Section 5 forbids.
+                pg.attachStatus(@(m) app.setStatus(m));
 
                 app.Pages(end + 1) = struct( ...
                     'Section', section, 'Prefix', prefix, ...

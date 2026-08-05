@@ -170,17 +170,26 @@ helpers. Rules earned building `+gui2`'s versions, not already covered by §A:
   `model.Factors()`'s own default is the DABJ mixed set — a **blank case must
   force the four slots uniform instead** (`AppState.blankCaseState` does
   this), or a fresh case opens already in the mixed-FF warning state.
-- **There is no public enumerator for user-saved factor presets.** `+data`
-  exposes `factorPreset` (lookup by exact name — errors listing available
-  names in its message), `factorPresets` (built-in map only), and
-  `saveFactorPreset` (write-only). The on-disk reader
-  (`loadUserFactorPresets`) and the path resolver
-  (`userFactorPresetsPath`) are both `+data/private`, unreachable from
-  `+gui2`. A picker dropdown can therefore only reliably list the **built-in**
-  three; reaching a **user**-saved preset needs its exact name typed in (or
-  parsing the lookup error's "Available: ..." string, which is fragile — a
-  wording change silently breaks a dropdown with no test to catch it). Flagged
-  for the owner rather than worked around with string-parsing.
+- ~~There is no public enumerator for user-saved factor presets.~~
+  **Resolved — `data.factorPresetNames` added.** `+data` originally exposed
+  only `factorPreset` (lookup by exact name), `factorPresets` (built-in map)
+  and `saveFactorPreset` (write); the on-disk reader
+  (`loadUserFactorPresets`) and the path resolver (`userFactorPresetsPath`)
+  are both `+data/private`. A user could therefore **save a preset and never
+  see it listed** — the store was undiscoverable from outside `+data`.
+
+  This was the first time the pure-GUI rule (`GUI2_SPEC.md` §1.1) genuinely
+  bit, and it was resolved by an **authorized, scoped exception**: one
+  read-only enumerator, computing nothing and owning no state, covered by
+  `tCaseIO`. The rejected alternative was parsing `factorPreset`'s error text
+  for its "Available: ..." list — fragile in the worst way, since a wording
+  change in an error string would break the dropdown at runtime with no test
+  to catch it.
+
+  **The precedent, for the pages still to come:** the frozen-package rule
+  protects the *math*, not the package boundary. A missing read-only accessor
+  is a reason to ask, not a reason to duplicate private logic in `+gui2`.
+  Ask; do not work around.
 - **Neither `factorPreset`/`saveFactorPreset` nor their private helpers take a
   file override reachable from the GUI.** Both accept one for tests
   (`saveFactorPreset(name, factors, file)`), but the GUI always calls the

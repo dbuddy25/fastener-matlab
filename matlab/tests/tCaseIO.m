@@ -86,6 +86,47 @@ classdef tCaseIO < matlab.unittest.TestCase
                 "data:factorPreset:unknown");
         end
 
+        function factorPresetNamesListsBuiltInsAndUserPresets(testCase)
+            % The enumerator must see BOTH stores. Built-in-only would be
+            % the failure mode that matters: a caller could save a user
+            % preset and then be unable to list it.
+            f = string(tempname) + ".json";
+            testCase.addTeardown(@() deleteIfPresent(f));
+
+            data.saveFactorPreset("Enumerated Test Preset", ...
+                model.Factors(FSU=1.7), f);
+
+            [names, builtIn] = data.factorPresetNames(f);
+
+            testCase.verifyClass(names, "string");
+            testCase.verifySize(builtIn, size(names));
+
+            isMine = names == "Enumerated Test Preset";
+            testCase.verifyEqual(nnz(isMine), 1, ...
+                "The saved user preset was not listed exactly once.");
+            testCase.verifyFalse(builtIn(isMine), ...
+                "A user-saved preset must not be reported as built in.");
+
+            % Every built-in still appears, and is flagged as one.
+            builtInNames = reshape(string(keys(data.factorPresets())), 1, []);
+            testCase.verifyTrue(all(ismember(builtInNames, names)));
+            testCase.verifyTrue(all(builtIn(ismember(names, builtInNames))));
+
+            % Every listed name must actually resolve — the enumerator and
+            % the lookup cannot be allowed to disagree.
+            for n = names
+                testCase.verifyClass(data.factorPreset(n, f), "model.Factors");
+            end
+        end
+
+        function factorPresetNamesWithNoUserFileReturnsBuiltInsOnly(testCase)
+            % An absent user store is the first-run state, not an error.
+            [names, builtIn] = data.factorPresetNames( ...
+                string(tempname) + "-does-not-exist.json");
+            testCase.verifyNotEmpty(names);
+            testCase.verifyTrue(all(builtIn));
+        end
+
         function userPresetSaveLoad(testCase)
             f = string(tempname) + ".json";
             testCase.addTeardown(@() deleteIfPresent(f));
