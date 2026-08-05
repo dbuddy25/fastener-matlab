@@ -126,6 +126,14 @@ classdef FastenerApp < handle
 
         function delete(app)
             %DELETE  Close the window when the app object is destroyed.
+            %   Listeners go first and independently: one that throws while
+            %   being torn down must not stop the figure being destroyed,
+            %   or the window survives its own app object and can never be
+            %   closed again.
+            try
+                delete(app.Listeners(isvalid(app.Listeners)));
+            catch
+            end
             if ~isempty(app.Fig) && isvalid(app.Fig)
                 delete(app.Fig);
             end
@@ -738,8 +746,20 @@ classdef FastenerApp < handle
 
         function onCloseRequest(app)
             %ONCLOSEREQUEST  Confirm before closing away unsaved changes.
-            if ~app.confirmDiscard('closing')
-                return
+            %   The prompt is wrapped: anything that throws in here - a
+            %   half-built AppState, a listener firing during teardown -
+            %   would otherwise abort the callback and leave the window
+            %   with no way to close it. A user must always be able to
+            %   quit; the worst case is losing the confirmation, not being
+            %   trapped in the application.
+            try
+                if ~app.confirmDiscard('closing')
+                    return
+                end
+            catch err
+                warning('gui2:FastenerApp:closePromptFailed', ...
+                    'Unsaved-changes prompt failed (%s); closing anyway.', ...
+                    err.message);
             end
             delete(app);
         end
