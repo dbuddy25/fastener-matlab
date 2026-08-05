@@ -39,10 +39,11 @@ classdef FactorsPage < gui2.Page
     end
 
     properties (Constant, Access = private)
-        % Shared by both factor grids so the name / symbol / value columns
-        % line up between the panels. A trailing '1x' absorbs the slack:
-        % a value box stretched across the page reads as a text field.
-        RowColumns = {'fit', 60, 90, '1x'}
+        % Shared by both factor grids. FIXED widths, not 'fit': 'fit'
+        % resolves per grid, so "Fitting Factor" and "Separation" would
+        % size their own columns differently and the two panels would not
+        % line up. Fixed widths are what makes them one visual table.
+        RowColumns = {110, 60, 90}
     end
 
     methods
@@ -59,15 +60,19 @@ classdef FactorsPage < gui2.Page
         end
 
         function build(obj, parent)
-            g = uigridlayout(parent, [3 1]);
-            g.RowHeight   = {'fit', 'fit', '1x'};
-            g.ColumnWidth = {'1x'};
+            % Column 2 is a flexible gutter that absorbs the window width,
+            % so the panels in column 1 size to their content instead of
+            % stretching across the page around three narrow fields.
+            g = uigridlayout(parent, [4 2]);
+            g.RowHeight   = {'fit', 'fit', 'fit', '1x'};
+            g.ColumnWidth = {'fit', '1x'};
             g.Padding     = [8 8 8 8];
             g.RowSpacing  = 8;
             g.Scrollable  = 'on';
 
             obj.buildFittingGroup(g, 1);
-            obj.buildSafetyGroup(g, 2);
+            obj.buildMixedBanner(g, 2);
+            obj.buildSafetyGroup(g, 3);
 
             obj.listenTo('FactorsChanged', @() obj.refresh());
         end
@@ -88,10 +93,11 @@ classdef FactorsPage < gui2.Page
             %   First because one FF multiplies every factor of safety
             %   below it — reading order matches the arithmetic.
             panel = uipanel(parent, 'Title', 'Fitting Factor');
-            panel.Layout.Row = row;
-            g = uigridlayout(panel, [2 4]);
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+            g = uigridlayout(panel, [1 3]);
             g.ColumnWidth = gui2.FactorsPage.RowColumns;
-            g.RowHeight   = {'fit', 'fit'};
+            g.RowHeight   = {'fit'};
             g.RowSpacing  = 4;
             g.Padding     = [6 6 6 6];
 
@@ -107,10 +113,18 @@ classdef FactorsPage < gui2.Page
                 'banner below.'];
             obj.FFField = obj.addFactorRow(g, 1, 'Fitting Factor', 'FF', ffTip);
             obj.bindEdit(obj.FFField, @(~, ~) obj.onFittingFactorEdited());
+        end
 
-            obj.MixedLabel = uilabel(g, 'Text', '', 'WordWrap', 'on');
-            obj.MixedLabel.Layout.Row    = 2;
-            obj.MixedLabel.Layout.Column = [1 4];
+        function buildMixedBanner(obj, parent, row)
+            %BUILDMIXEDBANNER  The unequal-fitting-factor warning.
+            %   Lives on the PAGE grid, not inside the Fitting Factor panel:
+            %   the panel is only as wide as three narrow columns, and a
+            %   wrapping sentence in that width becomes a tall thin column
+            %   of words. Full page width, hidden until it has something to
+            %   say.
+            obj.MixedLabel = uilabel(parent, 'Text', '', 'WordWrap', 'on');
+            obj.MixedLabel.Layout.Row    = row;
+            obj.MixedLabel.Layout.Column = [1 2];
             obj.MixedLabel.VerticalAlignment = 'top';
             obj.MixedLabel.BackgroundColor   = gui2.palette('bannerWarnBg');
             obj.MixedLabel.FontColor         = gui2.palette('bannerWarnFg');
@@ -120,8 +134,9 @@ classdef FactorsPage < gui2.Page
         function buildSafetyGroup(obj, parent, row)
             %BUILDSAFETYGROUP  The four factors of safety.
             panel = uipanel(parent, 'Title', 'Factors of Safety');
-            panel.Layout.Row = row;
-            g = uigridlayout(panel, [4 4]);
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+            g = uigridlayout(panel, [4 3]);
             g.ColumnWidth = gui2.FactorsPage.RowColumns;
             g.RowHeight   = repmat({'fit'}, 1, 4);
             g.RowSpacing  = 4;

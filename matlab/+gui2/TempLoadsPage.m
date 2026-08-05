@@ -46,9 +46,13 @@ classdef TempLoadsPage < gui2.Page
         end
 
         function build(obj, parent)
-            g = uigridlayout(parent, [3 1]);
+            % Column 2 is a flexible gutter: the panel in column 1 sizes to
+            % its content, so three two-digit temperatures do not get a box
+            % the width of the window. The banner still spans both columns,
+            % because a wrapping warning needs the width.
+            g = uigridlayout(parent, [3 2]);
             g.RowHeight   = {'fit', 'fit', '1x'};
-            g.ColumnWidth = {'1x'};
+            g.ColumnWidth = {'fit', '1x'};
             g.Padding     = [8 8 8 8];
             g.RowSpacing  = 8;
             g.Scrollable  = 'on';
@@ -58,6 +62,7 @@ classdef TempLoadsPage < gui2.Page
                 'analysis AND every joint in a bulk run; it is not scoped to ' ...
                 'whichever joint you last had open.']);
             banner.Layout.Row      = 1;
+            banner.Layout.Column   = [1 2];
             banner.WordWrap        = 'on';
             banner.FontWeight      = 'bold';
             banner.BackgroundColor = gui2.palette('bannerWarnBg');
@@ -65,10 +70,16 @@ classdef TempLoadsPage < gui2.Page
             obj.BannerLabel = banner;
 
             degC = [char(176) 'C'];   % matches +gui's own degree-symbol idiom
-            panel = uipanel(g, 'Title', ['Service Temperatures (' degC ')']);
-            panel.Layout.Row = 2;
-            pg = uigridlayout(panel, [3 2]);
-            pg.ColumnWidth = {'fit', '1x'};
+            % No unit in the title: every row now carries its own.
+            panel = uipanel(g, 'Title', 'Service Temperatures');
+            panel.Layout.Row    = 2;
+            panel.Layout.Column = 1;
+            pg = uigridlayout(panel, [3 3]);
+            % Same shape as the Factors page: fixed name / value columns so
+            % the rows read as a table, plus the unit. Temperatures have no
+            % symbol worth a column, so the third holds the unit instead —
+            % and it belongs after the number, where it is read.
+            pg.ColumnWidth = {90, 90, 'fit'};
             pg.RowHeight   = {'fit', 'fit', 'fit'};
             pg.RowSpacing  = 4;
             pg.Padding     = [6 6 6 6];
@@ -79,9 +90,9 @@ classdef TempLoadsPage < gui2.Page
                 'Hot = maximum, Cold = minimum. Must satisfy Cold <= ' ...
                 'Nominal <= Hot.'];
 
-            obj.NominalField = obj.addTempField(pg, 1, 'Nominal:', tip);
-            obj.HotField     = obj.addTempField(pg, 2, 'Hot:', tip);
-            obj.ColdField    = obj.addTempField(pg, 3, 'Cold:', tip);
+            obj.NominalField = obj.addTempField(pg, 1, 'Nominal', degC, tip);
+            obj.HotField     = obj.addTempField(pg, 2, 'Hot',     degC, tip);
+            obj.ColdField    = obj.addTempField(pg, 3, 'Cold',    degC, tip);
 
             obj.listenTo('SettingsChanged', @() obj.refresh());
         end
@@ -110,16 +121,24 @@ classdef TempLoadsPage < gui2.Page
 
     % ---- Widget <-> AppState -----------------------------------------------
     methods (Access = private)
-        function c = addTempField(obj, g, row, labelText, tip)
+        function c = addTempField(obj, g, row, labelText, unitText, tip)
+            %ADDTEMPFIELD  Name | value | unit, one row of the temp grid.
             lb = uilabel(g, 'Text', char(labelText));
             lb.Layout.Row    = row;
             lb.Layout.Column = 1;
             lb.Tooltip = tip;
+
             c = uieditfield(g, 'numeric');
             c.Layout.Row    = row;
             c.Layout.Column = 2;
             c.Tooltip = tip;
             obj.bindEdit(c, @(~, ~) obj.onTempEdited());
+
+            un = uilabel(g, 'Text', char(unitText));
+            un.Layout.Row    = row;
+            un.Layout.Column = 3;
+            un.FontColor     = gui2.palette('mutedText');
+            un.Tooltip       = tip;
         end
 
         function onTempEdited(obj)
