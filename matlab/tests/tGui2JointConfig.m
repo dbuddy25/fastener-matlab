@@ -69,50 +69,50 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
             testCase.verifyNotEmpty(strtrim(p.ratedUltField().Value), ...
                 'Rated ultimate did not auto-fill from the library.');
-            testCase.verifyEqual(p.ratedUltField().Enable, 'off', ...
+            testCase.verifyEqual(char(p.ratedUltField().Enable), 'off', ...
                 'Auto-filled rated loads must be LOCKED, not editable (A5).');
-            testCase.verifyEqual(p.ratedYieldField().Enable, 'off');
+            testCase.verifyEqual(char(p.ratedYieldField().Enable), 'off');
         end
 
         function ratedOverrideUnlocksTheRatedFields(testCase)
             p = testCase.Page;
             testCase.press(p.ratedOverrideCheck());
-            testCase.verifyEqual(p.ratedUltField().Enable, 'on', ...
+            testCase.verifyEqual(char(p.ratedUltField().Enable), 'on', ...
                 'The explicit override must unlock the rated fields.');
-            testCase.verifyEqual(p.ratedYieldField().Enable, 'on');
+            testCase.verifyEqual(char(p.ratedYieldField().Enable), 'on');
 
             testCase.press(p.ratedOverrideCheck());   % back to library control
-            testCase.verifyEqual(p.ratedUltField().Enable, 'off');
+            testCase.verifyEqual(char(p.ratedUltField().Enable), 'off');
         end
 
         function nutSpecFillsAndLocksItsDependentsAndCustomReleasesThem(testCase)
             p = testCase.Page;
             testCase.choose(p.memberTypeDropDown(), 'Nut');
 
-            token = testCase.firstResolvableNutSpec();
-            testCase.assumeNotEmpty(token, ...
+            specLabel = testCase.firstResolvableNutSpec();
+            testCase.assumeNotEmpty(specLabel, ...
                 'No nut family in the library resolves at any seeded bolt size.');
 
-            testCase.choose(p.nutSpecDropDown(), token);
-            testCase.verifyEqual(p.engagementField().Enable, 'off', ...
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+            testCase.verifyEqual(char(p.engagementField().Enable), 'off', ...
                 'A resolved nut spec must LOCK the fields it filled (A5).');
-            testCase.verifyEqual(p.memberMaterialDropDown().Enable, 'off');
+            testCase.verifyEqual(char(p.memberMaterialDropDown().Enable), 'off');
             testCase.verifyNotEmpty(strtrim(p.engagementField().Value), ...
                 'A resolved nut spec must fill the engagement length.');
 
             testCase.choose(p.nutSpecDropDown(), 'Custom');
-            testCase.verifyEqual(p.engagementField().Enable, 'on', ...
+            testCase.verifyEqual(char(p.engagementField().Enable), 'on', ...
                 'Custom must re-enable the fields — the manual path is permanent.');
-            testCase.verifyEqual(p.memberMaterialDropDown().Enable, 'on');
+            testCase.verifyEqual(char(p.memberMaterialDropDown().Enable), 'on');
         end
 
         function nutSpecIsDisabledWhenTheMemberIsNotANut(testCase)
             p = testCase.Page;
             testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
-            testCase.verifyEqual(p.nutSpecDropDown().Enable, 'off', ...
+            testCase.verifyEqual(char(p.nutSpecDropDown().Enable), 'off', ...
                 'The nut-spec picker is meaningful only for a Nut.');
             testCase.verifyEqual(char(p.nutSpecDropDown().Value), 'Custom');
-            testCase.verifyEqual(p.engagementField().Enable, 'on', ...
+            testCase.verifyEqual(char(p.engagementField().Enable), 'on', ...
                 'Non-Nut types leave the member fields freely editable.');
         end
     end
@@ -134,7 +134,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyEqual(char(nut.OD.Value), '0.50000', ...
                 'Same as Head did not mirror the head washer OD.');
             testCase.verifyEqual(nut.Thk.Value, 0.032);
-            testCase.verifyEqual(nut.OD.Enable, 'off', ...
+            testCase.verifyEqual(char(nut.OD.Enable), 'off', ...
                 'A mirrored nut washer must be grayed out.');
 
             testCase.press(p.sameAsHeadCheck());   % untick
@@ -146,10 +146,10 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
         function nutWasherGroupIsDisabledWhenTheMemberIsNotANut(testCase)
             p = testCase.Page;
             testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
-            testCase.verifyEqual(p.nutWasher().Present.Enable, 'off', ...
+            testCase.verifyEqual(char(p.nutWasher().Present.Enable), 'off', ...
                 ['With no nut there is no washer under one — the whole ' ...
                  'group is the outermost gate.']);
-            testCase.verifyEqual(p.sameAsHeadCheck().Enable, 'off');
+            testCase.verifyEqual(char(p.sameAsHeadCheck().Enable), 'off');
         end
     end
 
@@ -192,15 +192,15 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % read-only (A5).
             p = testCase.Page;
             testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
-            testCase.verifyEqual(p.engagementRatioField().Enable, 'on', ...
+            testCase.verifyEqual(char(p.engagementRatioField().Enable), 'on', ...
                 'Insert uses the x-bolt-D field.');
-            testCase.verifyEqual(p.engagementField().Enable, 'off', ...
+            testCase.verifyEqual(char(p.engagementField().Enable), 'off', ...
                 'Insert must grey the inches field.');
 
             testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
-            testCase.verifyEqual(p.engagementRatioField().Enable, 'off', ...
+            testCase.verifyEqual(char(p.engagementRatioField().Enable), 'off', ...
                 'Tapped Hole must grey the x-bolt-D field.');
-            testCase.verifyEqual(p.engagementField().Enable, 'on');
+            testCase.verifyEqual(char(p.engagementField().Enable), 'on');
         end
 
         function memberMaterialLabelFollowsTheMemberType(testCase)
@@ -237,7 +237,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyTrue(strlength(strtrim(string( ...
                 p.boltMaterialDropDown().Value))) == 0, ...
                 'Bolt material must START BLANK, never on the first library entry (A6).');
-            testCase.verifyEqual(p.analyzeButton().Enable, 'off', ...
+            testCase.verifyEqual(char(p.analyzeButton().Enable), 'off', ...
                 'Analyze must be gated while a required material is blank.');
             testCase.verifyTrue(contains(string(p.analyzeButton().Tooltip), ...
                 "Bolt material"), ...
@@ -284,7 +284,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
         function analyzePopulatesAppStateResult(testCase)
             p = testCase.Page;
             testCase.buildAnalyzableJoint();
-            testCase.assumeEqual(p.analyzeButton().Enable, 'on', ...
+            testCase.assumeEqual(char(p.analyzeButton().Enable), 'on', ...
                 'Could not complete the form enough for Analyze to be enabled.');
 
             fired = false;
@@ -365,13 +365,19 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             end
         end
 
-        function token = firstResolvableNutSpec(testCase)
+        function label = firstResolvableNutSpec(testCase)
             %FIRSTRESOLVABLENUTSPEC  A nut family that resolves at the bolt
             %   currently selected on the page, selecting a bolt if needed.
-            token = '';
+            %
+            %   Returns the DISPLAY LABEL, not the token. The picker carries
+            %   labels in Items and bare tokens in ItemsData, and
+            %   matlab.uitest's choose() matches on Items - exactly what a
+            %   user clicks. Passing the token raises
+            %   MATLAB:uiautomation:Driver:NoOptionMatch.
+            label = '';
             p   = testCase.Page;
             lib = testCase.App.State.Library;
-            [specs, ~] = lib.nutSpecs();
+            [specs, labels] = lib.nutSpecs();
             bolts = lib.boltKeys();
             for s = 1:numel(specs)
                 for b = 1:numel(bolts)
@@ -379,7 +385,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                     if ~isempty(lib.nutFor(bolt.NominalDiameter, ...
                             bolt.ThreadsPerInch, specs(s)))
                         testCase.choose(p.boltDropDown(), char(bolts(b)));
-                        token = char(specs(s));
+                        label = char(labels(s));
                         return
                     end
                 end

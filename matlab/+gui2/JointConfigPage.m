@@ -1381,7 +1381,7 @@ classdef JointConfigPage < gui2.Page
         end
 
         function tf = flangeRowInUse(obj, i)
-            t = obj.FlangeThickness{i}.Value
+            t = obj.FlangeThickness{i}.Value;
             tf = obj.FlangeActive{i}.Value && isfinite(t) && t > 0;
         end
 
@@ -1969,7 +1969,7 @@ classdef JointConfigPage < gui2.Page
         end
 
         function items = enumItems(~, enumClass)
-            members = enumeration(enumClass)
+            members = enumeration(enumClass);
             items = cellstr(string(members(:)'));
         end
 
@@ -2138,7 +2138,7 @@ classdef JointConfigPage < gui2.Page
         end
 
         function s = washerSizeLabel(w)
-            thk = sprintf('%.3f', w.Thickness)
+            thk = sprintf('%.3f', w.Thickness);
             s = sprintf('%s - %s thk', char(w.Key), thk(2:end));
         end
 
