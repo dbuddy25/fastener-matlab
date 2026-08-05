@@ -148,6 +148,39 @@ classdef tGui2SetupPages < matlab.uitest.TestCase
         end
     end
 
+    % ---- Always-live summary bar ---------------------------------------------
+    methods (Test)
+        function summaryBarTracksFactorsAndTempsFromAnyPage(testCase)
+            % The bar's whole point is being readable while working
+            % somewhere else, so assert from a page that is neither
+            % Factors nor Temp Loads.
+            testCase.App.navigateTo("Factors");
+            testCase.type(testCase.App.page("Factors").fsuField(), 1.75);
+
+            testCase.App.navigateTo("TempLoads");
+            testCase.type(testCase.App.page("TempLoads").hotField(), 88);
+
+            testCase.App.navigateTo("Project");
+            txt = string(testCase.App.summaryText());
+
+            testCase.verifyTrue(contains(txt, "1.75"), ...
+                'Summary bar did not pick up the edited ultimate FS.');
+            testCase.verifyTrue(contains(txt, "88"), ...
+                'Summary bar did not pick up the edited hot temperature.');
+        end
+
+        function summaryBarNamesAMixedFittingSetRatherThanOneNumber(testCase)
+            % Rendering one FF value while the case holds four unequal ones
+            % would state something the case does not hold - the summary
+            % equivalent of GUI2_HARVEST.md A1.
+            testCase.App.State.Factors = model.Factors( ...
+                FFU=1.15, FFY=1.0, FFSep=1.0, FFSlip=1.0);
+            txt = string(testCase.App.summaryText());
+            testCase.verifyTrue(contains(txt, "mixed"), ...
+                'Summary bar rendered a mixed fitting-factor set as a single value.');
+        end
+    end
+
     % ---- Temp Loads -----------------------------------------------------------
     methods (Test)
         function bannerNamesTheGlobalScope(testCase)

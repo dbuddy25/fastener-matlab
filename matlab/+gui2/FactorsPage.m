@@ -63,16 +63,20 @@ classdef FactorsPage < gui2.Page
             % Column 2 is a flexible gutter that absorbs the window width,
             % so the panels in column 1 size to their content instead of
             % stretching across the page around three narrow fields.
-            g = uigridlayout(parent, [4 2]);
-            g.RowHeight   = {'fit', 'fit', 'fit', '1x'};
+            g = uigridlayout(parent, [5 2]);
+            g.RowHeight   = {'fit', 'fit', 'fit', 'fit', '1x'};
             g.ColumnWidth = {'fit', '1x'};
             g.Padding     = [8 8 8 8];
             g.RowSpacing  = 8;
             g.Scrollable  = 'on';
 
-            obj.buildFittingGroup(g, 1);
-            obj.buildMixedBanner(g, 2);
-            obj.buildSafetyGroup(g, 3);
+            obj.addBanner(g, 1, [1 2], ...
+                ['Applies to BOTH analyses — the single-joint Analyze and ' ...
+                 'every joint in a bulk run use this one set of factors. ' ...
+                 'They are case state, saved and loaded with the case file.']);
+            obj.buildFittingGroup(g, 2);
+            obj.buildMixedBanner(g, 3);
+            obj.buildSafetyGroup(g, 4);
 
             obj.listenTo('FactorsChanged', @() obj.refresh());
         end

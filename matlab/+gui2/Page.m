@@ -122,6 +122,26 @@ classdef (Abstract) Page < handle
 
     % ---- Page-facing helpers. Called by subclasses. ----------------------
     methods (Access = protected, Sealed)
+        function lb = addBanner(~, parent, row, cols, text)
+            %ADDBANNER  The page-scope note that sits above a page's content.
+            %   ONE format for every page. These banners say what a page is
+            %   and what its contents affect — they are informational, not
+            %   warnings, so they all take the info palette. A page that
+            %   styled its own as an amber warning would read as a problem
+            %   the analyst has to resolve, and inconsistent banner styling
+            %   across pages reads as a bug even when each one is legible.
+            %
+            %   Emphasis belongs in the WORDS ("GLOBAL — applies to every
+            %   joint"), not in per-page colors.
+            lb = uilabel(parent, 'Text', text);
+            lb.Layout.Row    = row;
+            lb.Layout.Column = cols;
+            lb.WordWrap        = 'on';
+            lb.VerticalAlignment = 'top';
+            lb.BackgroundColor = gui2.palette('bannerInfoBg');
+            lb.FontColor       = gui2.palette('bannerInfoFg');
+        end
+
         function setStatus(obj, msg)
             %SETSTATUS  Write a one-line message to the shell's status bar.
             %   The route every page uses for INFORMATIONAL outcomes —

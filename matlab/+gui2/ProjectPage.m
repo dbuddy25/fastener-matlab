@@ -45,13 +45,9 @@ classdef ProjectPage < gui2.Page
             g.RowSpacing  = 8;
             g.Scrollable  = 'on';
 
-            banner = uilabel(g, 'Text', ['Project metadata — never analyzed. ' ...
+            obj.addBanner(g, 1, 1, ['Project metadata — never analyzed. ' ...
                 'It flows to reports and exports only; nothing here affects ' ...
                 'a margin.']);
-            banner.Layout.Row      = 1;
-            banner.WordWrap        = 'on';
-            banner.BackgroundColor = gui2.palette('bannerInfoBg');
-            banner.FontColor       = gui2.palette('bannerInfoFg');
 
             panel = uipanel(g, 'Title', 'Project');
             panel.Layout.Row = 2;

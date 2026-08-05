@@ -53,6 +53,7 @@ classdef FastenerApp < handle
         RailGrid
         CardGrid
         StatusLabel
+        SummaryLabel
         RecentMenu
 
         % Pages, in rail order. Struct array:
@@ -99,7 +100,13 @@ classdef FastenerApp < handle
                     @(~, ~) app.refreshRailGlyphs());
             end
 
+            for e = ["FactorsChanged", "SettingsChanged"]
+                app.Listeners(end + 1) = event.listener(app.State, char(e), ...
+                    @(~, ~) app.refreshSummary());
+            end
+
             app.updateTitle();
+            app.refreshSummary();
             app.navigateTo(app.Pages(1).Page.pageId());
 
             app.Fig.Visible = 'on';
@@ -125,6 +132,21 @@ classdef FastenerApp < handle
         end
     end
 
+    % ---- Static helpers ---------------------------------------------------
+    methods (Static, Access = private)
+        function v = settingNum(st, name)
+            %SETTINGNUM  One numeric field of AppState.Settings, or NaN.
+            %   Tolerant on purpose: a case file written by an older build
+            %   can be missing a field, and the summary bar must degrade to
+            %   NaN rather than throw and take the whole window with it.
+            if isstruct(st) && isfield(st, name)
+                v = double(st.(name));
+            else
+                v = NaN;
+            end
+        end
+    end
+
     % ---- Public shell surface: what pages and tests call ------------------
     methods
         function setStatus(app, msg)
@@ -141,6 +163,43 @@ classdef FastenerApp < handle
                 return
             end
             app.StatusLabel.Text = char(msg);
+        end
+
+        function refreshSummary(app)
+            %REFRESHSUMMARY  Repaint the always-visible factors/temps bar.
+            %   Public so tests can assert on it without a gesture, and so
+            %   a later page can force a repaint after a bulk state swap.
+            if isempty(app.SummaryLabel) || ~isvalid(app.SummaryLabel)
+                return
+            end
+            f = app.State.Factors;
+
+            % Unequal fitting factors must NOT render as a single number —
+            % that would state a value the case does not hold (the summary
+            % equivalent of GUI2_HARVEST.md A1). Name the mixed set instead.
+            ff = [f.FFU, f.FFY, f.FFSep, f.FFSlip];
+            if all(ff == ff(1))
+                ffTxt = sprintf('FF %g', ff(1));
+            else
+                ffTxt = sprintf('FF mixed %g/%g/%g/%g', ff(1), ff(2), ff(3), ff(4));
+            end
+
+            degC = [char(176) 'C'];
+            s = app.State.Settings;
+            app.SummaryLabel.Text = sprintf( ...
+                ['%s     FS:  yield %g · ult %g · sep %g · slip %g' ...
+                 '     Temp:  nom %g · hot %g · cold %g %s'], ...
+                ffTxt, f.FSY, f.FSU, f.FSSep, f.FSSlip, ...
+                gui2.FastenerApp.settingNum(s, 'NominalTempC'), ...
+                gui2.FastenerApp.settingNum(s, 'HotTempC'), ...
+                gui2.FastenerApp.settingNum(s, 'ColdTempC'), degC);
+        end
+
+        function t = summaryText(app)
+            %SUMMARYTEXT  Current text of the always-live summary bar.
+            %   A read-only seam for tests, so they assert on what the bar
+            %   actually shows rather than re-deriving it.
+            t = string(app.SummaryLabel.Text);
         end
 
         function navigateTo(app, pageId)
@@ -218,9 +277,9 @@ classdef FastenerApp < handle
     methods (Access = private)
         function buildLayout(app)
             %BUILDLAYOUT  Root grid: rail | cards, with the status bar under both.
-            root = uigridlayout(app.Fig, [2 2]);
+            root = uigridlayout(app.Fig, [3 2]);
             root.ColumnWidth = {gui2.FastenerApp.RailWidth, '1x'};
-            root.RowHeight   = {'1x', 22};
+            root.RowHeight   = {'1x', 22, 22};
             root.Padding     = [4 4 4 4];
             root.RowSpacing  = 4;
             root.ColumnSpacing = 6;
@@ -243,9 +302,20 @@ classdef FastenerApp < handle
             app.CardGrid.RowHeight     = {'1x'};
             app.CardGrid.ColumnWidth   = {'1x'};
 
+            % Always-live summary of the factors and temperatures every
+            % analysis on every page runs with. These are global, they are
+            % edited two pages away from where they are used, and there is
+            % no other way to see them without navigating off whatever you
+            % are doing. Read-only: this bar shows state, it never sets it.
+            app.SummaryLabel = uilabel(root, 'Text', '', ...
+                'HorizontalAlignment', 'left');
+            app.SummaryLabel.Layout.Row    = 2;
+            app.SummaryLabel.Layout.Column = [1 2];
+            app.SummaryLabel.FontColor     = gui2.palette('mutedText');
+
             app.StatusLabel = uilabel(root, 'Text', '', ...
                 'HorizontalAlignment', 'left');
-            app.StatusLabel.Layout.Row    = 2;
+            app.StatusLabel.Layout.Row    = 3;
             app.StatusLabel.Layout.Column = [1 2];
         end
 
