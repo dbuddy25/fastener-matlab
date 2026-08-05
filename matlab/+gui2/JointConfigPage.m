@@ -1215,7 +1215,18 @@ classdef JointConfigPage < gui2.Page
                 return
             end
             try
-                probe = model.Joint(FlangeStack = obj.collectFlangeLayers());
+                layers = obj.collectFlangeLayers();
+                if isempty(layers)
+                    % A1: unknown must never look like fine. An empty stack
+                    % is "nothing to measure yet", and rendering it as
+                    % 0 in states a grip the joint does not have - a row
+                    % with a thickness typed but no material chosen is
+                    % skipped by collectFlangeLayers, so 0 is exactly what
+                    % an analyst mid-entry would otherwise be shown.
+                    obj.GripLabel.Text = 'Grip length: — (no complete flange layer)';
+                    return
+                end
+                probe = model.Joint(FlangeStack = layers);
                 obj.GripLabel.Text = sprintf('Grip length: %g in', probe.GripLength);
             catch
                 obj.GripLabel.Text = 'Grip length: —';
@@ -1617,7 +1628,7 @@ classdef JointConfigPage < gui2.Page
                 JointTensileLimitLoad = gui2.JointConfigPage.parseOptional( ...
                                             obj.JointTensileField, 'Joint tensile limit load'), ...
                 JointShearLimitLoad   = gui2.JointConfigPage.parseOptional( ...
-                                            obj.JointShearField, 'Joint shear limit load'))
+                                            obj.JointShearField, 'Joint shear limit load'));
             
         end
 
@@ -1860,7 +1871,12 @@ classdef JointConfigPage < gui2.Page
             if isempty(obj.Root) || ~isvalid(obj.Root) || ~obj.Root.Visible
                 return   % another page is showing
             end
-            if ~strcmp(obj.AnalyzeButton.Enable, 'on')
+            % logical(), not strcmp(): Enable is a matlab.lang.OnOffSwitchState
+            % (a logical subclass), and strcmp returns 0 for any non-char
+            % input - so this test was always false, the guard always
+            % returned, and F5 never reached onAnalyze. Same type confusion
+            % the tests hit; this was its only production instance.
+            if ~logical(obj.AnalyzeButton.Enable)
                 return   % required fields missing; the button already says so
             end
             obj.onAnalyze();

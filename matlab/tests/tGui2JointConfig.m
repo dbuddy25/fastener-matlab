@@ -263,10 +263,34 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
     % ---- Readouts ----------------------------------------------------------
     methods (Test)
         function gripReadoutFollowsTheFlangeStack(testCase)
-            p = testCase.Page;
+            % A row reaches the stack only when it is Active, has a
+            % thickness AND has a material - collectFlangeLayers skips it
+            % otherwise. Typing a thickness alone leaves the stack empty,
+            % which the readout must report as unknown rather than as a
+            % grip of zero (A1), so the row has to be completed first.
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            mats = lib.materialKeys();
+            testCase.assumeNotEmpty(mats, 'No materials in the library.');
+
+            testCase.choose(p.flangeMaterial(1), char(mats(1)));
             testCase.type(p.flangeThickness(1), 0.25);
+
             testCase.verifyTrue(contains(string(p.gripLabel().Text), "0.25"), ...
                 'The grip readout must follow the stack it is derived from.');
+        end
+
+        function gripReadoutReportsAnIncompleteRowAsUnknownNotZero(testCase)
+            % A1: a thickness typed before a material is chosen must not
+            % render as "Grip length: 0 in" - that states a grip the joint
+            % does not have, at exactly the moment an analyst is mid-entry.
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), 0.25);
+            txt = string(p.gripLabel().Text);
+            testCase.verifyFalse(contains(txt, "0 in"), ...
+                'An incomplete flange row must not read as a grip of zero.');
+            testCase.verifyTrue(contains(txt, char(8212)), ...
+                'An unevaluated grip shows an em dash (A1).');
         end
 
         function boltLengthReadoutRendersFourLinesAndNeverBlank(testCase)
