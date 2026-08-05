@@ -183,21 +183,12 @@ Help   About                               (built)
        User Guide | Equation Reference     (step 10 — needs the bundled PDFs)
 ```
 
-**`F5` runs Analyze** — from the `uifigure` `KeyPressFcn`. Noted because
-`GUI_PORT_SPEC.md` §11 claimed this existed in the first build and it never
-did; there is no `KeyPressFcn` anywhere in `+gui`.
-
-> **Installed by Joint Config, not by the shell**, and guarded on that page
-> being visible. The handler has to be figure-level because that is where
-> MATLAB delivers keys, so this is one place a page reaches outside itself —
-> a known wart, taken over inventing a shell key-dispatch for a single
-> shortcut. **The trigger to fix it:** the moment a second page wants a key,
-> dispatch moves to `FastenerApp` and this moves with it.
-
-**Navigation is one method.** `app.navigateTo(pageId)` builds the page if
-needed, swaps visibility, refreshes it from state, and updates the rail. The
-pre-validation dialogs call it by name (`navigateTo("ElementMapping")`) rather
-than poking a tab-group property.
+> **No keyboard shortcut for Analyze.** `GUI_PORT_SPEC.md` §11 claimed the
+> first build ran Analyze on `F5`; it never did — there is no `KeyPressFcn`
+> anywhere in `+gui`. An earlier draft of this section specified one anyway,
+> on the strength of that claim. It was built, it required a figure-level
+> handler that made a page reach outside itself, and it shipped broken.
+> Removed: the button is the whole interface, and this is an MVP.
 
 ---
 

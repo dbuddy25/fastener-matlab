@@ -184,7 +184,7 @@ classdef JointConfigPage < gui2.Page
             g.Scrollable  = 'on';
 
             obj.addBanner(g, 1, [1 2], ...
-                ['Define one joint and its limit loads, then Analyze (F5). ' ...
+                ['Define one joint and its limit loads, then Analyze. ' ...
                  'The left column follows the physical stack, top to bottom. ' ...
                  'Factors and service temperatures are global — they live on ' ...
                  'their own pages and are shown in the bar at the bottom of ' ...
@@ -210,7 +210,6 @@ classdef JointConfigPage < gui2.Page
             % Initial sync. Order matters: the spec pickers depend on the
             % bolt selection, and the length readout depends on all of them.
             obj.populateSpecPickers();
-            obj.installAnalyzeShortcut();
             obj.updateSpecFields(false);
             obj.updateEngagementFieldMode();
             obj.applyNutSpec();
@@ -704,7 +703,7 @@ classdef JointConfigPage < gui2.Page
             obj.AnalyzeButton.Layout.Column = [1 3];
             obj.AnalyzeDefaultTooltip = ['Marshal these controls into a joint ' ...
                 'and load case, take the global factors and temperatures, ' ...
-                'and run engine.analyze. F5 does the same.'];
+                'and run engine.analyze.'];
             obj.AnalyzeButton.Tooltip = obj.AnalyzeDefaultTooltip;
             obj.AnalyzeButton.ButtonPushedFcn = @(~, ~) obj.onAnalyze();
 
@@ -1839,97 +1838,6 @@ classdef JointConfigPage < gui2.Page
 
         function fig = figureHandle(obj)
             fig = ancestor(obj.Root, 'figure');
-        end
-
-        function installAnalyzeShortcut(obj)
-            %INSTALLANALYZESHORTCUT  F5 runs Analyze (GUI2_SPEC.md Section 4).
-            %   GUI_PORT_SPEC.md Section 11 claimed the first build had this;
-            %   it never did, so there was nothing to port.
-            %
-            %   The handler is figure-level because that is the only place
-            %   MATLAB delivers key presses, but it GUARDS ON THIS PAGE
-            %   BEING VISIBLE: Analyze is meaningless from Element Forces,
-            %   and a global shortcut that fires from anywhere would run a
-            %   marshal the user never asked for.
-            %
-            %   A page reaching for the figure is a wart. It is here because
-            %   the shell has no key-dispatch mechanism and inventing one
-            %   for a single shortcut would be speculative. If a second page
-            %   ever wants a key, that dispatch belongs in gui2.FastenerApp
-            %   and this moves to it.
-            fig = obj.figureHandle();
-            if isempty(fig) || ~isvalid(fig)
-                return
-            end
-            fig.KeyPressFcn = @(~, evt) obj.onFigureKey(evt);
-        end
-
-        function onFigureKey(obj, evt)
-            if ~strcmp(evt.Key, 'f5')
-                return
-            end
-            if isempty(obj.Root) || ~isvalid(obj.Root) || ~obj.Root.Visible
-                return   % another page is showing
-            end
-            % logical(), not strcmp(): Enable is a matlab.lang.OnOffSwitchState
-            % (a logical subclass), and strcmp returns 0 for any non-char
-            % input - so this test was always false, the guard always
-            % returned, and F5 never reached onAnalyze. Same type confusion
-            % the tests hit; this was its only production instance.
-            if ~logical(obj.AnalyzeButton.Enable)
-                return   % required fields missing; the button already says so
-            end
-            obj.onAnalyze();
-        end
-    end
-
-    % ---- Small helpers -----------------------------------------------------
-    methods (Access = private)
-        function b = addGroup(obj, parent, row, titleText, expanded)
-            %ADDGROUP  A collapsible section. Returns the body grid.
-            %   The header is a state button, the body a panel whose row
-            %   height toggles between 'fit' and 0.
-            %
-            %   DEVIATION FROM GUI2_SPEC.md 7.5, deliberately: the body is
-            %   BUILT EAGERLY and only its visibility toggles. 7.5 asks for
-            %   collapsed groups to stay unbuilt, for render cost. But
-            %   buildJoint reads EVERY control to marshal a model.Joint, so
-            %   a control that does not exist is a marshalling failure, not
-            %   a saving. Correctness beats the first paint here; the
-            %   collapse still shrinks the page an analyst has to scan.
-            % Both rows set explicitly. A grid's default row height is
-            % '1x', which would stretch the first group's header to fill
-            % the column.
-            h = parent.RowHeight;
-            while numel(h) < row + 1
-                h{end + 1} = 'fit'; %#ok<AGROW>
-            end
-            h{row}     = 'fit';   % header button
-            h{row + 1} = 'fit';   % body, until applyGroupState collapses it
-            parent.RowHeight = h;
-
-            btn = uibutton(parent, 'state', 'Value', expanded, ...
-                'HorizontalAlignment', 'left', 'FontWeight', 'bold');
-            btn.Layout.Row    = row;
-            btn.Layout.Column = 1;
-            btn.Text = gui2.JointConfigPage.groupCaption(titleText, expanded);
-
-            panel = uipanel(parent, 'BorderType', 'line');
-            panel.Layout.Row    = row + 1;
-            panel.Layout.Column = 1;
-
-            b = uigridlayout(panel, [8 3]);
-            b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
-                             gui2.JointConfigPage.ValueW, '1x'};
-            b.RowHeight   = repmat({'fit'}, 1, 8);
-            b.RowSpacing  = 4;
-            b.Padding     = [6 6 6 6];
-
-            k = numel(obj.Groups) + 1;
-            obj.Groups(k) = struct('Button', btn, 'Body', panel, ...
-                'Grid', parent, 'Row', row + 1, 'Title', string(titleText));
-            btn.ValueChangedFcn = @(~, ~) obj.toggleGroup(k);
-            obj.applyGroupState(k);
         end
 
         function toggleGroup(obj, k)
