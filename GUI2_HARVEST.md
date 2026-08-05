@@ -448,6 +448,39 @@ helpers. Rules earned building `+gui2`'s versions, not already covered by §A:
 - Washer options show the **spec name** (`NAS1149 - Standard OD`), not thickness.
 - No `(optional)` placeholders on project metadata.
 
+### Layout conventions established in `+gui2`
+
+Settled while building the setup pages. Follow them; they are what makes the
+pages look like one application.
+
+- **One banner format, from `gui2.Page.addBanner`.** Page-scope notes — what
+  this page is, what its contents affect — are informational and all take the
+  info palette. Never style one as an amber warning: it reads as a problem to
+  resolve, and mismatched banners across pages read as a bug even when each is
+  legible on its own. Emphasis goes in the words (`GLOBAL — applies to every
+  joint`), never in per-page color.
+- **Field rows are name | symbol | value**, with **fixed** pixel widths for the
+  name and symbol columns. `'fit'` resolves *per grid*, so two panels using the
+  same spec still misalign — fixed widths are what make separate panels read as
+  one table.
+- **Section panels hug their content.** Give the page grid a trailing `'1x'`
+  gutter column and put panels in column 1. A panel stretched across the window
+  around three narrow fields looks broken.
+- **Value boxes never stretch.** A wide numeric box reads as a text field.
+- **Wrapping text does not go inside a content-width panel** — it becomes a tall
+  thin column of words. Banners and warnings span the page grid instead.
+- **Successful actions report through `Page.setStatus`, never `uialert`.** A
+  modal for routine success interrupts the user and blocks the App Testing
+  Framework's gestures, so the next `press`/`type` in a test silently does
+  nothing and an unrelated assertion fails later. `uialert` is for errors the
+  user must acknowledge.
+- **The footer summary bar is read-only.** It shows global state (factors,
+  temperatures); it never sets any. Values that could be misread must name their
+  own uncertainty — unequal fitting factors render `FF mixed a/b/c/d`, never a
+  single number.
+- **Test seams are public getters** returning real handles, so tests drive
+  gestures rather than poking private state.
+
 **Units** — ⚠ **`GUI_PORT_SPEC.md` §12 describes the original tool, not this
 one.** The MATLAB build has **no unit layer**: US customary throughout, °C for
 temperature (engine-native), with the °F display toggle and a metric system both
