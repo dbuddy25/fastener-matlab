@@ -28,7 +28,7 @@ classdef FastenerApp < handle
 
     properties (Constant, Access = private)
         % Rail geometry.
-        RailWidth   = 155
+        RailWidth   = 160
         RailRowH    = 30
         RailSectionH = 26
 
