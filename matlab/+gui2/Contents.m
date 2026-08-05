@@ -54,6 +54,7 @@
 %
 %   NOT BUILT YET — every remaining rail entry is a PlaceholderPage naming
 %   its step:
+%     step 3  Joint Config
 %     step 4  Single Joint Results
 %     step 5  Defined Joints
 %     step 6  Element Mapping

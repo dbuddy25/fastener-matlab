@@ -105,16 +105,6 @@ classdef (Abstract) Page < handle
             %   refresh, and forcing an empty override on it would be noise.
         end
 
-        function tf = refreshOnNavigate(obj) %#ok<MANU>
-            %REFRESHONNAVIGATE  May the shell refresh this page on entry?
-            %   Default true: most pages render from AppState and want the
-            %   lazy tab-entry sync. A page whose CONTROLS are the working
-            %   truth - one that marshals a model object out of them and
-            %   cannot always marshal successfully - returns false, so a
-            %   navigation never overwrites what the user has typed.
-            tf = true;
-        end
-
         function s = railStatus(obj) %#ok<MANU>
             %RAILSTATUS  The rail's status GLYPH for this page.
             %   "" | "stale" | "loaded". This is the SECOND of the rail's
