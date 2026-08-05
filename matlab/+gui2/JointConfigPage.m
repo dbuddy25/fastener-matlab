@@ -223,6 +223,13 @@ classdef JointConfigPage < gui2.Page
             obj.listenTo('JointChanged',   @() obj.refresh());
             obj.listenTo('LoadCaseChanged', @() obj.refresh());
             obj.listenTo('LibraryChanged', @() obj.refreshLibraryDropdowns());
+            % Temperatures are global and live on their own page, but they
+            % are marshalled INTO model.Joint. Without this, editing Temp
+            % Loads and saving writes a joint carrying the old soak
+            % temperatures: the in-app Analyze re-marshals and is right, but
+            % the saved file feeds a headless engine.analyze the wrong
+            % thermal preload term (TFSR 5).
+            obj.listenTo('SettingsChanged', @() obj.commitJoint());
         end
 
         function refresh(obj)
