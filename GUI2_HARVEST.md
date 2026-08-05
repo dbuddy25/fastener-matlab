@@ -153,6 +153,68 @@ name.
 
 ## B. Per-page checklists
 
+### Setup pages (Project / Factors / Temp Loads) — harvested during the step-2 build
+
+These three split out of the old single "Project & Factors" tab
+(`buildProjectTab`, `+gui/FastenerApp.m` ~825–1010) plus its scattered
+helpers. Rules earned building `+gui2`'s versions, not already covered by §A:
+
+- **The FF field is a single knob over four engine slots, and the four can
+  disagree.** `model.Factors` keeps FFU/FFY/FFSep/FFSlip separately; the GUI
+  exposes one FF field (NASA-STD-5020B 4.2.2 [TFSR 3]: one factor multiplies
+  every factor of safety). A loaded case or applied preset can carry UNEQUAL
+  values (the DABJ fixture: FFU=1.15, the rest 1.0) — collapsing that onto one
+  field and writing it back on the next Analyze would silently change the
+  loaded margins. Preserve the four verbatim, show a mixed-FF banner, and only
+  collapse to one value when the analyst actually edits the FF field.
+  `model.Factors()`'s own default is the DABJ mixed set — a **blank case must
+  force the four slots uniform instead** (`AppState.blankCaseState` does
+  this), or a fresh case opens already in the mixed-FF warning state.
+- **There is no public enumerator for user-saved factor presets.** `+data`
+  exposes `factorPreset` (lookup by exact name — errors listing available
+  names in its message), `factorPresets` (built-in map only), and
+  `saveFactorPreset` (write-only). The on-disk reader
+  (`loadUserFactorPresets`) and the path resolver
+  (`userFactorPresetsPath`) are both `+data/private`, unreachable from
+  `+gui2`. A picker dropdown can therefore only reliably list the **built-in**
+  three; reaching a **user**-saved preset needs its exact name typed in (or
+  parsing the lookup error's "Available: ..." string, which is fragile — a
+  wording change silently breaks a dropdown with no test to catch it). Flagged
+  for the owner rather than worked around with string-parsing.
+- **Neither `factorPreset`/`saveFactorPreset` nor their private helpers take a
+  file override reachable from the GUI.** Both accept one for tests
+  (`saveFactorPreset(name, factors, file)`), but the GUI always calls the
+  2-arg form, so every preset Save/Load from the running app touches the
+  REAL user preset store (`userpath()/fastener_factor_presets.json`, or a
+  repo-local fallback file directly inside `+data/` when `userpath()` is
+  empty). A GUI test that exercises Save/Load for real must back that file up
+  and restore it byte-for-byte — the same discipline `tGui2Shell` already
+  applies to `gui2.recentFiles` — or every test run leaves permanent junk in
+  a real preset file, with no delete API to clean it up afterward.
+- **Temp Loads is the one place `AppState.Settings` can hold an invalid
+  ordering without the page's own entry-validation ever having run.**
+  `AppState.readCaseFile`/`parseSettings` copies `nominalTempC`/`hotTempC`/
+  `coldTempC` from a case file verbatim, with no Cold<=Nominal<=Hot check —
+  that check lives only in the Temp Loads page's edit handler. So `refresh()`
+  must show whatever AppState actually holds (never substitute a "nicer"
+  value — that would hide a bad file), but must NOT blindly adopt an invalid
+  incoming trio as the "last known good" value to revert to on the next bad
+  edit; keep the previous (guaranteed-valid) revert target instead.
+- **A `uidatepicker` has no supported blank state to carry through a round
+  trip.** `AppState.defaultProject().date` is `""` (a genuinely blank case),
+  but the picker widget always needs a real `datetime` — there is no
+  proven-safe way to show "no date" in it. The proven `+gui` behavior
+  (display today's date when the stored value is blank, but leave the
+  *committed* value blank until the analyst actually changes something) is
+  the safer carry-forward than experimenting with an untested "allow empty"
+  widget property this environment cannot verify.
+- **Bare `bindEdit` marks dirty even when a subsequent validation revert
+  leaves the case state itself unchanged** (e.g. Temp Loads rejecting an
+  invalid ordering and reverting the field). This is a harmless false
+  positive baked into `bindEdit`'s unconditional-dirty design (`Page.m`), not
+  a per-page bug to work around — it can only over-mark, never under-mark, a
+  real edit.
+
 ### Joint Config ⚠ (deepest read needed)
 
 - Live **grip length** and 4-line **bolt-length adequacy** readouts

@@ -99,7 +99,7 @@ Three consequences:
 ## 3. Information architecture — left rail, 10 pages
 
 Top tabs waste vertical space, which is the scarce dimension on 16:9. A rail
-costs ~190 px horizontally, where there is surplus, and gives the tall Joint
+costs ~145 px horizontally, where there is surplus, and gives the tall Joint
 Config form the height it needs.
 
 ```
@@ -135,7 +135,7 @@ Reference` on the menu bar, opening the bundled PDFs. Resolve paths via
 `uitabgroup(TabLocation='left')` is a flat list: no section headers, no
 per-item state. Build the rail as a left `uigridlayout` column of `uilabel`
 section headers plus `uibutton(..., 'state')` page items, with a card area on
-the right where one page is visible at a time. `ColumnWidth = {190, '1x'}` —
+the right where one page is visible at a time. `ColumnWidth = {145, '1x'}` —
 which fits the longest label bolded, once the labels are kept short.
 
 **Selection:** state buttons in a radio group — the click handler sets
@@ -163,7 +163,7 @@ empty-state placeholders that replace the content, and run-time pre-validation
 
 | Element | Mechanism |
 |---|---|
-| Rail + card area | root `uigridlayout`, `ColumnWidth = {190, '1x'}` |
+| Rail + card area | root `uigridlayout`, `ColumnWidth = {145, '1x'}` |
 | Page visibility | lazily built on first visit, then `Visible` toggled |
 | Status bar | `uilabel` in the root grid's bottom row; one `app.setStatus(msg)` |
 | Menu bar | `uimenu` on the `uifigure` |
