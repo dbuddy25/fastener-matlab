@@ -5,9 +5,10 @@ classdef JointConfigPage < gui2.Page
     %   watching a failure count move. Each increment here ends with the
     %   suite green before the next begins.
     %
-    %   STEP 1 (this one): the page shell and the Identity + Bolt group.
-    %   Later: flange stack, threaded member, washers, the right column,
-    %   the actions, and last and alone, the library auto-fill cascades.
+    %   BUILT SO FAR: the page shell, the Identity + Bolt group, and the
+    %   flange stack with its grip readout. Later: threaded member,
+    %   washers, the right column, the actions, and last and alone, the
+    %   library auto-fill cascades.
     %
     %   BUILDJOINT IS TOTAL — it always returns a model.Joint and never
     %   throws. This is the design decision the first attempt got wrong. It
@@ -28,6 +29,8 @@ classdef JointConfigPage < gui2.Page
 
         LabelW = 150
         ValueW = 150
+
+        MaxFlangeLayers = 4
     end
 
     properties (Access = private)
@@ -35,6 +38,16 @@ classdef JointConfigPage < gui2.Page
         BoltDropDown
         BoltMaterialDropDown
         BoltCountField
+
+        % Flange stack, one cell per layer row.
+        FlangeActive
+        FlangeName
+        FlangeMaterial
+        FlangeThickness
+        FlangeHole
+        FlangeEdge
+        FlangeTearout
+        GripLabel
 
         % Guards a commit against the refresh its own event triggers.
         Refreshing (1,1) logical = false
@@ -76,11 +89,12 @@ classdef JointConfigPage < gui2.Page
             left.Layout.Row    = 2;
             left.Layout.Column = 1;
             left.ColumnWidth   = {'1x'};
-            left.RowHeight     = {'fit'};
+            left.RowHeight     = {'fit', 'fit'};
             left.Padding       = [0 0 0 0];
             left.RowSpacing    = 8;
 
             obj.buildBoltGroup(left, 1);
+            obj.buildFlangeGroup(left, 2);
 
             obj.listenTo('JointChanged', @() obj.refresh());
             obj.refresh();
@@ -99,6 +113,8 @@ classdef JointConfigPage < gui2.Page
             obj.BoltCountField.Value  = j.BoltCount;
             obj.trySelect(obj.BoltDropDown,         j.Bolt.Designation);
             obj.trySelect(obj.BoltMaterialDropDown, j.BoltMaterial.Name);
+            obj.applyFlangeStack(j.FlangeStack);
+            obj.updateGripLabel();
         end
     end
 
@@ -143,6 +159,107 @@ classdef JointConfigPage < gui2.Page
             obj.bindEdit(obj.BoltCountField, @(~, ~) obj.commitJoint());
         end
 
+        function buildFlangeGroup(obj, parent, row)
+            panel = uipanel(parent, 'Title', 'Flange stack (clamped layers)');
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+
+            outer = uigridlayout(panel, [2 1]);
+            outer.RowHeight   = {'fit', 'fit'};
+            outer.ColumnWidth = {'1x'};
+            outer.RowSpacing  = 6;
+            outer.Padding     = [6 6 6 6];
+
+            heads = {'Active', 'Layer', 'Name', 'Material', 't (in)', ...
+                     'Hole (in)', 'Edge (in)', 'Tear-out'};
+            tips  = { ...
+                ['Include this layer in the clamped stack. Unchecked keeps ' ...
+                 'its values but leaves it out entirely.'], ...
+                'Layer number, top being under the bolt head.', ...
+                'Optional label. Never affects the analysis.', ...
+                'Layer material. Fsu drives tear-out; Fbru/Fbry drive bearing.', ...
+                'Layer thickness t, in.', ...
+                'Clearance hole diameter, in. Blank = bearing not evaluated.', ...
+                'Hole centre to free edge e, in. Blank = tear-out not evaluated.', ...
+                'Run the shear tear-out check on this layer.'};
+
+            n = gui2.JointConfigPage.MaxFlangeLayers;
+            fg = uigridlayout(outer, [n + 1, numel(heads)]);
+            fg.Layout.Row    = 1;
+            fg.Layout.Column = 1;
+            fg.ColumnWidth   = {52, 44, 120, 150, 66, 76, 76, 66};
+            fg.RowHeight     = repmat({'fit'}, 1, n + 1);
+            fg.RowSpacing    = 4;
+            fg.ColumnSpacing = 4;
+            fg.Padding       = [0 0 0 0];
+
+            for c = 1:numel(heads)
+                h = uilabel(fg, 'Text', heads{c}, 'Tooltip', tips{c}, ...
+                    'FontWeight', 'bold');
+                h.Layout.Row = 1; h.Layout.Column = c;
+            end
+
+            obj.FlangeActive    = cell(1, n);
+            obj.FlangeName      = cell(1, n);
+            obj.FlangeMaterial  = cell(1, n);
+            obj.FlangeThickness = cell(1, n);
+            obj.FlangeHole      = cell(1, n);
+            obj.FlangeEdge      = cell(1, n);
+            obj.FlangeTearout   = cell(1, n);
+
+            mats = obj.libraryItems('material');
+            for i = 1:n
+                r = i + 1;
+
+                obj.FlangeActive{i} = uicheckbox(fg, 'Text', '', ...
+                    'Value', i == 1, 'Tooltip', tips{1});
+                obj.FlangeActive{i}.Layout.Row = r;
+                obj.FlangeActive{i}.Layout.Column = 1;
+                obj.bindEdit(obj.FlangeActive{i}, @(~, ~) obj.onFlangeEdited());
+
+                num = uilabel(fg, 'Text', sprintf('%d', i), 'Tooltip', tips{2});
+                num.Layout.Row = r; num.Layout.Column = 2;
+
+                obj.FlangeName{i} = uieditfield(fg, 'text', 'Tooltip', tips{3});
+                obj.FlangeName{i}.Layout.Row = r;
+                obj.FlangeName{i}.Layout.Column = 3;
+                obj.bindEdit(obj.FlangeName{i}, @(~, ~) obj.commitJoint());
+
+                obj.FlangeMaterial{i} = uidropdown(fg, 'Items', mats, ...
+                    'Value', gui2.JointConfigPage.BlankChoice, 'Tooltip', tips{4});
+                obj.FlangeMaterial{i}.Layout.Row = r;
+                obj.FlangeMaterial{i}.Layout.Column = 4;
+                obj.bindEdit(obj.FlangeMaterial{i}, @(~, ~) obj.onFlangeEdited());
+
+                obj.FlangeThickness{i} = uieditfield(fg, 'numeric', ...
+                    'Limits', [0 Inf], 'Tooltip', tips{5});
+                obj.FlangeThickness{i}.ValueDisplayFormat = '%.5f';
+                obj.FlangeThickness{i}.Layout.Row = r;
+                obj.FlangeThickness{i}.Layout.Column = 5;
+                obj.bindEdit(obj.FlangeThickness{i}, @(~, ~) obj.onFlangeEdited());
+
+                obj.FlangeHole{i} = uieditfield(fg, 'text', 'Tooltip', tips{6});
+                obj.FlangeHole{i}.Layout.Row = r;
+                obj.FlangeHole{i}.Layout.Column = 6;
+                obj.bindEdit(obj.FlangeHole{i}, @(~, ~) obj.commitJoint());
+
+                obj.FlangeEdge{i} = uieditfield(fg, 'text', 'Tooltip', tips{7});
+                obj.FlangeEdge{i}.Layout.Row = r;
+                obj.FlangeEdge{i}.Layout.Column = 7;
+                obj.bindEdit(obj.FlangeEdge{i}, @(~, ~) obj.commitJoint());
+
+                obj.FlangeTearout{i} = uicheckbox(fg, 'Text', '', ...
+                    'Value', true, 'Tooltip', tips{8});
+                obj.FlangeTearout{i}.Layout.Row = r;
+                obj.FlangeTearout{i}.Layout.Column = 8;
+                obj.bindEdit(obj.FlangeTearout{i}, @(~, ~) obj.commitJoint());
+            end
+
+            obj.GripLabel = uilabel(outer, 'Text', '');
+            obj.GripLabel.Layout.Row    = 2;
+            obj.GripLabel.Layout.Column = 1;
+        end
+
         function d = addDropdown(obj, g, row, labelText, items, tip)
             lb = uilabel(g, 'Text', labelText);
             lb.Layout.Row = row; lb.Layout.Column = 1;
@@ -175,8 +292,12 @@ classdef JointConfigPage < gui2.Page
                 switch which
                     case 'bolt'
                         keys = obj.State.Library.boltKeys();
-                    otherwise
+                    case 'boltMaterial'
+                        % Role-filtered: a washer alloy is not a bolt.
                         keys = obj.State.Library.materialKeys(Role = "bolt");
+                    otherwise
+                        % Flange layers take any material in the library.
+                        keys = obj.State.Library.materialKeys();
                 end
             catch
                 return
@@ -213,6 +334,100 @@ classdef JointConfigPage < gui2.Page
 
             joint.Bolt         = obj.lookupBolt();
             joint.BoltMaterial = obj.lookupBoltMaterial();
+            joint.FlangeStack  = obj.collectFlangeLayers();
+        end
+
+        function layers = collectFlangeLayers(obj)
+            %COLLECTFLANGELAYERS  The rows that are actually in the stack.
+            %   A row counts when it is Active AND has a positive thickness.
+            %   A blank material is NOT a reason to drop it: the layer has a
+            %   real thickness and belongs in the grip, and dropping it made
+            %   the grip readout report zero while the analyst was still
+            %   choosing materials. model.Material() carries no allowables,
+            %   so the engine reports the checks that need them as not
+            %   evaluated - which is the honest outcome, and the analyst is
+            %   told by required-field validation, not by a silent omission.
+            layers = model.FlangeLayer.empty(1, 0);
+            for i = 1:gui2.JointConfigPage.MaxFlangeLayers
+                if ~obj.FlangeActive{i}.Value
+                    continue
+                end
+                t = obj.FlangeThickness{i}.Value;
+                if ~(t > 0)
+                    continue
+                end
+                layers(end + 1) = model.FlangeLayer( ...
+                    Name              = string(obj.FlangeName{i}.Value), ...
+                    Material          = obj.lookupMaterial(obj.FlangeMaterial{i}), ...
+                    Thickness         = t, ...
+                    HoleDiameter      = obj.parseOptional(obj.FlangeHole{i}), ...
+                    EdgeDistance      = obj.parseOptional(obj.FlangeEdge{i}), ...
+                    CheckShearTearout = logical(obj.FlangeTearout{i}.Value)); %#ok<AGROW>
+            end
+        end
+
+        function applyFlangeStack(obj, stack)
+            %APPLYFLANGESTACK  model.Joint.FlangeStack -> the layer rows.
+            n = gui2.JointConfigPage.MaxFlangeLayers;
+            for i = 1:n
+                if i <= numel(stack)
+                    L = stack(i);
+                    obj.FlangeActive{i}.Value    = true;
+                    obj.FlangeName{i}.Value      = char(L.Name);
+                    obj.FlangeThickness{i}.Value = L.Thickness;
+                    obj.FlangeHole{i}.Value      = obj.fmtOptional(L.HoleDiameter);
+                    obj.FlangeEdge{i}.Value      = obj.fmtOptional(L.EdgeDistance);
+                    obj.FlangeTearout{i}.Value   = L.CheckShearTearout;
+                    obj.trySelect(obj.FlangeMaterial{i}, L.Material.Name);
+                else
+                    % Rows beyond the stack are cleared, not just unticked:
+                    % leaving a previous case's numbers behind an unticked
+                    % box invites re-ticking them into a different joint.
+                    obj.FlangeActive{i}.Value    = false;
+                    obj.FlangeName{i}.Value      = '';
+                    obj.FlangeThickness{i}.Value = 0;
+                    obj.FlangeHole{i}.Value      = '';
+                    obj.FlangeEdge{i}.Value      = '';
+                    obj.FlangeTearout{i}.Value   = true;
+                    obj.trySelect(obj.FlangeMaterial{i}, "");
+                end
+            end
+        end
+
+        function onFlangeEdited(obj)
+            obj.updateGripLabel();
+            obj.commitJoint();
+        end
+
+        function updateGripLabel(obj)
+            %UPDATEGRIPLABEL  Grip length, or the honest unknown.
+            %   A1: an empty stack must NOT render as "0 in". That states a
+            %   grip the joint does not have, at exactly the moment an
+            %   analyst is part-way through entering one.
+            if isempty(obj.GripLabel)
+                return
+            end
+            layers = obj.collectFlangeLayers();
+            if isempty(layers)
+                obj.GripLabel.Text = 'Grip length: — (no active layer with a thickness)';
+                obj.GripLabel.FontColor = gui2.palette('mutedText');
+                return
+            end
+            probe = model.Joint(FlangeStack = layers);
+            obj.GripLabel.Text = sprintf('Grip length: %.4f in', probe.GripLength);
+            obj.GripLabel.FontColor = gui2.palette('defaultText');
+        end
+
+        function m = lookupMaterial(obj, dd)
+            m = model.Material();
+            key = obj.selectedKey(dd);
+            if strlength(key) == 0 || ~obj.State.LibraryOK
+                return
+            end
+            try
+                m = obj.State.Library.material(key);
+            catch
+            end
         end
 
         function b = lookupBolt(obj)
@@ -248,6 +463,23 @@ classdef JointConfigPage < gui2.Page
 
     % ---- Small helpers ----------------------------------------------------
     methods (Access = private)
+        function v = parseOptional(~, field)
+            %PARSEOPTIONAL  Text field -> double. Blank or junk -> NaN.
+            %   NaN is the model's "not supplied", and the engine reports
+            %   the checks that need it as not evaluated. A typo must never
+            %   take a whole commit down (buildJoint is total).
+            v = str2double(strtrim(string(field.Value)));
+        end
+
+        function s = fmtOptional(~, v)
+            %FMTOPTIONAL  Double -> text field. NaN renders blank.
+            if isnan(v)
+                s = '';
+            else
+                s = sprintf('%g', v);
+            end
+        end
+
         function k = selectedKey(~, dd)
             %SELECTEDKEY  "" when the blank sentinel is showing.
             k = strtrim(string(dd.Value));
@@ -283,6 +515,26 @@ classdef JointConfigPage < gui2.Page
 
         function f = boltCountField(obj)
             f = obj.BoltCountField;
+        end
+
+        function c = flangeActive(obj, i)
+            c = obj.FlangeActive{i};
+        end
+
+        function d = flangeMaterial(obj, i)
+            d = obj.FlangeMaterial{i};
+        end
+
+        function f = flangeThickness(obj, i)
+            f = obj.FlangeThickness{i};
+        end
+
+        function f = flangeEdge(obj, i)
+            f = obj.FlangeEdge{i};
+        end
+
+        function l = gripLabel(obj)
+            l = obj.GripLabel;
         end
     end
 end

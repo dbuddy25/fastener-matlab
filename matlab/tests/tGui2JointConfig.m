@@ -1,5 +1,5 @@
 classdef tGui2JointConfig < matlab.uitest.TestCase
-    %TGUI2JOINTCONFIG  Joint Config, step 1: shell + Identity/Bolt group.
+    %TGUI2JOINTCONFIG  Joint Config: shell, Bolt group, flange stack.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -172,6 +172,70 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 Bolt = model.Bolt(Designation = "NOT-IN-LIBRARY-XYZ"));
             testCase.verifyEqual( ...
                 strtrim(char(testCase.Page.boltDropDown().Value)), '');
+        end
+    end
+    % ---- Flange stack -----------------------------------------------------
+    methods (Test)
+        function activeRowWithAThicknessReachesTheStack(testCase)
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), 0.25);
+            stack = testCase.App.State.Joint.FlangeStack;
+            testCase.verifyNumElements(stack, 1);
+            testCase.verifyEqual(stack(1).Thickness, 0.25);
+        end
+
+        function aRowWithNoMaterialYetStillCountsTowardTheGrip(testCase)
+            % The reverted build dropped a row until its material was
+            % chosen, so the grip read zero while the analyst was still
+            % picking materials. The thickness is real; the layer belongs
+            % in the grip. Missing allowables are the engine's to report.
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1);
+            testCase.verifyTrue( ...
+                contains(string(p.gripLabel().Text), "0.2500"), ...
+                'A row with a thickness but no material must still be in the grip.');
+        end
+
+        function anEmptyStackReportsUnknownRatherThanZero(testCase)
+            % A1: unknown must never look like fine. Row 1 starts Active
+            % with zero thickness, so the stack is empty at first paint.
+            txt = string(testCase.Page.gripLabel().Text);
+            testCase.verifyFalse(contains(txt, "0.0000"), ...
+                'An empty stack must not render as a grip of zero.');
+            testCase.verifyTrue(contains(txt, char(8212)), ...
+                'An unevaluated grip shows an em dash (A1).');
+        end
+
+        function untickingActiveRemovesTheLayerButKeepsItsValues(testCase)
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(2), 0.5);
+            testCase.press(p.flangeActive(2));   % ticked on
+            testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1);
+
+            testCase.press(p.flangeActive(2));   % ticked off again
+            testCase.verifyEmpty(testCase.App.State.Joint.FlangeStack);
+            testCase.verifyEqual(p.flangeThickness(2).Value, 0.5, ...
+                'Unticking a row must keep its values, not blank them.');
+        end
+
+        function aBlankEdgeDistanceMarshalsAsNaNNotZero(testCase)
+            % NaN is the model's "not supplied"; zero would be a real edge
+            % distance and would make tear-out evaluate against nothing.
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), 0.25);
+            stack = testCase.App.State.Joint.FlangeStack;
+            testCase.verifyTrue(isnan(stack(1).EdgeDistance));
+        end
+
+        function aTypoInEdgeDistanceDoesNotTakeTheCommitDown(testCase)
+            % buildJoint is total: a junk optional value becomes NaN.
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.type(p.flangeEdge(1), 'half an inch');
+            testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1, ...
+                'A typo in an optional field must not abort the commit.');
+            testCase.verifyTrue(isnan(testCase.App.State.Joint.FlangeStack(1).EdgeDistance));
         end
     end
 end
