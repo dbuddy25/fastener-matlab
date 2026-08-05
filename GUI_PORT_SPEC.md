@@ -1,4 +1,22 @@
-# GUI Spec — Phase 4
+# GUI Spec — Phase 4 (SUPERSEDED)
+
+> **Superseded by `GUI2_SPEC.md`**, which is the authority on the GUI layer.
+> This document is kept for two reasons, and is no longer a build instruction:
+>
+> 1. **It is the source for the step-0 behavior harvest.** The first-pass build
+>    (`+gui/FastenerApp.m`) is roughly 20% layout and 80% earned edge cases —
+>    staleness banners, empty-state toggling, pre-validation that navigates to
+>    the fix, lazy tab-entry refresh, units at the boundary. Layout is cheap to
+>    rebuild; that behavior is expensive to rediscover. Read this document and
+>    the class together when harvesting.
+> 2. **It records what was decided the first time, and why.** Several
+>    `GUI2_SPEC.md` decisions deliberately reverse choices made here — the flat
+>    top tab bar, the `Defined Joints` / `Materials & Hardware DB` naming, and
+>    §2's "skip the `events`/`notify` machinery", which produced an 11,945-line
+>    single class. The reversals are argued in `GUI2_SPEC.md`; the original
+>    reasoning lives here.
+>
+> Where the two disagree, `GUI2_SPEC.md` wins.
 
 Design spec for the MATLAB GUI: the information architecture, the
 conditional-field logic, the validation strategy, the output presentation, and a

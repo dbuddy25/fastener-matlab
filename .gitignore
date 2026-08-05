@@ -17,6 +17,9 @@ requiredMCRProducts.txt
 # Local project instructions (not published)
 CLAUDE.md
 
+# Local research notes (not published)
+compass_artifact_*.md
+
 # Example script output
 matlab/examples/bulk_results.xlsx
 
