@@ -148,6 +148,10 @@ classdef JointConfigPage < gui2.Page
         % JointChanged, which calls refresh(), which would repopulate the
         % controls mid-marshal.
         Refreshing (1,1) logical = false
+
+        % The AppState.CaseGeneration this page last repopulated from.
+        % -1 = never, so the first refresh always runs.
+        AppliedGeneration (1,1) double = -1
     end
 
     methods
@@ -226,6 +230,21 @@ classdef JointConfigPage < gui2.Page
             if ~obj.IsBuilt || obj.Refreshing
                 return
             end
+            % THE CONTROLS ARE THE TRUTH ON THIS PAGE, not State.Joint.
+            % buildJoint refuses to marshal until every required selection
+            % is made, so on a fresh case no commit succeeds and State.Joint
+            % stays at its blank default. Repopulating from it on every
+            % navigation would wipe everything typed so far the moment the
+            % analyst visited another page and came back.
+            %
+            % So repopulate ONLY when the case was replaced under us - File >
+            % New or File > Open, which bump CaseGeneration. Everything else
+            % (an echo of our own commit, a navigation, a library refresh)
+            % leaves the controls alone.
+            if obj.State.CaseGeneration == obj.AppliedGeneration
+                return
+            end
+            obj.AppliedGeneration = obj.State.CaseGeneration;
             obj.Refreshing = true;
             c = onCleanup(@() obj.clearRefreshing()); %#ok<NASGU>
             obj.applyJoint(obj.State.Joint);
@@ -1940,11 +1959,15 @@ classdef JointConfigPage < gui2.Page
         end
 
         function items = boltItems(obj)
-            items = {' '};
+            %BOLTITEMS  Blank sentinel FIRST, then the keys (A6).
+            %   The bolt is a required selection: landing a fresh case on
+            %   whatever bolt sorts first in the catalogue analyses hardware
+            %   the analyst never chose, and looks deliberate while doing it.
+            items = {gui2.JointConfigPage.BlankChoice};
             if obj.State.LibraryOK
                 keys = obj.State.Library.boltKeys();
                 if ~isempty(keys)
-                    items = reshape(cellstr(keys), 1, []);
+                    items = [items, reshape(cellstr(keys), 1, [])];
                 end
             end
         end
