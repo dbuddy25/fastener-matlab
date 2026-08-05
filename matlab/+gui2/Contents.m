@@ -37,11 +37,11 @@
 %     step 2  Project, Factors, Temp Loads
 %     step 3  Joint Config
 %     step 4  Single Joint Results
-%     step 5  Defined Joints Library
+%     step 5  Defined Joints
 %     step 6  Element Mapping
 %     step 7  Element Forces
 %     step 8  Bulk Analysis
-%     step 9  Materials & Hardware Library
+%     step 9  Materials & Hardware
 %     step 10 Help menu documents; delete +gui
 %
 %   THE RULES THIS PACKAGE IS BOUND BY

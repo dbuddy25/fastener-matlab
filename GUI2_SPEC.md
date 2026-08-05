@@ -99,19 +99,19 @@ Three consequences:
 ## 3. Information architecture — left rail, 10 pages
 
 Top tabs waste vertical space, which is the scarce dimension on 16:9. A rail
-costs ~190 px horizontally, where there is surplus, and gives the tall Joint
+costs ~215 px horizontally, where there is surplus, and gives the tall Joint
 Config form the height it needs.
 
 ```
 SETUP              REFERENCE
-  Project            Materials & Hardware Library
+  Project            Materials & Hardware
   Factors
   Temp Loads       (Help -> menu bar, not a page)
 SINGLE JOINT
   Joint Config
   Single Joint Results
 BULK
-  1  Defined Joints Library
+  1  Defined Joints
   2  Element Mapping
   3  Element Forces
   4  Bulk Analysis
@@ -135,7 +135,8 @@ Reference` on the menu bar, opening the bundled PDFs. Resolve paths via
 `uitabgroup(TabLocation='left')` is a flat list: no section headers, no
 per-item state. Build the rail as a left `uigridlayout` column of `uilabel`
 section headers plus `uibutton(..., 'state')` page items, with a card area on
-the right where one page is visible at a time. `ColumnWidth = {190, '1x'}`.
+the right where one page is visible at a time. `ColumnWidth = {215, '1x'}` —
+sized so the longest label still fits when bolded as the active item.
 
 **Selection:** state buttons in a radio group — the click handler sets
 `Value = true` on the clicked item, `false` on the rest. MATLAB renders the
@@ -162,7 +163,7 @@ empty-state placeholders that replace the content, and run-time pre-validation
 
 | Element | Mechanism |
 |---|---|
-| Rail + card area | root `uigridlayout`, `ColumnWidth = {190, '1x'}` |
+| Rail + card area | root `uigridlayout`, `ColumnWidth = {215, '1x'}` |
 | Page visibility | lazily built on first visit, then `Visible` toggled |
 | Status bar | `uilabel` in the root grid's bottom row; one `app.setStatus(msg)` |
 | Menu bar | `uimenu` on the `uifigure` |
@@ -533,24 +534,24 @@ Each step lands complete — spec section, class, test, run — before the next.
 | 2 | Project · Factors · Temp Loads |
 | 3 | Joint Config — the big one |
 | 4 | Single Joint Results |
-| 5 | Defined Joints Library |
+| 5 | Defined Joints |
 | 6 | Element Mapping |
 | 7 | Element Forces |
 | 8 | Bulk Analysis |
-| 9 | Materials & Hardware Library |
+| 9 | Materials & Hardware |
 | 10 | Help menu + bundled PDFs; delete `+gui` |
 
 ---
 
 ## 15. Open items
 
-- **Two pages named "Library".** *Defined Joints Library* is case-scoped —
-  saved inside the case file, travels with the analysis. *Materials & Hardware
-  Library* is app-scoped — baseline plus custom, persisted to `library.json`,
-  shared across every case. Same word, different lifetime.
-  `GUI_PORT_SPEC.md` §1 avoided this deliberately. Current decision: keep both
-  names, and state the scope in-page on each. One-line change if it reads badly
-  in practice.
+- ~~Two pages named "Library".~~ **Resolved** — the rail labels are now
+  *Defined Joints* and *Materials & Hardware*, which drops the collision
+  `GUI_PORT_SPEC.md` §1 warned about and fixes the rail fit at the same time.
+  The scope difference still gets stated in-page on each: **Defined Joints is
+  case-scoped** (saved in the case file, travels with the analysis);
+  **Materials & Hardware is app-scoped** (baseline plus custom, persisted to
+  `library.json`, shared across every case).
 - **Three thin setup pages.** Project is ~4 fields and Temp Loads ~3. Defensible
   — they are easier to build and review separately, which is the point of this
   pass. If they feel sparse once built, merge into one *Project Setup* page with

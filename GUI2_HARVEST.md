@@ -223,7 +223,7 @@ name.
 - Cancellable; MATLAB gives cancellation free (old trap #5).
 - Export per A11, and per `GUI2_SPEC.md` §9 the display filter never narrows it.
 
-### Materials & Hardware Library
+### Materials & Hardware
 
 - An unseeded library never crashes the app; dropdowns land on the blank
   sentinel, never a silent first item.
