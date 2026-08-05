@@ -329,8 +329,11 @@ classdef FastenerApp < handle
             fg.ColumnWidth = {'1x'};
             fg.Padding     = [8 0 8 0];
 
+            % Centered: the band spans the full window, and right-justified
+            % text in a full-width band leaves a large dead area on the
+            % left. 'right' is a one-word change if that reads better.
             app.SummaryLabel = uilabel(fg, 'Text', '', ...
-                'HorizontalAlignment', 'left');
+                'HorizontalAlignment', 'center');
             app.SummaryLabel.Layout.Row    = 1;
             app.SummaryLabel.Layout.Column = 1;
             app.SummaryLabel.FontColor     = gui2.palette('footerFg');
