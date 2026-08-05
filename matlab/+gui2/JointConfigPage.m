@@ -782,11 +782,16 @@ classdef JointConfigPage < gui2.Page
             if isempty(obj.MemberMaterialLabel)
                 return
             end
+            %   model.ThreadedMemberType has exactly THREE members — Nut,
+            %   Insert, TappedHole. There is no None: a joint always threads
+            %   into something, so "no threaded member" is not a state this
+            %   page can be in. (The old build's Bolt Sizing tab offered a
+            %   "None (bolt-only)" option, but that was a standalone sizing
+            %   context, not a joint.) Insert and TappedHole both thread into
+            %   the parent, so they share the otherwise branch.
             switch obj.selectedMemberType()
                 case model.ThreadedMemberType.Nut
                     obj.MemberMaterialLabel.Text = 'Nut material';
-                case model.ThreadedMemberType.None
-                    obj.MemberMaterialLabel.Text = 'Member material';
                 otherwise
                     obj.MemberMaterialLabel.Text = 'Parent (host) material';
             end

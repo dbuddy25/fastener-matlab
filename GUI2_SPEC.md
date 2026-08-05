@@ -318,7 +318,16 @@ the stack, behavior becomes "Analysis assumptions".
 
 **a. Member material gets a dynamic label.** One dropdown plays three roles.
 Label it for the role: `Nut` → *Nut material*; `Helical Insert` and
-`Tapped Hole` → *Parent (host) material*; `None` → hidden.
+`Tapped Hole` → *Parent (host) material*.
+
+> **There is no `None`.** `model.ThreadedMemberType` has exactly three
+> members — a joint always threads into something, so "no threaded member" is
+> not a state Joint Config can be in. An earlier draft of this section listed a
+> fourth `None → hidden` row; it was wrong, and it was implemented faithfully
+> as `case model.ThreadedMemberType.None`, which threw on every switch to
+> Insert or Tapped Hole. The old build's *Bolt Sizing* tab did offer
+> "None (bolt-only)", but that was a standalone sizing context rather than a
+> joint — do not carry it back here.
 
 **b. Threaded-member rated load — field removed.** For a nut it already comes
 from the library (the Nut spec picker resolves `data.Library.nutFor` and
