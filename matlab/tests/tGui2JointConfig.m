@@ -155,16 +155,26 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
     % ---- A9: cross-type field crossing ------------------------------------
     methods (Test)
-        function crossingInsertBoundaryClearsEngagementRatherThanConvertingIt(testCase)
+        function engagementValuesAreSeparatePerQuantityAndSurviveACrossing(testCase)
+            % Two controls, one per quantity, so A9's crossing problem
+            % cannot arise: 0.25 in and 0.25 x D each have their own home
+            % and neither can be read as the other. Both values persist
+            % across a type change, so flipping to compare and flipping
+            % back loses nothing.
             p = testCase.Page;
             testCase.choose(p.memberTypeDropDown(), 'Nut');
             testCase.type(p.engagementField(), '0.25');
 
             testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
-            testCase.verifyEmpty(strtrim(p.engagementField().Value), ...
-                ['Crossing into Insert must CLEAR the engagement field: ' ...
-                 '0.25 in and 0.25 x D are different quantities, and ' ...
-                 'carrying the number over states one as the other (A9).']);
+            testCase.type(p.engagementRatioField(), '1.5');
+
+            testCase.verifyEqual(strtrim(char(p.engagementField().Value)), '0.25', ...
+                'The inches value must survive a crossing into Insert.');
+
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifyEqual(strtrim(char(p.engagementRatioField().Value)), '1.5', ...
+                'The ratio value must survive a crossing back to Nut.');
+            testCase.verifyEqual(strtrim(char(p.engagementField().Value)), '0.25');
         end
 
         function nutToTappedHoleIsNotACrossingAndKeepsTheValue(testCase)
@@ -177,14 +187,20 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 'Nut and Tapped Hole are both inches — the value must survive.');
         end
 
-        function engagementLabelFollowsTheMemberType(testCase)
+        function engagementControlsGreyOutByMemberType(testCase)
+            % The irrelevant quantity is disabled, never hidden and never
+            % read-only (A5).
             p = testCase.Page;
             testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
-            testCase.verifyTrue(contains(string(p.engagementLabel().Text), "x bolt D"), ...
-                'Insert mode must say the field is a multiple of bolt diameter.');
-            testCase.choose(p.memberTypeDropDown(), 'Nut');
-            testCase.verifyTrue(contains(string(p.engagementLabel().Text), "(in)"), ...
-                'Nut mode must say the field is inches.');
+            testCase.verifyEqual(p.engagementRatioField().Enable, 'on', ...
+                'Insert uses the x-bolt-D field.');
+            testCase.verifyEqual(p.engagementField().Enable, 'off', ...
+                'Insert must grey the inches field.');
+
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyEqual(p.engagementRatioField().Enable, 'off', ...
+                'Tapped Hole must grey the x-bolt-D field.');
+            testCase.verifyEqual(p.engagementField().Enable, 'on');
         end
 
         function memberMaterialLabelFollowsTheMemberType(testCase)

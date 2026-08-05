@@ -584,6 +584,15 @@ classdef AppState < handle
             st.Factors.FFY    = st.Factors.FFU;
             st.Factors.FFSep  = st.Factors.FFU;
             st.Factors.FFSlip = st.Factors.FFU;
+
+            % GUI default: bolt axis X. model.Joint defaults to Z, and the
+            % model is frozen, so the divergence lives here - the same
+            % pattern as the uniform FF above. It is a DEFAULT, not a
+            % constraint: the dropdown offers X/Y/Z and a loaded case keeps
+            % whatever it carried. Headless callers still get Z, so a joint
+            % built in the Command Window and one started in the GUI differ
+            % until the axis is set explicitly.
+            st.Joint.BoltAxis = model.BoltAxis.X;
         end
 
         function p = defaultProject()

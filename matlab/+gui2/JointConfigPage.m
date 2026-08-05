@@ -85,11 +85,20 @@ classdef JointConfigPage < gui2.Page
         NutSpecDropDown
         EngagementField
         EngagementFieldLabel
+        EngagementRatioField
+        EngagementRatioLabel
 
         % Tracks which UNIT the engagement field currently means, so a
         % crossing can be detected. Not derivable after the fact — the
         % dropdown has already moved by the time the callback runs.
         EngagementIsInsertMode (1,1) logical = false
+
+        % True while a resolved nut spec owns the inches engagement field.
+        % Read by updateEngagementFieldMode, which is the ONE method that
+        % sets either engagement control's Enable - two writers racing over
+        % one property is how a field ends up editable when it should be
+        % locked (A5).
+        NutSpecLocked (1,1) logical = false
 
         % ---- Bolt length & grip
         BoltLengthField
@@ -155,15 +164,22 @@ classdef JointConfigPage < gui2.Page
         end
 
         function build(obj, parent)
-            g = uigridlayout(parent, [2 3]);
+            % 2/3 : 1/3. The left column carries the physical stack - eight
+            % groups including the eight-column flange grid - against four
+            % narrower groups on the right, so an even split starved the
+            % side doing the work. Panels fill their share here rather than
+            % hugging their content (the usual +gui2 rule): this page is
+            % dense enough that the ragged right edge of hugged panels reads
+            % as damage rather than as restraint.
+            g = uigridlayout(parent, [2 2]);
             g.RowHeight   = {'fit', 'fit'};
-            g.ColumnWidth = {'fit', 'fit', '1x'};
+            g.ColumnWidth = {'2x', '1x'};
             g.Padding     = [8 8 8 8];
             g.RowSpacing  = 8;
             g.ColumnSpacing = 10;
             g.Scrollable  = 'on';
 
-            obj.addBanner(g, 1, [1 3], ...
+            obj.addBanner(g, 1, [1 2], ...
                 ['Define one joint and its limit loads, then Analyze (F5). ' ...
                  'The left column follows the physical stack, top to bottom. ' ...
                  'Factors and service temperatures are global — they live on ' ...
@@ -173,14 +189,14 @@ classdef JointConfigPage < gui2.Page
             left = uigridlayout(g, [1 1]);
             left.Layout.Row    = 2;
             left.Layout.Column = 1;
-            left.ColumnWidth   = {'fit'};
+            left.ColumnWidth   = {'1x'};
             left.Padding       = [0 0 0 0];
             left.RowSpacing    = 4;
 
             right = uigridlayout(g, [1 1]);
             right.Layout.Row    = 2;
             right.Layout.Column = 2;
-            right.ColumnWidth   = {'fit'};
+            right.ColumnWidth   = {'1x'};
             right.Padding       = [0 0 0 0];
             right.RowSpacing    = 4;
 
@@ -225,6 +241,9 @@ classdef JointConfigPage < gui2.Page
             % ---- 1. Identity ------------------------------------------
             r = r + 1;
             b = obj.addGroup(col, r, 'Identity', true);
+            % Spans the gutter too: a joint name is prose ("Bracket to
+            % bulkhead, upper left") and the value column is sized for
+            % numbers.
             obj.JointNameField = obj.addTextRow(b, 1, 'Joint name', '', ...
                 'Name this joint is stored and reported under.');
             obj.bindEdit(obj.JointNameField, @(~, ~) obj.commitJoint());
@@ -299,8 +318,29 @@ classdef JointConfigPage < gui2.Page
                  'available. Nut type only.']);
             obj.bindEdit(obj.NutSpecDropDown, @(~, ~) obj.applyNutSpec());
 
+            % TWO controls, not one that changes meaning. Each maps to its
+            % own model.ThreadedMember property, so the A9 crossing problem
+            % - a ratio left behind by a former Insert being read as inches
+            % - cannot arise: neither value has anywhere to be misread. The
+            % irrelevant one greys out; both keep their numbers, so flipping
+            % type to compare and flipping back loses nothing.
+            [obj.EngagementRatioField, obj.EngagementRatioLabel] = ...
+                obj.addTextRow(b, 4, 'Engagement (x bolt D)', '', ...
+                ['Thread engagement as a MULTIPLE OF THE BOLT NOMINAL ' ...
+                 'DIAMETER (e.g. 1.5 for 1.5D). Helical inserts are ' ...
+                 'specified by length CLASS, not an absolute inch value ' ...
+                 '(NASM33537 Rev 4 Sec 6.1: 1, 1.5, 2, 2.5 or 3 x nominal ' ...
+                 'major diameter). Helical Insert only. Blank = pull-out ' ...
+                 'unassessed and the length readout reports "not evaluated".']);
+            obj.bindEdit(obj.EngagementRatioField, @(~, ~) obj.onEngagementEdited());
+
             [obj.EngagementField, obj.EngagementFieldLabel] = ...
-                obj.addTextRow(b, 4, 'Engagement length Le (in)', '', '');
+                obj.addTextRow(b, 5, 'Engagement length Le (in)', '', ...
+                ['Thread engagement in INCHES - nut thread height, or ' ...
+                 'tapped-hole engagement depth. Nut and Tapped Hole only. ' ...
+                 'Gates the live bolt-length readout, the stiffness L1 ' ...
+                 'estimate, and the thread-shear checks. Blank = all of ' ...
+                 'those report "not evaluated".']);
             obj.bindEdit(obj.EngagementField, @(~, ~) obj.onEngagementEdited());
 
             % ---- 7. Bolt length & grip --------------------------------
@@ -700,6 +740,7 @@ classdef JointConfigPage < gui2.Page
                     'engine-derived values'];
                 % Amber: "cannot look up" is not an OK state.
                 obj.SpecLabel.FontColor = gui2.palette('statusWarn');
+                obj.SpecLabel.Visible   = 'on';
                 if autofill && ~obj.RatedOverrideCheck.Value
                     % Blank the PREVIOUS pairing's values. Keeping them
                     % would analyse the new pairing with the old bolt's
@@ -708,7 +749,10 @@ classdef JointConfigPage < gui2.Page
                     obj.RatedYieldField.Value = '';
                 end
             else
-                obj.SpecLabel.FontColor = gui2.palette('defaultText');
+                % A resolved spec needs no line of its own: the rated-load
+                % fields are filled and locked, which says it already.
+                % Only the unresolved case is actionable.
+                obj.SpecLabel.Visible = 'off';
                 if autofill && ~obj.RatedOverrideCheck.Value
                     obj.SpecLabel.Text = sprintf( ...
                         'Bolt spec: %s (rated loads auto-filled from library)', ...
@@ -759,14 +803,6 @@ classdef JointConfigPage < gui2.Page
             %   AND would silently swap the analyst's intent between an
             %   absolute target and a length-class multiple. Nut <-> Tapped
             %   Hole is not a crossing; the value survives.
-            wasInsert = obj.EngagementIsInsertMode;
-            isInsert  = obj.selectedMemberType() == model.ThreadedMemberType.Insert;
-            if isInsert ~= wasInsert && ~isempty(strtrim(obj.EngagementField.Value))
-                obj.EngagementField.Value = '';
-                obj.setStatus(['Engagement Le cleared — its meaning changes ' ...
-                    'between inches (Nut / Tapped Hole) and x bolt nominal ' ...
-                    'diameter (Helical Insert).']);
-            end
             obj.updateMemberMaterialLabel();
             obj.updateEngagementFieldMode();
             obj.applyNutSpec();
@@ -798,38 +834,40 @@ classdef JointConfigPage < gui2.Page
         end
 
         function updateEngagementFieldMode(obj)
-            %UPDATEENGAGEMENTFIELDMODE  Relabel and re-tooltip the engagement
-            %   field for the CURRENT type, and record the mode so a later
-            %   crossing can be detected.
+            %UPDATEENGAGEMENTFIELDMODE  Enable the control this member type
+            %   actually uses and grey the other.
             %
-            %   NEVER TOUCHES THE VALUE. Only onMemberTypeChanged clears it,
-            %   on a genuine user crossing; if this did, loading a case
-            %   would wipe the number it just loaded.
-            if isempty(obj.EngagementField)
+            %   NEVER TOUCHES EITHER VALUE. Each control owns its own
+            %   property, so nothing has to be cleared on a type change and
+            %   loading a case cannot wipe the number it just loaded.
+            %   Greying is Enable='off', never read-only (A5).
+            if isempty(obj.EngagementField) || isempty(obj.EngagementRatioField)
                 return
             end
             isInsert = obj.selectedMemberType() == model.ThreadedMemberType.Insert;
-            if isInsert
-                obj.EngagementFieldLabel.Text = 'Engagement Le (x bolt D)';
-                tip = ['Thread engagement as a MULTIPLE OF THE BOLT NOMINAL ' ...
-                    'DIAMETER (e.g. 1.5 for 1.5D). Helical inserts are ' ...
-                    'specified by length CLASS, not an absolute inch value ' ...
-                    '(NASM33537 Rev 4 Sec 6.1: 1, 1.5, 2, 2.5 or 3 x nominal ' ...
-                    'major diameter). Feeds the length readout, the ' ...
-                    'stiffness L1 estimate, and the insert pull-out margin. ' ...
-                    'Blank = pull-out unassessed and the readout reports ' ...
-                    '"not evaluated".'];
+            states   = {'off', 'on'};
+
+            % Inches applies to Nut and Tapped Hole, and is additionally
+            % locked while a resolved nut spec is filling it.
+            ratioOn  = isInsert;
+            inchesOn = ~isInsert && ~obj.NutSpecLocked;
+
+            obj.EngagementRatioField.Enable = states{ratioOn + 1};
+            obj.EngagementRatioLabel.FontColor = obj.enabledTextColor(ratioOn);
+
+            obj.EngagementField.Enable = states{inchesOn + 1};
+            obj.EngagementFieldLabel.FontColor = obj.enabledTextColor(inchesOn);
+
+            obj.EngagementIsInsertMode = isInsert;
+        end
+
+        function c = enabledTextColor(~, tf)
+            %ENABLEDTEXTCOLOR  Label color matching a control's enabled state.
+            if tf
+                c = gui2.palette('defaultText');
             else
-                obj.EngagementFieldLabel.Text = 'Engagement length Le (in)';
-                tip = ['Thread engagement in INCHES — nut thread height, or ' ...
-                    'tapped-hole engagement depth. Gates the live ' ...
-                    'bolt-length readout, the stiffness L1 estimate, and ' ...
-                    'the thread-shear checks. Blank = all of those report ' ...
-                    '"not evaluated".'];
+                c = gui2.palette('mutedText');
             end
-            obj.EngagementField.Tooltip      = tip;
-            obj.EngagementFieldLabel.Tooltip = tip;
-            obj.EngagementIsInsertMode       = isInsert;
         end
 
         function onEngagementEdited(obj)
@@ -900,8 +938,12 @@ classdef JointConfigPage < gui2.Page
 
         function setNutFieldsEnable(obj, state)
             %SETNUTFIELDSENABLE  Enable only — never read-only (A5).
-            obj.MemberMaterialDropDown.Enable = state
-            obj.EngagementField.Enable        = state;
+            %   Does NOT touch the engagement controls: their enable state
+            %   is owned solely by updateEngagementFieldMode, which this
+            %   method's callers invoke after setting NutSpecLocked.
+            obj.MemberMaterialDropDown.Enable = state;
+            obj.NutSpecLocked = strcmp(state, 'off');
+            obj.updateEngagementFieldMode();
         end
 
         % ---- Washers -------------------------------------------------
@@ -1383,14 +1425,18 @@ classdef JointConfigPage < gui2.Page
                 obj.BoltLengthField, 'Overall bolt length');
 
             memberType = obj.selectedMemberType();
-            % Engagement: Insert -> ratio, everything else -> inches. ONE
-            % control, never both properties from the same typed number.
-            engVal = gui2.JointConfigPage.parseOptional( ...
-                obj.EngagementField, 'Engagement length');
+            % Each control owns one property. The type decides which is
+            % marshalled; the other goes to NaN, so a number left in the
+            % greyed control can never reach the engine as the wrong
+            % quantity.
             if memberType == model.ThreadedMemberType.Insert
-                engLength = NaN;  engRatio = engVal;
+                engRatio  = gui2.JointConfigPage.parseOptional( ...
+                    obj.EngagementRatioField, 'Engagement (x bolt D)');
+                engLength = NaN;
             else
-                engLength = engVal;  engRatio = NaN;
+                engLength = gui2.JointConfigPage.parseOptional( ...
+                    obj.EngagementField, 'Engagement length');
+                engRatio  = NaN;
             end
             % Insert only, catalogue-derived, never analyst-typed: the pitch
             % diameter at which the PARENT's internal thread shears. A miss
@@ -1471,12 +1517,14 @@ classdef JointConfigPage < gui2.Page
             bolt.Length = gui2.JointConfigPage.parseOptional( ...
                 obj.BoltLengthField, 'Overall bolt length');
             t = obj.selectedMemberType();
-            engVal = gui2.JointConfigPage.parseOptional( ...
-                obj.EngagementField, 'Engagement length');
             if t == model.ThreadedMemberType.Insert
-                member = model.ThreadedMember(Type = t, EngagementRatio = engVal);
+                member = model.ThreadedMember(Type = t, ...
+                    EngagementRatio = gui2.JointConfigPage.parseOptional( ...
+                        obj.EngagementRatioField, 'Engagement (x bolt D)'));
             else
-                member = model.ThreadedMember(Type = t, EngagementLength = engVal);
+                member = model.ThreadedMember(Type = t, ...
+                    EngagementLength = gui2.JointConfigPage.parseOptional( ...
+                        obj.EngagementField, 'Engagement length'));
             end
             j = model.Joint( ...
                 Bolt           = bolt, ...
@@ -1614,14 +1662,12 @@ classdef JointConfigPage < gui2.Page
             obj.MemberTypeDropDown.Value = ...
                 gui2.JointConfigPage.memberTypeLabel(j.ThreadedMember.Type);
             obj.trySelect(obj.MemberMaterialDropDown, j.ThreadedMember.Material.Name);
-            % Seed from whichever property this type actually uses — the
-            % same split buildJoint marshals by.
-            if j.ThreadedMember.Type == model.ThreadedMemberType.Insert
-                engSeed = j.ThreadedMember.EngagementRatio;
-            else
-                engSeed = j.ThreadedMember.EngagementLength;
-            end
-            obj.EngagementField.Value = gui2.JointConfigPage.fmtOptional(engSeed);
+            % Both controls are seeded, regardless of type: each holds its
+            % own property, so a case carrying both keeps both.
+            obj.EngagementRatioField.Value = gui2.JointConfigPage.fmtOptional( ...
+                j.ThreadedMember.EngagementRatio);
+            obj.EngagementField.Value = gui2.JointConfigPage.fmtOptional( ...
+                j.ThreadedMember.EngagementLength);
 
             ps = j.PreloadSpec;
             obj.NominalTorqueField.Value = gui2.JointConfigPage.fmtOptional(ps.NominalTorque);
@@ -2211,6 +2257,14 @@ classdef JointConfigPage < gui2.Page
         function d = nutSpecDropDown(obj)
             d = obj.NutSpecDropDown;
         end
+        function f = engagementRatioField(obj)
+            f = obj.EngagementRatioField;
+        end
+
+        function l = engagementRatioLabel(obj)
+            l = obj.EngagementRatioLabel;
+        end
+
         function f = engagementField(obj)
             f = obj.EngagementField;
         end
