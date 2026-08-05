@@ -20,13 +20,19 @@
 %   gui2.PlaceholderPage — a page naming the step that replaces it.
 %   gui2.ProjectPage     — project metadata (never analyzed). Backed by
 %                          AppState.Project, fires ProjectChanged.
-%   gui2.FactorsPage     — safety/fitting factors + the factor-preset
-%                          mechanism (data.factorPreset / factorPresets /
-%                          saveFactorPreset). Backed by AppState.Factors,
-%                          fires FactorsChanged.
+%   gui2.FactorsPage     — the fitting factor and the four factors of
+%                          safety. Backed by AppState.Factors, fires
+%                          FactorsChanged. The preset UI is deferred; the
+%                          data.factorPreset* API stays in place for it.
 %   gui2.TempLoadsPage   — GLOBAL service temperatures (one isothermal-soak
 %                          trio for every joint). Backed by AppState.Settings,
 %                          fires SettingsChanged.
+%   gui2.JointConfigPage — one joint and its limit loads, left column in
+%                          physical stack order. Owns the library cascade
+%                          (bolt -> nut spec + both washer specs), the live
+%                          bolt-length readout, required-field gating, and
+%                          Analyze / Save to Defined Joints. Backed by
+%                          AppState.Joint + LoadCase.
 %   gui2.palette         — semantic color name -> RGB; the ONLY place GUI2
 %                          colors live (no literal RGB triples elsewhere).
 %   gui2.recentFiles     — the persisted Open Recent list (max 5, dead paths
@@ -43,10 +49,11 @@
 %     - Open Recent (new build; the first pass deferred it).
 %     - Step 2: Project, Factors, Temp Loads — see gui2.ProjectPage,
 %       gui2.FactorsPage, gui2.TempLoadsPage above.
+%     - Step 3: Joint Config — see gui2.JointConfigPage above. Analyze
+%       writes AppState.Result; the Results page (step 4) renders it.
 %
 %   NOT BUILT YET — every remaining rail entry is a PlaceholderPage naming
 %   its step:
-%     step 3  Joint Config
 %     step 4  Single Joint Results
 %     step 5  Defined Joints
 %     step 6  Element Mapping

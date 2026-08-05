@@ -224,27 +224,109 @@ helpers. Rules earned building `+gui2`'s versions, not already covered by §A:
   a per-page bug to work around — it can only over-mark, never under-mark, a
   real edit.
 
-### Joint Config ⚠ (deepest read needed)
+### Joint Config
 
-- Live **grip length** and 4-line **bolt-length adequacy** readouts
-  (`engine.boltLengthCheck`), recomputed on every relevant edit. Three states:
-  muted when OK, **amber when the check cannot run** (naming the missing
-  input), bold red when short. Never an error dialog on an edit.
-- The readout formats the engine struct and does **no arithmetic** of its own.
-- `Same as Head` mirrors the head washer live (spec, size, material, OD/ID/
-  thickness) and greys out the nut-washer group. Unticking keeps the mirrored
-  values and re-enables editing — **never blanks them**.
-- Washer material is independent of the spec family (washers are geometry only)
-  and is never locked by the picker — but must still propagate under
-  `Same as Head`.
-- Nut-spec dropdown carries **drawing number + descriptor** as the display
-  label, with the bare family token in `ItemsData`. The composite string must
-  never become an identity that has to round-trip.
-- The insert group **title rewrites** to match the selection.
-- Member fields toggle `Enable` only — controls are never removed or hidden.
-- Save to Defined Joints: asks before overwriting, and **preserves fields Joint
-  Config has no controls for** (layer names, tapped-hole host name, preload
-  creep loss) so a save-back never silently resets them.
+Harvested from `buildJointDefinitionPanel`, `buildLoadsPanel` and every handler
+they reach. This page is where §A's hardest invariants actually live — A5
+(auto-fill then lock), A6 (required blank), A9 (cross-type field crossing) are
+all one page's problem.
+
+**Sync is not an edit.** `applyNutSpec`, `applyWasherSpec`, `refreshWasherState`,
+`syncWasherEnables`, `updateEngagementFieldMode` and `mirrorNutWasherFromHead`
+**never** mark dirty. They run during panel construction and from the
+case-loading path, where a dirty flag is a lie — a brand-new session would open
+with a `* ` title and prompt to discard on close. Genuine edits are marked by
+the edit funnel *before* the callback runs, so these can be called from
+anywhere. Every one of them must also be idempotent and must no-op cleanly
+before the panel is built.
+
+**One cascade, four triggers.** Changing the **bolt** re-resolves the bolt spec,
+the nut spec, and *both* washer specs, then refreshes the length readout — a
+nut or washer match is keyed on the selected bolt's thread size, so a bolt
+change invalidates all of them at once. The same orchestrator runs on a
+member-type change, a washer Present toggle, panel build, and case load. Do not
+wire these individually; there is one entry point per picker
+(`applyNutSpec`, `refreshWasherState`) and every trigger calls it.
+
+**Miss handling is uniform, and it is the point of the feature.** A spec family
+with no entry at the resolved thread size **reverts to `Custom`, re-enables the
+fields, and names the miss in the status bar** — the family and the bolt thread,
+not "no match". Leaving the previous bolt's numbers locked and looking
+authoritative is the exact failure the picker exists to prevent. Same contract
+when a resolved nut names a material absent from the library: revert to
+`Custom`, say which key was missing. A "select this key" helper that silently
+keeps the previous selection on a miss must have its miss report captured —
+discarding it re-creates the bug.
+
+**Washers differ from nuts in two ways.** `washersFor` returns MANY matches
+where `nutFor` returns one, so a washer group carries a *paired* size dropdown
+listing every match (thinnest first). The current selection is kept if it is
+still among the matches, otherwise the thinnest is auto-selected — the dropdown
+is never left blank while OD/ID/thickness sit locked. And the nut washer has
+`Same as Head` layered on top.
+
+**Nut-washer gating is three gates deep**, outermost first: member type is not
+Nut → the whole group is disabled (there is no nut, so a washer under it is
+meaningless); then `Same as Head` → mirror and disable; then Present → gate
+OD/ID/thickness and material. Gray, never hide: an analyst has to be able to
+see that a field exists and why it is unavailable.
+
+**Washer size lists change length between families**, so any repopulation must
+go through the set-items-and-data helper. A bare `Items` assignment throws while
+the old `ItemsData` pairing is still attached. Capture the previous value
+*before* assigning, never after.
+
+**The engagement field is one control with two meanings** — inches for
+Nut/Tapped Hole, a multiple of the bolt nominal diameter for Insert. Nut ↔
+Tapped Hole is not a crossing (both inches) and the value survives. Insert ↔
+anything **is**, and the value is cleared with a status-bar note (A9). The
+relabel-per-type routine must never touch the value: only a genuine user-driven
+crossing clears it, or loading a case would wipe the number it just loaded.
+
+**The live bolt-length readout is four lines and three states**, driven by
+`engine.boltLengthCheck` on a probe joint built from the current controls:
+muted when adequate, **amber when the check cannot run** — naming the missing
+inputs in the form's own words — and bold red when short. The verdict keys off
+`RequiredLength` being NaN, never off an `IsAdequate` flag alone: the original
+bug was a grossly short bolt rendering in the same muted style as an adequate
+one. Bad typed input is caught and rendered amber; **never an error dialog on
+an edit**. The probe must resolve engagement the same way the built joint will,
+or an inch value typed in Insert mode gets read as inches here and as a ratio
+later.
+
+**Required fields are conditional.** Bolt material and member material are
+always required; a flange layer's material is required **only while that row is
+in use** (Active checked *and* thickness > 0 — the identical predicate that
+marshals the stack). So toggling Active or editing a thickness changes the
+required set and must re-run the check. Blank required dropdowns paint pale red
+and disable Analyze with a tooltip naming the missing fields *in the user's own
+labels*. Programmatic population fires no callbacks, so the check must be
+re-run explicitly after every load.
+
+**Fail twice, deliberately.** The continuous check gates the button; a second
+assertion at marshal time fails with the same user-facing wording if a blank
+ever slips through. Without it the library throws about an internal key.
+
+**A failed Analyze stales the previous result rather than clearing it** — the
+numbers on screen predate the failed run and must stop looking current, but
+they stay readable (A3).
+
+**Save to Defined Joints preserves what the form does not own.** Overwriting
+asks first, and carries over the fields Joint Config has no control for —
+per-layer names, tapped-hole host name, preload creep loss and thermal rate.
+Host name carries over **only when the member type is unchanged**; a type change
+makes the old detail stale. Two fields are deliberately *not* carried: the
+insert pitch diameter is re-resolved from the current bolt on every marshal, and
+the shear engagement area is never analyst-supplied at all (§4.4.1 wants a rated
+load or specified catalogue geometry, not a typed area), so preserving a stale
+value would reintroduce the very override the field no longer accepts.
+
+**Marshalling details that are easy to get wrong:** an absent washer marshals as
+the model default (zero thickness, NaN diameters), not as zeros typed by the
+user. Blank optional text fields parse to NaN — the model's "automatic"
+sentinel — but a non-blank non-numeric entry is a typo and must error loudly
+rather than silently become automatic. Overall bolt length comes from the form,
+not the library entry, because it is joint-specific.
 
 ### Single Joint Results
 

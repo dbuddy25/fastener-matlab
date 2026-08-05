@@ -185,8 +185,14 @@ Help   About                               (built)
 
 **`F5` runs Analyze** — from the `uifigure` `KeyPressFcn`. Noted because
 `GUI_PORT_SPEC.md` §11 claimed this existed in the first build and it never
-did; there is no `KeyPressFcn` anywhere in `+gui`. It lands with Joint Config
-in step 3.
+did; there is no `KeyPressFcn` anywhere in `+gui`.
+
+> **Installed by Joint Config, not by the shell**, and guarded on that page
+> being visible. The handler has to be figure-level because that is where
+> MATLAB delivers keys, so this is one place a page reaches outside itself —
+> a known wart, taken over inventing a shell key-dispatch for a single
+> shortcut. **The trigger to fix it:** the moment a second page wants a key,
+> dispatch moves to `FastenerApp` and this moves with it.
 
 **Navigation is one method.** `app.navigateTo(pageId)` builds the page if
 needed, swaps visibility, refreshes it from state, and updates the rail. The
@@ -397,8 +403,18 @@ The same note appears under the Interaction row on Single Joint Results.
 
 ### 7.5 Groups are collapsible
 
-Collapsed groups stay unbuilt until first expanded. Eight groups on the left,
-four on the right, so the page opens light.
+Eight groups on the left, four on the right. Collapsing shrinks what an analyst
+has to scan.
+
+> **Bodies are built eagerly; collapse toggles visibility only.** The spec
+> originally asked for collapsed groups to stay unbuilt, for render cost. That
+> is incompatible with the marshalled design: `buildJoint` reads *every* control
+> to assemble a `model.Joint`, so an unbuilt control is a marshalling failure
+> rather than a saving. Correctness wins. The lazy-build saving that matters —
+> the whole page, on first navigation — is unaffected.
+>
+> Getting the render saving too would mean making the page model-bound instead
+> of marshalled, which is a different design and not worth reopening for it.
 
 ### 7.6 Keep in sync
 
