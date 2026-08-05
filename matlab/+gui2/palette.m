@@ -26,6 +26,7 @@ function c = palette(name)
 %                                            normal, and the pale red for a
 %                                            REQUIRED field left blank
 %                                            (GUI2_SPEC.md Section 11)
+%     footerBg / footerFg                  — the always-live summary band
 %     bannerInfoBg|Fg|Border               — info banner (onboarding, hints)
 %     bannerWarnBg|Fg|Border               — warning banner (amber)
 %     bannerErrorBg|Fg|Border              — error banner (red)
@@ -81,6 +82,13 @@ switch char(name)
     % when the field is filled.
     case 'fieldBg',         c = [1.00 1.00 1.00];
     case 'requiredBlankBg', c = [1.00 0.90 0.90];   % #FFE5E5
+
+    % ---- Footer band (the always-live factors/temps summary) -------------
+    % A filled band, not a bare line of text: two unstyled labels stacked
+    % at the bottom of the window read as a layout mistake rather than as
+    % chrome. Muted enough to stay reference material, not content.
+    case 'footerBg',     c = [0.937 0.937 0.941];
+    case 'footerFg',     c = [0.290 0.290 0.310];
 
     % ---- Banners: info (blue), warning (amber), error (red) --------------
     case 'bannerInfoBg',     c = [0.863 0.914 0.988];   % #DCE9FC

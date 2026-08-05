@@ -279,7 +279,7 @@ classdef FastenerApp < handle
             %BUILDLAYOUT  Root grid: rail | cards, with the status bar under both.
             root = uigridlayout(app.Fig, [3 2]);
             root.ColumnWidth = {gui2.FastenerApp.RailWidth, '1x'};
-            root.RowHeight   = {'1x', 22, 22};
+            root.RowHeight   = {'1x', 22, 26};
             root.Padding     = [4 4 4 4];
             root.RowSpacing  = 4;
             root.ColumnSpacing = 6;
@@ -302,21 +302,38 @@ classdef FastenerApp < handle
             app.CardGrid.RowHeight     = {'1x'};
             app.CardGrid.ColumnWidth   = {'1x'};
 
+            % Transient messages sit directly under the content; the
+            % always-live summary is the bottom-most band. Ordering matters:
+            % the status line changes, the footer does not, and a changing
+            % line below a static one reads as the page shifting.
+            app.StatusLabel = uilabel(root, 'Text', '', ...
+                'HorizontalAlignment', 'left');
+            app.StatusLabel.Layout.Row    = 2;
+            app.StatusLabel.Layout.Column = [1 2];
+
             % Always-live summary of the factors and temperatures every
             % analysis on every page runs with. These are global, they are
             % edited two pages away from where they are used, and there is
             % no other way to see them without navigating off whatever you
             % are doing. Read-only: this bar shows state, it never sets it.
-            app.SummaryLabel = uilabel(root, 'Text', '', ...
-                'HorizontalAlignment', 'left');
-            app.SummaryLabel.Layout.Row    = 2;
-            app.SummaryLabel.Layout.Column = [1 2];
-            app.SummaryLabel.FontColor     = gui2.palette('mutedText');
+            %
+            % A filled band pinned to the bottom, not a bare label: two
+            % unstyled text rows stacked at the foot of the window read as
+            % a layout mistake rather than as chrome.
+            footer = uipanel(root, 'BorderType', 'none', ...
+                'BackgroundColor', gui2.palette('footerBg'));
+            footer.Layout.Row    = 3;
+            footer.Layout.Column = [1 2];
+            fg = uigridlayout(footer, [1 1]);
+            fg.RowHeight   = {'1x'};
+            fg.ColumnWidth = {'1x'};
+            fg.Padding     = [8 0 8 0];
 
-            app.StatusLabel = uilabel(root, 'Text', '', ...
+            app.SummaryLabel = uilabel(fg, 'Text', '', ...
                 'HorizontalAlignment', 'left');
-            app.StatusLabel.Layout.Row    = 3;
-            app.StatusLabel.Layout.Column = [1 2];
+            app.SummaryLabel.Layout.Row    = 1;
+            app.SummaryLabel.Layout.Column = 1;
+            app.SummaryLabel.FontColor     = gui2.palette('footerFg');
         end
 
         function g = newCard(app)
