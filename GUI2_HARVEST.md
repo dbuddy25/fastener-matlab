@@ -560,6 +560,21 @@ pages look like one application.
   temperatures); it never sets any. Values that could be misread must name their
   own uncertainty — unequal fitting factors render `FF mixed a/b/c/d`, never a
   single number.
+- **`uiconfirm` must use its `CloseFcn` form, never its return value.**
+  `choice = uiconfirm(...)` halts execution *inside the callback* until a human
+  answers, which deadlocks any programmatic driver — the App Testing Framework
+  included. A test can never reach its `chooseDialog`, because the `press` that
+  opened the dialog has not returned. The suite hangs rather than fails, which
+  is worse than either. The callback form returns immediately and delivers the
+  answer through the event, so the handler splits into "ask" and "act on the
+  reply".
+
+  > **Still outstanding:** `gui2.FastenerApp.confirmDiscard` uses the blocking
+  > form. Nothing exercises it yet — no test triggers File → New with unsaved
+  > changes — but the first one that does will hang. Fixing it means turning
+  > its three callers into continuation style, so it waits until a test needs
+  > it rather than being done speculatively.
+
 - **Test seams are public getters** returning real handles, so tests drive
   gestures rather than poking private state.
 

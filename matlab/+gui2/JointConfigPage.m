@@ -1269,26 +1269,51 @@ classdef JointConfigPage < gui2.Page
                 return
             end
 
-            lib = obj.State.JointLibrary;
             % Case-INSENSITIVE collision: letting "JT-A" and "jt-a" coexist
             % is a mapping trap (A13), because element mapping keys on the
             % name and would silently reference the wrong joint.
+            lib = obj.State.JointLibrary;
             idx = find(strcmpi(string({lib.Name}), name), 1);
-            if ~isempty(idx)
-                choice = uiconfirm(fig, sprintf( ...
-                    ['A joint named "%s" is already in the library. ' ...
-                     'Overwrite it?'], lib(idx).Name), 'Overwrite joint', ...
-                    'Options', {'Overwrite', 'Cancel'}, ...
-                    'DefaultOption', 'Cancel', 'CancelOption', 'Cancel');
-                if ~strcmp(choice, 'Overwrite')
-                    return
-                end
+            if isempty(idx)
+                obj.commitSavedJoint(name, []);
+                return
+            end
+
+            % CloseFcn form, NOT the blocking one. uiconfirm with a return
+            % value halts execution inside the callback until a human
+            % answers - which deadlocks any programmatic driver, including
+            % the App Testing Framework: the test cannot reach its
+            % chooseDialog because the press that opened the dialog has
+            % never returned. The callback form returns immediately and
+            % delivers the answer through the event.
+            uiconfirm(fig, sprintf( ...
+                ['A joint named "%s" is already in the library. ' ...
+                 'Overwrite it?'], lib(idx).Name), 'Overwrite joint', ...
+                'Options',       {'Overwrite', 'Cancel'}, ...
+                'DefaultOption', 'Cancel', ...
+                'CancelOption',  'Cancel', ...
+                'CloseFcn', @(~, evt) obj.onOverwriteAnswered(name, idx, evt));
+        end
+
+        function onOverwriteAnswered(obj, name, idx, evt)
+            %ONOVERWRITEANSWERED  The overwrite dialog's reply.
+            if ~strcmp(evt.SelectedOption, 'Overwrite')
+                return
+            end
+            obj.commitSavedJoint(name, idx);
+        end
+
+        function commitSavedJoint(obj, name, idx)
+            %COMMITSAVEDJOINT  Write the joint into the library.
+            %   idx empty = append; otherwise overwrite that entry.
+            lib = obj.State.JointLibrary;
+            if isempty(idx)
+                lib(end + 1) = struct('Name', name, 'Joint', obj.buildJoint());
+                verb = 'Added';
+            else
                 lib(idx).Name  = name;
                 lib(idx).Joint = obj.buildJoint();
                 verb = 'Updated';
-            else
-                lib(end + 1) = struct('Name', name, 'Joint', obj.buildJoint());
-                verb = 'Added';
             end
             obj.State.JointLibrary = lib;
             obj.State.markDirty();
