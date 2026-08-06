@@ -823,9 +823,22 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % four-line readout sat stale while an insert's engagement
             % changed under it. Engagement feeds the required bolt length -
             % every control that does must refresh the readout.
-            p = testCase.Page;
+            % A bolt FIRST. An insert's Le is EngagementRatio x the bolt's
+            % nominal diameter, so with no bolt chosen the diameter is NaN
+            % and the readout correctly reports unknown however the ratio
+            % changes - the em dash is right, not stale. That distinction
+            % is the whole of A1, so the test has to give the readout
+            % something it can actually evaluate.
+            p     = testCase.Page;
+            bolts = testCase.App.State.Library.boltKeys();
+            testCase.assumeNotEmpty(bolts, 'No bolts in the library.');
+
+            testCase.choose(p.boltDropDown(), char(bolts(1)));
             testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.engagementRatioField(), '1.5');
             before = string(p.boltLengthLabel().Text{2});
+            testCase.assumeFalse(contains(before, char(8212)), ...
+                'The readout must be evaluable before this test means anything.');
 
             testCase.type(p.engagementRatioField(), '2.5');
             after = string(p.boltLengthLabel().Text{2});
