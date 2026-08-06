@@ -115,12 +115,13 @@ classdef JointConfigPage < gui2.Page
         end
 
         function build(obj, parent)
-            % 2/3 : 1/3. The left column carries the physical stack; the
-            % right takes loads and assumptions from step 5. It is declared
-            % now so later increments add groups rather than restructure.
+            % 60/40. The left column carries the physical stack - seven
+            % groups including the seven-column flange grid - so it needs
+            % the larger share, but a third starved the loads and
+            % assumptions beside it.
             g = uigridlayout(parent, [2 2]);
             g.RowHeight     = {'fit', 'fit'};
-            g.ColumnWidth   = {'2x', '1x'};
+            g.ColumnWidth   = {'3x', '2x'};
             g.Padding       = [8 8 8 8];
             g.RowSpacing    = 8;
             g.ColumnSpacing = 10;
