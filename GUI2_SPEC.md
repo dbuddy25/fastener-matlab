@@ -293,7 +293,7 @@ so nothing outside the view changes.
 | 7 | Bolt length & grip | Overall bolt length, then grip label + 4-line adequacy readout |
 | 8 | Advanced / overrides | Unthreaded body length L1, Bolt rated ultimate, Bolt rated yield, Frustum half-angle |
 
-**Right — loads, assumptions, run**
+**Right — loads, assumptions, run** (40%)
 
 | # | Group | Fields |
 |---|---|---|
