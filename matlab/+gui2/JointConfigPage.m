@@ -85,6 +85,10 @@ classdef JointConfigPage < gui2.Page
         BoltAxisDropDown
         LoadingPlaneField
 
+        AnalyzeButton
+        SaveJointButton
+        RequiredLabel
+
         MemberTypeDropDown
         MemberMaterialDropDown
         MemberMaterialLabel
@@ -152,17 +156,18 @@ classdef JointConfigPage < gui2.Page
             obj.buildBoltLengthGroup(left, 6);
             obj.buildAdvancedGroup(left, 7);
 
-            right = uigridlayout(g, [3 1]);
+            right = uigridlayout(g, [4 1]);
             right.Layout.Row    = 2;
             right.Layout.Column = 2;
             right.ColumnWidth   = {'1x'};
-            right.RowHeight     = repmat({'fit'}, 1, 3);
+            right.RowHeight     = repmat({'fit'}, 1, 4);
             right.Padding       = [0 0 0 0];
             right.RowSpacing    = 8;
 
             obj.buildPreloadGroup(right, 1);
             obj.buildLoadsGroup(right, 2);
             obj.buildAssumptionsGroup(right, 3);
+            obj.buildActionsGroup(right, 4);
             obj.syncWasherEnables();
 
             obj.listenTo('JointChanged', @() obj.refresh());
@@ -224,6 +229,8 @@ classdef JointConfigPage < gui2.Page
             obj.BoltShearField.Value    = obj.fmtOptional(lc.BoltShearLimitLoad);
             obj.JointTensileField.Value = obj.fmtOptional(lc.JointTensileLimitLoad);
             obj.JointShearField.Value   = obj.fmtOptional(lc.JointShearLimitLoad);
+
+            obj.validateRequired();
 
             % Same as Head is PAGE state, not case state: model.Joint holds
             % the two washers independently, so a loaded case defines both
@@ -767,6 +774,41 @@ classdef JointConfigPage < gui2.Page
             note.FontColor = gui2.palette('mutedText');
         end
 
+        function buildActionsGroup(obj, parent, row)
+            panel = uipanel(parent, 'Title', 'Actions');
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+
+            b = uigridlayout(panel, [3 1]);
+            b.ColumnWidth = {'1x'};
+            b.RowHeight   = {36, 'fit', 'fit'};
+            b.RowSpacing  = 6;
+            b.Padding     = [6 6 6 6];
+
+            obj.AnalyzeButton = uibutton(b, 'push', ...
+                'Text', 'Analyze Single Joint', 'FontWeight', 'bold', ...
+                'ButtonPushedFcn', @(~, ~) obj.onAnalyze());
+            obj.AnalyzeButton.Layout.Row    = 1;
+            obj.AnalyzeButton.Layout.Column = 1;
+
+            % The one place a required input is reported. Kept beneath the
+            % button rather than beside each field: the analyst needs the
+            % list at the moment they try to run, not scattered up the page.
+            obj.RequiredLabel = uilabel(b, 'WordWrap', 'on', 'Text', '');
+            obj.RequiredLabel.Layout.Row    = 2;
+            obj.RequiredLabel.Layout.Column = 1;
+            obj.RequiredLabel.FontColor     = gui2.palette('statusWarn');
+
+            obj.SaveJointButton = uibutton(b, 'push', ...
+                'Text', 'Save to Defined Joints', ...
+                'ButtonPushedFcn', @(~, ~) obj.onSaveJoint());
+            obj.SaveJointButton.Layout.Row    = 3;
+            obj.SaveJointButton.Layout.Column = 1;
+            obj.SaveJointButton.Tooltip = ['Store this joint in the ' ...
+                'defined-joints library under its name. Saved with the ' ...
+                'case file and used by the bulk workflow.'];
+        end
+
         function b = groupGrid(~, panel, rows)
             %GROUPGRID  The standard label / value / gutter grid.
             b = uigridlayout(panel, [rows 3]);
@@ -846,6 +888,10 @@ classdef JointConfigPage < gui2.Page
             obj.Refreshing = true;
             c = onCleanup(@() obj.clearRefreshing()); %#ok<NASGU>
             obj.State.Joint = obj.buildJoint();
+            % One call site rather than one per handler: every edit path
+            % funnels through here, so the gate cannot be forgotten when a
+            % control is added.
+            obj.validateRequired();
         end
 
         function joint = buildJoint(obj)
@@ -1137,6 +1183,119 @@ classdef JointConfigPage < gui2.Page
                 obj.MemberTypeDropDown.Value);
         end
 
+        function missing = missingRequired(obj)
+            %MISSINGREQUIRED  The selections Analyze cannot run without.
+            %   THIS IS THE ONLY GATE. buildJoint deliberately marshals an
+            %   incomplete form without complaint, because an incomplete
+            %   form is the normal state while working. Completeness is
+            %   enforced here, on the path where the answer has to be
+            %   trustworthy - not on every keystroke.
+            missing = string.empty(1, 0);
+            if strlength(obj.selectedKey(obj.BoltDropDown)) == 0
+                missing(end + 1) = "Bolt"; %#ok<AGROW>
+            end
+            if strlength(obj.selectedKey(obj.BoltMaterialDropDown)) == 0
+                missing(end + 1) = "Bolt material"; %#ok<AGROW>
+            end
+            if strlength(obj.selectedKey(obj.MemberMaterialDropDown)) == 0
+                missing(end + 1) = string(obj.MemberMaterialLabel.Text); %#ok<AGROW>
+            end
+            % Flange material is required only for a row actually in the
+            % stack - a row with no thickness is not part of this joint.
+            for i = 1:gui2.JointConfigPage.MaxFlangeLayers
+                if obj.FlangeThickness{i}.Value > 0 && ...
+                        strlength(obj.selectedKey(obj.FlangeMaterial{i})) == 0
+                    missing(end + 1) = sprintf("Flange layer %d material", i); %#ok<AGROW>
+                end
+            end
+        end
+
+        function validateRequired(obj)
+            %VALIDATEREQUIRED  Sole owner of AnalyzeButton.Enable.
+            %   Two independent disable reasons, and they must not clobber
+            %   each other: an unavailable library is reported on its own
+            %   and returns, rather than falling through into the
+            %   required-field branch and overwriting its message.
+            if isempty(obj.AnalyzeButton)
+                return
+            end
+            if ~obj.State.LibraryOK
+                obj.AnalyzeButton.Enable = 'off';
+                obj.RequiredLabel.Text = ['Hardware library not loaded - ' ...
+                    'nothing can be analysed until that is fixed.'];
+                return
+            end
+            missing = obj.missingRequired();
+            if isempty(missing)
+                obj.AnalyzeButton.Enable = 'on';
+                obj.RequiredLabel.Text   = '';
+            else
+                obj.AnalyzeButton.Enable = 'off';
+                obj.RequiredLabel.Text = sprintf('Required before Analyze: %s.', ...
+                    strjoin(cellstr(missing), ', '));
+            end
+        end
+
+        function onAnalyze(obj)
+            %ONANALYZE  Marshal, run the engine, hand the Result to AppState.
+            %   Its own try/catch, inside its own callback: an outer one
+            %   around construction catches nothing thrown from the event
+            %   loop (GUI2_SPEC.md Section 11).
+            try
+                r = engine.analyze(obj.buildJoint(), obj.buildLoadCase(), ...
+                    obj.State.Factors);
+            catch err
+                % A failed run must not leave a confident verdict on
+                % screen. Flag the previous result stale rather than
+                % clearing it or replacing it (A3).
+                obj.State.ResultStale = true;
+                uialert(ancestor(obj.Root, 'figure'), err.message, ...
+                    'Analysis failed');
+                return
+            end
+            obj.State.setResult(r);
+            obj.setStatus(sprintf('Analyzed "%s".', ...
+                gui2.JointConfigPage.orPlaceholder(obj.State.Joint.Name, ...
+                                                   'untitled joint')));
+        end
+
+        function onSaveJoint(obj)
+            %ONSAVEJOINT  Store this joint in the defined-joints library.
+            name = strtrim(string(obj.JointNameField.Value));
+            fig  = ancestor(obj.Root, 'figure');
+            if strlength(name) == 0
+                uialert(fig, ['Enter a joint name before saving - the ' ...
+                    'library is keyed by it.'], 'Cannot save joint');
+                return
+            end
+
+            lib = obj.State.JointLibrary;
+            % Case-INSENSITIVE collision: letting "JT-A" and "jt-a" coexist
+            % is a mapping trap (A13), because element mapping keys on the
+            % name and would silently reference the wrong joint.
+            idx = find(strcmpi(string({lib.Name}), name), 1);
+            if ~isempty(idx)
+                choice = uiconfirm(fig, sprintf( ...
+                    ['A joint named "%s" is already in the library. ' ...
+                     'Overwrite it?'], lib(idx).Name), 'Overwrite joint', ...
+                    'Options', {'Overwrite', 'Cancel'}, ...
+                    'DefaultOption', 'Cancel', 'CancelOption', 'Cancel');
+                if ~strcmp(choice, 'Overwrite')
+                    return
+                end
+                lib(idx).Name  = name;
+                lib(idx).Joint = obj.buildJoint();
+                verb = 'Updated';
+            else
+                lib(end + 1) = struct('Name', name, 'Joint', obj.buildJoint());
+                verb = 'Added';
+            end
+            obj.State.JointLibrary = lib;
+            obj.State.markDirty();
+            obj.setStatus(sprintf('%s joint "%s" in the defined-joints library.', ...
+                verb, name));
+        end
+
         function onSlipModeChanged(obj)
             obj.syncJointLoadVisibility();
             obj.commitJoint();
@@ -1354,6 +1513,14 @@ classdef JointConfigPage < gui2.Page
             end
         end
 
+        function s = orPlaceholder(value, placeholder)
+            %ORPLACEHOLDER  A non-empty string, or a stated stand-in.
+            s = char(strtrim(string(value)));
+            if isempty(s)
+                s = placeholder;
+            end
+        end
+
         function s = lineOrDash(fmt, v, dashText)
             %LINEORDASH  A formatted line, or the em-dash unknown (A1).
             if isnan(v)
@@ -1517,6 +1684,18 @@ classdef JointConfigPage < gui2.Page
 
         function d = boltAxisDropDown(obj)
             d = obj.BoltAxisDropDown;
+        end
+
+        function b = analyzeButton(obj)
+            b = obj.AnalyzeButton;
+        end
+
+        function b = saveJointButton(obj)
+            b = obj.SaveJointButton;
+        end
+
+        function l = requiredLabel(obj)
+            l = obj.RequiredLabel;
         end
     end
 end

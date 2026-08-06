@@ -684,4 +684,98 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 model.ShearTransferCondition.NotDeclared);
         end
     end
+    % ---- Actions: required-field gating, Analyze, Save ----------------------
+    methods (Test)
+        function analyzeIsHeldUntilEveryRequiredSelectionIsMade(testCase)
+            % The gate lives HERE, not in buildJoint - which is exactly why
+            % an incomplete form still commits without complaint.
+            p = testCase.Page;
+            testCase.verifyEqual(char(p.analyzeButton().Enable), 'off', ...
+                'A blank form cannot be analysed.');
+            testCase.verifyTrue(contains(string(p.requiredLabel().Text), "Bolt"), ...
+                'The gate must NAME what is missing, not just refuse.');
+        end
+
+        function theRequiredListNamesTheMemberMaterialByItsCurrentRole(testCase)
+            % The same dropdown is "Nut material" or "Parent (host)
+            % material" depending on type; the gate must say which.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyTrue( ...
+                contains(string(p.requiredLabel().Text), "Parent (host) material"));
+        end
+
+        function aFlangeMaterialIsRequiredOnlyOnceTheRowHasAThickness(testCase)
+            % A row with no thickness is not part of this joint, so its
+            % material cannot be required.
+            p = testCase.Page;
+            testCase.verifyFalse( ...
+                contains(string(p.requiredLabel().Text), "Flange layer 1"));
+            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.verifyTrue( ...
+                contains(string(p.requiredLabel().Text), "Flange layer 1 material"));
+        end
+
+        function analyzeEnablesOnceTheFormIsCompleteAndProducesAResult(testCase)
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            bolts = lib.boltKeys();
+            bmats = lib.materialKeys(Role = "bolt");
+            mats  = lib.materialKeys();
+            testCase.assumeNotEmpty(bolts);
+            testCase.assumeNotEmpty(bmats);
+            testCase.assumeNotEmpty(mats);
+
+            testCase.choose(p.boltDropDown(), char(bolts(1)));
+            testCase.choose(p.boltMaterialDropDown(), char(bmats(1)));
+            testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
+            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.choose(p.flangeMaterial(1), char(mats(1)));
+
+            testCase.verifyEqual(char(p.analyzeButton().Enable), 'on', ...
+                'A complete form must enable Analyze.');
+            testCase.verifyEmpty(char(p.requiredLabel().Text));
+
+            testCase.press(p.analyzeButton());
+            testCase.verifyClass(testCase.App.State.Result, 'engine.Result', ...
+                'Analyze must hand a Result to AppState.');
+            testCase.verifyFalse(testCase.App.State.ResultStale);
+        end
+
+        function savingWithNoNameIsRefused(testCase)
+            p = testCase.Page;
+            testCase.press(p.saveJointButton());
+            testCase.dismissDialog();
+            testCase.verifyEmpty(testCase.App.State.JointLibrary, ...
+                'A nameless joint must not enter the library - it is the key.');
+        end
+
+        function savingRoundTripsThroughTheJointLibrary(testCase)
+            p = testCase.Page;
+            testCase.type(p.jointNameField(), "JT-A");
+            testCase.type(p.boltCountField(), 4);
+
+            testCase.press(p.saveJointButton());
+
+            lib = testCase.App.State.JointLibrary;
+            testCase.verifyNumElements(lib, 1);
+            testCase.verifyEqual(lib(1).Name, "JT-A");
+            testCase.verifyEqual(lib(1).Joint.BoltCount, 4);
+        end
+
+        function aNameCollidingOnlyByCaseAsksBeforeOverwriting(testCase)
+            % A13: letting "JT-A" and "jt-a" coexist is a mapping trap -
+            % element mapping keys on the name.
+            p = testCase.Page;
+            testCase.type(p.jointNameField(), "JT-A");
+            testCase.press(p.saveJointButton());
+
+            testCase.type(p.jointNameField(), "jt-a");
+            testCase.press(p.saveJointButton());
+            testCase.chooseDialog('Overwrite');
+
+            testCase.verifyNumElements(testCase.App.State.JointLibrary, 1, ...
+                'A case-insensitive collision must overwrite, not duplicate.');
+        end
+    end
 end
