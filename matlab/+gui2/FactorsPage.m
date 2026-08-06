@@ -96,7 +96,7 @@ classdef FactorsPage < gui2.Page
             %BUILDFITTINGGROUP  The fitting factor, first on the page.
             %   First because one FF multiplies every factor of safety
             %   below it — reading order matches the arithmetic.
-            panel = uipanel(parent, 'Title', 'Fitting Factor');
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Fitting Factor');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
             g = uigridlayout(panel, [1 3]);
@@ -137,7 +137,7 @@ classdef FactorsPage < gui2.Page
 
         function buildSafetyGroup(obj, parent, row)
             %BUILDSAFETYGROUP  The four factors of safety.
-            panel = uipanel(parent, 'Title', 'Factors of Safety');
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Factors of Safety');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
             g = uigridlayout(panel, [4 3]);

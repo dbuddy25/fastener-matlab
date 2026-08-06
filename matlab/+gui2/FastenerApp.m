@@ -287,7 +287,7 @@ classdef FastenerApp < handle
             %BUILDLAYOUT  Root grid: rail | cards, with the status bar under both.
             root = uigridlayout(app.Fig, [3 2]);
             root.ColumnWidth = {gui2.FastenerApp.RailWidth, '1x'};
-            root.RowHeight   = {'1x', 22, 26};
+            root.RowHeight   = {'1x', 26, 26};
             root.Padding     = [4 4 4 4];
             root.RowSpacing  = 4;
             root.ColumnSpacing = 6;
@@ -314,10 +314,23 @@ classdef FastenerApp < handle
             % always-live summary is the bottom-most band. Ordering matters:
             % the status line changes, the footer does not, and a changing
             % line below a static one reads as the page shifting.
-            app.StatusLabel = uilabel(root, 'Text', '', ...
+            % Ruled top and bottom. The status line sits between the page
+            % content and the always-live footer, and three unbounded bands
+            % of text stacked at the foot of the window read as one blurred
+            % region - the rules are what make it three things.
+            statusBox = uipanel(root, 'BorderType', 'line', ...
+                'BorderColor', gui2.palette('rule'));
+            statusBox.Layout.Row    = 2;
+            statusBox.Layout.Column = [1 2];
+            sg = uigridlayout(statusBox, [1 1]);
+            sg.RowHeight   = {'1x'};
+            sg.ColumnWidth = {'1x'};
+            sg.Padding     = [8 0 8 0];
+
+            app.StatusLabel = uilabel(sg, 'Text', '', ...
                 'HorizontalAlignment', 'left');
-            app.StatusLabel.Layout.Row    = 2;
-            app.StatusLabel.Layout.Column = [1 2];
+            app.StatusLabel.Layout.Row    = 1;
+            app.StatusLabel.Layout.Column = 1;
 
             % Always-live summary of the factors and temperatures every
             % analysis on every page runs with. These are global, they are

@@ -246,7 +246,7 @@ classdef JointConfigPage < gui2.Page
     % ---- Layout -----------------------------------------------------------
     methods (Access = private)
         function buildBoltGroup(obj, parent, row)
-            panel = uipanel(parent, 'Title', 'Bolt');
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Bolt');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
@@ -285,7 +285,11 @@ classdef JointConfigPage < gui2.Page
         end
 
         function buildFlangeGroup(obj, parent, row)
-            panel = uipanel(parent, 'Title', 'Flange stack (clamped layers)');
+            % Named to head off the obvious misreading: the threaded member
+            % is NOT a layer here. Nut, insert or tapped parent is its own
+            % group - the stack is what the bolt clamps, nothing else.
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', ...
+                'Flange stack (clamped layers only - not the threaded member)');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
@@ -391,11 +395,11 @@ classdef JointConfigPage < gui2.Page
             %   Both groups come from here, so the two structs carry
             %   identical fields in identical order - the thing that makes
             %   them safe to treat alike.
-            panel = uipanel(parent, 'Title', titleText);
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', titleText);
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
-            nRows = 5 + double(withSameAsHead);
+            nRows = 5;
             b = uigridlayout(panel, [nRows 3]);
             b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
                              gui2.JointConfigPage.ValueW, '1x'};
@@ -409,19 +413,21 @@ classdef JointConfigPage < gui2.Page
                 ['Unchecked marshals the model default - no washer - NOT a ' ...
                  'washer of zero thickness. Rigid in the frustum stiffness ' ...
                  'model; its OD is the bearing face diameter.']);
-            w.Present.Layout.Row = r; w.Present.Layout.Column = [1 3];
+            % Present and the mirror share a row: they are the two switches
+            % that decide whether the rest of the group is editable at all,
+            % so they read as one decision rather than two stacked ones.
+            w.Present.Layout.Row = r; w.Present.Layout.Column = 1;
             obj.bindEdit(w.Present, @(~, ~) obj.onWasherPresentToggled());
 
             if withSameAsHead
-                r = r + 1;
-                obj.SameAsHeadCheck = uicheckbox(b, 'Text', 'Same as Head', ...
+                obj.SameAsHeadCheck = uicheckbox(b, 'Text', 'Same as under head', ...
                     'Value', false, 'Tooltip', ...
-                    ['Mirror the head washer live - material, OD, ID and ' ...
-                     'thickness - and grey this group. Unticking KEEPS the ' ...
-                     'mirrored values and re-enables editing; it never ' ...
-                     'blanks them.']);
-                obj.SameAsHeadCheck.Layout.Row = r;
-                obj.SameAsHeadCheck.Layout.Column = [1 3];
+                    ['Mirror the washer under the bolt head live - material, ' ...
+                     'OD, ID and thickness - and grey this group. Unticking ' ...
+                     'KEEPS the mirrored values and re-enables editing; it ' ...
+                     'never blanks them.']);
+                obj.SameAsHeadCheck.Layout.Row    = r;
+                obj.SameAsHeadCheck.Layout.Column = [2 3];
                 obj.bindEdit(obj.SameAsHeadCheck, @(~, ~) obj.onSameAsHeadToggled());
             end
 
@@ -459,7 +465,7 @@ classdef JointConfigPage < gui2.Page
         end
 
         function buildMemberGroup(obj, parent, row)
-            panel = uipanel(parent, 'Title', 'Threaded member');
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Threaded member');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
@@ -499,14 +505,18 @@ classdef JointConfigPage < gui2.Page
                      'DIAMETER, e.g. 1.5 for 1.5D. Helical inserts are ' ...
                      'specified by length CLASS, not an absolute inch ' ...
                      'value (NASM33537 Rev 4 Sec 6.1). Helical Insert only.']);
-            obj.bindEdit(obj.EngagementRatioField, @(~, ~) obj.commitJoint());
+            % onEngagementEdited, not commitJoint: engagement feeds the
+            % required bolt length, so the readout has to follow it. Binding
+            % straight to commitJoint left the four-line readout stale while
+            % an insert's engagement changed under it.
+            obj.bindEdit(obj.EngagementRatioField, @(~, ~) obj.onEngagementEdited());
 
             [obj.EngagementLengthField, obj.EngagementLengthLabel] = ...
                 obj.addLabelledText(b, 4, 'Engagement length Le (in)', ...
                     ['Thread engagement in INCHES - nut thread height, or ' ...
                      'tapped-hole engagement depth. Nut and Tapped Hole ' ...
                      'only. Blank leaves the thread checks not evaluated.']);
-            obj.bindEdit(obj.EngagementLengthField, @(~, ~) obj.commitJoint());
+            obj.bindEdit(obj.EngagementLengthField, @(~, ~) obj.onEngagementEdited());
         end
 
         function [c, lb] = addLabelledText(obj, g, row, labelText, tip)
@@ -523,7 +533,7 @@ classdef JointConfigPage < gui2.Page
             %   threaded member's engagement, so it has to sit below every
             %   input it consumes. The first build put a readout above two
             %   of its own inputs.
-            panel = uipanel(parent, 'Title', 'Bolt length');
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Bolt length');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
@@ -554,7 +564,7 @@ classdef JointConfigPage < gui2.Page
             %   left blank. They are grouped at the bottom rather than mixed
             %   into the stack because an override that sits among required
             %   inputs reads as one.
-            panel = uipanel(parent, 'Title', 'Advanced / overrides');
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Advanced / overrides');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
@@ -620,7 +630,7 @@ classdef JointConfigPage < gui2.Page
             %   first build removed the selector for the same reason.
             %   CreepLoss and ThermalRate have no controls either - the
             %   model keeps them for headless and fixture use.
-            panel = uipanel(parent, 'Title', 'Preload (torque-controlled)');
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Preload (torque-controlled)');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
@@ -634,8 +644,12 @@ classdef JointConfigPage < gui2.Page
             % These four are mustBeNonnegative / mustBePositive with NO NaN
             % state, so they are numeric fields with limits rather than text
             % that could parse to NaN and be rejected by the model.
-            obj.TorqueTolField = obj.addNumeric(b, 2, 'Torque tolerance (frac)', ...
-                'Fractional torque tolerance: 0.10 means +/-10%.');
+            obj.TorqueTolField = obj.addNumeric(b, 2, 'Torque tolerance +/- (frac)', ...
+                ['Tolerance band on the SPECIFIED TORQUE - how accurately ' ...
+                 'the wrench is set. "40 +/- 2 in-lbf" is 0.05. ' ...
+                 'NASA-STD-5020B 4.3.1: enters as c_max = 1 + tol and ' ...
+                 'c_min = 1 - tol. This is about the torque; the ' ...
+                 'uncertainty below is about what that torque achieves.']);
             obj.TorqueTolField.Limits = [0 Inf];
             obj.TorqueTolField.ValueDisplayFormat = '%.2f';
             obj.TorqueTolField.Value = 0;
@@ -649,8 +663,14 @@ classdef JointConfigPage < gui2.Page
             obj.NutFactorField.Value = 0.2;
             obj.bindEdit(obj.NutFactorField, @(~, ~) obj.commitJoint());
 
-            obj.UncertaintyField = obj.addNumeric(b, 4, 'Uncertainty (Gamma)', ...
-                'Preload uncertainty, fractional.');
+            obj.UncertaintyField = obj.addNumeric(b, 4, 'Preload uncertainty +/- (Gamma)', ...
+                ['Scatter in the TORQUE-TO-PRELOAD relationship - nut ' ...
+                 'factor K and friction - not in the torque itself. ' ...
+                 'NASA-STD-5020B Eq. 3/4/5: (1 +/- Gamma). 0.25 is the ' ...
+                 'usual figure for an unlubricated fastener. Unlike torque ' ...
+                 'tolerance it earns a statistical benefit across the ' ...
+                 'pattern: a joint that is NOT separation-critical uses ' ...
+                 'Gamma/sqrt(nf) on the minimum (Eq. 5).']);
             obj.UncertaintyField.Limits = [0 Inf];
             obj.UncertaintyField.ValueDisplayFormat = '%.2f';
             obj.UncertaintyField.Value = 0.25;
@@ -674,7 +694,7 @@ classdef JointConfigPage < gui2.Page
 
         function buildLoadsGroup(obj, parent, row)
             %BUILDLOADSGROUP  model.LoadCase - the single-joint limit loads.
-            panel = uipanel(parent, 'Title', 'Applied loads (single joint)');
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Applied loads (single joint)');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
@@ -715,7 +735,7 @@ classdef JointConfigPage < gui2.Page
         end
 
         function buildAssumptionsGroup(obj, parent, row)
-            panel = uipanel(parent, 'Title', 'Analysis assumptions');
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Analysis assumptions');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
@@ -775,7 +795,7 @@ classdef JointConfigPage < gui2.Page
         end
 
         function buildActionsGroup(obj, parent, row)
-            panel = uipanel(parent, 'Title', 'Actions');
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Actions');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
@@ -1344,6 +1364,11 @@ classdef JointConfigPage < gui2.Page
                      obj.JointShearField, obj.JointShearLabel}
                 h{1}.Visible = vis{isJoint + 1};
             end
+        end
+
+        function onEngagementEdited(obj)
+            obj.updateBoltLengthLabel();
+            obj.commitJoint();
         end
 
         function onBoltLengthEdited(obj)

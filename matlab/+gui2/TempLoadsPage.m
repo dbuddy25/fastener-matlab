@@ -65,7 +65,7 @@ classdef TempLoadsPage < gui2.Page
 
             degC = [char(176) 'C'];   % matches +gui's own degree-symbol idiom
             % No unit in the title: every row now carries its own.
-            panel = uipanel(g, 'Title', 'Service Temperatures');
+            panel = uipanel(g, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Service Temperatures');
             panel.Layout.Row    = 2;
             panel.Layout.Column = 1;
             pg = uigridlayout(panel, [3 3]);

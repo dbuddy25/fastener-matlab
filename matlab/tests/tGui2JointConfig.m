@@ -816,4 +816,33 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 'Nothing may be written until the overwrite is confirmed.');
         end
     end
+    % ---- Live readouts follow their inputs ---------------------------------
+    methods (Test)
+        function theBoltLengthReadoutFollowsAnInsertEngagementRatio(testCase)
+            % The ratio field was bound straight to commitJoint, so the
+            % four-line readout sat stale while an insert's engagement
+            % changed under it. Engagement feeds the required bolt length -
+            % every control that does must refresh the readout.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            before = string(p.boltLengthLabel().Text{2});
+
+            testCase.type(p.engagementRatioField(), '2.5');
+            after = string(p.boltLengthLabel().Text{2});
+
+            testCase.verifyNotEqual(after, before, ...
+                'Changing the insert engagement must update the readout.');
+        end
+
+        function theBoltLengthReadoutFollowsANutEngagementLength(testCase)
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            before = string(p.boltLengthLabel().Text{2});
+
+            testCase.type(p.engagementLengthField(), '0.31');
+            after = string(p.boltLengthLabel().Text{2});
+
+            testCase.verifyNotEqual(after, before);
+        end
+    end
 end

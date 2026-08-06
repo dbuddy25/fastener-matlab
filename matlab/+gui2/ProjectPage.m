@@ -49,7 +49,7 @@ classdef ProjectPage < gui2.Page
                 'It flows to reports and exports only; nothing here affects ' ...
                 'a margin.']);
 
-            panel = uipanel(g, 'Title', 'Project');
+            panel = uipanel(g, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Project');
             panel.Layout.Row = 2;
             pg = uigridlayout(panel, [6 2]);
             pg.ColumnWidth = {'fit', '1x'};

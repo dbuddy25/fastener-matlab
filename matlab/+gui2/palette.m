@@ -26,6 +26,7 @@ function c = palette(name)
 %                                            normal, and the pale red for a
 %                                            REQUIRED field left blank
 %                                            (GUI2_SPEC.md Section 11)
+%     rule                                 — separator / border lines
 %     footerBg / footerFg                  — the always-live summary band
 %     bannerInfoBg|Fg|Border               — info banner (onboarding, hints)
 %     bannerWarnBg|Fg|Border               — warning banner (amber)
@@ -82,6 +83,9 @@ switch char(name)
     % when the field is filled.
     case 'fieldBg',         c = [1.00 1.00 1.00];
     case 'requiredBlankBg', c = [1.00 0.90 0.90];   % #FFE5E5
+
+    % ---- Rules / separators ----------------------------------------------
+    case 'rule',         c = [0.780 0.780 0.800];
 
     % ---- Footer band (the always-live factors/temps summary) -------------
     % A filled band, not a bare line of text: two unstyled labels stacked
