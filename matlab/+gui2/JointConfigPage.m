@@ -63,6 +63,28 @@ classdef JointConfigPage < gui2.Page
         RatedYieldField
         FrustumAngleField
 
+        % Right column
+        NominalTorqueField
+        TorqueTolField
+        NutFactorField
+        UncertaintyField
+        RelaxationField
+        SeparationCriticalCheck
+
+        CaseNameField
+        BoltTensileField
+        BoltShearField
+        JointTensileField
+        JointShearField
+        JointTensileLabel
+        JointShearLabel
+
+        ShearPlaneDropDown
+        SlipModeDropDown
+        FrictionField
+        BoltAxisDropDown
+        LoadingPlaneField
+
         MemberTypeDropDown
         MemberMaterialDropDown
         MemberMaterialLabel
@@ -129,9 +151,22 @@ classdef JointConfigPage < gui2.Page
             obj.buildMemberGroup(left, 5);
             obj.buildBoltLengthGroup(left, 6);
             obj.buildAdvancedGroup(left, 7);
+
+            right = uigridlayout(g, [3 1]);
+            right.Layout.Row    = 2;
+            right.Layout.Column = 2;
+            right.ColumnWidth   = {'1x'};
+            right.RowHeight     = repmat({'fit'}, 1, 3);
+            right.Padding       = [0 0 0 0];
+            right.RowSpacing    = 8;
+
+            obj.buildPreloadGroup(right, 1);
+            obj.buildLoadsGroup(right, 2);
+            obj.buildAssumptionsGroup(right, 3);
             obj.syncWasherEnables();
 
             obj.listenTo('JointChanged', @() obj.refresh());
+            obj.listenTo('LoadCaseChanged', @() obj.refresh());
             obj.refresh();
         end
 
@@ -166,7 +201,29 @@ classdef JointConfigPage < gui2.Page
             obj.EngagementRatioField.Value  = obj.fmtOptional(m.EngagementRatio);
             obj.EngagementLengthField.Value = obj.fmtOptional(m.EngagementLength);
             obj.syncMemberType();
+            obj.syncJointLoadVisibility();
             obj.updateBoltLengthLabel();
+
+            obj.FrictionField.Value      = j.FrictionCoefficient;
+            obj.LoadingPlaneField.Value  = j.LoadingPlaneFactor;
+            obj.ShearPlaneDropDown.Value = char(string(j.ShearPlane));
+            obj.SlipModeDropDown.Value   = char(string(j.SlipMode));
+            obj.BoltAxisDropDown.Value   = char(string(j.BoltAxis));
+
+            ps = j.PreloadSpec;
+            obj.NominalTorqueField.Value      = obj.fmtOptional(ps.NominalTorque);
+            obj.TorqueTolField.Value          = ps.TorqueTolerance;
+            obj.NutFactorField.Value          = ps.NutFactor;
+            obj.UncertaintyField.Value        = ps.Uncertainty;
+            obj.RelaxationField.Value         = ps.RelaxationFraction;
+            obj.SeparationCriticalCheck.Value = ps.SeparationCritical;
+
+            lc = obj.State.LoadCase;
+            obj.CaseNameField.Value     = char(lc.Name);
+            obj.BoltTensileField.Value  = obj.fmtOptional(lc.BoltTensileLimitLoad);
+            obj.BoltShearField.Value    = obj.fmtOptional(lc.BoltShearLimitLoad);
+            obj.JointTensileField.Value = obj.fmtOptional(lc.JointTensileLimitLoad);
+            obj.JointShearField.Value   = obj.fmtOptional(lc.JointShearLimitLoad);
 
             % Same as Head is PAGE state, not case state: model.Joint holds
             % the two washers independently, so a loaded case defines both
@@ -549,6 +606,177 @@ classdef JointConfigPage < gui2.Page
             obj.bindEdit(obj.FrustumAngleField, @(~, ~) obj.commitJoint());
         end
 
+        function buildPreloadGroup(obj, parent, row)
+            %BUILDPRELOADGROUP  model.PreloadSpec, torque-controlled.
+            %   Method is hard-set to TorqueControl and has no selector:
+            %   this team's workflow is always torque-controlled, and the
+            %   first build removed the selector for the same reason.
+            %   CreepLoss and ThermalRate have no controls either - the
+            %   model keeps them for headless and fixture use.
+            panel = uipanel(parent, 'Title', 'Preload (torque-controlled)');
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+
+            b = obj.groupGrid(panel, 6);
+
+            obj.NominalTorqueField = obj.addLabelledText(b, 1, ...
+                'Nominal torque (in-lbf)', ...
+                'Applied effective torque, above running torque.');
+            obj.bindEdit(obj.NominalTorqueField, @(~, ~) obj.commitJoint());
+
+            % These four are mustBeNonnegative / mustBePositive with NO NaN
+            % state, so they are numeric fields with limits rather than text
+            % that could parse to NaN and be rejected by the model.
+            obj.TorqueTolField = obj.addNumeric(b, 2, 'Torque tolerance (frac)', ...
+                'Fractional torque tolerance: 0.10 means +/-10%.');
+            obj.TorqueTolField.Limits = [0 Inf];
+            obj.TorqueTolField.ValueDisplayFormat = '%.2f';
+            obj.TorqueTolField.Value = 0;
+            obj.bindEdit(obj.TorqueTolField, @(~, ~) obj.commitJoint());
+
+            obj.NutFactorField = obj.addNumeric(b, 3, 'Nut factor K', ...
+                'Torque-to-preload nut factor K.');
+            obj.NutFactorField.Limits = [0 Inf];
+            obj.NutFactorField.LowerLimitInclusive = 'off';
+            obj.NutFactorField.ValueDisplayFormat = '%.2f';
+            obj.NutFactorField.Value = 0.2;
+            obj.bindEdit(obj.NutFactorField, @(~, ~) obj.commitJoint());
+
+            obj.UncertaintyField = obj.addNumeric(b, 4, 'Uncertainty (Gamma)', ...
+                'Preload uncertainty, fractional.');
+            obj.UncertaintyField.Limits = [0 Inf];
+            obj.UncertaintyField.ValueDisplayFormat = '%.2f';
+            obj.UncertaintyField.Value = 0.25;
+            obj.bindEdit(obj.UncertaintyField, @(~, ~) obj.commitJoint());
+
+            obj.RelaxationField = obj.addNumeric(b, 5, 'Relaxation fraction', ...
+                'Short-term preload relaxation, fractional.');
+            obj.RelaxationField.Limits = [0 Inf];
+            obj.RelaxationField.ValueDisplayFormat = '%.2f';
+            obj.RelaxationField.Value = 0.05;
+            obj.bindEdit(obj.RelaxationField, @(~, ~) obj.commitJoint());
+
+            obj.SeparationCriticalCheck = uicheckbox(b, ...
+                'Text', 'Separation critical joint', 'Value', false);
+            obj.SeparationCriticalCheck.Layout.Row = 6;
+            obj.SeparationCriticalCheck.Layout.Column = [1 3];
+            obj.SeparationCriticalCheck.Tooltip = ['Selects the minimum ' ...
+                'preload equation: NASA-STD-5020B Eq. 4 vs Eq. 5.'];
+            obj.bindEdit(obj.SeparationCriticalCheck, @(~, ~) obj.commitJoint());
+        end
+
+        function buildLoadsGroup(obj, parent, row)
+            %BUILDLOADSGROUP  model.LoadCase - the single-joint limit loads.
+            panel = uipanel(parent, 'Title', 'Applied loads (single joint)');
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+
+            b = obj.groupGrid(panel, 5);
+
+            obj.CaseNameField = obj.addLabelledText(b, 1, 'Case name', ...
+                'Label for this load case. Never analysed.');
+            obj.bindEdit(obj.CaseNameField, @(~, ~) obj.commitLoadCase());
+
+            obj.BoltTensileField = obj.addLabelledText(b, 2, ...
+                'Bolt tensile limit PtL', ...
+                'Most-loaded bolt tensile limit load, lbf.');
+            obj.bindEdit(obj.BoltTensileField, @(~, ~) obj.commitLoadCase());
+
+            obj.BoltShearField = obj.addLabelledText(b, 3, ...
+                'Bolt shear limit PsL', ...
+                'Most-loaded bolt shear limit load, lbf.');
+            obj.bindEdit(obj.BoltShearField, @(~, ~) obj.commitLoadCase());
+
+            % Joint totals are shown ONLY for joint-mode slip. NASA-STD-5020B
+            % Eq. 84 needs them; Eq. 86 (the single-fastener default) does
+            % not, and showing them unconditionally is what made them
+            % confusing. They are NOT BoltCount x per-bolt - engine
+            % marginSlip says so explicitly, because of bolt-pattern load
+            % distribution - so blank leaves the Slip row not evaluated.
+            [obj.JointTensileField, obj.JointTensileLabel] = ...
+                obj.addLabelledText(b, 4, 'Joint tensile total', ...
+                    ['Joint-level tensile total, lbf. Required for ' ...
+                     'joint-mode slip (5020B Eq. 84). NOT bolt count x ' ...
+                     'the per-bolt load.']);
+            obj.bindEdit(obj.JointTensileField, @(~, ~) obj.commitLoadCase());
+
+            [obj.JointShearField, obj.JointShearLabel] = ...
+                obj.addLabelledText(b, 5, 'Joint shear total', ...
+                    ['Joint-level shear total, lbf. Required for ' ...
+                     'joint-mode slip (5020B Eq. 84).']);
+            obj.bindEdit(obj.JointShearField, @(~, ~) obj.commitLoadCase());
+        end
+
+        function buildAssumptionsGroup(obj, parent, row)
+            panel = uipanel(parent, 'Title', 'Analysis assumptions');
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+
+            b = obj.groupGrid(panel, 6);
+
+            obj.ShearPlaneDropDown = obj.addDropdown(b, 1, 'Shear plane', ...
+                gui2.JointConfigPage.enumItems('model.ShearPlaneCondition'), ...
+                ['Does the shear plane cut the THREADS or the ' ...
+                 'full-diameter BODY? Body if the unthreaded shank ' ...
+                 'extends past the faying surface; threads otherwise. ' ...
+                 'Sets the shear area (5020B Eq. 12 shank vs Eq. 13 ' ...
+                 'minor-diameter) AND the interaction exponents ' ...
+                 '(Eq. 20/21 body 2.5/1.5, Eq. 22/23 threads 1.2/2.0). ' ...
+                 'Threads is the conservative choice.']);
+            obj.bindEdit(obj.ShearPlaneDropDown, @(~, ~) obj.commitJoint());
+
+            obj.SlipModeDropDown = obj.addDropdown(b, 2, 'Slip mode', ...
+                gui2.JointConfigPage.enumItems('model.SlipMode'), ...
+                ['Single-fastener slip (5020B Eq. 86) or joint slip ' ...
+                 '(Eq. 84). Joint mode needs the joint-level totals in ' ...
+                 'Applied loads.']);
+            obj.bindEdit(obj.SlipModeDropDown, @(~, ~) obj.onSlipModeChanged());
+
+            obj.FrictionField = obj.addNumeric(b, 3, 'Friction coefficient', ...
+                'Faying-surface friction. Zero means slip is not evaluated.');
+            obj.FrictionField.Limits = [0 Inf];
+            obj.FrictionField.Value = 0;
+            obj.bindEdit(obj.FrictionField, @(~, ~) obj.commitJoint());
+
+            obj.BoltAxisDropDown = obj.addDropdown(b, 4, 'Bolt axis', ...
+                gui2.JointConfigPage.enumItems('model.BoltAxis'), ...
+                ['Global FEM axis the fastener acts along. Used by the ' ...
+                 'bulk path to split element forces into tension and ' ...
+                 'shear.']);
+            obj.bindEdit(obj.BoltAxisDropDown, @(~, ~) obj.commitJoint());
+
+            obj.LoadingPlaneField = obj.addNumeric(b, 5, 'Loading-plane factor n', ...
+                'n = Llp/L. 1.0 is conservative.');
+            obj.LoadingPlaneField.Limits = [0 Inf];
+            obj.LoadingPlaneField.ValueDisplayFormat = '%.2f';
+            obj.LoadingPlaneField.Value = 1.0;
+            obj.bindEdit(obj.LoadingPlaneField, @(~, ~) obj.commitJoint());
+
+            % GUI2_SPEC.md 7.2f: the shear-transfer condition control is
+            % deliberately absent and model.Joint keeps its NotDeclared
+            % default, which computes fbu = 0 and records the exemption as
+            % ASSUMED rather than VERIFIED. Hard-setting the "verified"
+            % member instead would have every joint claim a verification
+            % nobody performed. This note is the future-feature marker.
+            note = uilabel(b, 'WordWrap', 'on', 'Text', ...
+                ['Close-fit assumed - bolt bending (fbu = 0) not yet ' ...
+                 'implemented; NASA-STD-5020B 4.4.4 exemption assumed, ' ...
+                 'not verified.']);
+            note.Layout.Row = 6;
+            note.Layout.Column = [1 3];
+            note.FontColor = gui2.palette('mutedText');
+        end
+
+        function b = groupGrid(~, panel, rows)
+            %GROUPGRID  The standard label / value / gutter grid.
+            b = uigridlayout(panel, [rows 3]);
+            b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
+                             gui2.JointConfigPage.ValueW, '1x'};
+            b.RowHeight   = repmat({'fit'}, 1, rows);
+            b.RowSpacing  = 4;
+            b.Padding     = [6 6 6 6];
+        end
+
         function [d, lb] = addDropdown(obj, g, row, labelText, items, tip) %#ok<INUSD>
             lb = uilabel(g, 'Text', labelText, 'Tooltip', tip);
             lb.Layout.Row = row; lb.Layout.Column = 1;
@@ -639,9 +867,54 @@ classdef JointConfigPage < gui2.Page
             joint.BoltRatedUltimateLoad = obj.parseOptional(obj.RatedUltField);
             joint.BoltRatedYieldLoad    = obj.parseOptional(obj.RatedYieldField);
             joint.FrustumAngle          = obj.FrustumAngleField.Value;
+
+            joint.FrictionCoefficient = obj.FrictionField.Value;
+            joint.LoadingPlaneFactor  = obj.LoadingPlaneField.Value;
+            joint.ShearPlane = gui2.JointConfigPage.enumFromLabel( ...
+                'model.ShearPlaneCondition', obj.ShearPlaneDropDown.Value);
+            joint.SlipMode   = gui2.JointConfigPage.enumFromLabel( ...
+                'model.SlipMode', obj.SlipModeDropDown.Value);
+            joint.BoltAxis   = gui2.JointConfigPage.enumFromLabel( ...
+                'model.BoltAxis', obj.BoltAxisDropDown.Value);
+            joint.PreloadSpec    = obj.buildPreloadSpec();
             joint.ThreadedMember = obj.buildThreadedMember();
-            joint.HeadWasher   = obj.buildWasher(obj.HeadWasher);
-            joint.NutWasher    = obj.buildWasher(obj.NutWasher);
+            joint.HeadWasher     = obj.buildWasher(obj.HeadWasher);
+            joint.NutWasher      = obj.buildWasher(obj.NutWasher);
+        end
+
+        function ps = buildPreloadSpec(obj)
+            %BUILDPRELOADSPEC  Torque control always - see buildPreloadGroup.
+            ps = obj.State.Joint.PreloadSpec;
+            ps.Method             = model.PreloadMethod.TorqueControl;
+            ps.NominalTorque      = obj.parseOptional(obj.NominalTorqueField);
+            ps.TorqueTolerance    = obj.TorqueTolField.Value;
+            ps.NutFactor          = obj.NutFactorField.Value;
+            ps.Uncertainty        = obj.UncertaintyField.Value;
+            ps.RelaxationFraction = obj.RelaxationField.Value;
+            ps.SeparationCritical = logical(obj.SeparationCriticalCheck.Value);
+        end
+
+        function commitLoadCase(obj)
+            %COMMITLOADCASE  Controls -> AppState.LoadCase. Suppresses its
+            %   own echo for the same reason commitJoint does.
+            if obj.Refreshing
+                return
+            end
+            obj.Refreshing = true;
+            c = onCleanup(@() obj.clearRefreshing()); %#ok<NASGU>
+            obj.State.LoadCase = obj.buildLoadCase();
+        end
+
+        function lc = buildLoadCase(obj)
+            %BUILDLOADCASE  TOTAL, like buildJoint. Every field here is
+            %   mustBeNonnegativeOrNaN, so a typed zero is a legitimate
+            %   load and parseOptional keeps it.
+            lc = obj.State.LoadCase;
+            lc.Name                  = string(obj.CaseNameField.Value);
+            lc.BoltTensileLimitLoad  = obj.parseOptional(obj.BoltTensileField);
+            lc.BoltShearLimitLoad    = obj.parseOptional(obj.BoltShearField);
+            lc.JointTensileLimitLoad = obj.parseOptional(obj.JointTensileField);
+            lc.JointShearLimitLoad   = obj.parseOptional(obj.JointShearField);
         end
 
         function w = buildWasher(obj, g)
@@ -814,7 +1087,29 @@ classdef JointConfigPage < gui2.Page
 
         function onMemberTypeChanged(obj)
             obj.syncMemberType();
+            obj.syncJointLoadVisibility();
             obj.updateBoltLengthLabel();
+
+            obj.FrictionField.Value      = j.FrictionCoefficient;
+            obj.LoadingPlaneField.Value  = j.LoadingPlaneFactor;
+            obj.ShearPlaneDropDown.Value = char(string(j.ShearPlane));
+            obj.SlipModeDropDown.Value   = char(string(j.SlipMode));
+            obj.BoltAxisDropDown.Value   = char(string(j.BoltAxis));
+
+            ps = j.PreloadSpec;
+            obj.NominalTorqueField.Value      = obj.fmtOptional(ps.NominalTorque);
+            obj.TorqueTolField.Value          = ps.TorqueTolerance;
+            obj.NutFactorField.Value          = ps.NutFactor;
+            obj.UncertaintyField.Value        = ps.Uncertainty;
+            obj.RelaxationField.Value         = ps.RelaxationFraction;
+            obj.SeparationCriticalCheck.Value = ps.SeparationCritical;
+
+            lc = obj.State.LoadCase;
+            obj.CaseNameField.Value     = char(lc.Name);
+            obj.BoltTensileField.Value  = obj.fmtOptional(lc.BoltTensileLimitLoad);
+            obj.BoltShearField.Value    = obj.fmtOptional(lc.BoltShearLimitLoad);
+            obj.JointTensileField.Value = obj.fmtOptional(lc.JointTensileLimitLoad);
+            obj.JointShearField.Value   = obj.fmtOptional(lc.JointShearLimitLoad);
             obj.commitJoint();
         end
 
@@ -861,6 +1156,28 @@ classdef JointConfigPage < gui2.Page
         function t = selectedMemberType(obj)
             t = gui2.JointConfigPage.memberTypeFromLabel( ...
                 obj.MemberTypeDropDown.Value);
+        end
+
+        function onSlipModeChanged(obj)
+            obj.syncJointLoadVisibility();
+            obj.commitJoint();
+        end
+
+        function syncJointLoadVisibility(obj)
+            %SYNCJOINTLOADVISIBILITY  Joint totals appear only in joint mode.
+            %   5020B Eq. 84 needs them; the single-fastener default
+            %   (Eq. 86) does not, and showing them always is what made
+            %   them read as required.
+            if isempty(obj.SlipModeDropDown)
+                return
+            end
+            isJoint = gui2.JointConfigPage.enumFromLabel('model.SlipMode', ...
+                obj.SlipModeDropDown.Value) == model.SlipMode.Joint;
+            vis = {'off', 'on'};
+            for h = {obj.JointTensileField, obj.JointTensileLabel, ...
+                     obj.JointShearField, obj.JointShearLabel}
+                h{1}.Visible = vis{isJoint + 1};
+            end
         end
 
         function onBoltLengthEdited(obj)
@@ -1037,6 +1354,27 @@ classdef JointConfigPage < gui2.Page
 
     % ---- Member type labels -----------------------------------------------
     methods (Static, Access = private)
+        function items = enumItems(enumClass)
+            %ENUMITEMS  Enum member names as dropdown items, in order.
+            members = enumeration(enumClass);
+            items = cellstr(string(members(:)'));
+        end
+
+        function m = enumFromLabel(enumClass, label)
+            %ENUMFROMLABEL  Item text -> enum member, via the ENUMERATION.
+            %   Never a string comparison against a hard-coded member name
+            %   (GUI2_HARVEST.md C1). An unrecognised label falls back to
+            %   the first member rather than throwing, keeping buildJoint
+            %   total.
+            members = enumeration(enumClass);
+            idx = find(string(members) == strtrim(string(label)), 1);
+            if isempty(idx)
+                m = members(1);
+            else
+                m = members(idx);
+            end
+        end
+
         function s = lineOrDash(fmt, v, dashText)
             %LINEORDASH  A formatted line, or the em-dash unknown (A1).
             if isnan(v)
@@ -1168,6 +1506,38 @@ classdef JointConfigPage < gui2.Page
 
         function f = frustumAngleField(obj)
             f = obj.FrustumAngleField;
+        end
+
+        function f = nominalTorqueField(obj)
+            f = obj.NominalTorqueField;
+        end
+
+        function f = nutFactorField(obj)
+            f = obj.NutFactorField;
+        end
+
+        function c = separationCriticalCheck(obj)
+            c = obj.SeparationCriticalCheck;
+        end
+
+        function f = boltTensileField(obj)
+            f = obj.BoltTensileField;
+        end
+
+        function f = jointTensileField(obj)
+            f = obj.JointTensileField;
+        end
+
+        function d = slipModeDropDown(obj)
+            d = obj.SlipModeDropDown;
+        end
+
+        function d = shearPlaneDropDown(obj)
+            d = obj.ShearPlaneDropDown;
+        end
+
+        function d = boltAxisDropDown(obj)
+            d = obj.BoltAxisDropDown;
         end
     end
 end

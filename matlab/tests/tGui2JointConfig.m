@@ -606,4 +606,82 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 'An angle outside (0, 90) must never reach the model.');
         end
     end
+    % ---- Right column: preload, loads, assumptions --------------------------
+    methods (Test)
+        function preloadDefaultsMatchTheModel(testCase)
+            p  = testCase.Page;
+            ps = testCase.App.State.Joint.PreloadSpec;
+            testCase.verifyEqual(p.nutFactorField().Value, 0.2);
+            testCase.verifyEqual(ps.NutFactor, 0.2);
+            testCase.verifyEqual(ps.Method, model.PreloadMethod.TorqueControl, ...
+                'This workflow is always torque-controlled - there is no selector.');
+        end
+
+        function preloadEditsReachTheModel(testCase)
+            p = testCase.Page;
+            testCase.type(p.nominalTorqueField(), '55');
+            testCase.press(p.separationCriticalCheck());
+            ps = testCase.App.State.Joint.PreloadSpec;
+            testCase.verifyEqual(ps.NominalTorque, 55);
+            testCase.verifyTrue(ps.SeparationCritical);
+        end
+
+        function loadCaseEditsFireLoadCaseChanged(testCase)
+            fired = false;
+            lh = event.listener(testCase.App.State, 'LoadCaseChanged', ...
+                @(~, ~) setFired());
+            testCase.addTeardown(@() delete(lh));
+
+            testCase.type(testCase.Page.boltTensileField(), '1200');
+
+            testCase.verifyEqual(testCase.App.State.LoadCase.BoltTensileLimitLoad, 1200);
+            testCase.verifyTrue(fired);
+
+            function setFired()
+                fired = true;
+            end
+        end
+
+        function jointTotalsAppearOnlyInJointSlipMode(testCase)
+            % 5020B Eq. 84 needs them; the single-fastener default (Eq. 86)
+            % does not, and showing them always made them read as required.
+            p = testCase.Page;
+            testCase.verifyEqual(char(p.jointTensileField().Visible), 'off', ...
+                'Joint totals are hidden in single-fastener mode.');
+
+            testCase.choose(p.slipModeDropDown(), 'Joint');
+            testCase.verifyEqual(char(p.jointTensileField().Visible), 'on');
+
+            testCase.choose(p.slipModeDropDown(), 'SingleFastener');
+            testCase.verifyEqual(char(p.jointTensileField().Visible), 'off');
+        end
+
+        function assumptionEnumsResolveThroughTheEnumeration(testCase)
+            % Never a string compare against a hard-coded member name (C1).
+            p = testCase.Page;
+            testCase.choose(p.shearPlaneDropDown(), 'BodyInShear');
+            testCase.verifyEqual(testCase.App.State.Joint.ShearPlane, ...
+                model.ShearPlaneCondition.BodyInShear);
+
+            testCase.choose(p.boltAxisDropDown(), 'Y');
+            testCase.verifyEqual(testCase.App.State.Joint.BoltAxis, ...
+                model.BoltAxis.Y);
+        end
+
+        function boltAxisDefaultsToXOnABlankCase(testCase)
+            % A GUI default, not a model one: model.Joint defaults to Z and
+            % the model is frozen, so AppState.blankCaseState carries this.
+            testCase.verifyEqual(testCase.App.State.Joint.BoltAxis, ...
+                model.BoltAxis.X);
+        end
+
+        function shearTransferStaysNotDeclaredWithItsNoteShown(testCase)
+            % GUI2_SPEC.md 7.2f: no control, and the model keeps NotDeclared
+            % so the 4.4.4 exemption is recorded as ASSUMED. Hard-setting
+            % the verified member would claim a verification nobody did.
+            testCase.verifyEqual( ...
+                testCase.App.State.Joint.ShearTransferCondition, ...
+                model.ShearTransferCondition.NotDeclared);
+        end
+    end
 end
