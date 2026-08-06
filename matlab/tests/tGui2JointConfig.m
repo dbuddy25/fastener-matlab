@@ -297,23 +297,39 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
         end
 
         function onlyTheTypesOwnEngagementPropertyIsMarshalled(testCase)
-            % A number sitting in the greyed control must never reach the
-            % engine as the other quantity.
+            % Each value has to be entered while ITS OWN type is selected -
+            % the other control is disabled, and matlab.uitest refuses to
+            % type into a disabled component exactly as a user cannot. That
+            % refusal is the greying working, not a limitation to route
+            % around.
             p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.engagementRatioField(), '1.5');
             testCase.choose(p.memberTypeDropDown(), 'Nut');
             testCase.type(p.engagementLengthField(), '0.25');
-            testCase.type(p.engagementRatioField(), '1.5');
 
+            % Nut is selected: inches marshal, the ratio must not.
             m = testCase.App.State.Joint.ThreadedMember;
             testCase.verifyEqual(m.EngagementLength, 0.25);
             testCase.verifyTrue(isnan(m.EngagementRatio), ...
-                'A Nut must not marshal a ratio.');
+                'A Nut must not marshal a ratio, even with one on screen.');
 
+            % Insert selected: the reverse, and both values are still there.
             testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
             m = testCase.App.State.Joint.ThreadedMember;
             testCase.verifyEqual(m.EngagementRatio, 1.5);
             testCase.verifyTrue(isnan(m.EngagementLength), ...
                 'An Insert must not marshal an inch length.');
+        end
+
+        function aDisabledEngagementControlRefusesInput(testCase)
+            % A5: greyed means Enable='off', which genuinely blocks input -
+            % not a read-only-looking field that silently accepts it.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifyError( ...
+                @() testCase.type(p.engagementRatioField(), '1.5'), ...
+                'MATLAB:uiautomation:Driver:MustBeEditableAndEnabled');
         end
 
         function memberTypeReachesTheModel(testCase)
