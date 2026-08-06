@@ -575,10 +575,18 @@ pages look like one application.
   > its three callers into continuation style, so it waits until a test needs
   > it rather than being done speculatively.
 
-- **`dismissDialog` and `chooseDialog` take the FIGURE as their first
-  argument** — `testCase.chooseDialog(app.Fig, 'Overwrite')`. Calling them with
-  only the option raises `narginchk:notEnoughInputs`, which reads like a bug in
-  the page rather than in the test.
+- **Do not drive dialogs from tests. Assert the state instead.**
+  `dismissDialog` / `chooseDialog` take a *dialog-type* string first, not the
+  figure, and getting the argument order wrong produces
+  `narginchk:notEnoughInputs` or `mustBeTextScalar` — errors that read like a
+  fault in the page rather than in the test. Two rounds of false failures came
+  from guessing at that signature.
+
+  A non-blocking `uialert` needs no dismissal at all: the teardown's figure
+  delete takes it with the window. And a non-blocking `uiconfirm` returns
+  without writing anything, so the assertion that matters — *nothing was
+  silently written* — is available without touching the dialog. Test the
+  outcome, not the widget.
 - **`AppState`'s stale flags are read-only from outside.** Use
   `markResultStale()` / `markBulkStale()`; assigning the property directly
   raises `MATLAB:class:SetProhibited`. The methods also carry behaviour the

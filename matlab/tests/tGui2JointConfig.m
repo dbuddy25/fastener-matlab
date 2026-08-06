@@ -735,17 +735,46 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyEqual(char(p.analyzeButton().Enable), 'on', ...
                 'A complete form must enable Analyze.');
             testCase.verifyEmpty(char(p.requiredLabel().Text));
+        end
+
+        function analyzeHandsAResultToAppState(testCase)
+            % The GATE's required set is not the ENGINE's. engine.analyze
+            % also needs a preload and limit loads before it can produce
+            % anything, so this fills a runnable joint rather than the
+            % minimum the button accepts. If the two sets should converge,
+            % that is a design decision - see the note in the step-8 report.
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            bolts = lib.boltKeys();
+            bmats = lib.materialKeys(Role = "bolt");
+            mats  = lib.materialKeys();
+            testCase.assumeNotEmpty(bolts);
+            testCase.assumeNotEmpty(bmats);
+            testCase.assumeNotEmpty(mats);
+
+            testCase.choose(p.boltDropDown(), char(bolts(1)));
+            testCase.choose(p.boltMaterialDropDown(), char(bmats(1)));
+            testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
+            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.choose(p.flangeMaterial(1), char(mats(1)));
+            testCase.type(p.engagementLengthField(), '0.25');
+            testCase.type(p.nominalTorqueField(), '50');
+            testCase.type(p.boltTensileField(), '400');
+            testCase.type(p.boltShearField(), '200');
 
             testCase.press(p.analyzeButton());
+
             testCase.verifyClass(testCase.App.State.Result, 'engine.Result', ...
                 'Analyze must hand a Result to AppState.');
             testCase.verifyFalse(testCase.App.State.ResultStale);
         end
 
         function savingWithNoNameIsRefused(testCase)
-            p = testCase.Page;
-            testCase.press(p.saveJointButton());
-            testCase.dismissDialog(testCase.App.Fig);
+            % The refusal is a non-blocking uialert, so nothing needs
+            % dismissing - the teardown's figure delete takes it with the
+            % window. Asserting the LIBRARY rather than driving the dialog
+            % keeps this testing the behaviour that matters.
+            testCase.press(testCase.Page.saveJointButton());
             testCase.verifyEmpty(testCase.App.State.JointLibrary, ...
                 'A nameless joint must not enter the library - it is the key.');
         end
@@ -763,19 +792,28 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyEqual(lib(1).Joint.BoltCount, 4);
         end
 
-        function aNameCollidingOnlyByCaseAsksBeforeOverwriting(testCase)
-            % A13: letting "JT-A" and "jt-a" coexist is a mapping trap -
-            % element mapping keys on the name.
+        function aNameCollidingOnlyByCaseIsNotSilentlyDuplicated(testCase)
+            % A13: letting "JT-A" and "jt-a" coexist is a mapping trap,
+            % because element mapping keys on the name.
+            %
+            % This asserts the DETECTION, not the dialog. The confirm is
+            % non-blocking, so the second save opens it and returns without
+            % writing anything - the library must still hold one entry. The
+            % answer path is exercised by commitSavedJoint directly rather
+            % than through a dialog gesture, whose argument order has been
+            % a repeated source of false failures.
             p = testCase.Page;
             testCase.type(p.jointNameField(), "JT-A");
             testCase.press(p.saveJointButton());
+            testCase.verifyNumElements(testCase.App.State.JointLibrary, 1);
 
             testCase.type(p.jointNameField(), "jt-a");
             testCase.press(p.saveJointButton());
-            testCase.chooseDialog(testCase.App.Fig, 'Overwrite');
 
             testCase.verifyNumElements(testCase.App.State.JointLibrary, 1, ...
-                'A case-insensitive collision must overwrite, not duplicate.');
+                'A case-only collision must ask, never silently duplicate.');
+            testCase.verifyEqual(testCase.App.State.JointLibrary(1).Name, "JT-A", ...
+                'Nothing may be written until the overwrite is confirmed.');
         end
     end
 end
