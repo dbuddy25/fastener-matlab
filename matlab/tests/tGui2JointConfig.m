@@ -745,7 +745,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
         function savingWithNoNameIsRefused(testCase)
             p = testCase.Page;
             testCase.press(p.saveJointButton());
-            testCase.dismissDialog();
+            testCase.dismissDialog(testCase.App.Fig);
             testCase.verifyEmpty(testCase.App.State.JointLibrary, ...
                 'A nameless joint must not enter the library - it is the key.');
         end
@@ -772,7 +772,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
             testCase.type(p.jointNameField(), "jt-a");
             testCase.press(p.saveJointButton());
-            testCase.chooseDialog('Overwrite');
+            testCase.chooseDialog(testCase.App.Fig, 'Overwrite');
 
             testCase.verifyNumElements(testCase.App.State.JointLibrary, 1, ...
                 'A case-insensitive collision must overwrite, not duplicate.');

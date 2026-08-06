@@ -1247,8 +1247,11 @@ classdef JointConfigPage < gui2.Page
             catch err
                 % A failed run must not leave a confident verdict on
                 % screen. Flag the previous result stale rather than
-                % clearing it or replacing it (A3).
-                obj.State.ResultStale = true;
+                % clearing it or replacing it (A3). ResultStale is
+                % read-only from outside AppState - markResultStale is the
+                % supported route, and it no-ops when there is no result
+                % to go stale.
+                obj.State.markResultStale();
                 uialert(ancestor(obj.Root, 'figure'), err.message, ...
                     'Analysis failed');
                 return

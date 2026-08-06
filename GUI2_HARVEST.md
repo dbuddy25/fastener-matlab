@@ -575,6 +575,16 @@ pages look like one application.
   > its three callers into continuation style, so it waits until a test needs
   > it rather than being done speculatively.
 
+- **`dismissDialog` and `chooseDialog` take the FIGURE as their first
+  argument** — `testCase.chooseDialog(app.Fig, 'Overwrite')`. Calling them with
+  only the option raises `narginchk:notEnoughInputs`, which reads like a bug in
+  the page rather than in the test.
+- **`AppState`'s stale flags are read-only from outside.** Use
+  `markResultStale()` / `markBulkStale()`; assigning the property directly
+  raises `MATLAB:class:SetProhibited`. The methods also carry behaviour the
+  assignment does not — `markResultStale` no-ops before the first result,
+  because a stale flag with no result puts an amber banner over an empty page.
+
 - **Test seams are public getters** returning real handles, so tests drive
   gestures rather than poking private state.
 
