@@ -1089,27 +1089,6 @@ classdef JointConfigPage < gui2.Page
             obj.syncMemberType();
             obj.syncJointLoadVisibility();
             obj.updateBoltLengthLabel();
-
-            obj.FrictionField.Value      = j.FrictionCoefficient;
-            obj.LoadingPlaneField.Value  = j.LoadingPlaneFactor;
-            obj.ShearPlaneDropDown.Value = char(string(j.ShearPlane));
-            obj.SlipModeDropDown.Value   = char(string(j.SlipMode));
-            obj.BoltAxisDropDown.Value   = char(string(j.BoltAxis));
-
-            ps = j.PreloadSpec;
-            obj.NominalTorqueField.Value      = obj.fmtOptional(ps.NominalTorque);
-            obj.TorqueTolField.Value          = ps.TorqueTolerance;
-            obj.NutFactorField.Value          = ps.NutFactor;
-            obj.UncertaintyField.Value        = ps.Uncertainty;
-            obj.RelaxationField.Value         = ps.RelaxationFraction;
-            obj.SeparationCriticalCheck.Value = ps.SeparationCritical;
-
-            lc = obj.State.LoadCase;
-            obj.CaseNameField.Value     = char(lc.Name);
-            obj.BoltTensileField.Value  = obj.fmtOptional(lc.BoltTensileLimitLoad);
-            obj.BoltShearField.Value    = obj.fmtOptional(lc.BoltShearLimitLoad);
-            obj.JointTensileField.Value = obj.fmtOptional(lc.JointTensileLimitLoad);
-            obj.JointShearField.Value   = obj.fmtOptional(lc.JointShearLimitLoad);
             obj.commitJoint();
         end
 
