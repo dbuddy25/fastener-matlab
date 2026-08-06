@@ -1698,6 +1698,10 @@ classdef JointConfigPage < gui2.Page
             f = obj.BoltTensileField;
         end
 
+        function f = boltShearField(obj)
+            f = obj.BoltShearField;
+        end
+
         function f = jointTensileField(obj)
             f = obj.JointTensileField;
         end
