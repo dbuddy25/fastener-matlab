@@ -26,6 +26,7 @@ function c = palette(name)
 %                                            normal, and the pale red for a
 %                                            REQUIRED field left blank
 %                                            (GUI2_SPEC.md Section 11)
+%     statusActiveBg / statusActiveFg       — status band while it has a message
 %     rule                                 — separator / border lines
 %     footerBg / footerFg                  — the always-live summary band
 %     bannerInfoBg|Fg|Border               — info banner (onboarding, hints)
@@ -83,6 +84,12 @@ switch char(name)
     % when the field is filled.
     case 'fieldBg',         c = [1.00 1.00 1.00];
     case 'requiredBlankBg', c = [1.00 0.90 0.90];   % #FFE5E5
+
+    % ---- Status band -----------------------------------------------------
+    % Tinted only while a message is showing, so a new one registers without
+    % an animation. Soft enough to stay chrome rather than become a banner.
+    case 'statusActiveBg', c = [0.878 0.925 0.976];
+    case 'statusActiveFg', c = [0.102 0.227 0.431];
 
     % ---- Rules / separators ----------------------------------------------
     case 'rule',         c = [0.780 0.780 0.800];

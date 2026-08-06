@@ -178,7 +178,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
     methods (Test)
         function activeRowWithAThicknessReachesTheStack(testCase)
             p = testCase.Page;
-            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.type(p.flangeThickness(1), '0.25');
             stack = testCase.App.State.Joint.FlangeStack;
             testCase.verifyNumElements(stack, 1);
             testCase.verifyEqual(stack(1).Thickness, 0.25);
@@ -190,7 +190,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % picking materials. The thickness is real; the layer belongs
             % in the grip. Missing allowables are the engine's to report.
             p = testCase.Page;
-            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.type(p.flangeThickness(1), '0.25');
             testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1);
             testCase.verifyTrue( ...
                 contains(string(p.gripLabel().Text), "0.2500"), ...
@@ -211,10 +211,10 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % Thickness is the ONLY thing that puts a layer in the stack -
             % there is no separate Active state that can disagree with it.
             p = testCase.Page;
-            testCase.type(p.flangeThickness(2), 0.5);
+            testCase.type(p.flangeThickness(2), '0.5');
             testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1);
 
-            testCase.type(p.flangeThickness(2), 0);
+            testCase.type(p.flangeThickness(2), '0');
             testCase.verifyEmpty(testCase.App.State.Joint.FlangeStack, ...
                 'Clearing a thickness must remove the layer from the stack.');
         end
@@ -223,7 +223,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % NaN is the model's "not supplied"; zero would be a real edge
             % distance and would make tear-out evaluate against nothing.
             p = testCase.Page;
-            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.type(p.flangeThickness(1), '0.25');
             stack = testCase.App.State.Joint.FlangeStack;
             testCase.verifyTrue(isnan(stack(1).EdgeDistance));
         end
@@ -235,7 +235,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % the guarantee that buildJoint is total. Zero means "not
             % supplied", same as blank.
             p = testCase.Page;
-            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.type(p.flangeThickness(1), '0.25');
             testCase.type(p.flangeEdge(1), '0');
             testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1, ...
                 'A typed zero must not abort the commit.');
@@ -246,7 +246,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
         function aTypoInEdgeDistanceDoesNotTakeTheCommitDown(testCase)
             % buildJoint is total: a junk optional value becomes NaN.
             p = testCase.Page;
-            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.type(p.flangeThickness(1), '0.25');
             testCase.type(p.flangeEdge(1), 'half an inch');
             testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1, ...
                 'A typo in an optional field must not abort the commit.');
@@ -711,7 +711,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             p = testCase.Page;
             testCase.verifyFalse( ...
                 contains(string(p.requiredLabel().Text), "Flange layer 1"));
-            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.type(p.flangeThickness(1), '0.25');
             testCase.verifyTrue( ...
                 contains(string(p.requiredLabel().Text), "Flange layer 1 material"));
         end
@@ -729,7 +729,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.choose(p.boltDropDown(), char(bolts(1)));
             testCase.choose(p.boltMaterialDropDown(), char(bmats(1)));
             testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
-            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.type(p.flangeThickness(1), '0.25');
             testCase.choose(p.flangeMaterial(1), char(mats(1)));
 
             testCase.verifyEqual(char(p.analyzeButton().Enable), 'on', ...
@@ -755,7 +755,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.choose(p.boltDropDown(), char(bolts(1)));
             testCase.choose(p.boltMaterialDropDown(), char(bmats(1)));
             testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
-            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.type(p.flangeThickness(1), '0.25');
             testCase.choose(p.flangeMaterial(1), char(mats(1)));
             testCase.type(p.engagementLengthField(), '0.25');
             testCase.type(p.nominalTorqueField(), '50');
@@ -1161,6 +1161,29 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                     return
                 end
             end
+        end
+    end
+    % ---- Empty is empty ----------------------------------------------------
+    methods (Test)
+        function flangeThicknessStartsBlankNotZero(testCase)
+            % A numeric field renders 0.00000, which has to be cleared
+            % before a real thickness can be typed and reads as a layer of
+            % zero thickness rather than as no layer at all.
+            p = testCase.Page;
+            for i = 1:4
+                testCase.verifyEmpty(strtrim(char(p.flangeThickness(i).Value)), ...
+                    sprintf('Flange row %d must start blank, not 0.', i));
+            end
+        end
+
+        function clearingAThicknessEmptiesTheFieldRatherThanZeroingIt(testCase)
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1);
+
+            testCase.type(p.flangeThickness(1), '');
+            testCase.verifyEmpty(testCase.App.State.Joint.FlangeStack);
+            testCase.verifyEmpty(strtrim(char(p.flangeThickness(1).Value)));
         end
     end
 end

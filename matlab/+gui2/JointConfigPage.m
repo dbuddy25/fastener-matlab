@@ -291,7 +291,8 @@ classdef JointConfigPage < gui2.Page
 
             % Spans the gutter: a joint name is prose, and the value column
             % is sized for numbers.
-            obj.JointNameField = uieditfield(b, 'text');
+            obj.JointNameField = uieditfield(b, 'text', ...
+                'HorizontalAlignment', 'left');   % prose, not a number
             obj.JointNameField.Layout.Row    = 1;
             obj.JointNameField.Layout.Column = [2 3];
             lb = uilabel(b, 'Text', 'Joint name');
@@ -385,7 +386,8 @@ classdef JointConfigPage < gui2.Page
                 num = uilabel(fg, 'Text', sprintf('%d', i), 'Tooltip', tips{1});
                 num.Layout.Row = r; num.Layout.Column = 1;
 
-                obj.FlangeName{i} = uieditfield(fg, 'text', 'Tooltip', tips{2});
+                obj.FlangeName{i} = uieditfield(fg, 'text', 'Tooltip', tips{2}, ...
+                    'HorizontalAlignment', 'left');   % prose
                 obj.FlangeName{i}.Layout.Row = r;
                 obj.FlangeName{i}.Layout.Column = 2;
                 obj.bindEdit(obj.FlangeName{i}, @(~, ~) obj.commitJoint());
@@ -396,19 +398,26 @@ classdef JointConfigPage < gui2.Page
                 obj.FlangeMaterial{i}.Layout.Column = 3;
                 obj.bindEdit(obj.FlangeMaterial{i}, @(~, ~) obj.onFlangeEdited());
 
-                obj.FlangeThickness{i} = uieditfield(fg, 'numeric', ...
-                    'Limits', [0 Inf], 'Tooltip', tips{4});
-                obj.FlangeThickness{i}.ValueDisplayFormat = '%.5f';
+                % TEXT, not numeric. A numeric field cannot be empty - it
+                % renders 0.00000, which has to be cleared before a real
+                % thickness can be typed, and reads as a layer of zero
+                % thickness rather than as no layer at all. Blank is the
+                % honest empty state, and model.FlangeLayer.Thickness is
+                % mustBePositive so zero was never valid anyway.
+                obj.FlangeThickness{i} = uieditfield(fg, 'text', ...
+                    'Tooltip', tips{4}, 'HorizontalAlignment', 'right');
                 obj.FlangeThickness{i}.Layout.Row = r;
                 obj.FlangeThickness{i}.Layout.Column = 4;
                 obj.bindEdit(obj.FlangeThickness{i}, @(~, ~) obj.onFlangeEdited());
 
-                obj.FlangeHole{i} = uieditfield(fg, 'text', 'Tooltip', tips{5});
+                obj.FlangeHole{i} = uieditfield(fg, 'text', 'Tooltip', tips{5}, ...
+                    'HorizontalAlignment', 'right');
                 obj.FlangeHole{i}.Layout.Row = r;
                 obj.FlangeHole{i}.Layout.Column = 5;
                 obj.bindEdit(obj.FlangeHole{i}, @(~, ~) obj.commitJoint());
 
-                obj.FlangeEdge{i} = uieditfield(fg, 'text', 'Tooltip', tips{6});
+                obj.FlangeEdge{i} = uieditfield(fg, 'text', 'Tooltip', tips{6}, ...
+                    'HorizontalAlignment', 'right');
                 obj.FlangeEdge{i}.Layout.Row = r;
                 obj.FlangeEdge{i}.Layout.Column = 6;
                 obj.bindEdit(obj.FlangeEdge{i}, @(~, ~) obj.commitJoint());
@@ -603,6 +612,11 @@ classdef JointConfigPage < gui2.Page
             lb.Layout.Row = row; lb.Layout.Column = 1;
             c = uieditfield(g, 'text', 'Tooltip', tip);
             c.Layout.Row = row; c.Layout.Column = 2;
+            % addLabelledText carries NUMBERS held in text fields - lengths,
+            % torques, loads - which are text only so that blank can mean
+            % "not supplied". They right-align with the numeric fields;
+            % prose fields set 'left' explicitly at their own site.
+            c.HorizontalAlignment = 'right';
         end
 
         function buildBoltLengthGroup(obj, parent, row)
@@ -690,6 +704,7 @@ classdef JointConfigPage < gui2.Page
             lb = uilabel(b, 'Text', 'Frustum half-angle (deg)');
             lb.Layout.Row = 4; lb.Layout.Column = 1;
             obj.FrustumAngleField = uieditfield(b, 'numeric', ...
+                'HorizontalAlignment', 'right', ...
                 'Limits', [0 90], 'LowerLimitInclusive', 'off', ...
                 'UpperLimitInclusive', 'off', 'RoundFractionalValues', 'on', ...
                 'Value', 30);
@@ -945,6 +960,7 @@ classdef JointConfigPage < gui2.Page
             lb.Tooltip = tip;
             c = uieditfield(g, 'numeric');
             c.Layout.Row = row; c.Layout.Column = 2;
+            c.HorizontalAlignment = 'right';
             c.Tooltip = tip;
         end
 
@@ -1126,7 +1142,7 @@ classdef JointConfigPage < gui2.Page
             %   told by required-field validation, not by a silent omission.
             layers = model.FlangeLayer.empty(1, 0);
             for i = 1:gui2.JointConfigPage.MaxFlangeLayers
-                t = obj.FlangeThickness{i}.Value;
+                t = obj.parsePositive(obj.FlangeThickness{i});
                 if ~(t > 0)
                     continue
                 end
@@ -1147,7 +1163,7 @@ classdef JointConfigPage < gui2.Page
                 if i <= numel(stack)
                     L = stack(i);
                     obj.FlangeName{i}.Value      = char(L.Name);
-                    obj.FlangeThickness{i}.Value = L.Thickness;
+                    obj.FlangeThickness{i}.Value = obj.fmtOptional(L.Thickness);
                     obj.FlangeHole{i}.Value      = obj.fmtOptional(L.HoleDiameter);
                     obj.FlangeEdge{i}.Value      = obj.fmtOptional(L.EdgeDistance);
                     obj.FlangeTearout{i}.Value   = L.CheckShearTearout;
@@ -1157,7 +1173,7 @@ classdef JointConfigPage < gui2.Page
                     % leaving a previous case's numbers behind an unticked
                     % box invites re-ticking them into a different joint.
                     obj.FlangeName{i}.Value      = '';
-                    obj.FlangeThickness{i}.Value = 0;
+                    obj.FlangeThickness{i}.Value = '';
                     obj.FlangeHole{i}.Value      = '';
                     obj.FlangeEdge{i}.Value      = '';
                     obj.FlangeTearout{i}.Value   = true;
@@ -1695,7 +1711,7 @@ classdef JointConfigPage < gui2.Page
             % Flange material is required only for a row actually in the
             % stack - a row with no thickness is not part of this joint.
             for i = 1:gui2.JointConfigPage.MaxFlangeLayers
-                if obj.FlangeThickness{i}.Value > 0 && ...
+                if obj.parsePositive(obj.FlangeThickness{i}) > 0 && ...
                         strlength(obj.selectedKey(obj.FlangeMaterial{i})) == 0
                     missing(end + 1) = sprintf("Flange layer %d material", i); %#ok<AGROW>
                 end

@@ -53,6 +53,7 @@ classdef FastenerApp < handle
         RailGrid
         CardGrid
         StatusLabel
+        StatusBox
         SummaryLabel
         RecentMenu
 
@@ -171,6 +172,11 @@ classdef FastenerApp < handle
                 return
             end
             app.StatusLabel.Text = char(msg);
+            % Tint the band while it has something to say. A status line
+            % that looks identical whether or not it carries a message gets
+            % read as chrome and stopped being looked at - the colour is
+            % what makes a new message register without an animation.
+            app.tintStatus(strlength(strtrim(string(msg))) > 0);
         end
 
         function refreshSummary(app)
@@ -201,6 +207,20 @@ classdef FastenerApp < handle
                 gui2.FastenerApp.settingNum(s, 'NominalTempC'), ...
                 gui2.FastenerApp.settingNum(s, 'HotTempC'), ...
                 gui2.FastenerApp.settingNum(s, 'ColdTempC'), degC);
+        end
+
+        function tintStatus(app, active)
+            %TINTSTATUS  Highlight the status band when it carries a message.
+            if isempty(app.StatusBox) || ~isvalid(app.StatusBox)
+                return
+            end
+            if active
+                app.StatusBox.BackgroundColor = gui2.palette('statusActiveBg');
+                app.StatusLabel.FontColor     = gui2.palette('statusActiveFg');
+            else
+                app.StatusBox.BackgroundColor = gui2.palette('footerBg');
+                app.StatusLabel.FontColor     = gui2.palette('mutedText');
+            end
         end
 
         function t = summaryText(app)
@@ -320,6 +340,7 @@ classdef FastenerApp < handle
             % region - the rules are what make it three things.
             statusBox = uipanel(root, 'BorderType', 'line', ...
                 'BorderColor', gui2.palette('rule'));
+            app.StatusBox = statusBox;
             statusBox.Layout.Row    = 2;
             statusBox.Layout.Column = [1 2];
             sg = uigridlayout(statusBox, [1 1]);
