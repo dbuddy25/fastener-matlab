@@ -198,8 +198,8 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
         end
 
         function anEmptyStackReportsUnknownRatherThanZero(testCase)
-            % A1: unknown must never look like fine. Row 1 starts Active
-            % with zero thickness, so the stack is empty at first paint.
+            % A1: unknown must never look like fine. Every row starts with
+            % zero thickness, so the stack is empty at first paint.
             txt = string(testCase.Page.gripLabel().Text);
             testCase.verifyFalse(contains(txt, "0.0000"), ...
                 'An empty stack must not render as a grip of zero.');
@@ -207,16 +207,16 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 'An unevaluated grip shows an em dash (A1).');
         end
 
-        function untickingActiveRemovesTheLayerButKeepsItsValues(testCase)
+        function aLayerLeavesTheStackWhenItsThicknessIsCleared(testCase)
+            % Thickness is the ONLY thing that puts a layer in the stack -
+            % there is no separate Active state that can disagree with it.
             p = testCase.Page;
             testCase.type(p.flangeThickness(2), 0.5);
-            testCase.press(p.flangeActive(2));   % ticked on
             testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1);
 
-            testCase.press(p.flangeActive(2));   % ticked off again
-            testCase.verifyEmpty(testCase.App.State.Joint.FlangeStack);
-            testCase.verifyEqual(p.flangeThickness(2).Value, 0.5, ...
-                'Unticking a row must keep its values, not blank them.');
+            testCase.type(p.flangeThickness(2), 0);
+            testCase.verifyEmpty(testCase.App.State.Joint.FlangeStack, ...
+                'Clearing a thickness must remove the layer from the stack.');
         end
 
         function aBlankEdgeDistanceMarshalsAsNaNNotZero(testCase)

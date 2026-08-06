@@ -287,7 +287,7 @@ so nothing outside the view changes.
 | 1 | Identity | Joint name |
 | 2 | Bolt | Bolt, Bolt material, *[spec label]*, Bolt count nf |
 | 3 | Washer under bolt head | Present, spec, size, material, OD, ID, thickness |
-| 4 | Flange stack | 4 × (Active, Layer, Name, Material, t, Hole, Edge, Tear-out) |
+| 4 | Flange stack | 4 × (Layer, Name, Material, t, Hole, Edge, Tear-out) |
 | 5 | Washer under nut | Present, Same as Head, spec, size, material, OD, ID, thickness |
 | 6 | Threaded member | Type, *member material (dynamic label)*, Nut spec, Engagement Le |
 | 7 | Bolt length & grip | Overall bolt length, then grip label + 4-line adequacy readout |
@@ -381,6 +381,14 @@ marker:
 > NASA-STD-5020B §4.4.4 exemption assumed, not verified.*
 
 The same note appears under the Interaction row on Single Joint Results.
+
+> **No `Active` column.** A layer is in the stack when it has a thickness —
+> that is the whole rule. The first attempt carried an `Active` checkbox as a
+> second, independent way to say the same thing, and the two states had to be
+> kept in step: the deserializer unticked every row for an empty stack, which
+> silently undid the pre-ticked first row and made typing a thickness do
+> nothing at all. One source of truth removes both the bug and a column. To
+> park a layer, clear its thickness.
 
 ### 7.3 Conditional fields
 
