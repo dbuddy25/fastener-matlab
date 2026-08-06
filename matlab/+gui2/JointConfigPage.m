@@ -31,6 +31,12 @@ classdef JointConfigPage < gui2.Page
         LabelW = 150
         ValueW = 150
 
+        % The right column's value controls. Narrower than the left's
+        % because it holds single numbers - a torque, a fraction, an axis -
+        % where the left holds geometry and library keys. A box sized for a
+        % catalogue designation reads as though it wants more than 0.25.
+        ValueWRight = 120
+
         MaxFlangeLayers = 4
     end
 
@@ -115,13 +121,12 @@ classdef JointConfigPage < gui2.Page
         end
 
         function build(obj, parent)
-            % 60/40. The left column carries the physical stack - seven
-            % groups including the seven-column flange grid - so it needs
-            % the larger share, but a third starved the loads and
-            % assumptions beside it.
+            % 2/3 : 1/3. The left column carries the physical stack - seven
+            % groups including the seven-column flange grid - against four
+            % narrower ones on the right.
             g = uigridlayout(parent, [2 2]);
             g.RowHeight     = {'fit', 'fit'};
-            g.ColumnWidth   = {'3x', '2x'};
+            g.ColumnWidth   = {'2x', '1x'};
             g.Padding       = [8 8 8 8];
             g.RowSpacing    = 8;
             g.ColumnSpacing = 10;
@@ -831,10 +836,10 @@ classdef JointConfigPage < gui2.Page
         end
 
         function b = groupGrid(~, panel, rows)
-            %GROUPGRID  The standard label / value / gutter grid.
+            %GROUPGRID  The right column's label / value / gutter grid.
             b = uigridlayout(panel, [rows 3]);
             b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
-                             gui2.JointConfigPage.ValueW, '1x'};
+                             gui2.JointConfigPage.ValueWRight, '1x'};
             b.RowHeight   = repmat({'fit'}, 1, rows);
             b.RowSpacing  = 4;
             b.Padding     = [6 6 6 6];
