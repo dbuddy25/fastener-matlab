@@ -5,10 +5,11 @@ classdef JointConfigPage < gui2.Page
     %   watching a failure count move. Each increment here ends with the
     %   suite green before the next begins.
     %
-    %   BUILT SO FAR: the page shell, Identity + Bolt, the flange stack
-    %   with its grip readout, and the threaded member. Later: washers, the
-    %   right column, the actions, and last and alone, the library
-    %   auto-fill cascades.
+    %   BUILT SO FAR: the page shell, Identity + Bolt, both washers, the
+    %   flange stack with its grip readout, and the threaded member - laid
+    %   out in PHYSICAL STACK ORDER, which is what the page's own banner
+    %   promises. Later: the right column, the actions, and last and alone,
+    %   the library auto-fill cascades.
     %
     %   BUILDJOINT IS TOTAL — it always returns a model.Joint and never
     %   throws. This is the design decision the first attempt got wrong. It
@@ -47,6 +48,12 @@ classdef JointConfigPage < gui2.Page
         FlangeEdge
         FlangeTearout
         GripLabel
+
+        % Washer groups. Each is a struct of handles from buildWasherGroup,
+        % so both carry identical fields in identical order.
+        HeadWasher
+        NutWasher
+        SameAsHeadCheck
 
         MemberTypeDropDown
         MemberMaterialDropDown
@@ -96,13 +103,23 @@ classdef JointConfigPage < gui2.Page
             left.Layout.Row    = 2;
             left.Layout.Column = 1;
             left.ColumnWidth   = {'1x'};
-            left.RowHeight     = {'fit', 'fit', 'fit'};
+            left.RowHeight     = repmat({'fit'}, 1, 5);
             left.Padding       = [0 0 0 0];
             left.RowSpacing    = 8;
 
+            % PHYSICAL STACK ORDER, head to tail: the bolt, the washer under
+            % its head, the clamped layers, the washer under the nut, and
+            % what the bolt threads into. The banner above promises exactly
+            % this, so the washers sit between the groups they physically
+            % sit between rather than being appended.
             obj.buildBoltGroup(left, 1);
-            obj.buildFlangeGroup(left, 2);
-            obj.buildMemberGroup(left, 3);
+            obj.HeadWasher = obj.buildWasherGroup(left, 2, ...
+                'Washer under bolt head', false);
+            obj.buildFlangeGroup(left, 3);
+            obj.NutWasher = obj.buildWasherGroup(left, 4, ...
+                'Washer under nut', true);
+            obj.buildMemberGroup(left, 5);
+            obj.syncWasherEnables();
 
             obj.listenTo('JointChanged', @() obj.refresh());
             obj.refresh();
@@ -133,6 +150,15 @@ classdef JointConfigPage < gui2.Page
             obj.EngagementRatioField.Value  = obj.fmtOptional(m.EngagementRatio);
             obj.EngagementLengthField.Value = obj.fmtOptional(m.EngagementLength);
             obj.syncMemberType();
+
+            % Same as Head is PAGE state, not case state: model.Joint holds
+            % the two washers independently, so a loaded case defines both
+            % explicitly. Untick on an external load rather than let a
+            % mirrored view claim values the file never carried.
+            obj.SameAsHeadCheck.Value = false;
+            obj.applyWasher(obj.HeadWasher, j.HeadWasher);
+            obj.applyWasher(obj.NutWasher,  j.NutWasher);
+            obj.syncWasherEnables();
         end
     end
 
@@ -211,7 +237,9 @@ classdef JointConfigPage < gui2.Page
             fg = uigridlayout(outer, [n + 1, numel(heads)]);
             fg.Layout.Row    = 1;
             fg.Layout.Column = 1;
-            fg.ColumnWidth   = {44, 120, 150, 66, 76, 76, 66};
+            % Name takes '1x': it is the one free-text column, and the
+            % others are sized for the numbers they hold.
+            fg.ColumnWidth   = {44, '1x', 150, 66, 76, 76, 66};
             fg.RowHeight     = repmat({'fit'}, 1, n + 1);
             fg.RowSpacing    = 4;
             fg.ColumnSpacing = 4;
@@ -275,6 +303,78 @@ classdef JointConfigPage < gui2.Page
             obj.GripLabel = uilabel(outer, 'Text', '');
             obj.GripLabel.Layout.Row    = 2;
             obj.GripLabel.Layout.Column = 1;
+        end
+
+        function w = buildWasherGroup(obj, parent, row, titleText, withSameAsHead)
+            %BUILDWASHERGROUP  One washer group; returns its handles.
+            %   Both groups come from here, so the two structs carry
+            %   identical fields in identical order - the thing that makes
+            %   them safe to treat alike.
+            panel = uipanel(parent, 'Title', titleText);
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+
+            nRows = 5 + double(withSameAsHead);
+            b = uigridlayout(panel, [nRows 3]);
+            b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
+                             gui2.JointConfigPage.ValueW, '1x'};
+            b.RowHeight   = repmat({'fit'}, 1, nRows);
+            b.RowSpacing  = 4;
+            b.Padding     = [6 6 6 6];
+
+            r = 1;
+            w.Present = uicheckbox(b, 'Text', 'Washer present', ...
+                'Value', false, 'Tooltip', ...
+                ['Unchecked marshals the model default - no washer - NOT a ' ...
+                 'washer of zero thickness. Rigid in the frustum stiffness ' ...
+                 'model; its OD is the bearing face diameter.']);
+            w.Present.Layout.Row = r; w.Present.Layout.Column = [1 3];
+            obj.bindEdit(w.Present, @(~, ~) obj.onWasherPresentToggled());
+
+            if withSameAsHead
+                r = r + 1;
+                obj.SameAsHeadCheck = uicheckbox(b, 'Text', 'Same as Head', ...
+                    'Value', false, 'Tooltip', ...
+                    ['Mirror the head washer live - material, OD, ID and ' ...
+                     'thickness - and grey this group. Unticking KEEPS the ' ...
+                     'mirrored values and re-enables editing; it never ' ...
+                     'blanks them.']);
+                obj.SameAsHeadCheck.Layout.Row = r;
+                obj.SameAsHeadCheck.Layout.Column = [1 3];
+                obj.bindEdit(obj.SameAsHeadCheck, @(~, ~) obj.onSameAsHeadToggled());
+            end
+
+            r = r + 1;
+            w.Material = obj.addDropdown(b, r, 'Washer material', ...
+                obj.libraryItems('washerMaterial'), ...
+                'Washer material. Carried for completeness; washers are rigid in the engine.');
+
+            r = r + 1;
+            w.OD = obj.addLabelledText(b, r, 'Outer diameter (in)', ...
+                ['Washer OD - the bearing face diameter, and the frustum ' ...
+                 'contact diameter in engine.stiffness. Blank = unspecified.']);
+
+            r = r + 1;
+            w.ID = obj.addLabelledText(b, r, 'Inner diameter (in)', ...
+                'Washer ID, in. Carried for completeness; unused by the engine.');
+
+            r = r + 1;
+            w.Thk = obj.addNumeric(b, r, 'Thickness (in)', ...
+                'Washer thickness, in. Adds clamped length in engine.stiffness.');
+            w.Thk.Limits = [0 Inf];
+            w.Thk.ValueDisplayFormat = '%.5f';
+
+            % One handler per group, so the head group can drive the mirror
+            % and the nut group cannot.
+            if withSameAsHead
+                cb = @(~, ~) obj.onNutWasherEdited();
+            else
+                cb = @(~, ~) obj.onHeadWasherEdited();
+            end
+            obj.bindEdit(w.Material, cb);
+            obj.bindEdit(w.OD,       cb);
+            obj.bindEdit(w.ID,       cb);
+            obj.bindEdit(w.Thk,      cb);
         end
 
         function buildMemberGroup(obj, parent, row)
@@ -376,6 +476,8 @@ classdef JointConfigPage < gui2.Page
                     case 'boltMaterial'
                         % Role-filtered: a washer alloy is not a bolt.
                         keys = obj.State.Library.materialKeys(Role = "bolt");
+                    case 'washerMaterial'
+                        keys = obj.State.Library.materialKeys(Role = "washer");
                     otherwise
                         % Flange layers take any material in the library.
                         keys = obj.State.Library.materialKeys();
@@ -417,6 +519,36 @@ classdef JointConfigPage < gui2.Page
             joint.BoltMaterial = obj.lookupBoltMaterial();
             joint.FlangeStack  = obj.collectFlangeLayers();
             joint.ThreadedMember = obj.buildThreadedMember();
+            joint.HeadWasher   = obj.buildWasher(obj.HeadWasher);
+            joint.NutWasher    = obj.buildWasher(obj.NutWasher);
+        end
+
+        function w = buildWasher(obj, g)
+            %BUILDWASHER  One group -> model.Washer.
+            %   Present unchecked marshals the MODEL DEFAULT - "no washer" -
+            %   not a washer of zero thickness typed by nobody. The two are
+            %   different joints.
+            if ~g.Present.Value
+                w = model.Washer();
+                return
+            end
+            w = model.Washer( ...
+                Thickness     = g.Thk.Value, ...
+                OuterDiameter = obj.parsePositive(g.OD), ...
+                InnerDiameter = obj.parsePositive(g.ID), ...
+                Material      = obj.lookupMaterial(g.Material));
+        end
+
+        function applyWasher(obj, g, w)
+            %APPLYWASHER  model.Washer -> one group's controls.
+            %   Present is derived from the washer actually carrying
+            %   something: the model default has zero thickness and no OD,
+            %   which is precisely "there is no washer here".
+            g.Thk.Value      = w.Thickness;
+            g.OD.Value       = obj.fmtOptional(w.OuterDiameter);
+            g.ID.Value       = obj.fmtOptional(w.InnerDiameter);
+            obj.trySelect(g.Material, w.Material.Name);
+            g.Present.Value  = (w.Thickness > 0) || ~isnan(w.OuterDiameter);
         end
 
         function m = buildThreadedMember(obj)
@@ -458,8 +590,8 @@ classdef JointConfigPage < gui2.Page
                     Name              = string(obj.FlangeName{i}.Value), ...
                     Material          = obj.lookupMaterial(obj.FlangeMaterial{i}), ...
                     Thickness         = t, ...
-                    HoleDiameter      = obj.parseOptional(obj.FlangeHole{i}), ...
-                    EdgeDistance      = obj.parseOptional(obj.FlangeEdge{i}), ...
+                    HoleDiameter      = obj.parsePositive(obj.FlangeHole{i}), ...
+                    EdgeDistance      = obj.parsePositive(obj.FlangeEdge{i}), ...
                     CheckShearTearout = logical(obj.FlangeTearout{i}.Value)); %#ok<AGROW>
             end
         end
@@ -488,6 +620,75 @@ classdef JointConfigPage < gui2.Page
                     obj.trySelect(obj.FlangeMaterial{i}, "");
                 end
             end
+        end
+
+        function onWasherPresentToggled(obj)
+            obj.syncWasherEnables();
+            obj.commitJoint();
+        end
+
+        function onSameAsHeadToggled(obj)
+            %ONSAMEASHEADTOGGLED  Ticking mirrors now; unticking keeps what
+            %   was mirrored and hands editing back. It NEVER blanks the
+            %   values - that is the whole point of the harvested behavior.
+            if obj.SameAsHeadCheck.Value
+                obj.mirrorHeadToNut();
+            end
+            obj.syncWasherEnables();
+            obj.commitJoint();
+        end
+
+        function onHeadWasherEdited(obj)
+            % Live mirroring: the nut group follows every head edit while
+            % Same as Head is ticked.
+            if ~isempty(obj.SameAsHeadCheck) && obj.SameAsHeadCheck.Value
+                obj.mirrorHeadToNut();
+            end
+            obj.commitJoint();
+        end
+
+        function onNutWasherEdited(obj)
+            obj.commitJoint();
+        end
+
+        function mirrorHeadToNut(obj)
+            %MIRRORHEADTONUT  Copy the four mirrored values, head -> nut.
+            %   Present is NOT mirrored: a joint can legitimately have a
+            %   washer under the head and none under the nut, so that stays
+            %   the nut group's own decision.
+            obj.NutWasher.OD.Value  = obj.HeadWasher.OD.Value;
+            obj.NutWasher.ID.Value  = obj.HeadWasher.ID.Value;
+            obj.NutWasher.Thk.Value = obj.HeadWasher.Thk.Value;
+            obj.trySelect(obj.NutWasher.Material, ...
+                obj.selectedKey(obj.HeadWasher.Material));
+        end
+
+        function syncWasherEnables(obj)
+            %SYNCWASHERENABLES  Enable only - never read-only (A5).
+            %   A group's fields are live when its washer is present. The
+            %   nut group additionally greys while it is mirroring the head,
+            %   because there is nothing left to choose independently.
+            if isempty(obj.HeadWasher) || isempty(obj.NutWasher)
+                return
+            end
+            states = {'off', 'on'};
+
+            headOn = logical(obj.HeadWasher.Present.Value);
+            obj.setWasherFieldsEnable(obj.HeadWasher, states{headOn + 1});
+
+            nutPresent = logical(obj.NutWasher.Present.Value);
+            mirroring  = logical(obj.SameAsHeadCheck.Value);
+            % Same as Head is only meaningful once there IS a nut washer.
+            obj.SameAsHeadCheck.Enable = states{nutPresent + 1};
+            nutOn = nutPresent && ~mirroring;
+            obj.setWasherFieldsEnable(obj.NutWasher, states{nutOn + 1});
+        end
+
+        function setWasherFieldsEnable(~, w, state)
+            w.Material.Enable = state;
+            w.OD.Enable       = state;
+            w.ID.Enable       = state;
+            w.Thk.Enable      = state;
         end
 
         function onMemberTypeChanged(obj)
@@ -617,6 +818,18 @@ classdef JointConfigPage < gui2.Page
             v = str2double(strtrim(string(field.Value)));
         end
 
+        function v = parsePositive(obj, field)
+            %PARSEPOSITIVE  Text field -> a POSITIVE double, or NaN.
+            %   model.Washer's OD and ID are mustBePositiveOrNaN, so a typed
+            %   zero or a negative would THROW and abort the commit - which
+            %   would break the guarantee that buildJoint is total. Anything
+            %   that is not positive becomes NaN, the model's "not supplied".
+            v = obj.parseOptional(field);
+            if ~(v > 0)
+                v = NaN;
+            end
+        end
+
         function s = fmtOptional(~, v)
             %FMTOPTIONAL  Double -> text field. NaN renders blank.
             if isnan(v)
@@ -717,6 +930,18 @@ classdef JointConfigPage < gui2.Page
 
         function l = gripLabel(obj)
             l = obj.GripLabel;
+        end
+
+        function w = headWasher(obj)
+            w = obj.HeadWasher;
+        end
+
+        function w = nutWasher(obj)
+            w = obj.NutWasher;
+        end
+
+        function c = sameAsHeadCheck(obj)
+            c = obj.SameAsHeadCheck;
         end
 
         function d = memberTypeDropDown(obj)

@@ -1,5 +1,5 @@
 classdef tGui2JointConfig < matlab.uitest.TestCase
-    %TGUI2JOINTCONFIG  Joint Config: shell, Bolt, flange stack, member.
+    %TGUI2JOINTCONFIG  Joint Config: shell, Bolt, washers, flanges, member.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -228,6 +228,21 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyTrue(isnan(stack(1).EdgeDistance));
         end
 
+        function aTypedZeroInFlangeGeometryDoesNotTakeTheCommitDown(testCase)
+            % model.FlangeLayer's HoleDiameter and EdgeDistance are
+            % mustBePositiveOrNaN, so a typed 0 THROWS - which would abort
+            % the commit and silently drop every edit after it, breaking
+            % the guarantee that buildJoint is total. Zero means "not
+            % supplied", same as blank.
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), 0.25);
+            testCase.type(p.flangeEdge(1), '0');
+            testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1, ...
+                'A typed zero must not abort the commit.');
+            testCase.verifyTrue( ...
+                isnan(testCase.App.State.Joint.FlangeStack(1).EdgeDistance));
+        end
+
         function aTypoInEdgeDistanceDoesNotTakeTheCommitDown(testCase)
             % buildJoint is total: a junk optional value becomes NaN.
             p = testCase.Page;
@@ -338,6 +353,151 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyEqual(testCase.App.State.Joint.ThreadedMember.Type, ...
                 model.ThreadedMemberType.TappedHole, ...
                 'Tapped Hole must resolve through the enumeration, not a string compare (C1).');
+        end
+    end
+    % ---- Washers -----------------------------------------------------------
+    methods (Test)
+        function bothWasherGroupsBuild(testCase)
+            p = testCase.Page;
+            testCase.verifyNotEmpty(p.headWasher().Present);
+            testCase.verifyNotEmpty(p.nutWasher().Present);
+            testCase.verifyNotEmpty(p.sameAsHeadCheck());
+        end
+
+        function washerFieldsAreDisabledUntilTheWasherIsPresent(testCase)
+            % A5: Enable='off', never a read-only-looking field. Enable
+            % reads back as OnOffSwitchState, so compare char().
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.verifyEqual(char(h.Thk.Enable), 'off', ...
+                'An absent washer has nothing to configure.');
+
+            testCase.press(h.Present);
+            testCase.verifyEqual(char(h.Thk.Enable), 'on');
+            testCase.verifyEqual(char(h.OD.Enable),  'on');
+        end
+
+        function anAbsentWasherMarshalsTheModelDefaultNotTheTypedValues(testCase)
+            % "No washer" and "a washer of zero thickness" are different
+            % joints. Unticking Present must produce the former even though
+            % the fields still show what was typed.
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.06);
+            testCase.verifyEqual(testCase.App.State.Joint.HeadWasher.Thickness, 0.06);
+
+            testCase.press(h.Present);   % back off
+            w = testCase.App.State.Joint.HeadWasher;
+            testCase.verifyEqual(w.Thickness, 0, ...
+                'An absent washer marshals the model default.');
+            testCase.verifyTrue(isnan(w.OuterDiameter));
+            testCase.verifyEqual(h.Thk.Value, 0.06, ...
+                'Unticking Present must not blank the field.');
+        end
+
+        function washerEditsReachAppState(testCase)
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.078);
+            testCase.type(h.OD, '0.687');
+
+            w = testCase.App.State.Joint.HeadWasher;
+            testCase.verifyEqual(w.Thickness, 0.078);
+            testCase.verifyEqual(w.OuterDiameter, 0.687);
+            testCase.verifyTrue(testCase.App.State.IsDirty);
+        end
+
+        function sameAsHeadMirrorsTheHeadWasherAndGreysTheNutGroup(testCase)
+            % The head values must be entered BEFORE ticking: Same as Head
+            % greys the nut group, and matlab.uitest refuses to type into a
+            % disabled component exactly as a user cannot.
+            p = testCase.Page;
+            h = p.headWasher();
+            n = p.nutWasher();
+
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.078);
+            testCase.type(h.OD, '0.687');
+            testCase.press(n.Present);
+
+            testCase.press(p.sameAsHeadCheck());
+
+            testCase.verifyEqual(n.Thk.Value, 0.078, ...
+                'Ticking Same as Head must mirror the head washer.');
+            testCase.verifyEqual(strtrim(char(n.OD.Value)), '0.687');
+            testCase.verifyEqual(char(n.Thk.Enable), 'off', ...
+                'A mirrored group has nothing left to choose (A5).');
+            testCase.verifyEqual(testCase.App.State.Joint.NutWasher.Thickness, ...
+                0.078, 'The mirrored values must reach the model.');
+        end
+
+        function headEditsPropagateLiveWhileSameAsHeadIsTicked(testCase)
+            p = testCase.Page;
+            h = p.headWasher();
+            n = p.nutWasher();
+            testCase.press(h.Present);
+            testCase.press(n.Present);
+            testCase.press(p.sameAsHeadCheck());
+
+            testCase.type(h.Thk, 0.125);
+
+            testCase.verifyEqual(n.Thk.Value, 0.125, ...
+                'Mirroring is live, not a one-shot copy at tick time.');
+        end
+
+        function untickingSameAsHeadKeepsTheMirroredValues(testCase)
+            p = testCase.Page;
+            h = p.headWasher();
+            n = p.nutWasher();
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.078);
+            testCase.press(n.Present);
+            testCase.press(p.sameAsHeadCheck());
+            testCase.press(p.sameAsHeadCheck());   % back off
+
+            testCase.verifyEqual(n.Thk.Value, 0.078, ...
+                'Unticking keeps the mirrored values - it never blanks them.');
+            testCase.verifyEqual(char(n.Thk.Enable), 'on', ...
+                'Unticking hands editing back.');
+        end
+
+        function sameAsHeadIsOnlyOfferedOnceThereIsANutWasher(testCase)
+            p = testCase.Page;
+            testCase.verifyEqual(char(p.sameAsHeadCheck().Enable), 'off', ...
+                'Nothing to mirror onto while there is no nut washer.');
+            testCase.press(p.nutWasher().Present);
+            testCase.verifyEqual(char(p.sameAsHeadCheck().Enable), 'on');
+        end
+
+        function aBlankWasherDiameterMarshalsAsNaNAndKeepsTheCommit(testCase)
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.078);
+
+            w = testCase.App.State.Joint.HeadWasher;
+            testCase.verifyEqual(w.Thickness, 0.078, ...
+                'A blank diameter must not abort the commit.');
+            testCase.verifyTrue(isnan(w.OuterDiameter));
+            testCase.verifyTrue(isnan(w.InnerDiameter));
+        end
+
+        function aNonPositiveOuterDiameterDoesNotAbortTheCommit(testCase)
+            % model.Washer's OD is mustBePositiveOrNaN, so a typed zero
+            % would throw and take the whole commit down with it. buildJoint
+            % is total: it becomes NaN instead.
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.078);
+            testCase.type(h.OD, '0');
+
+            w = testCase.App.State.Joint.HeadWasher;
+            testCase.verifyEqual(w.Thickness, 0.078, ...
+                'A typed zero diameter must not abort the commit.');
+            testCase.verifyTrue(isnan(w.OuterDiameter));
         end
     end
 end
