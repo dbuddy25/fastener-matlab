@@ -58,6 +58,11 @@ classdef JointConfigPage < gui2.Page
         BoltLengthField
         BoltLengthLabel
 
+        BodyLengthField
+        RatedUltField
+        RatedYieldField
+        FrustumAngleField
+
         MemberTypeDropDown
         MemberMaterialDropDown
         MemberMaterialLabel
@@ -106,7 +111,7 @@ classdef JointConfigPage < gui2.Page
             left.Layout.Row    = 2;
             left.Layout.Column = 1;
             left.ColumnWidth   = {'1x'};
-            left.RowHeight     = repmat({'fit'}, 1, 6);
+            left.RowHeight     = repmat({'fit'}, 1, 7);
             left.Padding       = [0 0 0 0];
             left.RowSpacing    = 8;
 
@@ -123,6 +128,7 @@ classdef JointConfigPage < gui2.Page
                 'Washer under nut', true);
             obj.buildMemberGroup(left, 5);
             obj.buildBoltLengthGroup(left, 6);
+            obj.buildAdvancedGroup(left, 7);
             obj.syncWasherEnables();
 
             obj.listenTo('JointChanged', @() obj.refresh());
@@ -145,7 +151,11 @@ classdef JointConfigPage < gui2.Page
             obj.applyFlangeStack(j.FlangeStack);
             obj.updateGripLabel();
 
-            obj.BoltLengthField.Value = obj.fmtOptional(j.Bolt.Length);
+            obj.BoltLengthField.Value  = obj.fmtOptional(j.Bolt.Length);
+            obj.BodyLengthField.Value  = obj.fmtOptional(j.BodyLengthInGrip);
+            obj.RatedUltField.Value    = obj.fmtOptional(j.BoltRatedUltimateLoad);
+            obj.RatedYieldField.Value  = obj.fmtOptional(j.BoltRatedYieldLoad);
+            obj.FrustumAngleField.Value = j.FrustumAngle;
 
             m = j.ThreadedMember;
             obj.MemberTypeDropDown.Value = ...
@@ -474,6 +484,71 @@ classdef JointConfigPage < gui2.Page
             obj.BoltLengthLabel.Layout.Column = [1 3];
         end
 
+        function buildAdvancedGroup(obj, parent, row)
+            %BUILDADVANCEDGROUP  The blank-means-automatic overrides.
+            %   Everything here is optional and derived by the engine when
+            %   left blank. They are grouped at the bottom rather than mixed
+            %   into the stack because an override that sits among required
+            %   inputs reads as one.
+            panel = uipanel(parent, 'Title', 'Advanced / overrides');
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+
+            b = uigridlayout(panel, [4 3]);
+            b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
+                             gui2.JointConfigPage.ValueW, '1x'};
+            b.RowHeight   = repmat({'fit'}, 1, 4);
+            b.RowSpacing  = 4;
+            b.Padding     = [6 6 6 6];
+
+            % L1 CANNOT be made automatic, despite the spec's first draft
+            % saying so. engine.stiffness derives it from
+            % Bolt.Length - Bolt.ThreadLength, and NO seeded bolt carries a
+            % thread length: it is a per-part property that varies with the
+            % ordered length, so it cannot live in a catalogue keyed by
+            % thread size. Deriving it would need per-part-number library
+            % entries (GUI2_SPEC.md 7.2d).
+            obj.BodyLengthField = obj.addLabelledText(b, 1, ...
+                'Unthreaded body length L1 (in)', ...
+                ['L1 - the UNTHREADED shank length inside the clamp, used ' ...
+                 'for bolt stiffness. NOT the bolt length and NOT the ' ...
+                 'thread length. Required for stiffness: catalogue bolts ' ...
+                 'carry no thread length, so it cannot be derived.']);
+            obj.bindEdit(obj.BodyLengthField, @(~, ~) obj.commitJoint());
+
+            obj.RatedUltField = obj.addLabelledText(b, 2, ...
+                'Bolt rated ultimate (lbf)', ...
+                ['Spec-rated Ptu-allow. Blank = the engine derives ' ...
+                 'At x Ftu, which is a derived convention rather than a ' ...
+                 '5020B equation.']);
+            obj.bindEdit(obj.RatedUltField, @(~, ~) obj.commitJoint());
+
+            obj.RatedYieldField = obj.addLabelledText(b, 3, ...
+                'Bolt rated yield (lbf)', ...
+                ['Spec-rated Pty-allow. Blank = the engine derives it via ' ...
+                 'NASA-STD-5020B Eq. 18.']);
+            obj.bindEdit(obj.RatedYieldField, @(~, ~) obj.commitJoint());
+
+            % NOT a text field like the others: FrustumAngle is the one
+            % property here with no NaN state - model.Joint requires
+            % 0 < angle < 90 always. A numeric field with exclusive limits
+            % refuses an invalid value at the widget, so marshalling can
+            % never be handed one.
+            lb = uilabel(b, 'Text', 'Frustum half-angle (deg)');
+            lb.Layout.Row = 4; lb.Layout.Column = 1;
+            obj.FrustumAngleField = uieditfield(b, 'numeric', ...
+                'Limits', [0 90], 'LowerLimitInclusive', 'off', ...
+                'UpperLimitInclusive', 'off', 'RoundFractionalValues', 'on', ...
+                'Value', 30);
+            obj.FrustumAngleField.Layout.Row = 4;
+            obj.FrustumAngleField.Layout.Column = 2;
+            obj.FrustumAngleField.Tooltip = ['Conical-frustum half-angle ' ...
+                'for the member-stiffness model. Integer degrees; the ' ...
+                'model default is 30.'];
+            lb.Tooltip = obj.FrustumAngleField.Tooltip;
+            obj.bindEdit(obj.FrustumAngleField, @(~, ~) obj.commitJoint());
+        end
+
         function [d, lb] = addDropdown(obj, g, row, labelText, items, tip) %#ok<INUSD>
             lb = uilabel(g, 'Text', labelText, 'Tooltip', tip);
             lb.Layout.Row = row; lb.Layout.Column = 1;
@@ -557,6 +632,13 @@ classdef JointConfigPage < gui2.Page
             joint.Bolt         = obj.lookupBolt();
             joint.BoltMaterial = obj.lookupBoltMaterial();
             joint.FlangeStack  = obj.collectFlangeLayers();
+            % parsePositive for L1 (mustBePositiveOrNaN); parseOptional for
+            % the rated loads, which are mustBeNONNEGATIVEOrNaN - a rated
+            % load of zero is a legitimate value, not a typo.
+            joint.BodyLengthInGrip      = obj.parsePositive(obj.BodyLengthField);
+            joint.BoltRatedUltimateLoad = obj.parseOptional(obj.RatedUltField);
+            joint.BoltRatedYieldLoad    = obj.parseOptional(obj.RatedYieldField);
+            joint.FrustumAngle          = obj.FrustumAngleField.Value;
             joint.ThreadedMember = obj.buildThreadedMember();
             joint.HeadWasher   = obj.buildWasher(obj.HeadWasher);
             joint.NutWasher    = obj.buildWasher(obj.NutWasher);
@@ -1074,6 +1156,18 @@ classdef JointConfigPage < gui2.Page
 
         function l = boltLengthLabel(obj)
             l = obj.BoltLengthLabel;
+        end
+
+        function f = bodyLengthField(obj)
+            f = obj.BodyLengthField;
+        end
+
+        function f = ratedUltField(obj)
+            f = obj.RatedUltField;
+        end
+
+        function f = frustumAngleField(obj)
+            f = obj.FrustumAngleField;
         end
     end
 end

@@ -551,4 +551,59 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyTrue(isnan(testCase.App.State.Joint.Bolt.Length));
         end
     end
+    % ---- Advanced / overrides ----------------------------------------------
+    methods (Test)
+        function overridesStartBlankAndMarshalAsNaN(testCase)
+            % Blank means "the engine derives it", which is NaN in the
+            % model. Zero would be a real value and a wrong one.
+            j = testCase.App.State.Joint;
+            testCase.verifyTrue(isnan(j.BodyLengthInGrip));
+            testCase.verifyTrue(isnan(j.BoltRatedUltimateLoad));
+            testCase.verifyTrue(isnan(j.BoltRatedYieldLoad));
+        end
+
+        function bodyLengthAndRatedLoadsReachTheModel(testCase)
+            p = testCase.Page;
+            testCase.type(p.bodyLengthField(), '0.70');
+            testCase.type(p.ratedUltField(), '4210');
+            j = testCase.App.State.Joint;
+            testCase.verifyEqual(j.BodyLengthInGrip, 0.70);
+            testCase.verifyEqual(j.BoltRatedUltimateLoad, 4210);
+        end
+
+        function aRatedLoadOfZeroIsKeptNotDiscarded(testCase)
+            % BoltRatedUltimateLoad is mustBeNONNEGATIVEOrNaN, unlike the
+            % geometry fields: zero is a legitimate rating, so it must not
+            % be silently converted to "not supplied".
+            testCase.type(testCase.Page.ratedUltField(), '0');
+            testCase.verifyEqual(testCase.App.State.Joint.BoltRatedUltimateLoad, 0);
+        end
+
+        function aTypedZeroBodyLengthDoesNotTakeTheCommitDown(testCase)
+            % BodyLengthInGrip is mustBePositiveOrNaN - the same trap as
+            % the flange geometry, the washer diameters and bolt length.
+            p = testCase.Page;
+            testCase.type(p.jointNameField(), "Zero L1 probe");
+            testCase.type(p.bodyLengthField(), '0');
+            testCase.verifyEqual(testCase.App.State.Joint.Name, "Zero L1 probe");
+            testCase.verifyTrue(isnan(testCase.App.State.Joint.BodyLengthInGrip));
+        end
+
+        function frustumAngleDefaultsToThirtyAndRefusesInvalidValues(testCase)
+            % The one property here with NO NaN state: model.Joint requires
+            % 0 < angle < 90 always, so the widget refuses out-of-range
+            % input rather than letting marshalling be handed something the
+            % model will reject.
+            p = testCase.Page;
+            testCase.verifyEqual(p.frustumAngleField().Value, 30);
+            testCase.verifyEqual(testCase.App.State.Joint.FrustumAngle, 30);
+
+            testCase.type(p.frustumAngleField(), 45);
+            testCase.verifyEqual(testCase.App.State.Joint.FrustumAngle, 45);
+
+            testCase.type(p.frustumAngleField(), 95);
+            testCase.verifyNotEqual(testCase.App.State.Joint.FrustumAngle, 95, ...
+                'An angle outside (0, 90) must never reach the model.');
+        end
+    end
 end
