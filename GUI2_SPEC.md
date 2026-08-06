@@ -360,12 +360,20 @@ only consumer, `marginBearingUnderHead`, is outside the displayed scope.
 The field keeps its current tooltip, plus: *required for bolt stiffness —
 catalogue bolts carry no thread length, so it cannot be derived.*
 
-**e. Bolt rated loads become locked display with an explicit override.**
-They already auto-fill from `data.Library.boltSpecFor(bolt, material)` on every
-bolt or material change — the problem is that they render as primary inputs.
-Lock by default, unlock deliberately, same mechanism as the Nut spec picker.
-The override still matters: a bolt+material pair with no `boltSpec` entry falls
-back to `At · Ftu`, a derived convention rather than a 5020B equation.
+**e. Bolt rated loads auto-fill from the library and stay editable.**
+They fill from `data.Library.boltSpecFor(bolt, material)` on every bolt or
+material change. A pairing with **no** `boltSpec` entry **blanks** them rather
+than carrying the previous pairing's numbers over — analysing a new bolt with
+the old bolt's ratings is the failure that matters here.
+
+> An earlier draft called for "locked display with an explicit override",
+> mirroring the nut-spec picker. Dropped once built: these fields live in a
+> group titled **Advanced / overrides**, so leaving them editable *is* the
+> override path. Locking them would need a second unlock control to say what
+> the group's title already says. The override still matters — a pairing with
+> no spec entry falls back to `At · Ftu`, a derived convention rather than a
+> 5020B equation, and an analyst with a real spec value needs somewhere to put
+> it.
 
 **f. Shear-transfer condition — control removed, `NotDeclared` hard-set.**
 

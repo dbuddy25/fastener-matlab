@@ -28,6 +28,17 @@ classdef JointConfigPage < gui2.Page
         % it is a selectable item rather than an absent value.
         BlankChoice = ' '
 
+        % The manual escape from every spec picker. PERMANENT and always
+        % reachable (A5): a user must never be left with fields locked and
+        % no way back. A bare token, not a label, because it is also the
+        % ItemsData value.
+        CustomChoice = 'Custom'
+
+        % Shown by a size picker with nothing to offer - no family chosen,
+        % or no bolt to resolve against. Named rather than blank, so the
+        % absence reads as a state instead of a rendering fault (A12).
+        SizeNA = '(none - pick a family)'
+
         LabelW = 150
         ValueW = 150
 
@@ -103,6 +114,16 @@ classdef JointConfigPage < gui2.Page
         EngagementLengthField
         EngagementLengthLabel
 
+        NutSpecDropDown
+
+        % True while a RESOLVED nut family owns the member material and the
+        % inches engagement. Read by syncMemberType, which is the ONE method
+        % that sets either engagement control's Enable - the nut cascade
+        % feeds it this flag rather than writing Enable behind its back.
+        % Two writers over one property is how a field ends up editable
+        % when it should be locked (A5).
+        NutSpecLocked (1,1) logical = false
+
         % Guards a commit against the refresh its own event triggers.
         Refreshing (1,1) logical = false
     end
@@ -174,6 +195,8 @@ classdef JointConfigPage < gui2.Page
             obj.buildLoadsGroup(right, 2);
             obj.buildAssumptionsGroup(right, 3);
             obj.buildActionsGroup(right, 4);
+            % Families first, then the enable pass that reads their state.
+            obj.populateSpecPickers();
             obj.syncWasherEnables();
 
             obj.listenTo('JointChanged', @() obj.refresh());
@@ -238,11 +261,14 @@ classdef JointConfigPage < gui2.Page
 
             obj.validateRequired();
 
-            % Same as Head is PAGE state, not case state: model.Joint holds
-            % the two washers independently, so a loaded case defines both
-            % explicitly. Untick on an external load rather than let a
-            % mirrored view claim values the file never carried.
+            % Same as Head and the spec pickers are PAGE state, not case
+            % state: model.Joint holds the two washers independently and
+            % records resolved numbers rather than which family produced
+            % them. A loaded case defines all of it explicitly, so a
+            % mirrored view or a picker left claiming ownership would be
+            % asserting a provenance the file never carried.
             obj.SameAsHeadCheck.Value = false;
+            obj.resetSpecPickers();
             obj.applyWasher(obj.HeadWasher, j.HeadWasher);
             obj.applyWasher(obj.NutWasher,  j.NutWasher);
             obj.syncWasherEnables();
@@ -272,15 +298,18 @@ classdef JointConfigPage < gui2.Page
             lb.Layout.Row = 1; lb.Layout.Column = 1;
             obj.bindEdit(obj.JointNameField, @(~, ~) obj.commitJoint());
 
+            % Not commitJoint: the bolt keys every cascade on the page, so a
+            % change to it re-resolves the bolt spec, the nut family and
+            % both washer families before committing.
             obj.BoltDropDown = obj.addDropdown(b, 2, 'Bolt', ...
                 obj.libraryItems('bolt'), ...
                 'Fastener from the hardware library. Required.');
-            obj.bindEdit(obj.BoltDropDown, @(~, ~) obj.commitJoint());
+            obj.bindEdit(obj.BoltDropDown, @(~, ~) obj.onBoltChanged());
 
             obj.BoltMaterialDropDown = obj.addDropdown(b, 3, 'Bolt material', ...
                 obj.libraryItems('boltMaterial'), ...
                 'Bolt material from the hardware library. Required.');
-            obj.bindEdit(obj.BoltMaterialDropDown, @(~, ~) obj.commitJoint());
+            obj.bindEdit(obj.BoltMaterialDropDown, @(~, ~) obj.onBoltMaterialChanged());
 
             obj.BoltCountField = obj.addNumeric(b, 4, 'Bolt count nf', ...
                 'Number of fasteners in the pattern.');
@@ -405,7 +434,7 @@ classdef JointConfigPage < gui2.Page
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
-            nRows = 5;
+            nRows = 7;
             b = uigridlayout(panel, [nRows 3]);
             b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
                              gui2.JointConfigPage.ValueW, '1x'};
@@ -437,6 +466,33 @@ classdef JointConfigPage < gui2.Page
                 obj.bindEdit(obj.SameAsHeadCheck, @(~, ~) obj.onSameAsHeadToggled());
             end
 
+            % Spec + size, above the geometry they fill. A family resolves
+            % MANY washers at one bolt size - 2-3 for NAS1149 - so unlike
+            % the nut cascade this needs a second picker to choose between
+            % them, and the family alone can never fill anything.
+            r = r + 1;
+            w.Spec = obj.addDropdown(b, r, 'Washer spec', ...
+                {gui2.JointConfigPage.CustomChoice}, ...
+                ['Pick a washer family to list the sizes catalogued at the ' ...
+                 'selected bolt''s nominal diameter. Choosing a size fills ' ...
+                 'and LOCKS OD, ID and thickness. Custom re-enables them ' ...
+                 'and always remains available.']);
+
+            r = r + 1;
+            w.Size = obj.addDropdown(b, r, 'Washer size', ...
+                {gui2.JointConfigPage.SizeNA}, ...
+                ['Sizes catalogued at the selected bolt''s nominal ' ...
+                 'diameter, thinnest first. A washer family resolves to ' ...
+                 'several thicknesses, so the family alone cannot fill the ' ...
+                 'geometry.']);
+            w.Size.Enable = 'off';
+
+            % Locked by a resolved size, so syncWasherEnables can tell
+            % "greyed because the catalogue owns it" from "greyed because
+            % there is no washer here". Both groups carry the field, so the
+            % two structs stay identical in shape.
+            w.Locked = false;
+
             r = r + 1;
             w.Material = obj.addDropdown(b, r, 'Washer material', ...
                 obj.libraryItems('washerMaterial'), ...
@@ -458,16 +514,21 @@ classdef JointConfigPage < gui2.Page
             w.Thk.ValueDisplayFormat = '%.5f';
 
             % One handler per group, so the head group can drive the mirror
-            % and the nut group cannot.
+            % and the nut group cannot. `which` names the group for the
+            % cascade, which needs to know whose OD/ID/thickness to fill.
             if withSameAsHead
-                cb = @(~, ~) obj.onNutWasherEdited();
+                cb    = @(~, ~) obj.onNutWasherEdited();
+                which = 'Nut';
             else
-                cb = @(~, ~) obj.onHeadWasherEdited();
+                cb    = @(~, ~) obj.onHeadWasherEdited();
+                which = 'Head';
             end
             obj.bindEdit(w.Material, cb);
             obj.bindEdit(w.OD,       cb);
             obj.bindEdit(w.ID,       cb);
             obj.bindEdit(w.Thk,      cb);
+            obj.bindEdit(w.Spec, @(~, ~) obj.onWasherSpecChanged(which));
+            obj.bindEdit(w.Size, @(~, ~) obj.onWasherSizeChanged(which));
         end
 
         function buildMemberGroup(obj, parent, row)
@@ -475,10 +536,10 @@ classdef JointConfigPage < gui2.Page
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
-            b = uigridlayout(panel, [4 3]);
+            b = uigridlayout(panel, [5 3]);
             b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
                              gui2.JointConfigPage.ValueW, '1x'};
-            b.RowHeight   = repmat({'fit'}, 1, 4);
+            b.RowHeight   = repmat({'fit'}, 1, 5);
             b.RowSpacing  = 4;
             b.Padding     = [6 6 6 6];
 
@@ -492,8 +553,20 @@ classdef JointConfigPage < gui2.Page
                 model.ThreadedMemberType.Nut);
             obj.bindEdit(obj.MemberTypeDropDown, @(~, ~) obj.onMemberTypeChanged());
 
+            % Nut families only. An insert resolves through NASM33537
+            % geometry rather than a picker, and a tapped hole has no
+            % catalogue at all - so this control is meaningful for exactly
+            % one member type and disables itself for the other two.
+            obj.NutSpecDropDown = obj.addDropdown(b, 2, 'Nut spec', ...
+                {gui2.JointConfigPage.CustomChoice}, ...
+                ['Pick a nut family to resolve it against the selected ' ...
+                 'bolt''s thread size, filling and LOCKING the material and ' ...
+                 'the engagement length. Custom re-enables them and always ' ...
+                 'remains available. Nut member type only.']);
+            obj.bindEdit(obj.NutSpecDropDown, @(~, ~) obj.onNutSpecChanged());
+
             [obj.MemberMaterialDropDown, obj.MemberMaterialLabel] = ...
-                obj.addDropdown(b, 2, 'Nut material', ...
+                obj.addDropdown(b, 3, 'Nut material', ...
                     obj.libraryItems('material'), ...
                     ['The material whose shear allowable carries the ' ...
                      'internal thread: the nut itself, or the parent body ' ...
@@ -506,7 +579,7 @@ classdef JointConfigPage < gui2.Page
             % irrelevant one greys out; both keep their values, so flipping
             % type to compare and flipping back loses nothing.
             [obj.EngagementRatioField, obj.EngagementRatioLabel] = ...
-                obj.addLabelledText(b, 3, 'Engagement (x bolt D)', ...
+                obj.addLabelledText(b, 4, 'Engagement (x bolt D)', ...
                     ['Thread engagement as a MULTIPLE OF THE BOLT NOMINAL ' ...
                      'DIAMETER, e.g. 1.5 for 1.5D. Helical inserts are ' ...
                      'specified by length CLASS, not an absolute inch ' ...
@@ -518,7 +591,7 @@ classdef JointConfigPage < gui2.Page
             obj.bindEdit(obj.EngagementRatioField, @(~, ~) obj.onEngagementEdited());
 
             [obj.EngagementLengthField, obj.EngagementLengthLabel] = ...
-                obj.addLabelledText(b, 4, 'Engagement length Le (in)', ...
+                obj.addLabelledText(b, 5, 'Engagement length Le (in)', ...
                     ['Thread engagement in INCHES - nut thread height, or ' ...
                      'tapped-hole engagement depth. Nut and Tapped Hole ' ...
                      'only. Blank leaves the thread checks not evaluated.']);
@@ -1145,28 +1218,399 @@ classdef JointConfigPage < gui2.Page
             states = {'off', 'on'};
 
             headOn = logical(obj.HeadWasher.Present.Value);
-            obj.setWasherFieldsEnable(obj.HeadWasher, states{headOn + 1});
+            obj.setWasherFieldsEnable(obj.HeadWasher, headOn);
 
             nutPresent = logical(obj.NutWasher.Present.Value);
             mirroring  = logical(obj.SameAsHeadCheck.Value);
             % Same as Head is only meaningful once there IS a nut washer.
             obj.SameAsHeadCheck.Enable = states{nutPresent + 1};
             nutOn = nutPresent && ~mirroring;
-            obj.setWasherFieldsEnable(obj.NutWasher, states{nutOn + 1});
+            obj.setWasherFieldsEnable(obj.NutWasher, nutOn);
         end
 
-        function setWasherFieldsEnable(~, w, state)
-            w.Material.Enable = state;
-            w.OD.Enable       = state;
-            w.ID.Enable       = state;
-            w.Thk.Enable      = state;
+        function setWasherFieldsEnable(~, w, groupLive)
+            %SETWASHERFIELDSENABLE  Three reasons a field here can be dead.
+            %   The group has no washer, or the nut group is mirroring the
+            %   head, or a resolved catalogue size owns the geometry. The
+            %   first two kill everything; the third kills only the
+            %   geometry, because washer MATERIAL is not in the catalogue -
+            %   library washers are geometry only, so a family can never
+            %   speak for it.
+            states = {'off', 'on'};
+            geometryLive = groupLive && ~w.Locked;
+
+            w.Material.Enable = states{groupLive + 1};
+            w.Spec.Enable     = states{groupLive + 1};
+            w.OD.Enable       = states{geometryLive + 1};
+            w.ID.Enable       = states{geometryLive + 1};
+            w.Thk.Enable      = states{geometryLive + 1};
+
+            % The size picker is live only once a family has offered sizes.
+            hasSizes = ~strcmp(w.Size.Value, gui2.JointConfigPage.SizeNA);
+            w.Size.Enable = states{(groupLive && hasSizes) + 1};
         end
 
         function onMemberTypeChanged(obj)
-            obj.syncMemberType();
+            % applyNutSpec BEFORE syncMemberType would be wrong: the picker
+            % has to be reset for the new type first, and applyNutSpec ends
+            % by calling syncMemberType itself.
+            obj.applyNutSpec();
             obj.syncJointLoadVisibility();
             obj.updateBoltLengthLabel();
             obj.commitJoint();
+        end
+
+        % ---- The library cascades -----------------------------------------
+        %   Three pickers, one contract (A5): resolve against the selected
+        %   bolt, fill what the catalogue knows, LOCK it with Enable='off',
+        %   and on any miss revert to Custom, re-enable, and SAY SO naming
+        %   the family and the thread size. Never leave numbers resolved for
+        %   a different bolt sitting there looking authoritative.
+
+        function onBoltChanged(obj)
+            %ONBOLTCHANGED  One bolt change invalidates three pickers.
+            %   Every cascade is keyed on the bolt's thread size, so a new
+            %   bolt makes all of them stale at once. Re-resolving rather
+            %   than clearing keeps a still-valid family selected.
+            obj.updateSpecFields(true);
+            obj.applyNutSpec();
+            obj.applyWasherSpec('Head');
+            obj.applyWasherSpec('Nut');
+            obj.updateBoltLengthLabel();
+            obj.commitJoint();
+        end
+
+        function onBoltMaterialChanged(obj)
+            % Only the bolt SPEC depends on the material - a nut or washer
+            % family is resolved by thread size alone.
+            obj.updateSpecFields(true);
+            obj.commitJoint();
+        end
+
+        function updateSpecFields(obj, autofill)
+            %UPDATESPECFIELDS  Bolt + material -> the rated loads.
+            %   Pure lookup, no arithmetic. autofill=false refreshes nothing
+            %   and exists so a loaded case's stored overrides are not
+            %   clobbered by catalogue values on repopulation.
+            %
+            %   A MISS BLANKS THEM. Leaving the previous pairing's ratings
+            %   in place would analyse the new bolt with the old bolt's
+            %   numbers - and they would look like a deliberate override.
+            if ~autofill || isempty(obj.RatedUltField) || ~obj.State.LibraryOK
+                return
+            end
+            boltKey = obj.selectedKey(obj.BoltDropDown);
+            matKey  = obj.selectedKey(obj.BoltMaterialDropDown);
+            if strlength(boltKey) == 0 || strlength(matKey) == 0
+                return
+            end
+
+            s = [];
+            try
+                s = obj.State.Library.boltSpecFor(boltKey, matKey);
+            catch
+                s = [];
+            end
+
+            if isempty(s)
+                obj.RatedUltField.Value   = '';
+                obj.RatedYieldField.Value = '';
+                obj.setStatus(sprintf(['No rated loads catalogued for %s in ' ...
+                    '%s - the engine will derive them, or enter them under ' ...
+                    'Advanced.'], boltKey, matKey));
+                return
+            end
+            obj.RatedUltField.Value   = obj.fmtOptional(s.RatedUltimateLoad);
+            obj.RatedYieldField.Value = obj.fmtOptional(s.RatedYieldLoad);
+            obj.setStatus(sprintf('Rated loads filled from %s.', s.Key));
+        end
+
+        function onNutSpecChanged(obj)
+            obj.applyNutSpec();
+            obj.updateBoltLengthLabel();
+            obj.commitJoint();
+        end
+
+        function applyNutSpec(obj)
+            %APPLYNUTSPEC  Resolve the nut family at the bolt's thread size.
+            %   NEVER MARKS DIRTY - this is state sync, not an edit, and it
+            %   runs during construction and repopulation. Idempotent.
+            if isempty(obj.NutSpecDropDown)
+                return
+            end
+
+            % Not a Nut, or Custom: nothing owns the fields. Reverting the
+            % value too, so a family left selected from a previous member
+            % type cannot appear to be governing.
+            isNut = obj.selectedMemberType() == model.ThreadedMemberType.Nut;
+            spec  = string(obj.NutSpecDropDown.Value);
+            if ~isNut || spec == gui2.JointConfigPage.CustomChoice
+                if ~isNut
+                    obj.NutSpecDropDown.Value = gui2.JointConfigPage.CustomChoice;
+                end
+                obj.NutSpecLocked = false;
+                obj.syncMemberType();
+                return
+            end
+
+            bolt = obj.selectedBolt();
+            if isempty(bolt) || isnan(bolt.NominalDiameter) || ...
+                    isnan(bolt.ThreadsPerInch)
+                obj.releaseNutSpec(sprintf(['Pick a bolt before choosing a ' ...
+                    'nut family - %s resolves by thread size.'], spec));
+                return
+            end
+
+            n = [];
+            try
+                n = obj.State.Library.nutFor(bolt.NominalDiameter, ...
+                    bolt.ThreadsPerInch, spec);
+            catch
+                n = [];
+            end
+            if isempty(n)
+                obj.releaseNutSpec(sprintf(['No %s nut catalogued at %s - ' ...
+                    'reverted to Custom; enter the nut fields manually.'], ...
+                    spec, obj.threadDescription(bolt)));
+                return
+            end
+
+            % A nut naming a material the library no longer carries must not
+            % leave a stale selection LOCKED - that is the exact failure the
+            % picker exists to prevent.
+            if ~obj.trySelectKey(obj.MemberMaterialDropDown, n.Material)
+                obj.releaseNutSpec(sprintf(['Nut %s names material "%s", ' ...
+                    'which is not in the library - reverted to Custom.'], ...
+                    n.Key, n.Material));
+                return
+            end
+
+            obj.EngagementLengthField.Value = obj.fmtOptional(n.Height);
+            obj.NutSpecLocked = true;
+            obj.syncMemberType();
+            obj.setStatus(sprintf('Nut %s filled the material and engagement.', ...
+                n.Key));
+        end
+
+        function releaseNutSpec(obj, message)
+            %RELEASENUTSPEC  Revert to Custom, unlock, and say why (A5).
+            obj.NutSpecDropDown.Value = gui2.JointConfigPage.CustomChoice;
+            obj.NutSpecLocked = false;
+            obj.syncMemberType();
+            obj.setStatus(message);
+        end
+
+        function onWasherSpecChanged(obj, which)
+            obj.applyWasherSpec(which);
+            obj.updateBoltLengthLabel();
+            obj.commitJoint();
+        end
+
+        function applyWasherSpec(obj, which)
+            %APPLYWASHERSPEC  Resolve a washer family into its size list.
+            %   A family resolves to MANY washers at one bolt size, so this
+            %   fills the SIZE picker rather than the geometry; choosing a
+            %   size is what fills OD/ID/thickness.
+            w = obj.washerGroup(which);
+            if isempty(w.Spec)
+                return
+            end
+            spec = string(w.Spec.Value);
+            if spec == gui2.JointConfigPage.CustomChoice
+                obj.releaseWasherSpec(which, '');
+                return
+            end
+
+            bolt = obj.selectedBolt();
+            if isempty(bolt) || isnan(bolt.NominalDiameter)
+                obj.releaseWasherSpec(which, sprintf(['Pick a bolt before ' ...
+                    'choosing a washer family - %s resolves by nominal ' ...
+                    'diameter.'], spec));
+                return
+            end
+
+            matches = [];
+            try
+                matches = obj.State.Library.washersFor(bolt.NominalDiameter, spec);
+            catch
+                matches = [];
+            end
+            if isempty(matches)
+                obj.releaseWasherSpec(which, sprintf(['No %s washer ' ...
+                    'catalogued at %g in nominal - reverted to Custom; ' ...
+                    'enter the geometry manually.'], spec, bolt.NominalDiameter));
+                return
+            end
+
+            labels = cell(1, numel(matches));
+            tokens = cell(1, numel(matches));
+            for k = 1:numel(matches)
+                labels{k} = obj.washerSizeLabel(matches(k));
+                tokens{k} = char(matches(k).Key);
+            end
+            gui2.JointConfigPage.setItemsAndData(w.Size, labels, tokens);
+            % Thinnest first, and washersFor sorts ascending - so element 1
+            % is the least intrusive default rather than an arbitrary one.
+            w.Size.Value = tokens{1};
+            obj.fillWasherFromSize(which);
+        end
+
+        function onWasherSizeChanged(obj, which)
+            obj.fillWasherFromSize(which);
+            obj.updateBoltLengthLabel();
+            obj.commitJoint();
+        end
+
+        function fillWasherFromSize(obj, which)
+            %FILLWASHERFROMSIZE  The chosen size -> OD, ID, thickness, locked.
+            w   = obj.washerGroup(which);
+            key = string(w.Size.Value);
+            if key == gui2.JointConfigPage.SizeNA || ~obj.State.LibraryOK
+                return
+            end
+            entry = [];
+            try
+                entry = obj.State.Library.washer(key);
+            catch
+                entry = [];
+            end
+            if isempty(entry)
+                obj.releaseWasherSpec(which, sprintf( ...
+                    'Washer %s is no longer in the library - reverted to Custom.', key));
+                return
+            end
+
+            w.OD.Value  = obj.fmtOptional(entry.OuterDiameter);
+            w.ID.Value  = obj.fmtOptional(entry.InnerDiameter);
+            w.Thk.Value = entry.Thickness;
+            % Geometry from a catalogue means the washer IS there - ticking
+            % Present spares the analyst a step that could only have one
+            % answer.
+            w.Present.Value = true;
+            obj.setWasherLocked(which, true);
+            obj.setStatus(sprintf('Washer %s filled the geometry.', entry.Key));
+        end
+
+        function releaseWasherSpec(obj, which, message)
+            %RELEASEWASHERSPEC  Back to Custom with the geometry editable.
+            %   Values are LEFT IN PLACE, never blanked: whatever the
+            %   catalogue put there is a reasonable starting point to edit,
+            %   and blanking would punish the analyst for changing their
+            %   mind (the Same as Head rule, applied here).
+            w = obj.washerGroup(which);
+            w.Spec.Value = gui2.JointConfigPage.CustomChoice;
+            gui2.JointConfigPage.setItemsAndData(w.Size, ...
+                {gui2.JointConfigPage.SizeNA}, {gui2.JointConfigPage.SizeNA});
+            w.Size.Value = gui2.JointConfigPage.SizeNA;
+            obj.setWasherLocked(which, false);
+            if ~isempty(message)
+                obj.setStatus(message);
+            end
+        end
+
+        function setWasherLocked(obj, which, tf)
+            %SETWASHERLOCKED  Record the lock, then let syncWasherEnables
+            %   act on it. Same discipline as NutSpecLocked: the cascade
+            %   never writes Enable itself.
+            if strcmp(which, 'Head')
+                obj.HeadWasher.Locked = tf;
+            else
+                obj.NutWasher.Locked = tf;
+            end
+            obj.syncWasherEnables();
+        end
+
+        function w = washerGroup(obj, which)
+            if strcmp(which, 'Head')
+                w = obj.HeadWasher;
+            else
+                w = obj.NutWasher;
+            end
+        end
+
+        function b = selectedBolt(obj)
+            %SELECTEDBOLT  The library entry, or [] when none is chosen.
+            b = [];
+            key = obj.selectedKey(obj.BoltDropDown);
+            if strlength(key) == 0 || ~obj.State.LibraryOK
+                return
+            end
+            try
+                b = obj.State.Library.bolt(key);
+            catch
+                b = [];
+            end
+        end
+
+        function s = threadDescription(~, bolt)
+            %THREADDESCRIPTION  "0.19 in - 32 TPI", for a status message.
+            %   Library bolt KEYS are not parseable thread strings, so the
+            %   size is described from the numbers the match was made on.
+            s = sprintf('%g in - %g TPI', bolt.NominalDiameter, ...
+                bolt.ThreadsPerInch);
+        end
+
+        function s = washerSizeLabel(obj, entry) %#ok<INUSL>
+            %WASHERSIZELABEL  What distinguishes one match from another.
+            %   Thickness, because that is the only thing that varies within
+            %   a family at one bolt size - listing the key alone would make
+            %   the choice arbitrary.
+            if strlength(entry.SizeCode) > 0
+                s = sprintf('%s - %.4f in thk', entry.SizeCode, entry.Thickness);
+            else
+                s = sprintf('%s - %.4f in thk', entry.Key, entry.Thickness);
+            end
+        end
+
+        function populateSpecPickers(obj)
+            %POPULATESPECPICKERS  Family lists, labels shown, tokens stored.
+            %   Items carry "<drawing number> - <descriptor>" because the
+            %   number is what an analyst cites and the descriptor is what
+            %   tells them which part it is. ItemsData carries the bare
+            %   token, so Value is what nutFor/washersFor match on and the
+            %   composite string never becomes an identity that has to
+            %   round-trip.
+            if ~obj.State.LibraryOK
+                return
+            end
+            custom = gui2.JointConfigPage.CustomChoice;
+            try
+                [tok, lab] = obj.State.Library.nutSpecs();
+                gui2.JointConfigPage.setItemsAndData(obj.NutSpecDropDown, ...
+                    [cellstr(lab), {custom}], [cellstr(tok), {custom}]);
+                obj.NutSpecDropDown.Value = custom;
+            catch
+            end
+            try
+                [wtok, wlab] = obj.State.Library.washerSpecs();
+                for which = {'Head', 'Nut'}
+                    w = obj.washerGroup(which{1});
+                    gui2.JointConfigPage.setItemsAndData(w.Spec, ...
+                        [cellstr(wlab), {custom}], [cellstr(wtok), {custom}]);
+                    w.Spec.Value = custom;
+                end
+            catch
+            end
+        end
+
+        function resetSpecPickers(obj)
+            %RESETSPECPICKERS  Back to Custom, unlocked, on an external load.
+            %   The pickers are PAGE state, not case state: model.Joint
+            %   records the resolved numbers, not which family produced
+            %   them. A loaded case defines its washers and nut explicitly,
+            %   so a picker left claiming ownership would be asserting a
+            %   provenance the file never carried.
+            if isempty(obj.NutSpecDropDown)
+                return
+            end
+            obj.NutSpecDropDown.Value = gui2.JointConfigPage.CustomChoice;
+            obj.NutSpecLocked = false;
+            % syncMemberType is what turns the cleared flag into enable
+            % state; refresh() ran it before this point, when the flag was
+            % still set.
+            obj.syncMemberType();
+            obj.releaseWasherSpec('Head', '');
+            obj.releaseWasherSpec('Nut',  '');
         end
 
         function syncMemberType(obj)
@@ -1195,10 +1639,27 @@ classdef JointConfigPage < gui2.Page
 
             isInsert = (t == model.ThreadedMemberType.Insert);
             states   = {'off', 'on'};
-            obj.EngagementRatioField.Enable  = states{isInsert + 1};
-            obj.EngagementLengthField.Enable = states{~isInsert + 1};
-            obj.EngagementRatioLabel.FontColor  = obj.enabledColor(isInsert);
-            obj.EngagementLengthLabel.FontColor = obj.enabledColor(~isInsert);
+
+            % SOLE OWNER of both engagement controls' Enable, and of the
+            % member material's. A resolved nut family locks the inches
+            % engagement and the material, but it does so by setting
+            % NutSpecLocked and calling here - never by writing Enable
+            % itself, which would race this method (A5).
+            ratioOn  = isInsert;
+            inchesOn = ~isInsert && ~obj.NutSpecLocked;
+
+            obj.EngagementRatioField.Enable  = states{ratioOn + 1};
+            obj.EngagementLengthField.Enable = states{inchesOn + 1};
+            obj.EngagementRatioLabel.FontColor  = obj.enabledColor(ratioOn);
+            obj.EngagementLengthLabel.FontColor = obj.enabledColor(inchesOn);
+
+            obj.MemberMaterialDropDown.Enable = states{~obj.NutSpecLocked + 1};
+
+            % The picker itself is meaningful for a Nut and nothing else.
+            if ~isempty(obj.NutSpecDropDown)
+                isNut = (t == model.ThreadedMemberType.Nut);
+                obj.NutSpecDropDown.Enable = states{isNut + 1};
+            end
         end
 
         function c = enabledColor(~, tf)
@@ -1540,6 +2001,15 @@ classdef JointConfigPage < gui2.Page
             k = strtrim(string(dd.Value));
         end
 
+        function tf = trySelectKey(obj, dd, value)
+            %TRYSELECTKEY  trySelect, but reports whether it landed.
+            %   The cascade needs to know: a nut naming a material the
+            %   library lacks must release the lock rather than silently
+            %   leave the dropdown blank AND locked.
+            obj.trySelect(dd, value);
+            tf = strlength(obj.selectedKey(dd)) > 0;
+        end
+
         function trySelect(obj, dd, value)
             %TRYSELECT  Select `value` if the list has it, else the blank.
             %   Never errors, and never silently lands on a neighbour: a
@@ -1556,6 +2026,29 @@ classdef JointConfigPage < gui2.Page
 
     % ---- Member type labels -----------------------------------------------
     methods (Static, Access = private)
+        function setItemsAndData(dd, labels, tokens)
+            %SETITEMSANDDATA  Repopulate a picker, preserving the selection.
+            %   ItemsData is CLEARED FIRST. Assigning Items while ItemsData
+            %   is non-empty and a different length resizes them
+            %   inconsistently (A5), and the two must always agree.
+            %
+            %   The current selection survives if the new list still offers
+            %   it - a library refresh must not silently move the analyst
+            %   onto a different part.
+            want = '';
+            if ~isempty(dd.ItemsData)
+                want = char(string(dd.Value));
+            end
+            dd.ItemsData = {};
+            dd.Items     = labels;
+            dd.ItemsData = tokens;
+            if ~isempty(want) && any(strcmp(tokens, want))
+                dd.Value = want;
+            else
+                dd.Value = tokens{1};
+            end
+        end
+
         function items = enumItems(enumClass)
             %ENUMITEMS  Enum member names as dropdown items, in order.
             members = enumeration(enumClass);
@@ -1684,6 +2177,10 @@ classdef JointConfigPage < gui2.Page
 
         function d = memberMaterialDropDown(obj)
             d = obj.MemberMaterialDropDown;
+        end
+
+        function d = nutSpecDropDown(obj)
+            d = obj.NutSpecDropDown;
         end
 
         function l = memberMaterialLabel(obj)

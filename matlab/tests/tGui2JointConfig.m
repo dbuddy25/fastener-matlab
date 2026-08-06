@@ -858,4 +858,309 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyNotEqual(after, before);
         end
     end
+    % ---- Library cascades ---------------------------------------------------
+    %   choose() matches Items - the display LABEL a user clicks - while the
+    %   pickers carry bare tokens in ItemsData. Every choose below therefore
+    %   passes a label, and the helpers return labels for that reason.
+    methods (Test)
+        function aResolvedBoltSpecFillsTheRatedLoads(testCase)
+            p = testCase.Page;
+            [boltKey, matKey, spec] = testCase.firstBoltSpecPair();
+            testCase.assumeNotEmpty(boltKey, ...
+                'No bolt + material pair in the library has a boltSpec.');
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.boltMaterialDropDown(), matKey);
+
+            testCase.verifyEqual(str2double(p.ratedUltField().Value), ...
+                spec.RatedUltimateLoad, ...
+                'A resolved bolt spec must fill the rated ultimate load.');
+            testCase.verifyEqual(testCase.App.State.Joint.BoltRatedUltimateLoad, ...
+                spec.RatedUltimateLoad, ...
+                'The filled value must reach the model, not just the field.');
+        end
+
+        function anUnmatchedBoltPairingBlanksTheRatedLoadsRatherThanKeepingThem(testCase)
+            % Carrying the previous pairing forward would analyse the new
+            % bolt with the old bolt's ratings - and they would look like a
+            % deliberate override rather than a leftover.
+            p = testCase.Page;
+            [boltKey, matKey] = testCase.firstBoltSpecPair();
+            testCase.assumeNotEmpty(boltKey);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.boltMaterialDropDown(), matKey);
+            testCase.assumeNotEmpty(strtrim(p.ratedUltField().Value), ...
+                'This test needs a filled field before it can test blanking.');
+
+            other = testCase.aBoltWithNoSpecFor(matKey, boltKey);
+            testCase.assumeNotEmpty(other, ...
+                'Every bolt in the library has a spec for this material.');
+            testCase.choose(p.boltDropDown(), other);
+
+            testCase.verifyEmpty(strtrim(p.ratedUltField().Value), ...
+                'An unmatched pairing must blank the rated loads.');
+            testCase.verifyTrue( ...
+                isnan(testCase.App.State.Joint.BoltRatedUltimateLoad));
+        end
+
+        function aResolvedNutSpecFillsAndLocksAndCustomReleases(testCase)
+            p = testCase.Page;
+            [boltKey, specLabel, nut] = testCase.firstResolvableNutSpec();
+            testCase.assumeNotEmpty(specLabel, ...
+                'No nut family in the library resolves at any seeded bolt.');
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+
+            testCase.verifyEqual(str2double(p.engagementLengthField().Value), ...
+                nut.Height, 'A resolved nut must fill the engagement length.');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'off', ...
+                'What the catalogue filled must be LOCKED (A5).');
+            testCase.verifyEqual(char(p.memberMaterialDropDown().Enable), 'off');
+
+            testCase.choose(p.nutSpecDropDown(), 'Custom');
+
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on', ...
+                'Custom must always release - the manual path is permanent.');
+            testCase.verifyEqual(char(p.memberMaterialDropDown().Enable), 'on');
+        end
+
+        function aNutFamilyThatDoesNotResolveRevertsToCustomAndSaysSo(testCase)
+            % Never leave a family selected that resolved nothing: it would
+            % read as governing while the fields it claims to own are
+            % whatever was there before.
+            p = testCase.Page;
+            [boltKey, specLabel] = testCase.aNutSpecThatMissesAtSomeBolt();
+            testCase.assumeNotEmpty(specLabel, ...
+                'No bolt in the library misses every nut family.');
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+
+            testCase.verifyEqual(char(p.nutSpecDropDown().Value), 'Custom', ...
+                'A family that resolves nothing must revert to Custom.');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on', ...
+                'Reverting must re-enable the fields it would have locked.');
+        end
+
+        function theNutPickerIsLiveOnlyForANutMemberType(testCase)
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifyEqual(char(p.nutSpecDropDown().Enable), 'on');
+
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.verifyEqual(char(p.nutSpecDropDown().Enable), 'off', ...
+                'An insert resolves through NASM33537 geometry, not a nut family.');
+            testCase.verifyEqual(char(p.nutSpecDropDown().Value), 'Custom', ...
+                'A family left selected from another type would look governing.');
+        end
+
+        function aWasherFamilyListsItsSizesAndTheChosenOneFillsTheGeometry(testCase)
+            % washersFor returns MANY matches at one bolt size - that is the
+            % difference from the nut cascade, and why a second picker
+            % exists at all.
+            p = testCase.Page;
+            [boltKey, specLabel, matches] = testCase.firstMultiSizeWasherSpec();
+            testCase.assumeNotEmpty(specLabel, ...
+                'No washer family offers more than one size at a seeded bolt.');
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            w = p.headWasher();
+            testCase.press(w.Present);
+            testCase.choose(w.Spec, specLabel);
+
+            testCase.verifyNumElements(w.Size.Items, numel(matches), ...
+                'Every catalogued size at this bolt must be offered.');
+            testCase.verifyEqual(str2double(w.OD.Value), matches(1).OuterDiameter, ...
+                'The thinnest match fills the geometry by default.');
+            testCase.verifyEqual(w.Thk.Value, matches(1).Thickness);
+            testCase.verifyEqual(char(w.OD.Enable), 'off', ...
+                'Catalogue geometry is LOCKED (A5).');
+            testCase.verifyEqual(char(w.Material.Enable), 'on', ...
+                ['Washer material is NOT in the catalogue - library ' ...
+                 'washers are geometry only, so a family cannot speak for it.']);
+        end
+
+        function aWasherFamilyReleasesOnCustomKeepingItsValues(testCase)
+            p = testCase.Page;
+            [boltKey, specLabel] = testCase.firstMultiSizeWasherSpec();
+            testCase.assumeNotEmpty(specLabel);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            w = p.headWasher();
+            testCase.press(w.Present);
+            testCase.choose(w.Spec, specLabel);
+            filled = w.OD.Value;
+
+            testCase.choose(w.Spec, 'Custom');
+
+            testCase.verifyEqual(char(w.OD.Enable), 'on', ...
+                'Custom must release the geometry.');
+            testCase.verifyEqual(w.OD.Value, filled, ...
+                ['Releasing must KEEP what was filled - it is a reasonable ' ...
+                 'starting point, and blanking punishes changing your mind.']);
+        end
+
+        function changingTheBoltReResolvesEveryPicker(testCase)
+            % One bolt change invalidates all three cascades at once,
+            % because every one of them is keyed on the thread size.
+            p = testCase.Page;
+            [boltKey, specLabel] = testCase.firstResolvableNutSpec();
+            testCase.assumeNotEmpty(specLabel);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+            testCase.assumeEqual(char(p.engagementLengthField().Enable), 'off', ...
+                'This test needs a locked field before it can test re-resolution.');
+
+            other = testCase.aBoltOfADifferentThreadSize(boltKey);
+            testCase.assumeNotEmpty(other, 'The library has one thread size.');
+            testCase.choose(p.boltDropDown(), other);
+
+            % Either the family still resolves at the new size, or it
+            % reverted to Custom - what must NOT happen is the old nut's
+            % numbers sitting there locked under a different bolt.
+            if strcmp(char(p.nutSpecDropDown().Value), 'Custom')
+                testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on', ...
+                    'A family that stopped resolving must release its lock.');
+            else
+                nut = testCase.App.State.Library.nutFor( ...
+                    testCase.App.State.Joint.Bolt.NominalDiameter, ...
+                    testCase.App.State.Joint.Bolt.ThreadsPerInch, ...
+                    string(p.nutSpecDropDown().Value));
+                testCase.verifyEqual(str2double(p.engagementLengthField().Value), ...
+                    nut.Height, ...
+                    'A still-resolving family must re-fill from the NEW bolt.');
+            end
+        end
+
+        function loadingACaseResetsThePickersToCustom(testCase)
+            % The pickers are page state: model.Joint records the resolved
+            % numbers, not which family produced them. A picker still
+            % claiming ownership after a load asserts a provenance the file
+            % never carried.
+            p = testCase.Page;
+            [boltKey, specLabel] = testCase.firstResolvableNutSpec();
+            testCase.assumeNotEmpty(specLabel);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+
+            testCase.App.State.Joint = model.Joint(Name = "Loaded elsewhere");
+
+            testCase.verifyEqual(char(p.nutSpecDropDown().Value), 'Custom');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on', ...
+                'A load must not leave fields locked by a picker it reset.');
+        end
+    end
+
+    % ---- Cascade helpers ----------------------------------------------------
+    %   All of these return DISPLAY LABELS for choose(), never tokens.
+    methods (Access = private)
+        function [boltKey, matKey, spec] = firstBoltSpecPair(testCase)
+            boltKey = ''; matKey = ''; spec = [];
+            lib = testCase.App.State.Library;
+            bolts = lib.boltKeys();
+            mats  = lib.materialKeys(Role = "bolt");
+            for b = 1:numel(bolts)
+                for m = 1:numel(mats)
+                    s = lib.boltSpecFor(bolts(b), mats(m));
+                    if ~isempty(s)
+                        boltKey = char(bolts(b));
+                        matKey  = char(mats(m));
+                        spec    = s;
+                        return
+                    end
+                end
+            end
+        end
+
+        function key = aBoltWithNoSpecFor(testCase, matKey, excludeKey)
+            key = '';
+            lib = testCase.App.State.Library;
+            for b = lib.boltKeys()
+                if strcmp(char(b), excludeKey)
+                    continue
+                end
+                if isempty(lib.boltSpecFor(b, string(matKey)))
+                    key = char(b);
+                    return
+                end
+            end
+        end
+
+        function [boltKey, specLabel, nut] = firstResolvableNutSpec(testCase)
+            boltKey = ''; specLabel = ''; nut = [];
+            lib = testCase.App.State.Library;
+            [specs, labels] = lib.nutSpecs();
+            bolts = lib.boltKeys();
+            for s = 1:numel(specs)
+                for b = 1:numel(bolts)
+                    bolt = lib.bolt(bolts(b));
+                    n = lib.nutFor(bolt.NominalDiameter, ...
+                        bolt.ThreadsPerInch, specs(s));
+                    if ~isempty(n)
+                        boltKey   = char(bolts(b));
+                        specLabel = char(labels(s));
+                        nut       = n;
+                        return
+                    end
+                end
+            end
+        end
+
+        function [boltKey, specLabel] = aNutSpecThatMissesAtSomeBolt(testCase)
+            boltKey = ''; specLabel = '';
+            lib = testCase.App.State.Library;
+            [specs, labels] = lib.nutSpecs();
+            for b = lib.boltKeys()
+                bolt = lib.bolt(b);
+                for s = 1:numel(specs)
+                    if isempty(lib.nutFor(bolt.NominalDiameter, ...
+                            bolt.ThreadsPerInch, specs(s)))
+                        boltKey   = char(b);
+                        specLabel = char(labels(s));
+                        return
+                    end
+                end
+            end
+        end
+
+        function [boltKey, specLabel, matches] = firstMultiSizeWasherSpec(testCase)
+            boltKey = ''; specLabel = ''; matches = [];
+            lib = testCase.App.State.Library;
+            [specs, labels] = lib.washerSpecs();
+            bolts = lib.boltKeys();
+            for s = 1:numel(specs)
+                for b = 1:numel(bolts)
+                    bolt = lib.bolt(bolts(b));
+                    m = lib.washersFor(bolt.NominalDiameter, specs(s));
+                    if numel(m) > 1
+                        boltKey   = char(bolts(b));
+                        specLabel = char(labels(s));
+                        matches   = m;
+                        return
+                    end
+                end
+            end
+        end
+
+        function key = aBoltOfADifferentThreadSize(testCase, excludeKey)
+            key = '';
+            lib = testCase.App.State.Library;
+            ref = lib.bolt(string(excludeKey));
+            for b = lib.boltKeys()
+                cand = lib.bolt(b);
+                if abs(cand.NominalDiameter - ref.NominalDiameter) > 1e-6
+                    key = char(b);
+                    return
+                end
+            end
+        end
+    end
 end
