@@ -838,8 +838,13 @@ classdef JointConfigPage < gui2.Page
         function b = groupGrid(~, panel, rows)
             %GROUPGRID  The right column's label / value / gutter grid.
             b = uigridlayout(panel, [rows 3]);
-            b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
-                             gui2.JointConfigPage.ValueWRight, '1x'};
+            % The LABEL column takes the slack, not a trailing gutter, so
+            % the controls sit hard against the right edge of the panel and
+            % line up as one column instead of drifting with label length.
+            % A narrow third column stays so the full-width rows - the
+            % separation-critical checkbox, the 4.4.4 note - can still span
+            % [1 3].
+            b.ColumnWidth = {'1x', gui2.JointConfigPage.ValueWRight, 4};
             b.RowHeight   = repmat({'fit'}, 1, rows);
             b.RowSpacing  = 4;
             b.Padding     = [6 6 6 6];
