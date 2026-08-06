@@ -300,7 +300,7 @@ classdef JointConfigPage < gui2.Page
             obj.bindEdit(obj.MemberTypeDropDown, @(~, ~) obj.onMemberTypeChanged());
 
             [obj.MemberMaterialDropDown, obj.MemberMaterialLabel] = ...
-                obj.addLabelledDropdown(b, 2, 'Nut material', ...
+                obj.addDropdown(b, 2, 'Nut material', ...
                     obj.libraryItems('material'), ...
                     ['The material whose shear allowable carries the ' ...
                      'internal thread: the nut itself, or the parent body ' ...
@@ -328,11 +328,6 @@ classdef JointConfigPage < gui2.Page
             obj.bindEdit(obj.EngagementLengthField, @(~, ~) obj.commitJoint());
         end
 
-        function [d, lb] = addLabelledDropdown(obj, g, row, labelText, items, tip)
-            d = obj.addDropdown(g, row, labelText, items, tip);
-            lb = obj.labelInRow(g, row);
-        end
-
         function [c, lb] = addLabelledText(obj, g, row, labelText, tip)
             lb = uilabel(g, 'Text', labelText, 'Tooltip', tip);
             lb.Layout.Row = row; lb.Layout.Column = 1;
@@ -340,29 +335,12 @@ classdef JointConfigPage < gui2.Page
             c.Layout.Row = row; c.Layout.Column = 2;
         end
 
-        function lb = labelInRow(~, g, row)
-            %LABELINROW  The uilabel addDropdown put in column 1 of `row`.
-            %   Returned so the caller can relabel it later; searching the
-            %   grid beats threading the handle back through addDropdown.
-            lb = [];
-            for k = 1:numel(g.Children)
-                ch = g.Children(k);
-                if isa(ch, 'matlab.ui.control.Label') && ...
-                        ch.Layout.Row == row && ch.Layout.Column == 1
-                    lb = ch;
-                    return
-                end
-            end
-        end
-
-        function d = addDropdown(obj, g, row, labelText, items, tip)
-            lb = uilabel(g, 'Text', labelText);
+        function [d, lb] = addDropdown(obj, g, row, labelText, items, tip) %#ok<INUSD>
+            lb = uilabel(g, 'Text', labelText, 'Tooltip', tip);
             lb.Layout.Row = row; lb.Layout.Column = 1;
-            lb.Tooltip = tip;
             d = uidropdown(g, 'Items', items, ...
-                'Value', gui2.JointConfigPage.BlankChoice);
+                'Value', gui2.JointConfigPage.BlankChoice, 'Tooltip', tip);
             d.Layout.Row = row; d.Layout.Column = 2;
-            d.Tooltip = tip;
         end
 
         function c = addNumeric(~, g, row, labelText, tip)
