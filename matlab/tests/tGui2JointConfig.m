@@ -500,4 +500,55 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyTrue(isnan(w.OuterDiameter));
         end
     end
+    % ---- Bolt length readout -----------------------------------------------
+    methods (Test)
+        function readoutIsAlwaysFourLinesAndNeverBlank(testCase)
+            txt = testCase.Page.boltLengthLabel().Text;
+            testCase.verifyNumElements(txt, 4, ...
+                'Grip, engagement, minimum, verdict - always four lines.');
+            testCase.verifyFalse(any(cellfun(@isempty, txt)), ...
+                'No line may render blank; unknown shows an em dash (A1).');
+        end
+
+        function anUnevaluatedCheckNamesItsCauseInAmber(testCase)
+            % A1: a check that CANNOT RUN is amber and says why. Muted grey
+            % would read as "nothing to report", which is the opposite.
+            p = testCase.Page;
+            txt = p.boltLengthLabel().Text;
+            testCase.verifyTrue(contains(string(txt{4}), "Not evaluated"), ...
+                'A blank form cannot evaluate bolt length and must say so.');
+            testCase.verifyEqual(p.boltLengthLabel().FontColor, ...
+                gui2.palette('statusWarn'), ...
+                'An unevaluated check is amber, not muted (A1).');
+        end
+
+        function anEmptyGripRendersAsAnEmDashNotZero(testCase)
+            txt = testCase.Page.boltLengthLabel().Text;
+            testCase.verifyTrue(contains(string(txt{1}), char(8212)), ...
+                'An undefined grip shows an em dash, never 0.0000.');
+        end
+
+        function overallBoltLengthReachesTheModel(testCase)
+            testCase.type(testCase.Page.boltLengthField(), '1.25');
+            testCase.verifyEqual(testCase.App.State.Joint.Bolt.Length, 1.25);
+        end
+
+        function aBlankBoltLengthMarshalsAsNaNNotZero(testCase)
+            % NaN is "not supplied", and the engine estimates a length from
+            % the joint geometry. Zero would be a real, absurd length.
+            testCase.verifyTrue(isnan(testCase.App.State.Joint.Bolt.Length));
+        end
+
+        function aTypedZeroBoltLengthDoesNotTakeTheCommitDown(testCase)
+            % model.Bolt.Length is mustBePositiveOrNaN - the same trap that
+            % the flange geometry hit. buildJoint stays total.
+            p = testCase.Page;
+            testCase.type(p.jointNameField(), "Zero length probe");
+            testCase.type(p.boltLengthField(), '0');
+            testCase.verifyEqual(testCase.App.State.Joint.Name, ...
+                "Zero length probe", ...
+                'A typed zero must not abort the commit.');
+            testCase.verifyTrue(isnan(testCase.App.State.Joint.Bolt.Length));
+        end
+    end
 end

@@ -55,6 +55,9 @@ classdef JointConfigPage < gui2.Page
         NutWasher
         SameAsHeadCheck
 
+        BoltLengthField
+        BoltLengthLabel
+
         MemberTypeDropDown
         MemberMaterialDropDown
         MemberMaterialLabel
@@ -103,7 +106,7 @@ classdef JointConfigPage < gui2.Page
             left.Layout.Row    = 2;
             left.Layout.Column = 1;
             left.ColumnWidth   = {'1x'};
-            left.RowHeight     = repmat({'fit'}, 1, 5);
+            left.RowHeight     = repmat({'fit'}, 1, 6);
             left.Padding       = [0 0 0 0];
             left.RowSpacing    = 8;
 
@@ -119,6 +122,7 @@ classdef JointConfigPage < gui2.Page
             obj.NutWasher = obj.buildWasherGroup(left, 4, ...
                 'Washer under nut', true);
             obj.buildMemberGroup(left, 5);
+            obj.buildBoltLengthGroup(left, 6);
             obj.syncWasherEnables();
 
             obj.listenTo('JointChanged', @() obj.refresh());
@@ -141,6 +145,8 @@ classdef JointConfigPage < gui2.Page
             obj.applyFlangeStack(j.FlangeStack);
             obj.updateGripLabel();
 
+            obj.BoltLengthField.Value = obj.fmtOptional(j.Bolt.Length);
+
             m = j.ThreadedMember;
             obj.MemberTypeDropDown.Value = ...
                 gui2.JointConfigPage.memberTypeLabel(m.Type);
@@ -150,6 +156,7 @@ classdef JointConfigPage < gui2.Page
             obj.EngagementRatioField.Value  = obj.fmtOptional(m.EngagementRatio);
             obj.EngagementLengthField.Value = obj.fmtOptional(m.EngagementLength);
             obj.syncMemberType();
+            obj.updateBoltLengthLabel();
 
             % Same as Head is PAGE state, not case state: model.Joint holds
             % the two washers independently, so a loaded case defines both
@@ -435,6 +442,38 @@ classdef JointConfigPage < gui2.Page
             c.Layout.Row = row; c.Layout.Column = 2;
         end
 
+        function buildBoltLengthGroup(obj, parent, row)
+            %BUILDBOLTLENGTHGROUP  Overall bolt length, and whether it fits.
+            %   LAST in the left column, and deliberately so: the adequacy
+            %   readout depends on the flange stack, BOTH washers and the
+            %   threaded member's engagement, so it has to sit below every
+            %   input it consumes. The first build put a readout above two
+            %   of its own inputs.
+            panel = uipanel(parent, 'Title', 'Bolt length');
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+
+            b = uigridlayout(panel, [2 3]);
+            b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
+                             gui2.JointConfigPage.ValueW, '1x'};
+            b.RowHeight   = {'fit', 'fit'};
+            b.RowSpacing  = 4;
+            b.Padding     = [6 6 6 6];
+
+            [obj.BoltLengthField, ~] = obj.addLabelledText(b, 1, ...
+                'Overall bolt length (in)', ...
+                ['OVERALL length, under-head to tip - not the thread ' ...
+                 'length and not L1. Blank leaves the engine to estimate ' ...
+                 'it as grip + nut height + 2*pitch (NASA-STD-5020B ' ...
+                 '4.7.4), and the readout below reports "not evaluated".']);
+            obj.bindEdit(obj.BoltLengthField, @(~, ~) obj.onBoltLengthEdited());
+
+            obj.BoltLengthLabel = uilabel(b, 'Text', '', 'WordWrap', 'on', ...
+                'VerticalAlignment', 'top');
+            obj.BoltLengthLabel.Layout.Row    = 2;
+            obj.BoltLengthLabel.Layout.Column = [1 3];
+        end
+
         function [d, lb] = addDropdown(obj, g, row, labelText, items, tip) %#ok<INUSD>
             lb = uilabel(g, 'Text', labelText, 'Tooltip', tip);
             lb.Layout.Row = row; lb.Layout.Column = 1;
@@ -693,6 +732,7 @@ classdef JointConfigPage < gui2.Page
 
         function onMemberTypeChanged(obj)
             obj.syncMemberType();
+            obj.updateBoltLengthLabel();
             obj.commitJoint();
         end
 
@@ -741,8 +781,56 @@ classdef JointConfigPage < gui2.Page
                 obj.MemberTypeDropDown.Value);
         end
 
+        function onBoltLengthEdited(obj)
+            obj.updateBoltLengthLabel();
+            obj.commitJoint();
+        end
+
+        function updateBoltLengthLabel(obj)
+            %UPDATEBOLTLENGTHLABEL  Four lines from engine.boltLengthCheck.
+            %   ALL arithmetic is the engine's; this formats the struct and
+            %   nothing more. boltLengthCheck is a pure query that never
+            %   throws and degrades any missing input to NaN, which is why
+            %   it can be called on a half-filled form.
+            %
+            %   Three states, and the middle one is the point (A1): when the
+            %   check CANNOT RUN it is amber, not muted grey. The check is
+            %   not running, and that must never read as nothing to report.
+            if isempty(obj.BoltLengthLabel)
+                return
+            end
+            r = engine.boltLengthCheck(obj.buildJoint());
+
+            lines = { ...
+                gui2.JointConfigPage.lineOrDash('Grip (stack + washers): %.4f in', ...
+                    r.GripLength, 'Grip (stack + washers): —'), ...
+                gui2.JointConfigPage.lineOrDash('Engagement Le: %.4f in', ...
+                    r.Engagement, 'Engagement Le: —'), ...
+                gui2.JointConfigPage.lineOrDash('Minimum bolt length: %.4f in', ...
+                    r.RequiredLength, 'Minimum bolt length: —')};
+
+            if ~r.Evaluated
+                % Named cause, not a bare dash: the analyst needs to know
+                % WHICH input is missing to act on it.
+                lines{4} = sprintf('Not evaluated — %s', char(r.Detail));
+                obj.BoltLengthLabel.FontColor  = gui2.palette('statusWarn');
+                obj.BoltLengthLabel.FontWeight = 'normal';
+            elseif r.Shortfall > 0
+                lines{4} = sprintf('Selected %.4f in — TOO SHORT by %.4f in', ...
+                    r.SuppliedLength, r.Shortfall);
+                obj.BoltLengthLabel.FontColor  = gui2.palette('statusFail');
+                obj.BoltLengthLabel.FontWeight = 'bold';
+            else
+                lines{4} = sprintf('Selected %.4f in — OK', r.SuppliedLength);
+                obj.BoltLengthLabel.FontColor  = gui2.palette('mutedText');
+                obj.BoltLengthLabel.FontWeight = 'normal';
+            end
+            obj.BoltLengthLabel.Text = lines;
+        end
+
         function onFlangeEdited(obj)
             obj.updateGripLabel();
+            obj.updateBoltLengthLabel();
             obj.commitJoint();
         end
 
@@ -780,14 +868,21 @@ classdef JointConfigPage < gui2.Page
         function b = lookupBolt(obj)
             b = model.Bolt();
             key = obj.selectedKey(obj.BoltDropDown);
-            if strlength(key) == 0 || ~obj.State.LibraryOK
-                return
+            if strlength(key) > 0 && obj.State.LibraryOK
+                try
+                    b = obj.State.Library.bolt(key);
+                catch
+                    % A key that vanished from the library marshals as the
+                    % default rather than taking the whole commit down.
+                end
             end
-            try
-                b = obj.State.Library.bolt(key);
-            catch
-                % A key that vanished from the library marshals as the
-                % default rather than taking the whole commit down.
+            % Overall length is joint-specific, not a property of the
+            % catalogue entry, so it comes from the form either way.
+            % parsePositive, not parseOptional: Bolt.Length is
+            % mustBePositiveOrNaN, so a typed zero would throw and abort
+            % the commit.
+            if ~isempty(obj.BoltLengthField)
+                b.Length = obj.parsePositive(obj.BoltLengthField);
             end
         end
 
@@ -860,6 +955,15 @@ classdef JointConfigPage < gui2.Page
 
     % ---- Member type labels -----------------------------------------------
     methods (Static, Access = private)
+        function s = lineOrDash(fmt, v, dashText)
+            %LINEORDASH  A formatted line, or the em-dash unknown (A1).
+            if isnan(v)
+                s = dashText;
+            else
+                s = sprintf(fmt, v);
+            end
+        end
+
         function items = memberTypeItems()
             %MEMBERTYPEITEMS  Display labels, in enumeration order.
             members = enumeration('model.ThreadedMemberType');
@@ -962,6 +1066,14 @@ classdef JointConfigPage < gui2.Page
 
         function f = engagementLengthField(obj)
             f = obj.EngagementLengthField;
+        end
+
+        function f = boltLengthField(obj)
+            f = obj.BoltLengthField;
+        end
+
+        function l = boltLengthLabel(obj)
+            l = obj.BoltLengthLabel;
         end
     end
 end
