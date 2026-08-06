@@ -5,10 +5,10 @@ classdef JointConfigPage < gui2.Page
     %   watching a failure count move. Each increment here ends with the
     %   suite green before the next begins.
     %
-    %   BUILT SO FAR: the page shell, the Identity + Bolt group, and the
-    %   flange stack with its grip readout. Later: threaded member,
-    %   washers, the right column, the actions, and last and alone, the
-    %   library auto-fill cascades.
+    %   BUILT SO FAR: the page shell, Identity + Bolt, the flange stack
+    %   with its grip readout, and the threaded member. Later: washers, the
+    %   right column, the actions, and last and alone, the library
+    %   auto-fill cascades.
     %
     %   BUILDJOINT IS TOTAL — it always returns a model.Joint and never
     %   throws. This is the design decision the first attempt got wrong. It
@@ -47,6 +47,14 @@ classdef JointConfigPage < gui2.Page
         FlangeEdge
         FlangeTearout
         GripLabel
+
+        MemberTypeDropDown
+        MemberMaterialDropDown
+        MemberMaterialLabel
+        EngagementRatioField
+        EngagementRatioLabel
+        EngagementLengthField
+        EngagementLengthLabel
 
         % Guards a commit against the refresh its own event triggers.
         Refreshing (1,1) logical = false
@@ -88,12 +96,13 @@ classdef JointConfigPage < gui2.Page
             left.Layout.Row    = 2;
             left.Layout.Column = 1;
             left.ColumnWidth   = {'1x'};
-            left.RowHeight     = {'fit', 'fit'};
+            left.RowHeight     = {'fit', 'fit', 'fit'};
             left.Padding       = [0 0 0 0];
             left.RowSpacing    = 8;
 
             obj.buildBoltGroup(left, 1);
             obj.buildFlangeGroup(left, 2);
+            obj.buildMemberGroup(left, 3);
 
             obj.listenTo('JointChanged', @() obj.refresh());
             obj.refresh();
@@ -114,6 +123,16 @@ classdef JointConfigPage < gui2.Page
             obj.trySelect(obj.BoltMaterialDropDown, j.BoltMaterial.Name);
             obj.applyFlangeStack(j.FlangeStack);
             obj.updateGripLabel();
+
+            m = j.ThreadedMember;
+            obj.MemberTypeDropDown.Value = ...
+                gui2.JointConfigPage.memberTypeLabel(m.Type);
+            obj.trySelect(obj.MemberMaterialDropDown, m.Material.Name);
+            % BOTH engagement controls are seeded regardless of type: each
+            % holds its own property, so a case carrying both keeps both.
+            obj.EngagementRatioField.Value  = obj.fmtOptional(m.EngagementRatio);
+            obj.EngagementLengthField.Value = obj.fmtOptional(m.EngagementLength);
+            obj.syncMemberType();
         end
     end
 
@@ -258,6 +277,84 @@ classdef JointConfigPage < gui2.Page
             obj.GripLabel.Layout.Column = 1;
         end
 
+        function buildMemberGroup(obj, parent, row)
+            panel = uipanel(parent, 'Title', 'Threaded member');
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+
+            b = uigridlayout(panel, [4 3]);
+            b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
+                             gui2.JointConfigPage.ValueW, '1x'};
+            b.RowHeight   = repmat({'fit'}, 1, 4);
+            b.RowSpacing  = 4;
+            b.Padding     = [6 6 6 6];
+
+            obj.MemberTypeDropDown = obj.addDropdown(b, 1, 'Type', ...
+                gui2.JointConfigPage.memberTypeItems(), ...
+                'What the bolt threads into on the far side of the joint.');
+            % Type is not a required-blank field: a joint always threads
+            % into something, so the model default (Nut) is a real answer
+            % rather than a silent guess.
+            obj.MemberTypeDropDown.Value = gui2.JointConfigPage.memberTypeLabel( ...
+                model.ThreadedMemberType.Nut);
+            obj.bindEdit(obj.MemberTypeDropDown, @(~, ~) obj.onMemberTypeChanged());
+
+            [obj.MemberMaterialDropDown, obj.MemberMaterialLabel] = ...
+                obj.addLabelledDropdown(b, 2, 'Nut material', ...
+                    obj.libraryItems('material'), ...
+                    ['The material whose shear allowable carries the ' ...
+                     'internal thread: the nut itself, or the parent body ' ...
+                     'for an insert or a tapped hole.']);
+            obj.bindEdit(obj.MemberMaterialDropDown, @(~, ~) obj.commitJoint());
+
+            % TWO controls, not one that changes meaning. Each maps to its
+            % own model.ThreadedMember property, so a ratio left behind by
+            % a former Insert can never be read as inches (A9). The
+            % irrelevant one greys out; both keep their values, so flipping
+            % type to compare and flipping back loses nothing.
+            [obj.EngagementRatioField, obj.EngagementRatioLabel] = ...
+                obj.addLabelledText(b, 3, 'Engagement (x bolt D)', ...
+                    ['Thread engagement as a MULTIPLE OF THE BOLT NOMINAL ' ...
+                     'DIAMETER, e.g. 1.5 for 1.5D. Helical inserts are ' ...
+                     'specified by length CLASS, not an absolute inch ' ...
+                     'value (NASM33537 Rev 4 Sec 6.1). Helical Insert only.']);
+            obj.bindEdit(obj.EngagementRatioField, @(~, ~) obj.commitJoint());
+
+            [obj.EngagementLengthField, obj.EngagementLengthLabel] = ...
+                obj.addLabelledText(b, 4, 'Engagement length Le (in)', ...
+                    ['Thread engagement in INCHES - nut thread height, or ' ...
+                     'tapped-hole engagement depth. Nut and Tapped Hole ' ...
+                     'only. Blank leaves the thread checks not evaluated.']);
+            obj.bindEdit(obj.EngagementLengthField, @(~, ~) obj.commitJoint());
+        end
+
+        function [d, lb] = addLabelledDropdown(obj, g, row, labelText, items, tip)
+            d = obj.addDropdown(g, row, labelText, items, tip);
+            lb = obj.labelInRow(g, row);
+        end
+
+        function [c, lb] = addLabelledText(obj, g, row, labelText, tip)
+            lb = uilabel(g, 'Text', labelText, 'Tooltip', tip);
+            lb.Layout.Row = row; lb.Layout.Column = 1;
+            c = uieditfield(g, 'text', 'Tooltip', tip);
+            c.Layout.Row = row; c.Layout.Column = 2;
+        end
+
+        function lb = labelInRow(~, g, row)
+            %LABELINROW  The uilabel addDropdown put in column 1 of `row`.
+            %   Returned so the caller can relabel it later; searching the
+            %   grid beats threading the handle back through addDropdown.
+            lb = [];
+            for k = 1:numel(g.Children)
+                ch = g.Children(k);
+                if isa(ch, 'matlab.ui.control.Label') && ...
+                        ch.Layout.Row == row && ch.Layout.Column == 1
+                    lb = ch;
+                    return
+                end
+            end
+        end
+
         function d = addDropdown(obj, g, row, labelText, items, tip)
             lb = uilabel(g, 'Text', labelText);
             lb.Layout.Row = row; lb.Layout.Column = 1;
@@ -333,6 +430,24 @@ classdef JointConfigPage < gui2.Page
             joint.Bolt         = obj.lookupBolt();
             joint.BoltMaterial = obj.lookupBoltMaterial();
             joint.FlangeStack  = obj.collectFlangeLayers();
+            joint.ThreadedMember = obj.buildThreadedMember();
+        end
+
+        function m = buildThreadedMember(obj)
+            %BUILDTHREADEDMEMBER  The type decides which engagement property
+            %   is marshalled; the other stays NaN, so a number sitting in
+            %   the greyed control can never reach the engine as the wrong
+            %   quantity.
+            m = obj.State.Joint.ThreadedMember;
+            m.Type     = obj.selectedMemberType();
+            m.Material = obj.lookupMaterial(obj.MemberMaterialDropDown);
+            if m.Type == model.ThreadedMemberType.Insert
+                m.EngagementRatio  = obj.parseOptional(obj.EngagementRatioField);
+                m.EngagementLength = NaN;
+            else
+                m.EngagementLength = obj.parseOptional(obj.EngagementLengthField);
+                m.EngagementRatio  = NaN;
+            end
         end
 
         function layers = collectFlangeLayers(obj)
@@ -387,6 +502,56 @@ classdef JointConfigPage < gui2.Page
                     obj.trySelect(obj.FlangeMaterial{i}, "");
                 end
             end
+        end
+
+        function onMemberTypeChanged(obj)
+            obj.syncMemberType();
+            obj.commitJoint();
+        end
+
+        function syncMemberType(obj)
+            %SYNCMEMBERTYPE  Label the material for its role, and enable the
+            %   engagement control this type actually uses.
+            %
+            %   NEVER TOUCHES EITHER ENGAGEMENT VALUE. Each control owns its
+            %   own property, so nothing has to be cleared on a type change
+            %   and loading a case cannot wipe the number it just loaded.
+            if isempty(obj.MemberTypeDropDown)
+                return
+            end
+            t = obj.selectedMemberType();
+
+            % model.ThreadedMemberType has exactly THREE members - Nut,
+            % Insert, TappedHole. There is no None: a joint always threads
+            % into something. The reverted build had a `case
+            % model.ThreadedMemberType.None` here, which threw on every
+            % switch to Insert or Tapped Hole because MATLAB evaluates a
+            % case expression only when it is reached.
+            if t == model.ThreadedMemberType.Nut
+                obj.MemberMaterialLabel.Text = 'Nut material';
+            else
+                obj.MemberMaterialLabel.Text = 'Parent (host) material';
+            end
+
+            isInsert = (t == model.ThreadedMemberType.Insert);
+            states   = {'off', 'on'};
+            obj.EngagementRatioField.Enable  = states{isInsert + 1};
+            obj.EngagementLengthField.Enable = states{~isInsert + 1};
+            obj.EngagementRatioLabel.FontColor  = obj.enabledColor(isInsert);
+            obj.EngagementLengthLabel.FontColor = obj.enabledColor(~isInsert);
+        end
+
+        function c = enabledColor(~, tf)
+            if tf
+                c = gui2.palette('defaultText');
+            else
+                c = gui2.palette('mutedText');
+            end
+        end
+
+        function t = selectedMemberType(obj)
+            t = gui2.JointConfigPage.memberTypeFromLabel( ...
+                obj.MemberTypeDropDown.Value);
         end
 
         function onFlangeEdited(obj)
@@ -494,6 +659,46 @@ classdef JointConfigPage < gui2.Page
         end
     end
 
+    % ---- Member type labels -----------------------------------------------
+    methods (Static, Access = private)
+        function items = memberTypeItems()
+            %MEMBERTYPEITEMS  Display labels, in enumeration order.
+            members = enumeration('model.ThreadedMemberType');
+            items = cell(1, numel(members));
+            for i = 1:numel(members)
+                items{i} = gui2.JointConfigPage.memberTypeLabel(members(i));
+            end
+        end
+
+        function s = memberTypeLabel(t)
+            %MEMBERTYPELABEL  Enum -> display label. Display only.
+            if t == model.ThreadedMemberType.Insert
+                s = 'Helical Insert';
+            elseif t == model.ThreadedMemberType.TappedHole
+                s = 'Tapped Hole';
+            else
+                s = char(string(t));
+            end
+        end
+
+        function t = memberTypeFromLabel(txt)
+            %MEMBERTYPEFROMLABEL  Label -> enum, resolved through the
+            %   ENUMERATION rather than by string equality against member
+            %   names. GUI2_HARVEST.md C1 records the bug that came from
+            %   comparing against 'TappedHole', which could never match, so
+            %   the member silently behaved as bolt-only.
+            want = strtrim(char(string(txt)));
+            members = enumeration('model.ThreadedMemberType');
+            for i = 1:numel(members)
+                if strcmp(gui2.JointConfigPage.memberTypeLabel(members(i)), want)
+                    t = members(i);
+                    return
+                end
+            end
+            t = model.ThreadedMemberType.Nut;
+        end
+    end
+
     % ---- Test seams -------------------------------------------------------
     methods
         function f = jointNameField(obj)
@@ -526,6 +731,26 @@ classdef JointConfigPage < gui2.Page
 
         function l = gripLabel(obj)
             l = obj.GripLabel;
+        end
+
+        function d = memberTypeDropDown(obj)
+            d = obj.MemberTypeDropDown;
+        end
+
+        function d = memberMaterialDropDown(obj)
+            d = obj.MemberMaterialDropDown;
+        end
+
+        function l = memberMaterialLabel(obj)
+            l = obj.MemberMaterialLabel;
+        end
+
+        function f = engagementRatioField(obj)
+            f = obj.EngagementRatioField;
+        end
+
+        function f = engagementLengthField(obj)
+            f = obj.EngagementLengthField;
         end
     end
 end

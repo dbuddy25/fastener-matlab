@@ -1,5 +1,5 @@
 classdef tGui2JointConfig < matlab.uitest.TestCase
-    %TGUI2JOINTCONFIG  Joint Config: shell, Bolt group, flange stack.
+    %TGUI2JOINTCONFIG  Joint Config: shell, Bolt, flange stack, member.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -236,6 +236,92 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1, ...
                 'A typo in an optional field must not abort the commit.');
             testCase.verifyTrue(isnan(testCase.App.State.Joint.FlangeStack(1).EdgeDistance));
+        end
+    end
+    % ---- Threaded member ---------------------------------------------------
+    methods (Test)
+        function memberTypeOffersExactlyTheThreeEnumMembers(testCase)
+            % There is no None. The reverted build had a case for one, which
+            % threw on every switch away from Nut because MATLAB evaluates a
+            % case expression only when it is reached.
+            items = testCase.Page.memberTypeDropDown().Items;
+            testCase.verifyNumElements(items, 3);
+            testCase.verifyTrue(all(ismember( ...
+                {'Nut', 'Helical Insert', 'Tapped Hole'}, items)));
+        end
+
+        function materialLabelFollowsTheRoleTheDropdownIsPlaying(testCase)
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifyEqual(string(p.memberMaterialLabel().Text), ...
+                "Nut material");
+
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyEqual(string(p.memberMaterialLabel().Text), ...
+                "Parent (host) material");
+
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.verifyEqual(string(p.memberMaterialLabel().Text), ...
+                "Parent (host) material");
+        end
+
+        function engagementControlsGreyOutByType(testCase)
+            % Disabled, never hidden and never read-only (A5). Enable reads
+            % back as OnOffSwitchState, so compare char().
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.verifyEqual(char(p.engagementRatioField().Enable), 'on');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'off');
+
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyEqual(char(p.engagementRatioField().Enable), 'off');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on');
+        end
+
+        function eachEngagementQuantityKeepsItsOwnValueAcrossACrossing(testCase)
+            % A9 dissolved rather than defended against: 0.25 in and 1.5 x D
+            % each have their own home, so neither can be read as the other
+            % and nothing needs clearing on a type change.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.type(p.engagementLengthField(), '0.25');
+
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.engagementRatioField(), '1.5');
+            testCase.verifyEqual(strtrim(char(p.engagementLengthField().Value)), ...
+                '0.25', 'The inches value must survive a crossing into Insert.');
+
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifyEqual(strtrim(char(p.engagementRatioField().Value)), ...
+                '1.5', 'The ratio value must survive a crossing back to Nut.');
+        end
+
+        function onlyTheTypesOwnEngagementPropertyIsMarshalled(testCase)
+            % A number sitting in the greyed control must never reach the
+            % engine as the other quantity.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.type(p.engagementLengthField(), '0.25');
+            testCase.type(p.engagementRatioField(), '1.5');
+
+            m = testCase.App.State.Joint.ThreadedMember;
+            testCase.verifyEqual(m.EngagementLength, 0.25);
+            testCase.verifyTrue(isnan(m.EngagementRatio), ...
+                'A Nut must not marshal a ratio.');
+
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            m = testCase.App.State.Joint.ThreadedMember;
+            testCase.verifyEqual(m.EngagementRatio, 1.5);
+            testCase.verifyTrue(isnan(m.EngagementLength), ...
+                'An Insert must not marshal an inch length.');
+        end
+
+        function memberTypeReachesTheModel(testCase)
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyEqual(testCase.App.State.Joint.ThreadedMember.Type, ...
+                model.ThreadedMemberType.TappedHole, ...
+                'Tapped Hole must resolve through the enumeration, not a string compare (C1).');
         end
     end
 end
