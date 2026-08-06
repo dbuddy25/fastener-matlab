@@ -653,3 +653,34 @@ turned out to have **no first-pass behavior to carry forward**: Open Recent and
 Import Joints were deferred and never built, and there is no `KeyPressFcn`
 anywhere, so `F5` was never wired. All three are new builds against
 `GUI2_SPEC.md` §4, not ports.
+
+---
+
+## G. Known data gaps
+
+Not defects in the GUI — gaps in the seeded library that change what the tool
+can do.
+
+**`boltSpecs` is empty.** `matlab/+data/library.json` carries 28 materials,
+32 bolts, 20 nuts, 30 inserts and 58 washers — and **zero** bolt specs. The key
+and the schema are present and `data.Library` reads them, so this reads as
+unfinished seeding rather than a decision.
+
+Consequences, all honest but worth knowing:
+
+- `data.Library.boltSpecFor` can never resolve, so **the bolt-spec cascade
+  never fires**. Rated ultimate and rated yield stay blank, and the "miss" path
+  is the only path Joint Config ever takes.
+- Every bolt therefore falls back to **`At · Ftu`** for its ultimate allowable —
+  which `ENGINE_CHECKS.md` labels *"a derived convention, no 5020B equation"* —
+  and to 5020B Eq. 18 for yield.
+- Two `tGui2JointConfig` tests assume out rather than passing vacuously against
+  data that cannot exercise them. That is the tests behaving correctly, but it
+  means **a green suite does not prove the resolve-and-fill path works.**
+
+**Left as-is deliberately (2026-08-06).** Filling it needs real spec-rated loads
+from procurement documents — NAS1351 / NAS1352 and the rest. A fabricated rating
+in a catalogue whose entries carry provenance would be worse than the honest
+derived fallback, and `CLAUDE.md` §4.4.1 is explicit that a procured item is
+assessed on its specification. When real values exist, seeding them is one
+`+data` edit and the cascade starts working with no GUI change.
