@@ -338,9 +338,17 @@ classdef JointConfigPage < gui2.Page
         function [d, lb] = addDropdown(obj, g, row, labelText, items, tip) %#ok<INUSD>
             lb = uilabel(g, 'Text', labelText, 'Tooltip', tip);
             lb.Layout.Row = row; lb.Layout.Column = 1;
-            d = uidropdown(g, 'Items', items, ...
-                'Value', gui2.JointConfigPage.BlankChoice, 'Tooltip', tip);
+            d = uidropdown(g, 'Items', items, 'Tooltip', tip);
             d.Layout.Row = row; d.Layout.Column = 2;
+            % Land on the blank sentinel ONLY when the list actually has
+            % one. Required pickers (bolt, materials) do; the member type
+            % does not, because a joint always threads into something and
+            % the model default is a real answer rather than a guess.
+            % uidropdown rejects a Value that is not in Items, so setting
+            % it unconditionally threw at construction.
+            if any(strcmp(items, gui2.JointConfigPage.BlankChoice))
+                d.Value = gui2.JointConfigPage.BlankChoice;
+            end
         end
 
         function c = addNumeric(~, g, row, labelText, tip)
