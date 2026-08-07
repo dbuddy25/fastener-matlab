@@ -75,21 +75,22 @@ classdef tGui2Shell < matlab.uitest.TestCase
             % GUI2_SPEC.md Section 10 rule 1. Over a remote session, building
             % ten pages into the first paint is the most expensive thing the
             % shell could do.
-            unvisited = testCase.App.page("BulkAnalysis");
+            unvisited = testCase.App.page(testCase.aPlaceholderPageId());
             testCase.verifyEqual(unvisited.buildCount(), 0, ...
                 'A page was built before it was ever navigated to.');
         end
 
         function buildRunsExactlyOnceAcrossManyVisits(testCase)
-            page = testCase.App.page("ElementForces");
+            id   = testCase.aPlaceholderPageId();
+            page = testCase.App.page(id);
 
-            testCase.App.navigateTo("ElementForces");
+            testCase.App.navigateTo(id);
             testCase.verifyEqual(page.buildCount(), 1);
 
             testCase.App.navigateTo("Factors");
-            testCase.App.navigateTo("ElementForces");
+            testCase.App.navigateTo(id);
             testCase.App.navigateTo("Factors");
-            testCase.App.navigateTo("ElementForces");
+            testCase.App.navigateTo(id);
 
             testCase.verifyEqual(page.buildCount(), 1, ...
                 'Page was rebuilt on a return visit; it must be built once and shown by visibility.');
@@ -99,13 +100,14 @@ classdef tGui2Shell < matlab.uitest.TestCase
             % The counterpart to building once: the page must re-read
             % AppState each time it is shown, or it renders whatever was
             % true when it was first built.
-            page = testCase.App.page("Results");
+            id   = testCase.aPlaceholderPageId();
+            page = testCase.App.page(id);
 
-            testCase.App.navigateTo("Results");
+            testCase.App.navigateTo(id);
             testCase.verifyEqual(page.refreshCount(), 1);
 
             testCase.App.navigateTo("Project");
-            testCase.App.navigateTo("Results");
+            testCase.App.navigateTo(id);
             testCase.verifyEqual(page.refreshCount(), 2, ...
                 'Navigating to a built page did not refresh it from AppState.');
         end
@@ -256,6 +258,31 @@ classdef tGui2Shell < matlab.uitest.TestCase
             page = testCase.App.page("Results");
             testCase.verifyEqual(page.railStatus(), "", ...
                 'A page with nothing to report should show no glyph.');
+        end
+    end
+
+    % ---- Helpers ----------------------------------------------------------
+    methods (Access = private)
+        function id = aPlaceholderPageId(testCase)
+            %APLACEHOLDERPAGEID  Any page still backed by a PlaceholderPage.
+            %   The lazy-build and refresh-on-visit contracts are asserted
+            %   through PlaceholderPage's buildCount/refreshCount counters,
+            %   which only it carries. Naming a page directly meant these
+            %   tests broke the moment that page became real - which is what
+            %   happened when Results landed. Finding one dynamically means
+            %   the contract stays covered for as long as ANY page is still
+            %   a placeholder, and skips honestly once none is.
+            id = "";
+            for pid = testCase.App.pageIds()
+                if isa(testCase.App.page(pid), 'gui2.PlaceholderPage')
+                    id = pid;
+                    return
+                end
+            end
+            testCase.assumeNotEmpty(char(id), ...
+                ['Every page is now real, so the shell''s build/refresh ' ...
+                 'contracts need a different probe than PlaceholderPage''s ' ...
+                 'counters.']);
         end
     end
 
