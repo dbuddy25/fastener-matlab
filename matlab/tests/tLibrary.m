@@ -76,6 +76,65 @@ classdef tLibrary < matlab.unittest.TestCase
             end
         end
 
+        function everyShippedBoltCarriesItsTableIIILengthLadder(testCase)
+            % NAS1351/NAS1352 Table III. The transcription is checkable
+            % because every grid cell holds the full dash number and its
+            % length code is exactly length x 16 at every rung -- so a
+            % mistyped length lands off the 1/16 grid and is caught here
+            % rather than by someone reading a part number off a report.
+            lib  = data.Library.load();
+            keys = lib.boltKeys();
+            testCase.assertNotEmpty(keys);
+            total = 0;
+            for k = keys
+                [L, codes] = lib.boltLengths(k);
+                testCase.assertNotEmpty(L, ...
+                    sprintf('No catalogued lengths for %s.', k));
+                testCase.verifyEqual(codes, L * 16, "AbsTol", 1e-12, ...
+                    sprintf('%s: a length is off the 1/16-in dash grid', k));
+                % Not asserting ascending order — boltLengths sorts, so
+                % that check could not fail. Uniqueness still can: a
+                % duplicated rung in the JSON survives the sort.
+                testCase.verifyEqual(numel(unique(L)), numel(L), ...
+                    sprintf('%s: duplicate length', k));
+                testCase.verifyGreaterThan(L(1), 0, ...
+                    sprintf('%s: a length must be positive', k));
+                total = total + numel(L);
+            end
+            testCase.verifyEqual(total, 226, ...
+                'Table III rung count changed -- re-check the transcription.');
+        end
+
+        function theLengthLadderIsSharedBetweenTheTwoStandards(testCase)
+            % Table III keys on the ASME B18.3 BODY size, not the thread
+            % pitch, so the UNF and UNC screws of one nominal diameter list
+            % the same lengths -- the same reason Lt is shared. Pinned
+            % because it is the assumption the seed data was built on: if
+            % it were false, one of the two standards was transcribed from
+            % the other's grid.
+            lib = data.Library.load();
+            pairs = ["NAS1351 3/8-24" "NAS1352 3/8-16"
+                     "NAS1351 #10-32" "NAS1352 #10-24"
+                     "NAS1351 3/4-16" "NAS1352 3/4-10"];
+            for i = 1:size(pairs, 1)
+                testCase.verifyEqual( ...
+                    lib.boltLengths(pairs(i, 1)), lib.boltLengths(pairs(i, 2)), ...
+                    sprintf('%s and %s must share a ladder', ...
+                            pairs(i, 1), pairs(i, 2)));
+            end
+        end
+
+        function anUncataloguedBoltReportsNoLadderRatherThanErroring(testCase)
+            % A custom bolt has no Table III. The picker's fallback is
+            % plain manual entry, which needs an empty answer, not an
+            % exception to catch.
+            lib = data.Library.load();
+            lib = lib.addBolt(testCase.sampleBolt());
+            [L, codes] = lib.boltLengths("1/4-28 UNF");
+            testCase.verifyEmpty(L);
+            testCase.verifyEmpty(codes);
+        end
+
         function pullsBoltSpec(testCase)
             % Plumbing test for the pull-by-key mechanism. Uses a LOCAL
             % entry with values that match no shipped catalogue row, so a

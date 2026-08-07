@@ -5,6 +5,8 @@ classdef Library
     %       lib = data.Library.load();          % bundled library.json
     %       b   = lib.bolt("NAS1351 3/8-24");   % -> model.Bolt
     %       m   = lib.material("A286");        % -> model.Material
+    %       [L, c] = lib.boltLengths("NAS1351 3/8-24");  % Table III ladder
+    %       %                                       + dash codes; [] if none
     %       s   = lib.boltSpec(specKey);         % specKey from lib.boltSpecKeys()
     %       % s.RatedUltimateLoad / s.RatedYieldLoad -> Joint spec allowables;
     %       % s.Bolt / s.Material are the keys of the bolt + bolt material.
@@ -224,6 +226,42 @@ classdef Library
             if isfield(e, "fbry"),  m.Fbry = e.fbry;  end
             if isfield(e, "e"),     m.E    = e.e;     end
             if isfield(e, "cte"),   m.CTE  = e.cte;   end
+        end
+
+        function [lengths, codes] = boltLengths(obj, key)
+            %BOLTLENGTHS  Catalogued overall lengths for a bolt, ascending.
+            %   [lengths, codes] = lib.boltLengths(key) returns the lengths
+            %   (in) this bolt's standard tabulates and their DASH CODES —
+            %   the second field of the full part number, e.g. 1.000 in on
+            %   a NAS1351 3/8-24 is "-6-16", so codes(i) = 16.
+            %
+            %   THE CODE RULE LIVES HERE, not in a caller. Every rung of
+            %   NAS1351/NAS1352 Table III satisfies code = length x 16
+            %   exactly (verified across both standards, all 226 rungs —
+            %   see any bolt entry's source note). A view that recomputed
+            %   it would be re-deriving a spec rule from a UI file.
+            %
+            %   A bolt with no catalogued ladder returns EMPTY, not an
+            %   error: entries predating the schema and any custom bolt an
+            %   analyst adds legitimately have none, and the picker's job
+            %   is then to fall back to plain manual entry.
+            %
+            %   NOT EXHAUSTIVE, and callers must treat it that way. Table
+            %   III's own note reads "SEE CODE FOR ADDITIONAL LENGTHS": a
+            %   length outside this list is procurable, so it may be
+            %   flagged as uncatalogued but NEVER rejected as invalid.
+            arguments
+                obj (1,1) data.Library
+                key (1,1) string
+            end
+            e = obj.findEntry(obj.Bolts, key, "bolt");
+            if ~isfield(e, "lengths") || isempty(e.lengths)
+                lengths = double.empty(1, 0);
+                codes   = double.empty(1, 0);
+                return
+            end
+            lengths = sort(reshape(double(e.lengths), 1, []));
+            codes   = round(lengths * 16);
         end
 
         function s = boltSpec(obj, key)
