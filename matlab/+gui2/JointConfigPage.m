@@ -280,6 +280,7 @@ classdef JointConfigPage < gui2.Page
             obj.applyWasher(obj.NutWasher,  j.NutWasher);
             obj.reselectWasherSpec('Head', j.HeadWasher);
             obj.reselectWasherSpec('Nut',  j.NutWasher);
+            obj.reselectNutSpec(j.ThreadedMember);
             obj.syncWasherEnables();
         end
     end
@@ -1514,6 +1515,69 @@ classdef JointConfigPage < gui2.Page
             w.Present.Value = true;
             obj.setWasherLocked(which, true);
             obj.setStatus(sprintf('Washer %s filled the geometry.', entry.Key));
+        end
+
+        function reselectNutSpec(obj, member)
+            %RESELECTNUTSPEC  Recover the nut family a loaded joint came from.
+            %   Same defect and same remedy as reselectWasherSpec:
+            %   model.ThreadedMember records the nut's MATERIAL and
+            %   ENGAGEMENT LENGTH but not which catalogue nut supplied
+            %   them, so a saved-and-reloaded case used to come back on
+            %   Custom with the fields unlocked.
+            %
+            %   No reverse-lookup helper is needed on the library here.
+            %   Unlike washers, a nut family resolves to exactly ONE nut at
+            %   a given thread size, so re-deriving is just asking each
+            %   family what it would have produced and seeing which answer
+            %   matches -- nutFor is already that question.
+            if isempty(obj.NutSpecDropDown) || ~obj.State.LibraryOK
+                return
+            end
+            if member.Type ~= model.ThreadedMemberType.Nut
+                return
+            end
+            bolt = obj.selectedBolt();
+            if isempty(bolt) || isnan(bolt.NominalDiameter) || ...
+                    isnan(bolt.ThreadsPerInch) || isnan(member.EngagementLength)
+                return
+            end
+
+            hit = "";
+            try
+                specs = obj.State.Library.nutSpecs();
+                for s = 1:numel(specs)
+                    n = obj.State.Library.nutFor(bolt.NominalDiameter, ...
+                        bolt.ThreadsPerInch, specs(s));
+                    if isempty(n)
+                        continue
+                    end
+                    % Height AND material, both exact. Height alone would
+                    % match two families that happen to share a nut height
+                    % but call for different alloys.
+                    if abs(n.Height - member.EngagementLength) < 1e-9 && ...
+                            strcmp(string(n.Material), member.Material.Name)
+                        if strlength(hit) > 0
+                            return   % ambiguous: claim nothing
+                        end
+                        hit = specs(s);
+                    end
+                end
+            catch
+                return
+            end
+            if strlength(hit) == 0
+                return
+            end
+
+            % Through the normal cascade, so the lock and the material
+            % selection are set by the one path that owns them.
+            obj.NutSpecDropDown.Value = char(hit);
+            obj.applyNutSpec();
+            % applyNutSpec reports that it FILLED the fields. Nothing was
+            % filled here -- the values were already right and the family
+            % was inferred from them, which is a different claim.
+            obj.setStatus(sprintf( ...
+                'Nut fields match %s — family reselected.', hit));
         end
 
         function reselectWasherSpec(obj, which, washer)

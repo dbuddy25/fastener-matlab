@@ -906,6 +906,52 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 isnan(testCase.App.State.Joint.BoltRatedUltimateLoad));
         end
 
+        function aLoadedCaseKeepsItsNutFamilyInsteadOfDowngradingToCustom(testCase)
+            % REGRESSION, the nut half of the washer round-trip defect.
+            % model.ThreadedMember records the nut's material and
+            % engagement length but not which catalogue nut supplied them,
+            % so a reload used to come back on Custom with the fields
+            % unlocked.
+            p = testCase.Page;
+            [boltKey, specLabel, nut] = testCase.firstResolvableNutSpec();
+            testCase.assumeNotEmpty(specLabel);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+            testCase.assertEqual(char(p.engagementLengthField().Enable), 'off');
+
+            saved = testCase.App.State.Joint;
+            testCase.App.State.Joint = model.Joint();
+            testCase.assertEqual(char(p.nutSpecDropDown().Value), 'Custom', ...
+                'A blank joint must not claim a nut family.');
+            testCase.App.State.Joint = saved;
+
+            testCase.verifyNotEqual(char(p.nutSpecDropDown().Value), 'Custom', ...
+                'The nut family must survive a reload.');
+            testCase.verifyEqual(str2double(p.engagementLengthField().Value), ...
+                nut.Height, "AbsTol", 1e-12);
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'off', ...
+                'A reselected family owns the engagement length again (A5).');
+        end
+
+        function aHandEnteredNutStaysCustomOnReload(testCase)
+            % The reselect must recognise catalogue values, not adopt any
+            % nut whose height happens to be nearby.
+            p = testCase.Page;
+            bolts = testCase.App.State.Library.boltKeys();
+            testCase.choose(p.boltDropDown(), char(bolts(1)));
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.type(p.engagementLengthField(), '0.0917');
+
+            saved = testCase.App.State.Joint;
+            testCase.App.State.Joint = model.Joint();
+            testCase.App.State.Joint = saved;
+
+            testCase.verifyEqual(char(p.nutSpecDropDown().Value), 'Custom');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on');
+        end
+
         function aResolvedNutSpecFillsAndLocksAndCustomReleases(testCase)
             p = testCase.Page;
             [boltKey, specLabel, nut] = testCase.firstResolvableNutSpec();
