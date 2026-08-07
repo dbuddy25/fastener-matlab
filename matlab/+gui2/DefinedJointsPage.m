@@ -34,9 +34,19 @@ classdef DefinedJointsPage < gui2.Page
     %   engine.summary's job and it needs a load case and factors, neither
     %   of which a defined joint carries.
     %
+    %   A RENAME OR A DELETE HAS CONSEQUENCES OUTSIDE THIS PAGE. Element
+    %   mapping keys on the joint NAME, so a rename that did not carry the
+    %   mapping with it would silently orphan every mapped element -- the
+    %   rows would still name the old joint and resolve to nothing. Rename
+    %   therefore retargets AppState.Mapping in the same commit, and delete
+    %   states how many elements it is about to strand BEFORE asking, not
+    %   after. (Element Mapping is not built yet, but Mapping is already
+    %   case state and already loads from a case file, so the orphaning is
+    %   reachable today.)
+    %
     %   INCREMENT 1 shipped the list, the empty state and the count.
-    %   INCREMENT 2 (this one) adds the summary. The load / rename / delete
-    %   actions land next. Joint Config was rebuilt this way after the
+    %   INCREMENT 2 added the summary. INCREMENT 3 (this one) adds load /
+    %   rename / delete. Joint Config was rebuilt this way after the
     %   single-pass attempt failed -- each increment diagnosable from one
     %   stack trace.
     %
@@ -49,6 +59,10 @@ classdef DefinedJointsPage < gui2.Page
         SummaryPanel
         SummaryValues % struct: row key -> value uilabel
         NoSelectionLabel
+        NameField
+        LoadButton
+        RenameButton
+        DeleteButton
     end
 
     properties (Constant, Access = private)
@@ -124,6 +138,8 @@ classdef DefinedJointsPage < gui2.Page
             obj.NoSelectionLabel.Layout.Row    = 3;
             obj.NoSelectionLabel.Layout.Column = 2;
 
+            obj.buildActions(g, 4, 1);
+
             obj.listenTo('JointLibraryChanged', @() obj.refresh());
             obj.refresh();
         end
@@ -170,6 +186,222 @@ classdef DefinedJointsPage < gui2.Page
                 obj.CountLabel.Text = sprintf('%d saved joints', n);
             end
             obj.showSelection();
+        end
+    end
+
+    % ---- Actions ------------------------------------------------------
+    methods (Access = private)
+        function buildActions(obj, parent, row, col)
+            %BUILDACTIONS  Rename field + the three management buttons.
+            %   RENAME IS AN IN-PAGE FIELD, NOT A DIALOG. The only stock
+            %   text-entry dialog is inputdlg, which is a legacy figure
+            %   dialog and BLOCKS -- the same trap uiconfirm's return-value
+            %   form set for the test suite (a press that opens it never
+            %   returns, so no programmatic driver can answer it). A field
+            %   and a button need no dialog machinery at all.
+            g = uigridlayout(parent, [2 3]);
+            g.RowHeight   = {'fit', 'fit'};
+            g.ColumnWidth = {'1x', '1x', '1x'};
+            g.Padding     = [0 0 0 0];
+            g.RowSpacing  = 4;
+            g.Layout.Row    = row;
+            g.Layout.Column = col;
+
+            obj.NameField = uieditfield(g, 'text', ...
+                'Tooltip', ['The selected joint''s name. Edit it and press ' ...
+                            'Rename; element mappings follow the new name.']);
+            obj.NameField.Layout.Row    = 1;
+            obj.NameField.Layout.Column = [1 3];
+
+            obj.LoadButton = uibutton(g, 'push', 'Text', 'Load', ...
+                'ButtonPushedFcn', @(~, ~) obj.onLoad());
+            obj.LoadButton.Layout.Row    = 2;
+            obj.LoadButton.Layout.Column = 1;
+            obj.LoadButton.Tooltip = ['Copy this joint onto Joint Config ' ...
+                'and go there.'];
+
+            obj.RenameButton = uibutton(g, 'push', 'Text', 'Rename', ...
+                'ButtonPushedFcn', @(~, ~) obj.onRename());
+            obj.RenameButton.Layout.Row    = 2;
+            obj.RenameButton.Layout.Column = 2;
+
+            obj.DeleteButton = uibutton(g, 'push', 'Text', 'Delete', ...
+                'ButtonPushedFcn', @(~, ~) obj.onDelete());
+            obj.DeleteButton.Layout.Row    = 2;
+            obj.DeleteButton.Layout.Column = 3;
+        end
+
+        function onLoad(obj)
+            %ONLOAD  Copy the selected joint onto Joint Config.
+            name = obj.selectedName();
+            if strlength(name) == 0
+                return
+            end
+            % Confirm ONLY when there is something to lose. The joint on
+            % Joint Config is worth protecting when it is neither the
+            % untouched default nor already stored under some name --
+            % anything else and the dialog is noise, and a dialog that is
+            % usually noise is one people learn to click through.
+            if obj.currentJointIsUnsavedWork()
+                fig = ancestor(obj.Root, 'figure');
+                uiconfirm(fig, ['The joint on Joint Config has not been ' ...
+                    'saved to this library. Loading "' char(name) ...
+                    '" replaces it. Continue?'], 'Replace current joint', ...
+                    'Options',       {'Load', 'Cancel'}, ...
+                    'DefaultOption', 'Cancel', ...
+                    'CancelOption',  'Cancel', ...
+                    'CloseFcn', @(~, evt) obj.onLoadAnswered(name, evt));
+                return
+            end
+            obj.commitLoad(name);
+        end
+
+        function onLoadAnswered(obj, name, evt)
+            if strcmp(evt.SelectedOption, 'Load')
+                obj.commitLoad(name);
+            end
+        end
+
+        function commitLoad(obj, name)
+            obj.State.Joint = obj.jointNamed(name);
+            obj.State.markDirty();
+            obj.setStatus(sprintf('Loaded "%s" onto Joint Config.', name));
+            obj.goToPage("JointConfig");
+        end
+
+        function onRename(obj)
+            %ONRENAME  Rename the selection, carrying its mappings with it.
+            old = obj.selectedName();
+            new = strtrim(string(obj.NameField.Value));
+            if strlength(old) == 0
+                return
+            end
+            if strlength(new) == 0
+                obj.setStatus('Enter a name — the library is keyed by it.');
+                return
+            end
+            if strcmp(old, new)
+                return
+            end
+
+            % Case-INSENSITIVE collision, the same rule Joint Config's save
+            % uses (A13). "JT-A" and "jt-a" coexisting is a mapping trap:
+            % element mapping keys on the name and would reference the
+            % wrong joint. A rename that only changes CASE is still a
+            % rename, so the entry itself is excluded from the check.
+            lib = obj.State.JointLibrary;
+            idx = find(strcmpi(string({lib.Name}), old), 1);
+            others = setdiff(1:numel(lib), idx);
+            if any(strcmpi(string({lib(others).Name}), new))
+                obj.setStatus(sprintf( ...
+                    'A joint named "%s" is already in the library.', new));
+                obj.NameField.Value = char(old);
+                return
+            end
+
+            lib(idx).Name = new;
+            obj.State.JointLibrary = lib;
+            obj.retargetMapping(old, new);
+            obj.State.markDirty();
+            obj.List.Value = char(new);
+            obj.showSelection();
+            obj.setStatus(sprintf('Renamed "%s" to "%s".', old, new));
+        end
+
+        function onDelete(obj)
+            %ONDELETE  Remove the selection, after saying what it costs.
+            name = obj.selectedName();
+            if strlength(name) == 0
+                return
+            end
+            % Name the mapped elements in the prompt. Deleting a joint that
+            % elements still reference leaves those rows pointing at
+            % nothing, and the analyst is the only one who can decide that
+            % is acceptable -- so they have to be told before, not after.
+            n = numel(obj.mappedElements(name));
+            msg = sprintf('Delete "%s" from this case''s defined joints?', name);
+            if n == 1
+                msg = [msg ' 1 mapped element will be left without a joint.'];
+            elseif n > 1
+                msg = sprintf('%s %d mapped elements will be left without a joint.', msg, n);
+            end
+
+            fig = ancestor(obj.Root, 'figure');
+            uiconfirm(fig, msg, 'Delete joint', ...
+                'Options',       {'Delete', 'Cancel'}, ...
+                'DefaultOption', 'Cancel', ...
+                'CancelOption',  'Cancel', ...
+                'CloseFcn', @(~, evt) obj.onDeleteAnswered(name, evt));
+        end
+
+        function onDeleteAnswered(obj, name, evt)
+            if ~strcmp(evt.SelectedOption, 'Delete')
+                return
+            end
+            lib = obj.State.JointLibrary;
+            idx = find(strcmpi(string({lib.Name}), name), 1);
+            if isempty(idx)
+                return
+            end
+            lib(idx) = [];
+            obj.State.JointLibrary = lib;   % fires the refresh
+            obj.State.markDirty();
+            obj.setStatus(sprintf('Deleted "%s".', name));
+        end
+
+        function tf = currentJointIsUnsavedWork(obj)
+            %CURRENTJOINTISUNSAVEDWORK  Is there Joint Config work to lose?
+            %   False for the untouched default, and false when the joint
+            %   is already stored under some name.
+            tf = false;
+            j = obj.State.Joint;
+            if isequal(j, model.Joint())
+                return
+            end
+            lib = obj.State.JointLibrary;
+            for i = 1:numel(lib)
+                if isequal(lib(i).Joint, j)
+                    return
+                end
+            end
+            tf = true;
+        end
+
+        function j = jointNamed(obj, name)
+            j   = model.Joint();
+            lib = obj.State.JointLibrary;
+            idx = find(strcmpi(string({lib.Name}), name), 1);
+            if ~isempty(idx)
+                j = lib(idx).Joint;
+            end
+        end
+
+        function ids = mappedElements(obj, name)
+            %MAPPEDELEMENTS  Element ids pointing at this joint name.
+            m = obj.State.Mapping;
+            if isempty(m)
+                ids = strings(1, 0);
+                return
+            end
+            hit = strcmpi(string({m.JointName}), name);
+            ids = string({m(hit).ElementID});
+        end
+
+        function retargetMapping(obj, old, new)
+            %RETARGETMAPPING  Point this joint's element rows at the new name.
+            %   Without this a rename silently orphans every mapped
+            %   element: Element Mapping keys on the NAME, so the rows
+            %   would still say the old one and resolve to nothing.
+            m = obj.State.Mapping;
+            if isempty(m)
+                return
+            end
+            hit = strcmpi(string({m.JointName}), old);
+            if ~any(hit)
+                return
+            end
+            [m(hit).JointName] = deal(new);
+            obj.State.Mapping = m;
         end
     end
 
@@ -233,9 +465,20 @@ classdef DefinedJointsPage < gui2.Page
             obj.EmptyLabel.Visible       = ~hasLibrary;
             obj.NoSelectionLabel.Visible = hasLibrary && ~hasSelection;
             obj.SummaryPanel.Visible     = hasSelection;
+
+            % Disabled rather than hidden: buttons that vanish move the
+            % layout under the cursor, and all three are meaningless
+            % without a selection anyway.
+            obj.LoadButton.Enable   = hasSelection;
+            obj.RenameButton.Enable = hasSelection;
+            obj.DeleteButton.Enable = hasSelection;
+            obj.NameField.Enable    = hasSelection;
+
             if ~hasSelection
+                obj.NameField.Value = '';
                 return
             end
+            obj.NameField.Value = char(name);
 
             j    = obj.selectedJoint();
             rows = gui2.DefinedJointsPage.SummaryRows;
@@ -318,6 +561,22 @@ classdef DefinedJointsPage < gui2.Page
 
         function l = noSelectionLabel(obj)
             l = obj.NoSelectionLabel;
+        end
+
+        function f = nameField(obj)
+            f = obj.NameField;
+        end
+
+        function b = loadButton(obj)
+            b = obj.LoadButton;
+        end
+
+        function b = renameButton(obj)
+            b = obj.RenameButton;
+        end
+
+        function b = deleteButton(obj)
+            b = obj.DeleteButton;
         end
 
         function l = countLabel(obj)

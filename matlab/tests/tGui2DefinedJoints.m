@@ -8,8 +8,9 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
     %   so what is worth asserting is that it renders what state holds,
     %   re-renders when state changes, does not present an empty library
     %   as if it held something, and never shows an unset value as a real
-    %   one. The load / rename / delete actions land next, with their own
-    %   tests.
+    %   one. The load / rename / delete actions add a second concern: what
+    %   they change OUTSIDE this page — AppState.Joint, the active page,
+    %   and the element mapping that keys on the joint name.
 
     properties
         App
@@ -190,6 +191,152 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
 
             testCase.verifyEqual(testCase.Page.selectedName(), "A");
             testCase.verifyTrue(logical(testCase.Page.summaryPanel().Visible));
+        end
+    end
+
+    % ---- Load / rename / delete -------------------------------------------
+    %   Dialogs are NEVER driven from these tests. The confirms use the
+    %   CloseFcn form so the press returns immediately, and what gets
+    %   asserted is that NOTHING changed while the question is outstanding
+    %   -- the dialog itself dies with the figure at teardown. The rule the
+    %   suite learned the hard way: a test that tries to answer a dialog is
+    %   a test that can hang the whole run.
+    methods (Test)
+        function theActionsAreDisabledWithoutASelection(testCase)
+            testCase.verifyEqual(char(testCase.Page.loadButton().Enable), 'off');
+            testCase.verifyEqual(char(testCase.Page.renameButton().Enable), 'off');
+            testCase.verifyEqual(char(testCase.Page.deleteButton().Enable), 'off');
+        end
+
+        function aSelectionEnablesThemAndFillsTheNameField(testCase)
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryWith("Bracket");
+            testCase.verifyEqual(char(testCase.Page.loadButton().Enable), 'on');
+            testCase.verifyEqual( ...
+                string(testCase.Page.nameField().Value), "Bracket");
+        end
+
+        function loadingCopiesTheJointOntoJointConfigAndGoesThere(testCase)
+            % The current joint is the untouched default, so there is
+            % nothing to lose and no dialog stands in the way.
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryWith("Bracket", Torque = 310);
+
+            testCase.press(testCase.Page.loadButton());
+
+            testCase.verifyEqual( ...
+                testCase.App.State.Joint.PreloadSpec.NominalTorque, 310);
+            testCase.verifyEqual(testCase.App.activePageId(), "JointConfig", ...
+                'Loading a joint must land the analyst on the page it loaded into.');
+        end
+
+        function loadingAsksFirstWhenJointConfigHoldsUnsavedWork(testCase)
+            % Asserted through the STATE, not by answering the dialog: the
+            % joint must be untouched while the question is outstanding.
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryWith("Bracket", Torque = 310);
+            edited = model.Joint();
+            p = edited.PreloadSpec; p.NominalTorque = 999; edited.PreloadSpec = p;
+            testCase.App.State.Joint = edited;
+
+            testCase.press(testCase.Page.loadButton());
+
+            testCase.verifyEqual( ...
+                testCase.App.State.Joint.PreloadSpec.NominalTorque, 999, ...
+                'An unanswered confirm must not have replaced the joint.');
+            testCase.verifyEqual(testCase.App.activePageId(), "DefinedJoints");
+        end
+
+        function loadingDoesNotAskWhenTheCurrentJointIsAlreadySaved(testCase)
+            % A dialog that is usually noise is one people learn to click
+            % through, so it only appears when there is real work to lose.
+            entry = tGui2DefinedJoints.libraryWith("Bracket", Torque = 310);
+            testCase.App.State.JointLibrary = entry;
+            testCase.App.State.Joint = entry.Joint;
+
+            testCase.press(testCase.Page.loadButton());
+            testCase.verifyEqual(testCase.App.activePageId(), "JointConfig");
+        end
+
+        function renamingKeepsTheJointAndItsSelection(testCase)
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryWith("Old name", Torque = 310);
+
+            testCase.type(testCase.Page.nameField(), 'New name');
+            testCase.press(testCase.Page.renameButton());
+
+            testCase.verifyEqual( ...
+                string({testCase.App.State.JointLibrary.Name}), "New name");
+            testCase.verifyEqual( ...
+                testCase.App.State.JointLibrary(1).Joint.PreloadSpec.NominalTorque, ...
+                310, 'A rename must not disturb the joint itself.');
+            testCase.verifyEqual(testCase.Page.selectedName(), "New name");
+        end
+
+        function renamingCarriesTheElementMappingWithIt(testCase)
+            % Element Mapping keys on the NAME. Without the retarget these
+            % two rows would still say "Old name" and resolve to nothing.
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryWith("Old name");
+            testCase.App.State.Mapping = struct( ...
+                'ElementID', {"1001", "1002", "1003"}, ...
+                'JointName', {"Old name", "Elsewhere", "Old name"});
+
+            testCase.type(testCase.Page.nameField(), 'New name');
+            testCase.press(testCase.Page.renameButton());
+
+            testCase.verifyEqual( ...
+                string({testCase.App.State.Mapping.JointName}), ...
+                ["New name", "Elsewhere", "New name"], ...
+                'Only the renamed joint''s rows may move.');
+        end
+
+        function aRenameOntoAnExistingNameIsRefused(testCase)
+            % Case-insensitive, matching Joint Config's save rule (A13):
+            % "JT-A" and "jt-a" coexisting is the mapping trap.
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryNamed(["Alpha", "Beta"]);
+            testCase.choose(testCase.Page.listBox(), 'Beta');
+
+            testCase.type(testCase.Page.nameField(), 'ALPHA');
+            testCase.press(testCase.Page.renameButton());
+
+            testCase.verifyEqual( ...
+                string({testCase.App.State.JointLibrary.Name}), ...
+                ["Alpha", "Beta"], 'The library must be untouched.');
+            testCase.verifyEqual( ...
+                string(testCase.Page.nameField().Value), "Beta", ...
+                'The field must revert, not sit on a name that was refused.');
+        end
+
+        function changingOnlyTheCaseOfANameIsStillARename(testCase)
+            % The collision check must exclude the entry being renamed, or
+            % "bracket" -> "Bracket" collides with itself.
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryWith("bracket");
+            testCase.type(testCase.Page.nameField(), 'Bracket');
+            testCase.press(testCase.Page.renameButton());
+            testCase.verifyEqual( ...
+                string({testCase.App.State.JointLibrary.Name}), "Bracket");
+        end
+
+        function aBlankRenameIsRefusedRatherThanStoringANamelessJoint(testCase)
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryWith("Bracket");
+            testCase.type(testCase.Page.nameField(), '   ');
+            testCase.press(testCase.Page.renameButton());
+            testCase.verifyEqual( ...
+                string({testCase.App.State.JointLibrary.Name}), "Bracket");
+        end
+
+        function deleteAsksBeforeRemovingAnything(testCase)
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryNamed(["A", "B"]);
+
+            testCase.press(testCase.Page.deleteButton());
+
+            testCase.verifyEqual(numel(testCase.App.State.JointLibrary), 2, ...
+                'An unanswered confirm must not have deleted anything.');
         end
     end
 
