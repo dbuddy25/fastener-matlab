@@ -156,10 +156,21 @@ classdef tWorkbook < matlab.unittest.TestCase
             expectedR = Rt^1.5 + Rs^2.5;   % = 0.541925
             testCase.verifyEqual(T.InteractionR(idx), expectedR, "AbsTol", 1e-6);
             testCase.verifyEqual(T.InteractionR(idx), 0.541925, "AbsTol", 1e-4);
+            % The independent cross-check must stand on the SAME allowable
+            % the engine used, so it resolves the catalogued spec the way
+            % the loader would rather than leaving the rating unset -- an
+            % unrated joint here would silently derive At*Ftu and check
+            % the run against a different Ptu_allow than it actually used.
+            % Resolved through boltSpecFor, not hardcoded, so this stays an
+            % independent check rather than a copy of the engine's output.
             lib  = data.Library.load();
+            spec = lib.boltSpecFor("NAS1351 3/8-24", "A286");
+            testCase.assertNotEmpty(spec, ...
+                'The catalogued NAS1351 3/8-24 + A286 spec must resolve.');
             jBody = model.Joint( ...
                 Bolt = lib.bolt("NAS1351 3/8-24"), ...
                 BoltMaterial = lib.material("A286"), ...
+                BoltRatedUltimateLoad = spec.RatedUltimateLoad, ...
                 ShearPlane = model.ShearPlaneCondition.BodyInShear);
             d  = struct("Ptu", Ptu, "Pty", NaN, "Psu", Psu, "Psep", NaN);
             ia = engine.marginInteraction(jBody, d);

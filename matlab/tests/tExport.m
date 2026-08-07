@@ -187,7 +187,12 @@ classdef tExport < matlab.unittest.TestCase
             testCase.verifySubstring(T.Warnings(1), "Critical:");
             testCase.verifySubstring(T.Warnings(1), ...
                 "EXCEEDS the bolt yield tensile allowable");
-            testCase.verifySubstring(T.Warnings(1), "derived basis");
+            % "rated", not "derived": the catalogued FF-S-86F yield load
+            % reached this joint, so preloadWatchdog names that basis. This
+            % substring is the one assertion in the suite that pins WHICH
+            % basis the warning reports, so it is the tripwire if the
+            % auto-lookup ever silently stops resolving.
+            testCase.verifySubstring(T.Warnings(1), "rated basis");
             testCase.verifySubstring(T.Warnings(1), "Bolt may permanently deform");
         end
 
