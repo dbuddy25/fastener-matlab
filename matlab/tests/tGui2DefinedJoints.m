@@ -226,7 +226,13 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
         end
 
         function anEditedJointConfigIsWorthWarningAbout(testCase)
+            % markDirty is how an edit actually arrives: every Joint Config
+            % control commits through the funnel that calls it. Assigning
+            % State.Joint alone is the DESERIALIZER's path, which never
+            % marks dirty on purpose (A4) -- a test that only assigned
+            % would be describing a load, not an edit.
             testCase.App.State.Joint = model.Joint(Name = "Half-built");
+            testCase.App.State.markDirty();
             testCase.verifyTrue(testCase.Page.hasUnsavedJointWork());
         end
 
@@ -237,6 +243,7 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
             j = model.Joint();
             p = j.PreloadSpec; p.NominalTorque = 999; j.PreloadSpec = p;
             testCase.App.State.Joint = j;
+            testCase.App.State.markDirty();
             testCase.verifyTrue(testCase.Page.hasUnsavedJointWork(), ...
                 'A typed torque is work, even with nothing else filled in.');
         end
@@ -250,6 +257,7 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
             entry = tGui2DefinedJoints.libraryWith("Bracket", Torque = 310);
             testCase.App.State.JointLibrary = entry;
             testCase.App.State.Joint = entry.Joint;
+            testCase.App.State.markDirty();   % dirty, but the joint IS saved
             testCase.verifyTrue( ...
                 isnan(entry.Joint.BoltRatedUltimateLoad), ...
                 'This joint must carry a NaN for the guard to mean anything.');
@@ -279,6 +287,7 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
             edited = model.Joint();
             p = edited.PreloadSpec; p.NominalTorque = 999; edited.PreloadSpec = p;
             testCase.App.State.Joint = edited;
+            testCase.App.State.markDirty();
 
             testCase.press(testCase.Page.loadButton());
 
@@ -294,6 +303,7 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
             entry = tGui2DefinedJoints.libraryWith("Bracket", Torque = 310);
             testCase.App.State.JointLibrary = entry;
             testCase.App.State.Joint = entry.Joint;
+            testCase.App.State.markDirty();   % dirty, but the joint IS saved
 
             testCase.press(testCase.Page.loadButton());
             testCase.verifyEqual(testCase.App.activePageId(), "JointConfig");

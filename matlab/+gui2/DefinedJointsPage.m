@@ -244,9 +244,10 @@ classdef DefinedJointsPage < gui2.Page
             % usually noise is one people learn to click through.
             if obj.hasUnsavedJointWork()
                 fig = ancestor(obj.Root, 'figure');
-                uiconfirm(fig, ['The joint on Joint Config has not been ' ...
-                    'saved to this library. Loading "' char(name) ...
-                    '" replaces it. Continue?'], 'Replace current joint', ...
+                uiconfirm(fig, ['This case has unsaved changes, and the ' ...
+                    'joint on Joint Config is not stored in this library. ' ...
+                    'Loading "' char(name) '" replaces it. Continue?'], ...
+                    'Replace current joint', ...
                     'Options',       {'Load', 'Cancel'}, ...
                     'DefaultOption', 'Cancel', ...
                     'CancelOption',  'Cancel', ...
@@ -583,33 +584,34 @@ classdef DefinedJointsPage < gui2.Page
             %   verifyEqual uses isequaln, which is why the tests around
             %   this never tripped over the same thing.)
             %
-            %   COMPARISON IS ON THE SERIALIZED FORM, not on the objects.
-            %   data.toStruct is what File > Save writes, so "already
-            %   saved" is asked in exactly the terms that make it true.
+            %   "HAS ANYTHING BEEN EDITED" IS NOT THIS PAGE'S QUESTION TO
+            %   ANSWER. AppState.IsDirty already means exactly that, is
+            %   maintained by the one markDirty funnel every edit passes
+            %   through, and is cleared by File > New / Open. Two earlier
+            %   attempts here defined it a second time -- first by
+            %   comparing joints, then by comparing their serialized forms
+            %   against a blank -- and each got a different answer from the
+            %   flag sitting right there. A second definition of a state
+            %   the app already tracks is a second thing to keep correct.
+            %
+            %   What this page DOES own is the library question, and it is
+            %   asked on the SERIALIZED form: data.toStruct is what File >
+            %   Save writes, so "already saved" is asked in the terms that
+            %   make it true. isequaln, never isequal -- an unset joint is
+            %   mostly NaN and isequal(NaN, NaN) is false, which had this
+            %   method calling a joint different from itself.
             here = gui2.DefinedJointsPage.serialized(obj.State.Joint);
-            if isempty(here)
-                tf = false;
-                return   % cannot compare: say nothing is at risk
-            end
-
-            % Nothing built yet. Compared rather than guessed at from a
-            % name-or-bolt heuristic: a joint carrying only a typed torque
-            % has no name and no bolt, and it is still work to lose.
-            blank = gui2.DefinedJointsPage.serialized(model.Joint());
-            if isequaln(here, blank)
-                tf = false;
-                return
-            end
-
-            lib = obj.State.JointLibrary;
-            for i = 1:numel(lib)
-                saved = gui2.DefinedJointsPage.serialized(lib(i).Joint);
-                if ~isempty(saved) && isequaln(saved, here)
-                    tf = false;
-                    return
+            if ~isempty(here)
+                lib = obj.State.JointLibrary;
+                for i = 1:numel(lib)
+                    saved = gui2.DefinedJointsPage.serialized(lib(i).Joint);
+                    if ~isempty(saved) && isequaln(saved, here)
+                        tf = false;   % stored under a name: cannot be lost
+                        return
+                    end
                 end
             end
-            tf = true;
+            tf = obj.State.IsDirty;
         end
 
         function b = loadButton(obj)
