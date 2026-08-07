@@ -986,6 +986,61 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                  'washers are geometry only, so a family cannot speak for it.']);
         end
 
+        function aLoadedCaseKeepsItsWasherFamilyInsteadOfDowngradingToCustom(testCase)
+            % REGRESSION. Saving a case and reloading it used to downgrade
+            % every washer to Custom: model.Washer records geometry only,
+            % with no catalogue key, and the load path reset the pickers
+            % and stopped there. The family is now re-derived by asking
+            % the catalogue which part has exactly this geometry.
+            p = testCase.Page;
+            [boltKey, specLabel, matches] = testCase.firstMultiSizeWasherSpec();
+            testCase.assumeNotEmpty(specLabel);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            w = p.headWasher();
+            testCase.press(w.Present);
+            testCase.choose(w.Spec, specLabel);
+            testCase.assertEqual(char(w.OD.Enable), 'off');
+
+            % An EXTERNAL joint assignment is exactly what loading a case
+            % file does -- it is the path that was losing the family.
+            saved = testCase.App.State.Joint;
+            testCase.App.State.Joint = model.Joint();
+            testCase.assertEqual(string(w.Spec.Value), "Custom", ...
+                'A blank joint must not claim a family.');
+            testCase.App.State.Joint = saved;
+
+            testCase.verifyNotEqual(string(w.Spec.Value), "Custom", ...
+                'The washer family must survive a reload.');
+            testCase.verifyEqual(str2double(w.OD.Value), ...
+                matches(1).OuterDiameter, "AbsTol", 1e-12);
+            testCase.verifyEqual(char(w.OD.Enable), 'off', ...
+                'A reselected family owns the geometry again (A5).');
+        end
+
+        function handTypedWasherGeometryStaysCustomOnReload(testCase)
+            % The reselect must RECOGNISE catalogue geometry, not snap
+            % nearby numbers onto a part. Geometry that matches nothing
+            % has to come back as what it is.
+            p = testCase.Page;
+            bolts = testCase.App.State.Library.boltKeys();
+            testCase.choose(p.boltDropDown(), char(bolts(1)));
+            w = p.headWasher();
+            testCase.press(w.Present);
+            % Deliberately off-catalogue to four decimals.
+            testCase.type(w.OD, '0.8123');
+            testCase.type(w.ID, '0.3771');
+            testCase.type(w.Thk, 0.0399);
+
+            saved = testCase.App.State.Joint;
+            testCase.App.State.Joint = model.Joint();
+            testCase.App.State.Joint = saved;
+
+            testCase.verifyEqual(string(w.Spec.Value), "Custom");
+            testCase.verifyEqual(char(w.OD.Enable), 'on', ...
+                'Nothing owns hand-typed geometry, so it stays editable.');
+        end
+
         function aWasherFamilyReleasesOnCustomKeepingItsValues(testCase)
             p = testCase.Page;
             [boltKey, specLabel] = testCase.firstMultiSizeWasherSpec();

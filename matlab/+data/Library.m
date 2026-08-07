@@ -594,6 +594,56 @@ classdef Library
                 data.Library.filterOrigin(obj.Nuts, origin));
         end
 
+        function w = washerMatching(obj, nominalDiameter, od, id, thickness)
+            %WASHERMATCHING  Catalogue washers with EXACTLY this geometry.
+            %   w = lib.washerMatching(dia, od, id, thickness) returns a
+            %   1xN struct array shaped like washer() (N possibly 0).
+            %
+            %   THE REVERSE OF washersFor, and it exists because a
+            %   model.Washer records geometry only — Thickness, OD, ID,
+            %   Material — and no catalogue key. Nothing downstream of the
+            %   model can therefore say WHICH part produced those numbers,
+            %   so a saved-and-reloaded case cannot restore the family the
+            %   analyst picked. Asking the catalogue which part has this
+            %   exact geometry is how that identity is recovered.
+            %
+            %   EXACT, deliberately. The nominal diameter matches on the
+            %   1e-6 tolerance washersFor uses (it is a size lookup), but
+            %   the three dimensions must agree to 1e-9. The job is to
+            %   RECOGNISE geometry that came out of this catalogue, not to
+            %   snap hand-entered numbers onto the nearest part — a loose
+            %   tolerance would claim a provenance the analyst never chose,
+            %   and would make two catalogue entries match one washer.
+            %
+            %   N > 1 is a real answer, not an error: two families can
+            %   share a size. The caller decides, and "ambiguous, so claim
+            %   nothing" is the safe reading.
+            arguments
+                obj             (1,1) data.Library
+                nominalDiameter (1,1) double
+                od              (1,1) double
+                id              (1,1) double
+                thickness       (1,1) double
+            end
+            % Same empty shape washersFor returns, so the two are
+            % interchangeable at a call site that only counts matches.
+            w = struct("Key", {}, "Spec", {}, "Name", {}, "SizeCode", {}, ...
+                "Thread", {}, "NominalDiameter", {}, "InnerDiameter", {}, ...
+                "OuterDiameter", {}, "Thickness", {});
+            if any(isnan([nominalDiameter, od, id, thickness]))
+                return   % an unspecified dimension cannot identify a part
+            end
+            for i = 1:numel(obj.Washers)
+                e = obj.Washers{i};
+                if abs(e.nominalDiameter - nominalDiameter) < 1e-6 && ...
+                        abs(e.outerDiameter - od) < 1e-9 && ...
+                        abs(e.innerDiameter - id) < 1e-9 && ...
+                        abs(e.thickness - thickness) < 1e-9
+                    w(end + 1) = obj.washer(string(e.key)); %#ok<AGROW>
+                end
+            end
+        end
+
         function keys = washerKeys(obj, origin)
             %WASHERKEYS  Available washer keys, in file order.
             %   Optional origin filter as in materialKeys.

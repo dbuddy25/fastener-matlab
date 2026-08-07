@@ -135,6 +135,47 @@ classdef tLibrary < matlab.unittest.TestCase
             testCase.verifyEmpty(codes);
         end
 
+        function washerMatchingRecognisesCatalogueGeometry(testCase)
+            % The reverse of washersFor, and the reason it exists: a
+            % model.Washer carries geometry but no catalogue key, so a
+            % saved case cannot say which part produced its numbers. The
+            % catalogue can be asked instead.
+            lib = data.Library.load();
+            keys = lib.washerKeys();
+            testCase.assertNotEmpty(keys);
+            e = lib.washer(keys(1));
+
+            hits = lib.washerMatching(e.NominalDiameter, e.OuterDiameter, ...
+                e.InnerDiameter, e.Thickness);
+            testCase.assertNotEmpty(hits);
+            testCase.verifyTrue(any(strcmp(string({hits.Key}), e.Key)), ...
+                'A catalogued washer must match itself.');
+        end
+
+        function washerMatchingIsExactRatherThanNearest(testCase)
+            % A loose tolerance would claim a provenance the analyst never
+            % chose, and could make two entries match one washer. Half a
+            % thou off is not that part.
+            lib  = data.Library.load();
+            keys = lib.washerKeys();
+            e    = lib.washer(keys(1));
+            testCase.verifyEmpty(lib.washerMatching(e.NominalDiameter, ...
+                e.OuterDiameter + 5e-4, e.InnerDiameter, e.Thickness));
+            testCase.verifyEmpty(lib.washerMatching(e.NominalDiameter, ...
+                e.OuterDiameter, e.InnerDiameter, e.Thickness + 5e-4));
+        end
+
+        function washerMatchingCannotIdentifyAnUnspecifiedDimension(testCase)
+            % model.Washer defaults OD and ID to NaN. A washer with only a
+            % thickness is not identifiable, and guessing would be worse
+            % than saying so.
+            lib  = data.Library.load();
+            keys = lib.washerKeys();
+            e    = lib.washer(keys(1));
+            testCase.verifyEmpty(lib.washerMatching(e.NominalDiameter, ...
+                NaN, e.InnerDiameter, e.Thickness));
+        end
+
         function pullsBoltSpec(testCase)
             % Plumbing test for the pull-by-key mechanism. Uses a LOCAL
             % entry with values that match no shipped catalogue row, so a

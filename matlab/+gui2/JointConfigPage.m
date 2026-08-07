@@ -261,16 +261,25 @@ classdef JointConfigPage < gui2.Page
 
             obj.validateRequired();
 
-            % Same as Head and the spec pickers are PAGE state, not case
-            % state: model.Joint holds the two washers independently and
-            % records resolved numbers rather than which family produced
-            % them. A loaded case defines all of it explicitly, so a
-            % mirrored view or a picker left claiming ownership would be
-            % asserting a provenance the file never carried.
+            % Same as Head is PAGE state and stays cleared: model.Joint
+            % holds the two washers independently, so a loaded case
+            % defines both explicitly and a mirrored view would be
+            % asserting a link the file never carried.
             obj.SameAsHeadCheck.Value = false;
+
+            % The spec pickers start from Custom and are then RE-DERIVED
+            % from the geometry that was just loaded. model.Joint records
+            % resolved numbers rather than which family produced them, so
+            % the picker cannot be restored from the file — but the
+            % catalogue can be asked which part has exactly these
+            % dimensions, and an exact hit is evidence enough. This used
+            % to stop at the reset, which meant saving a case and
+            % reloading it silently downgraded every washer to Custom.
             obj.resetSpecPickers();
             obj.applyWasher(obj.HeadWasher, j.HeadWasher);
             obj.applyWasher(obj.NutWasher,  j.NutWasher);
+            obj.reselectWasherSpec('Head', j.HeadWasher);
+            obj.reselectWasherSpec('Nut',  j.NutWasher);
             obj.syncWasherEnables();
         end
     end
@@ -1505,6 +1514,59 @@ classdef JointConfigPage < gui2.Page
             w.Present.Value = true;
             obj.setWasherLocked(which, true);
             obj.setStatus(sprintf('Washer %s filled the geometry.', entry.Key));
+        end
+
+        function reselectWasherSpec(obj, which, washer)
+            %RESELECTWASHERSPEC  Recover the family a loaded washer came from.
+            %   model.Washer carries no catalogue key, so the picker cannot
+            %   be restored from the file. It CAN be re-derived: ask the
+            %   catalogue which part has exactly this geometry at this
+            %   bolt's nominal diameter. One hit is enough to name the
+            %   family; anything else leaves Custom alone.
+            %
+            %   Silent on a miss. A loaded case that simply has hand-typed
+            %   washer geometry is not a problem to report, and a status
+            %   line for every load that isn't catalogue hardware would
+            %   train the analyst to ignore the status bar.
+            w = obj.washerGroup(which);
+            if isempty(w.Spec) || ~obj.State.LibraryOK
+                return
+            end
+            if ~logical(w.Present.Value)
+                return   % no washer to identify
+            end
+            bolt = obj.selectedBolt();
+            if isempty(bolt) || isnan(bolt.NominalDiameter)
+                return
+            end
+
+            hits = [];
+            try
+                hits = obj.State.Library.washerMatching(bolt.NominalDiameter, ...
+                    washer.OuterDiameter, washer.InnerDiameter, washer.Thickness);
+            catch
+                return
+            end
+            % Exactly one, or claim nothing: two families sharing a size
+            % is a real catalogue state, and picking either would assert a
+            % provenance the analyst never chose.
+            if numel(hits) ~= 1
+                return
+            end
+
+            % Route through the normal cascade rather than writing Spec,
+            % Size and the lock by hand — applyWasherSpec is what fills the
+            % size list, and a second path that populated it here is the
+            % kind of duplicate that drifts.
+            w.Spec.Value = char(hits(1).Spec);
+            obj.applyWasherSpec(which);
+            if any(strcmp(w.Size.ItemsData, char(hits(1).Key)))
+                w.Size.Value = char(hits(1).Key);
+                obj.fillWasherFromSize(which);
+            end
+            obj.setStatus(sprintf( ...
+                '%s washer geometry matches %s — family reselected.', ...
+                which, hits(1).Key));
         end
 
         function releaseWasherSpec(obj, which, message)
