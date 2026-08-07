@@ -220,7 +220,11 @@ classdef JointConfigPage < gui2.Page
             obj.applyFlangeStack(j.FlangeStack);
             obj.updateGripLabel();
 
-            obj.BoltLengthField.Value  = obj.fmtOptional(j.Bolt.Length);
+            % Choices first: the ladder is per-bolt, and the value has to
+            % land in a list that already reflects the bolt just selected.
+            obj.updateBoltLengthChoices();
+            obj.BoltLengthField.Value  = ...
+                gui2.JointConfigPage.lengthChoice(j.Bolt.Length);
             obj.BodyLengthField.Value  = obj.fmtOptional(j.BodyLengthInGrip);
             obj.RatedUltField.Value    = obj.fmtOptional(j.BoltRatedUltimateLoad);
             obj.RatedYieldField.Value  = obj.fmtOptional(j.BoltRatedYieldLoad);
@@ -647,12 +651,31 @@ classdef JointConfigPage < gui2.Page
             b.RowSpacing  = 4;
             b.Padding     = [6 6 6 6];
 
-            [obj.BoltLengthField, ~] = obj.addLabelledText(b, 1, ...
-                'Overall bolt length (in)', ...
-                ['OVERALL length, under-head to tip - not the thread ' ...
-                 'length and not L1. Blank leaves the engine to estimate ' ...
-                 'it as grip + nut height + 2*pitch (NASA-STD-5020B ' ...
-                 '4.7.4), and the readout below reports "not evaluated".']);
+            tip = ['OVERALL length, under-head to tip - not the thread ' ...
+                   'length and not L1. The list holds the lengths this ' ...
+                   'bolt''s standard tabulates (NAS1351/NAS1352 Table ' ...
+                   'III), but the box is EDITABLE: Table III''s own note ' ...
+                   'reads "see code for additional lengths", so a length ' ...
+                   'outside the list is procurable and is accepted. Blank ' ...
+                   'leaves the engine to estimate grip + nut height + ' ...
+                   '2*pitch (NASA-STD-5020B 4.7.4).'];
+            lb = uilabel(b, 'Text', 'Overall bolt length (in)', 'Tooltip', tip);
+            lb.Layout.Row = 1; lb.Layout.Column = 1;
+
+            % EDITABLE dropdown, not a picker plus a separate "other" field.
+            % The catalogue is a starting point rather than a constraint --
+            % see the tooltip - so pick-or-type has to be one control, and
+            % an editable uidropdown is exactly that. Items are bare
+            % numbers so parsePositive reads Value unchanged; the part
+            % number belongs in the readout, where it can name the whole
+            % dash number rather than crowd the list.
+            %
+            % NO ItemsData: MATLAB requires it to be empty when Editable
+            % is on, which is also why the items cannot be labels.
+            obj.BoltLengthField = uidropdown(b, 'Editable', 'on', ...
+                'Items', {''}, 'Tooltip', tip);
+            obj.BoltLengthField.Layout.Row    = 1;
+            obj.BoltLengthField.Layout.Column = 2;
             obj.bindEdit(obj.BoltLengthField, @(~, ~) obj.onBoltLengthEdited());
 
             obj.BoltLengthLabel = uilabel(b, 'Text', '', 'WordWrap', 'on', ...
@@ -1302,6 +1325,7 @@ classdef JointConfigPage < gui2.Page
             obj.applyNutSpec();
             obj.applyWasherSpec('Head');
             obj.applyWasherSpec('Nut');
+            obj.updateBoltLengthChoices();
             obj.updateBoltLengthLabel();
             obj.commitJoint();
         end
@@ -1994,6 +2018,39 @@ classdef JointConfigPage < gui2.Page
             obj.commitJoint();
         end
 
+        function updateBoltLengthChoices(obj)
+            %UPDATEBOLTLENGTHCHOICES  The selected bolt's Table III ladder.
+            %   THE VALUE IS PRESERVED ACROSS THE REBUILD. Changing bolts
+            %   changes which lengths are catalogued, but it does not
+            %   retract the length the analyst asked for: a 1.000 in screw
+            %   is still 1.000 in after switching from UNF to UNC, and
+            %   silently blanking it would look like the tool deciding.
+            %   An editable dropdown accepts a Value outside its Items,
+            %   which is what makes that possible.
+            %
+            %   An uncatalogued bolt -- a custom entry, or one predating
+            %   the lengths schema -- leaves just the blank item, so the
+            %   control degrades to plain manual entry rather than looking
+            %   broken (data.Library.boltLengths returns empty by design).
+            if isempty(obj.BoltLengthField)
+                return
+            end
+            items = {gui2.JointConfigPage.BlankChoice};
+            key   = obj.selectedKey(obj.BoltDropDown);
+            if strlength(key) > 0 && obj.State.LibraryOK
+                try
+                    L = obj.State.Library.boltLengths(key);
+                    items = [items, ...
+                        arrayfun(@(x) sprintf('%g', x), L, 'UniformOutput', false)];
+                catch
+                end
+            end
+            kept = gui2.JointConfigPage.lengthChoice( ...
+                str2double(strtrim(string(obj.BoltLengthField.Value))));
+            obj.BoltLengthField.Items = items;
+            obj.BoltLengthField.Value = kept;
+        end
+
         function updateBoltLengthLabel(obj)
             %UPDATEBOLTLENGTHLABEL  Four lines from engine.boltLengthCheck.
             %   ALL arithmetic is the engine's; this formats the struct and
@@ -2221,6 +2278,19 @@ classdef JointConfigPage < gui2.Page
             s = char(strtrim(string(value)));
             if isempty(s)
                 s = placeholder;
+            end
+        end
+
+        function s = lengthChoice(v)
+            %LENGTHCHOICE  A bolt length as the picker's Value.
+            %   NaN lands on BlankChoice rather than on '' — the blank
+            %   ITEM is a single space, so an empty string would sit
+            %   outside the list looking identical to it while behaving
+            %   differently. Both parse back to NaN.
+            if isnan(v)
+                s = gui2.JointConfigPage.BlankChoice;
+            else
+                s = sprintf('%g', v);
             end
         end
 

@@ -539,6 +539,54 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyTrue(isnan(testCase.App.State.Joint.Bolt.Length));
         end
 
+        function theLengthPickerOffersThisBoltsCataloguedLadder(testCase)
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            key = "NAS1351 3/8-24";
+            testCase.choose(p.boltDropDown(), char(key));
+
+            expected = arrayfun(@(x) sprintf('%g', x), lib.boltLengths(key), ...
+                'UniformOutput', false);
+            items = p.boltLengthField().Items;
+            testCase.verifyEqual(items(2:end), expected, ...
+                'The picker must offer exactly the Table III ladder.');
+            testCase.verifyEqual(strtrim(items{1}), '', ...
+                'A blank first item is how "let the engine estimate" is chosen.');
+        end
+
+        function choosingACataloguedLengthReachesTheModel(testCase)
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltLengthField(), '1.25');
+            testCase.verifyEqual(testCase.App.State.Joint.Bolt.Length, 1.25);
+        end
+
+        function anOffCatalogueLengthIsAcceptedNotRejected(testCase)
+            % Table III's own note reads "see code for additional lengths",
+            % so a length outside the ladder is procurable. The picker must
+            % take it rather than snapping to a listed value or blanking.
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.type(p.boltLengthField(), '1.31');
+            testCase.verifyEqual(testCase.App.State.Joint.Bolt.Length, 1.31);
+        end
+
+        function changingBoltRepopulatesTheLadderButKeepsTheLength(testCase)
+            % A 1.000 in screw is still 1.000 in after switching thread
+            % series. Blanking it would look like the tool deciding.
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 #10-32');
+            testCase.type(p.boltLengthField(), '1');
+            before = p.boltLengthField().Items;
+
+            testCase.choose(p.boltDropDown(), 'NAS1352 3/4-10');
+
+            testCase.verifyEqual(testCase.App.State.Joint.Bolt.Length, 1, ...
+                'Changing bolts must not retract the length asked for.');
+            testCase.verifyNotEqual(numel(p.boltLengthField().Items), ...
+                numel(before), 'The ladder must follow the bolt.');
+        end
+
         function aTypedZeroBoltLengthDoesNotTakeTheCommitDown(testCase)
             % model.Bolt.Length is mustBePositiveOrNaN - the same trap that
             % the flange geometry hit. buildJoint stays total.
