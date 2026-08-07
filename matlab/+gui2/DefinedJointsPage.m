@@ -242,7 +242,7 @@ classdef DefinedJointsPage < gui2.Page
             % untouched default nor already stored under some name --
             % anything else and the dialog is noise, and a dialog that is
             % usually noise is one people learn to click through.
-            if obj.currentJointIsUnsavedWork()
+            if obj.hasUnsavedJointWork()
                 fig = ancestor(obj.Root, 'figure');
                 uiconfirm(fig, ['The joint on Joint Config has not been ' ...
                     'saved to this library. Loading "' char(name) ...
@@ -347,24 +347,6 @@ classdef DefinedJointsPage < gui2.Page
             obj.State.JointLibrary = lib;   % fires the refresh
             obj.State.markDirty();
             obj.setStatus(sprintf('Deleted "%s".', name));
-        end
-
-        function tf = currentJointIsUnsavedWork(obj)
-            %CURRENTJOINTISUNSAVEDWORK  Is there Joint Config work to lose?
-            %   False for the untouched default, and false when the joint
-            %   is already stored under some name.
-            tf = false;
-            j = obj.State.Joint;
-            if isequal(j, model.Joint())
-                return
-            end
-            lib = obj.State.JointLibrary;
-            for i = 1:numel(lib)
-                if isequal(lib(i).Joint, j)
-                    return
-                end
-            end
-            tf = true;
         end
 
         function j = jointNamed(obj, name)
@@ -525,6 +507,18 @@ classdef DefinedJointsPage < gui2.Page
     end
 
     methods (Static, Access = private)
+        function s = serialized(j)
+            %SERIALIZED  A joint as the case file would store it, or [].
+            %   Empty on any failure: this feeds a "should I warn?"
+            %   decision, and a decision helper that can throw would take
+            %   the whole button press down with it.
+            s = [];
+            try
+                s = data.toStruct(j);
+            catch
+            end
+        end
+
         function s = orDash(v)
             s = string(v);
             if strlength(strtrim(s)) == 0
@@ -565,6 +559,47 @@ classdef DefinedJointsPage < gui2.Page
 
         function f = nameField(obj)
             f = obj.NameField;
+        end
+
+        function tf = hasUnsavedJointWork(obj)
+            %HASUNSAVEDJOINTWORK  Is there Joint Config work Load would lose?
+            %   PUBLIC so it can be tested directly. It decides whether the
+            %   Load confirm appears at all, and when it was only reachable
+            %   THROUGH that dialog a wrong answer showed up as "loading
+            %   does nothing" — a symptom three steps from its cause.
+            %
+            %   Two ways the answer is no:
+            %     - nothing has been built yet (no name, no bolt), or
+            %     - what is there is already stored under some name.
+            %
+            %   COMPARISON IS ON THE SERIALIZED FORM, not on the objects.
+            %   data.toStruct is what File > Save writes, so "already
+            %   saved" is being asked in exactly the terms that make it
+            %   true, and the answer cannot turn on object-comparison
+            %   semantics — dependent properties, class metadata — that
+            %   have nothing to do with whether work would be lost.
+            j = obj.State.Joint;
+
+            % Cheap and decisive for the common case: a joint with neither
+            % a name nor a bolt is a fresh start, not work.
+            tf = strlength(strtrim(j.Name)) > 0 || ...
+                 strlength(strtrim(j.Bolt.Designation)) > 0;
+            if ~tf
+                return
+            end
+
+            here = gui2.DefinedJointsPage.serialized(j);
+            if isempty(here)
+                return   % cannot compare: say nothing is at risk
+            end
+            lib = obj.State.JointLibrary;
+            for i = 1:numel(lib)
+                saved = gui2.DefinedJointsPage.serialized(lib(i).Joint);
+                if ~isempty(saved) && isequal(saved, here)
+                    tf = false;
+                    return
+                end
+            end
         end
 
         function b = loadButton(obj)

@@ -216,6 +216,29 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
                 string(testCase.Page.nameField().Value), "Bracket");
         end
 
+        function aFreshJointConfigHasNothingToLose(testCase)
+            % The gate that decides whether Load asks first. Tested
+            % DIRECTLY: when it was only reachable through the dialog, a
+            % wrong answer here surfaced as "loading does nothing", which
+            % is three steps from the cause.
+            testCase.verifyFalse(testCase.Page.hasUnsavedJointWork(), ...
+                'A blank Joint Config is a fresh start, not work to lose.');
+        end
+
+        function anEditedJointConfigIsWorthWarningAbout(testCase)
+            j = model.Joint(Name = "Half-built");
+            testCase.App.State.Joint = j;
+            testCase.verifyTrue(testCase.Page.hasUnsavedJointWork());
+        end
+
+        function aJointAlreadyInTheLibraryIsNotUnsavedWork(testCase)
+            entry = tGui2DefinedJoints.libraryWith("Bracket", Torque = 310);
+            testCase.App.State.JointLibrary = entry;
+            testCase.App.State.Joint = entry.Joint;
+            testCase.verifyFalse(testCase.Page.hasUnsavedJointWork(), ...
+                'A joint already stored under a name cannot be lost.');
+        end
+
         function loadingCopiesTheJointOntoJointConfigAndGoesThere(testCase)
             % The current joint is the untouched default, so there is
             % nothing to lose and no dialog stands in the way.
