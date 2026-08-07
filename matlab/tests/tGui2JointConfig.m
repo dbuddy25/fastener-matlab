@@ -543,13 +543,16 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
         function aTypedL1IsReportedAsTheOverrideItIs(testCase)
             p = testCase.Page;
             testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltMaterialDropDown(), 'A286');
             testCase.type(p.flangeThickness(1), '0.375');
             testCase.choose(p.boltLengthField(), '1.25');
             testCase.type(p.bodyLengthField(), '0.2');
 
             txt = p.boltLengthLabel().Text;
             testCase.verifyTrue(contains(string(txt{5}), "your override"), ...
-                'A typed L1 wins, and the readout must not call it derived.');
+                ['A typed L1 wins, and the readout must not call it ' ...
+                 'derived - which also means typing one has to REFRESH ' ...
+                 'that readout, not just commit the model.']);
         end
 
         function anUnevaluatedCheckNamesItsCauseInAmber(testCase)

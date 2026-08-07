@@ -721,7 +721,12 @@ classdef JointConfigPage < gui2.Page
                  'length readout shows which one is in force. Note that ' ...
                  'Lt is a MINIMUM thread length, so a derived L1 is the ' ...
                  'longest shank the part can have.']);
-            obj.bindEdit(obj.BodyLengthField, @(~, ~) obj.commitJoint());
+            % Refreshes the readout, not just the model: the bolt length
+            % group now reports WHICH L1 is in force, so typing one here
+            % changes what that line has to say. Committing alone would
+            % leave it claiming a derived value the override had just
+            % replaced.
+            obj.bindEdit(obj.BodyLengthField, @(~, ~) obj.onBodyLengthEdited());
 
             obj.RatedUltField = obj.addLabelledText(b, 2, ...
                 'Bolt rated ultimate (lbf)', ...
@@ -2021,6 +2026,11 @@ classdef JointConfigPage < gui2.Page
         end
 
         function onBoltLengthEdited(obj)
+            obj.updateBoltLengthLabel();
+            obj.commitJoint();
+        end
+
+        function onBodyLengthEdited(obj)
             obj.updateBoltLengthLabel();
             obj.commitJoint();
         end
