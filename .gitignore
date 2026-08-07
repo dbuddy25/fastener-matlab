@@ -30,5 +30,8 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Reference standards and vendor documents (not redistributable)
+# Reference standards and vendor documents (not redistributable).
+# They live in references/ — the folder is ignored wholesale so a new
+# document dropped in never needs a .gitignore edit to stay unpublished.
+references/
 *.pdf
