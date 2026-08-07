@@ -442,22 +442,61 @@ commit, or the summary and the form disagree.
 
 ## 8. Single Joint Results
 
-- Margin table, 9 rows, solver order, no sorting. Color from
-  `Margins(i).Status` via `gui2.palette` — never re-thresholded in the view.
-- **`removeStyle` before every `addStyle` pass.** Style accumulation costs
-  render time and produces wrong colors, and remote sessions multiply the cost.
-- **No worst-margin or governing-check headline** (§2). The verdict line is
-  scope-qualified — *"All 9 displayed checks pass — 6 computed, not shown"* —
-  and is never unqualified. The rail navigates here automatically after
-  Analyze; the first failing row is selected, or row 1 if none fail.
-- Detail panel for the selected row: `Method` (the equation citation), `Detail`,
-  and — on Tension-Ultimate — the `Allowable from:` line from §2.
-- Fig. 8 separation-before-rupture narrative, verbatim from `Result.Narrative`.
-- Scope footer per §2.
-- Stale banner when any input changed since the shown result was computed; the
-  rail item carries the amber `●` at the same time.
+### 8.1 The margin table — 8 rows
 
----
+The nine displayed checks minus `Separation-before-rupture`, which is not a
+margin (§8.2). Solver order, no sorting, **`Interaction` last**.
+
+- Colour from `Margins(i).Status` — `"Pass" | "Fail" | "NotEvaluated"`. The
+  view never re-thresholds (A2).
+- **`removeStyle` before every `addStyle` pass**, applied with an N×2 index
+  matrix, never per cell (A8).
+- **Margins render to two decimals** with an explicit sign: `+0.32`, `-0.14`.
+- **"Cap MS > 5" checkbox, default ON, display-only**, with a tooltip saying
+  so. Above the cap renders `>+5`; `inf` renders `+inf`. Without it a table of
+  `+47.3`, `+112.8`, `-0.14` buries the only number that matters. Toggling the
+  cap is a display action: it must never mark the case dirty or stale a result.
+- **`Interaction` is last, and labelled for its own direction.** It reports a
+  RATIO, passing iff `R <= 1` — the opposite of every other row. Render it as
+  `R = 0.86 (<= 1)` so the criterion travels with the number and cannot be read
+  as a margin. It is deliberately excluded from any worst-margin comparison.
+- No worst-margin or governing-check headline (§2). The verdict line is
+  scope-qualified.
+
+### 8.2 Analysis decisions — a separate section
+
+**Separation-before-rupture is not a margin and must not sit in the margin
+table.** It carries no number: it records which branch the tension check took
+(5020B Fig. 8), and listing it among margins is a category error that the first
+build made. `ENGINE_CHECKS.md` says as much — it is one of "three rows that are
+not margins".
+
+It gets its own section, which generalises to everything that determined
+*which* equations ran:
+
+| Decision | Source |
+|---|---|
+| Separation before rupture — assured or not | `Result.Narrative`, 5020B Fig. 8 |
+| Bolt bending exemption — **assumed, not verified** | 5020B §4.4.4, `ShearTransferCondition` (§7.2f) |
+| Shear plane — which area and which exponents ran | `Joint.ShearPlane`, Eq. 12/13 and 20–23 |
+| Fastening-system allowable — which member governs | §2's `Allowable from:` line |
+
+These are choices with consequences, not a trace, which is why the section is
+named for decisions rather than for a path.
+
+### 8.3 The rest
+
+- Detail panel for the selected row: `Method` (the equation citation) and
+  `Detail`, plus the `Allowable from:` line on Tension-Ultimate (§2).
+- Warnings from `Result.Warnings`, rebuilt from scratch on every render and
+  never accumulated. Refreshed only from the show-result path — refreshing them
+  when the user starts editing would be anti-conservative (A3).
+- Scope footer per §2: 9 of 15 shown, the six named.
+- Stale banner when any input changed since the shown result was computed, with
+  the table muted and the rail carrying its amber dot. Muting is cosmetic and
+  never allowed to break the numbers.
+- The rail navigates here automatically after Analyze; the first failing row is
+  selected, or row 1 if none fail.
 
 ## 9. Bulk Analysis
 
