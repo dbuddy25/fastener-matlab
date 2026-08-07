@@ -420,8 +420,12 @@ classdef tGui2Results < matlab.uitest.TestCase
             txt = string(testCase.App.page("Results").verdictLabel().Text);
             testCase.verifyFalse(contains(upper(txt), "FAIL"), ...
                 'An unassured gate must not make an all-passing joint read as failing.');
-            testCase.verifyTrue(contains(txt, "8"), ...
-                'The verdict counts the eight margin rows.');
+            % The discriminator is the BRANCH taken, not a literal count:
+            % counting nine would hit the failure branch ("1 of 9 ... FAIL"),
+            % counting eight reaches the unevaluated branch, because the
+            % eight table rows are six passes and two NotEvaluated.
+            testCase.verifyTrue(contains(upper(txt), "NOT EVALUATED"), ...
+                'The verdict must describe the eight table rows, not the gate.');
         end
 
         function theGateStatesItsBranchRatherThanAPassOrFail(testCase)

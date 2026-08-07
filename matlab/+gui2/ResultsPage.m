@@ -272,9 +272,15 @@ classdef ResultsPage < gui2.Page
             p = uipanel(g, 'FontWeight', 'bold', 'FontSize', 13, ...
                 'Title', 'Selected check');
             p.Layout.Row    = row;
-            p.Layout.Column = [1 2];
+            % Column 1 ONLY. The decisions/warnings panel spans both content
+            % rows in column 2, so spanning [1 2] here put two widgets in
+            % the same cell - they stack rather than error, which is worse.
+            p.Layout.Column = 1;
             pg = uigridlayout(p, [1 1]);
-            pg.RowHeight   = {90};
+            % '1x', not a fixed 90: the row is now '1x' and a fixed inner
+            % height was why the citation sat squeezed at the bottom of a
+            % panel with room to spare.
+            pg.RowHeight   = {'1x'};
             pg.ColumnWidth = {'1x'};
             pg.Padding     = [6 6 6 6];
             obj.DetailArea = uitextarea(pg, 'Editable', 'off', 'Value', {''});
