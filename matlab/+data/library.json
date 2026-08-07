@@ -793,7 +793,233 @@
       "origin": "baseline"
     }
   ],
-  "boltSpecs": [],
+  "boltSpecs": [
+    {
+      "key": "NAS1351 #0-80 A286",
+      "bolt": "NAS1351 #0-80",
+      "material": "A286",
+      "ratedUltimateLoad": 288,
+      "ratedYieldLoad": 216,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 #2-56 A286",
+      "bolt": "NAS1352 #2-56",
+      "material": "A286",
+      "ratedUltimateLoad": 592,
+      "ratedYieldLoad": 444,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 #2-64 A286",
+      "bolt": "NAS1351 #2-64",
+      "material": "A286",
+      "ratedUltimateLoad": 630,
+      "ratedYieldLoad": 472,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 #4-40 A286",
+      "bolt": "NAS1352 #4-40",
+      "material": "A286",
+      "ratedUltimateLoad": 965,
+      "ratedYieldLoad": 725,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 #4-48 A286",
+      "bolt": "NAS1351 #4-48",
+      "material": "A286",
+      "ratedUltimateLoad": 1060,
+      "ratedYieldLoad": 794,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 #6-32 A286",
+      "bolt": "NAS1352 #6-32",
+      "material": "A286",
+      "ratedUltimateLoad": 1455,
+      "ratedYieldLoad": 1090,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 #6-40 A286",
+      "bolt": "NAS1351 #6-40",
+      "material": "A286",
+      "ratedUltimateLoad": 1620,
+      "ratedYieldLoad": 1220,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 #8-32 A286",
+      "bolt": "NAS1352 #8-32",
+      "material": "A286",
+      "ratedUltimateLoad": 2240,
+      "ratedYieldLoad": 1680,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 #8-36 A286",
+      "bolt": "NAS1351 #8-36",
+      "material": "A286",
+      "ratedUltimateLoad": 2360,
+      "ratedYieldLoad": 1770,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 #10-24 A286",
+      "bolt": "NAS1352 #10-24",
+      "material": "A286",
+      "ratedUltimateLoad": 2805,
+      "ratedYieldLoad": 2100,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 #10-32 A286",
+      "bolt": "NAS1351 #10-32",
+      "material": "A286",
+      "ratedUltimateLoad": 3200,
+      "ratedYieldLoad": 2400,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 1/4-20 A286",
+      "bolt": "NAS1352 1/4-20",
+      "material": "A286",
+      "ratedUltimateLoad": 5090,
+      "ratedYieldLoad": 3820,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 1/4-28 A286",
+      "bolt": "NAS1351 1/4-28",
+      "material": "A286",
+      "ratedUltimateLoad": 5820,
+      "ratedYieldLoad": 4350,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 5/16-18 A286",
+      "bolt": "NAS1352 5/16-18",
+      "material": "A286",
+      "ratedUltimateLoad": 8390,
+      "ratedYieldLoad": 6300,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 5/16-24 A286",
+      "bolt": "NAS1351 5/16-24",
+      "material": "A286",
+      "ratedUltimateLoad": 9300,
+      "ratedYieldLoad": 6950,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 3/8-16 A286",
+      "bolt": "NAS1352 3/8-16",
+      "material": "A286",
+      "ratedUltimateLoad": 12400,
+      "ratedYieldLoad": 9300,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 3/8-24 A286",
+      "bolt": "NAS1351 3/8-24",
+      "material": "A286",
+      "ratedUltimateLoad": 14050,
+      "ratedYieldLoad": 10500,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 7/16-14 A286",
+      "bolt": "NAS1352 7/16-14",
+      "material": "A286",
+      "ratedUltimateLoad": 17010,
+      "ratedYieldLoad": 12750,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 7/16-20 A286",
+      "bolt": "NAS1351 7/16-20",
+      "material": "A286",
+      "ratedUltimateLoad": 19000,
+      "ratedYieldLoad": 14200,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 1/2-13 A286",
+      "bolt": "NAS1352 1/2-13",
+      "material": "A286",
+      "ratedUltimateLoad": 22705,
+      "ratedYieldLoad": 17000,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 1/2-20 A286",
+      "bolt": "NAS1351 1/2-20",
+      "material": "A286",
+      "ratedUltimateLoad": 25600,
+      "ratedYieldLoad": 19200,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 5/8-11 A286",
+      "bolt": "NAS1352 5/8-11",
+      "material": "A286",
+      "ratedUltimateLoad": 36160,
+      "ratedYieldLoad": 27100,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 5/8-18 A286",
+      "bolt": "NAS1351 5/8-18",
+      "material": "A286",
+      "ratedUltimateLoad": 41000,
+      "ratedYieldLoad": 30700,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1352 3/4-10 A286",
+      "bolt": "NAS1352 3/4-10",
+      "material": "A286",
+      "ratedUltimateLoad": 53515,
+      "ratedYieldLoad": 40100,
+      "source": "FF-S-86F Table VI (coarse threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VI note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1352 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1352 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    },
+    {
+      "key": "NAS1351 3/4-16 A286",
+      "bolt": "NAS1351 3/4-16",
+      "material": "A286",
+      "ratedUltimateLoad": 59700,
+      "ratedYieldLoad": 44800,
+      "source": "FF-S-86F Table VII (fine threads), heat and corrosion resistant steel columns. FF-S-86F 3.1.3 and 3.2.4.1 identify that material as A286 iron-base superalloy (UNS S66286) at Ftu = 160,000 psi min and Fty = 120,000 psi min for all sizes, which is exactly this library's A286 entry -- so the spec's loads and the material's stresses cannot drift apart. Per Table VII note 4/ the loads ARE the machined-specimen allowable stress times the thread tensile stress area, and the table's printed As column matches this bolt's tensileStressArea to all five decimals, which is how the transcription was checked (every entry agrees with At*Ftu and At*Fty to better than 0.4%). NAS1351 Table II lists a MINIMUM BREAKING STRENGTH for the same size and material that differs from the tensile load here by at most 0.4% (rounding only); FF-S-86F is preferred because NAS1351 note (d) invokes it as the procurement spec, and because Table II carries no yield value at all. Supplying ratedYieldLoad here gives engine.marginTensionYield its \"rated\" basis directly, so the NASA-STD-5020B Eq. 18 estimate (Pty_allow = (Fty/Ftu)*Ptu_allow) -- which that standard offers only \"when a value is not explicitly defined in the corresponding fastener specification\" -- is no longer needed for this pairing.",
+      "origin": "baseline"
+    }
+  ],
   "nuts": [
     {
       "key": "NASM21042-02",

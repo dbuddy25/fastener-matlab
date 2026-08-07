@@ -884,8 +884,8 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
         function anUnmatchedBoltPairingBlanksTheRatedLoadsRatherThanKeepingThem(testCase)
             % Carrying the previous pairing forward would analyse the new
-            % bolt with the old bolt's ratings - and they would look like a
-            % deliberate override rather than a leftover.
+            % pairing with the old one's ratings - and they would look like
+            % a deliberate override rather than a leftover.
             p = testCase.Page;
             [boltKey, matKey] = testCase.firstBoltSpecPair();
             testCase.assumeNotEmpty(boltKey);
@@ -895,10 +895,10 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.assumeNotEmpty(strtrim(p.ratedUltField().Value), ...
                 'This test needs a filled field before it can test blanking.');
 
-            other = testCase.aBoltWithNoSpecFor(matKey, boltKey);
+            other = testCase.aMaterialWithNoSpecFor(boltKey, matKey);
             testCase.assumeNotEmpty(other, ...
-                'Every bolt in the library has a spec for this material.');
-            testCase.choose(p.boltDropDown(), other);
+                'Every bolt material in the library has a spec for this bolt.');
+            testCase.choose(p.boltMaterialDropDown(), other);
 
             testCase.verifyEmpty(strtrim(p.ratedUltField().Value), ...
                 'An unmatched pairing must blank the rated loads.');
@@ -1082,15 +1082,21 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             end
         end
 
-        function key = aBoltWithNoSpecFor(testCase, matKey, excludeKey)
+        function key = aMaterialWithNoSpecFor(testCase, boltKey, excludeKey)
+            % The catalogue covers every shipped bolt in A286 (FF-S-86F
+            % Table VI/VII), so there is no BOLT that misses for that
+            % material -- the miss has to come from the other side of the
+            % pairing. updateSpecFields looks up (bolt, material) as a
+            % pair and blanks on any miss, so changing either one
+            % exercises the identical path.
             key = '';
             lib = testCase.App.State.Library;
-            for b = lib.boltKeys()
-                if strcmp(char(b), excludeKey)
+            for m = lib.materialKeys(Role = "bolt")
+                if strcmp(char(m), excludeKey)
                     continue
                 end
-                if isempty(lib.boltSpecFor(b, string(matKey)))
-                    key = char(b);
+                if isempty(lib.boltSpecFor(string(boltKey), m))
+                    key = char(m);
                     return
                 end
             end

@@ -46,12 +46,41 @@ classdef tLibrary < matlab.unittest.TestCase
             testCase.verifyEqual(m.Fsu, 93400);
         end
 
+        function everyShippedBoltHasAnA286SpecMatchingItsStressArea(testCase)
+            % The catalogue's boltSpecs come from FF-S-86F Table VI
+            % (coarse) and Table VII (fine), heat and corrosion resistant
+            % steel = A286 per FF-S-86F 3.1.3. Table note 4/ says those
+            % loads ARE the machined-specimen allowable stress times the
+            % thread tensile stress area, and 3.2.4.1 fixes that stress at
+            % Ftu = 160 ksi / Fty = 120 ksi for ALL sizes -- so every entry
+            % must reconcile with this library's own At and A286 material
+            % to within the spec's rounding. A transcription slip moves a
+            % value by far more than 1%, which is what this catches; it is
+            % NOT a re-derivation, because the shipped numbers are the
+            % spec's, not At*Ftu computed here.
+            lib  = data.Library.load();
+            m    = lib.material("A286");
+            keys = lib.boltKeys();
+            testCase.assertNotEmpty(keys);
+            for k = keys
+                s = lib.boltSpecFor(k, "A286");
+                testCase.assertNotEmpty(s, ...
+                    sprintf('No A286 boltSpec for %s.', k));
+                At = lib.bolt(k).TensileStressArea;
+                testCase.verifyEqual(s.RatedUltimateLoad, At * m.Ftu, ...
+                    "RelTol", 0.01, sprintf('%s ultimate', k));
+                testCase.verifyEqual(s.RatedYieldLoad, At * m.Fty, ...
+                    "RelTol", 0.01, sprintf('%s yield', k));
+                testCase.verifyLessThan(s.RatedYieldLoad, s.RatedUltimateLoad, ...
+                    sprintf('%s yield must sit below ultimate', k));
+            end
+        end
+
         function pullsBoltSpec(testCase)
-            % Plumbing test. Library.json ships no catalog boltSpec (the
-            % only one it ever carried was the DABJ fixture's, now
-            % removed), so this adds one locally and reads it back --
-            % exercising the same lib.boltSpec() pull-by-key mechanism
-            % without depending on shipped baseline data.
+            % Plumbing test for the pull-by-key mechanism. Uses a LOCAL
+            % entry with values that match no shipped catalogue row, so a
+            % pass proves the lookup returned this entry rather than
+            % coincidentally agreeing with the baseline A286 catalogue.
             lib = data.Library.load();
             lib = lib.addBoltSpec(struct("key", "NAS1351 3/8-24 A286 test spec", ...
                 "bolt", "NAS1351 3/8-24", "material", "A286", ...
@@ -66,14 +95,14 @@ classdef tLibrary < matlab.unittest.TestCase
 
         function boltCarriesHeadBearingAndThreadLength(testCase)
             % XLSX-template prep: the library maps headBearingDiameter and
-            % threadLength onto the model.Bolt. HeadBearingDiameter is
-            % checked against a real catalog entry (NAS1351 3/8-24);
-            % ThreadLength is a per-part, length-dependent property that no
-            % catalog SHCS entry carries (see that entry's source note), so
-            % its mapping is checked on a constructed entry instead.
+            % threadLength onto the model.Bolt. Both are checked against a
+            % real catalog entry (NAS1351 3/8-24, whose Lt comes from
+            % NAS1351 Table II), then the mapping is checked again on a
+            % constructed entry to prove it is not size-specific.
             lib = data.Library.load();
             b = lib.bolt("NAS1351 3/8-24");
             testCase.verifyEqual(b.HeadBearingDiameter, 0.5625, "AbsTol", 1e-12);
+            testCase.verifyEqual(b.ThreadLength, 1.25, "AbsTol", 1e-12);
 
             e = testCase.sampleBolt();
             e.threadLength = 0.625;
@@ -319,9 +348,9 @@ classdef tLibrary < matlab.unittest.TestCase
             dupBolt.key = "NAS1351 3/8-24";
             testCase.verifyError(@() lib.addBolt(dupBolt), ...
                 "data:Library:duplicateKey");
-            % library.json ships no baseline boltSpec (the only one it ever
-            % carried was the DABJ fixture's, now removed), so the
-            % collision is self-created: add once, then try again.
+            % The shipped catalogue keys its specs "<bolt> A286", so this
+            % test-only key collides with nothing baseline: the collision
+            % is self-created: add once, then try again.
             dupSpec = testCase.sampleBoltSpec();
             dupSpec.key = "NAS1351 3/8-24 A286 test spec";
             dupSpec.bolt = "NAS1351 3/8-24";
@@ -516,8 +545,9 @@ classdef tLibrary < matlab.unittest.TestCase
         end
 
         function duplicateAsCustomDispatchesAcrossEntityTypes(testCase)
-            % library.json ships no baseline boltSpec, so the "unambiguous
-            % key" case adds one locally before duplicating it.
+            % Adds a spec under a test-only key (the shipped catalogue
+            % uses "<bolt> A286") so the "unambiguous key" case duplicates
+            % an entry this test fully controls.
             lib = data.Library.load();
             lib = lib.addBoltSpec(struct("key", "NAS1351 3/8-24 A286 test spec", ...
                 "bolt", "NAS1351 3/8-24", "material", "A286", ...

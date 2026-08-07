@@ -14,11 +14,12 @@ classdef tExport < matlab.unittest.TestCase
     %   See tests/tBulk.m's class header for the full story: the shipped
     %   template's demo joint ("Sample four-bolt SHCS/nut joint" -- it used
     %   to be misleadingly named "DABJ Sec. 9 class problem") has no
-    %   BoltSpec and library.json ships zero boltSpecs, so
-    %   BoltRatedUltimateLoad/BoltRatedYieldLoad stay NaN — but
-    %   engine.marginTensionYield / engine.marginInteraction now fall back to
-    %   a derived allowable (boltTensileAllowable) when the rating is
-    %   unset, so the row analyzes cleanly. Tension-Ultimate ALSO resolves
+    %   BoltSpec, but library.json now ships one for its NAS1351 3/8-24 +
+    %   A286 pairing, so the auto-lookup fills BoltRatedUltimateLoad /
+    %   BoltRatedYieldLoad with the FF-S-86F Table VII rated pair,
+    %   14,050 / 10,500 lbf, and boltTensileAllowable takes its "rated"
+    %   basis rather than the derived At*Ftu / Eq. 18 fallback.
+    %   Tension-Ultimate ALSO resolves
     %   to a real number: the row carries BodyLengthInGrip/NutHeight (see
     %   data.makeTemplate's sampleNutJointRow), so engine.stiffness
     %   computes phi instead of erroring, and the Fig. 8 rupture branch
@@ -92,28 +93,30 @@ classdef tExport < matlab.unittest.TestCase
             % TensionYield does NOT take Eq. 15: engine.marginTensionYield
             % shares the Fig. 8 gate with Tension-Ultimate (below), and
             % that gate is NOT assured on this row (PpMax 11,006.78 >
-            % 0.75*Ptu_allow 10,539.6), so Eq. 16/17 governs.
+            % 0.75*Ptu_allow 10,537.5), so Eq. 16/17 governs.
             % HAND-DERIVED, longhand (phi = 0.394005, PpMax = 11,006.78,
             % n = 0.5 -- the same stiffness/preload chain the
             % Tension-Ultimate derivation below works out in full):
-            %   Ptu_allow = At*Ftu = 0.08783*160,000 = 14,052.8
-            %   Pty_allow = (Fty/Ftu)*Ptu_allow = 0.75*14,052.8 = 10,539.6 (Eq. 18)
+            %   Ptu_allow = 14,050  (FF-S-86F Table VII rated tensile load,
+            %   Pty_allow = 10,500   rated yield load -- both taken as-is;
+            %                        Eq. 18 does not apply when the
+            %                        fastener spec defines the value)
             %   P'ty = (Pty_allow - PpMax)/(n*phi)
-            %        = (10,539.6 - 11,006.78)/(0.5*0.394005) = -2,371.44 (Eq. 17)
+            %        = (10,500 - 11,006.78)/(0.5*0.394005) = -2,572.45 (Eq. 17)
             %   Pty  = FSY*FFY*5590 = 1.25*1*5590 = 6,987.5 lbf
-            %   MS   = P'ty/Pty - 1 = -2,371.44/6,987.5 - 1 = -1.3394    (Eq. 16)
+            %   MS   = P'ty/Pty - 1 = -2,572.45/6,987.5 - 1 = -1.3682    (Eq. 16)
             % Pty_allow is itself below PpMax -- a genuinely over-torqued
             % joint (matches engine.preloadWatchdog's Critical warning
             % below), not a defect; Eq. 15 never subtracts preload, so it
             % previously masked this.
-            expectedPtuAllow = 0.08783 * 160000;               % At*Ftu, NAS1351 3/8-24 + A286
-            expectedPtyAllow = (120000/160000) * expectedPtuAllow;  % Eq. 18
+            expectedPtuAllow = 14050;   % FF-S-86F Tbl VII, NAS1351 3/8-24 + A286
+            expectedPtyAllow = 10500;   % FF-S-86F Tbl VII rated yield (no Eq. 18)
             phi = 0.394005;   n = 0.5;   PpMax = 11006.78;      % from the Tension-Ultimate derivation below
             Pty = 1.25 * 1.0 * 5590;                           % FSY*FFY*Axial
             Pprime = (expectedPtyAllow - PpMax) / (n * phi);     % Eq. 17
             expectedTensionYield = Pprime / Pty - 1;             % Eq. 16
             testCase.verifyEqual(T.TensionYield(1), expectedTensionYield, "AbsTol", 1e-3);
-            testCase.verifyEqual(T.TensionYield(1), -1.3394, "AbsTol", 1e-3);
+            testCase.verifyEqual(T.TensionYield(1), -1.3682, "AbsTol", 1e-3);
             testCase.verifyLessThan(T.TensionYield(1), 0);   % over-torqued: assert the sign plainly
 
             % Tension-Ultimate resolves now: the row carries BodyLengthInGrip
@@ -135,12 +138,12 @@ classdef tExport < matlab.unittest.TestCase
             %   alphaJ (Al 7075-T7351) = 2.32e-5, alphaB (A286) = 1.65e-5;
             %   grip 0.75 in; dThot = 13.8889 degC -> Pth = 117.89 lbf.
             %   PpMax = Ppi_max(10,888.89) + Pth(117.89) = 11,006.78 lbf
-            %   -- Fig. 8 gate NOT assured (11,006.78 >= 0.75*14,052.8 =
-            %   10,539.6).
-            %   NASA-STD-5020B Eq. 10: P'tu = (14,052.8-11,006.78)/(0.5*0.394005)
-            %   = 15,461.83 lbf; Ptu = 1.4*1.15*5590 = 8,999.9 lbf;
-            %   MS = 15,461.83/8,999.9 - 1 = 0.718000.
-            testCase.verifyEqual(T.TensionUlt(1), 0.718000, "AbsTol", 1e-3);
+            %   -- Fig. 8 gate NOT assured (11,006.78 >= 0.75*14,050 =
+            %   10,537.5).
+            %   NASA-STD-5020B Eq. 10: P'tu = (14,050-11,006.78)/(0.5*0.394005)
+            %   = 15,447.62 lbf; Ptu = 1.4*1.15*5590 = 8,999.9 lbf;
+            %   MS = 15,447.62/8,999.9 - 1 = 0.716421.
+            testCase.verifyEqual(T.TensionUlt(1), 0.716421, "AbsTol", 1e-3);
 
             % WorstMargin is the minimum across every assessed check on this
             % row; several (Separation, Bearing, NutStrength) depend on the
@@ -163,15 +166,19 @@ classdef tExport < matlab.unittest.TestCase
             % Trailing Warnings column (engine.preloadWatchdog via
             % engine.analyze): this row's PpMax (~11,006.78, derived above)
             % is compared against the bolt's YIELD allowable -- which on
-            % THIS row is the DERIVED Eq. 18 value (10,539.6, same
-            % arithmetic as the Fig. 8 gate threshold above -- the 0.75
-            % multiplier appearing in both is a COINCIDENCE of this bolt's
-            % Fty/Ftu = 120,000/160,000 = 0.75 ratio, not the same check).
+            % THIS row is the FF-S-86F Table VII RATED value, 10,500. That
+            % is a DIFFERENT number from the Fig. 8 gate threshold above
+            % (0.75*14,050 = 10,537.5) even though both once evaluated to
+            % 10,539.6: the old derived yield allowable was Eq. 18's
+            % (Fty/Ftu)*Ptu_allow, and this bolt's Fty/Ftu = 120,000/160,000
+            % happens to equal the gate's own 0.75 -- a coincidence the
+            % catalogued pair now breaks, which is exactly why the two were
+            % never the same check.
             % HAND-DERIVED:
-            %   PpMax/YieldAllow = 11,006.78/10,539.6 = 1.04433 = 104.4%
+            %   PpMax/YieldAllow = 11,006.78/10,500 = 1.048265 = 104.8%
             %   -- ABOVE 100% of yield -> PreloadExceedsYield, Critical
             %   (NOT merely near-yield: this demo joint's torqued preload
-            %   genuinely exceeds its bolt's derived yield allowable).
+            %   genuinely exceeds its bolt's rated yield allowable).
             %   Bolt length is NOT flagged: this row's Bolt (NAS1351
             %   3/8-24, from the library, not this template row) carries
             %   no Length value (library bolts default Length to NaN --
@@ -247,21 +254,21 @@ classdef tExport < matlab.unittest.TestCase
             %          = 8,355.556; cMax = 1.042553, Gamma = 0.25
             %   PpiMax = cMax*(1+Gamma)*PpiNom = 1.302319*8,355.556
             %          = 10,888.89 lbf = PpMax (no thermal term here)
-            %   Ptu_allow = 14,052.8 (At*Ftu, unchanged) -- Fig. 8 gate
-            %   still NOT assured: 10,888.89 >= 0.75*14,052.8 = 10,539.6.
+            %   Ptu_allow = 14,050 (FF-S-86F Table VII, unchanged) -- Fig. 8
+            %   gate still NOT assured: 10,888.89 >= 0.75*14,050 = 10,537.5.
             %   phi = 0.394005 (pure geometry -- Kc = pi*tan(30deg)*Ec*D/
             %   (2*ln(arg)), the exact pi*tan(alpha) coefficient, not a
             %   30deg-only 1.81 constant; same as every other use of this
             %   row -- see tBulk.m for the full Kb/Kc arithmetic).
-            %   NASA-STD-5020B Eq. 10: P'tu = (14,052.8-10,888.89)/(0.5*0.394005)
-            %   = 3,163.91/0.197003 = 16,060.26 lbf
+            %   NASA-STD-5020B Eq. 10: P'tu = (14,050-10,888.89)/(0.5*0.394005)
+            %   = 3,161.11/0.197003 = 16,046.04 lbf
             %   Ptu = FSU*FFU*5590 = 1.4*1.15*5590 = 8,999.9 lbf (same
             %   FSU/FFU as the settings template -- model.Factors()'s
             %   built-in defaults happen to equal it)
-            %   MS = 16,060.26/8,999.9 - 1 = 0.784493
+            %   MS = 16,046.04/8,999.9 - 1 = 0.782913
             testCase.verifyEqual(Tdef.TensionUlt(1), Temp.TensionUlt(1), "AbsTol", 1e-6);
             testCase.verifyEqual(Tdef.TensionUlt(1), Tfac.TensionUlt(1), "AbsTol", 1e-6);
-            testCase.verifyEqual(Tdef.TensionUlt(1), 0.784493, "AbsTol", 1e-3);
+            testCase.verifyEqual(Tdef.TensionUlt(1), 0.782913, "AbsTol", 1e-3);
 
             % WorstMargin is a real number on this row -- cross-check it
             % across all three tables to prove the three call forms
@@ -277,12 +284,12 @@ classdef tExport < matlab.unittest.TestCase
 
             % Trailing Warnings column: cross-check all three call forms
             % agree, then pin by hand. PpMax here is the no-thermal PpiMax
-            % = 10,888.89 (derived above) vs the SAME derived yield
-            % allowable as runBulkEndToEnd (10,539.6 -- this row's
+            % = 10,888.89 (derived above) vs the SAME rated yield
+            % allowable as runBulkEndToEnd (10,500 -- this row's
             % allowables don't depend on the settings/temperature path).
-            % HAND-DERIVED: 10,888.89/10,539.6 = 1.033141 = 103.3% of
+            % HAND-DERIVED: 10,888.89/10,500 = 1.037037 = 103.7% of
             % yield -- still ABOVE 100% -> PreloadExceedsYield, Critical
-            % (a smaller overshoot than runBulkEndToEnd's 104.4% since
+            % (a smaller overshoot than runBulkEndToEnd's 104.8% since
             % there is no thermal add-on here, but still an overshoot).
             testCase.verifyEqual(Tdef.Warnings(1), Temp.Warnings(1));
             testCase.verifyEqual(Tdef.Warnings(1), Tfac.Warnings(1));

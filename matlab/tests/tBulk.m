@@ -18,21 +18,26 @@ classdef tBulk < matlab.unittest.TestCase
     %   to different hardware and derived allowables was actively
     %   misleading.
     %
-    %   BoltSpec is blank on the demo row and library.json ships ZERO
-    %   boltSpecs, so BoltRatedUltimateLoad/BoltRatedYieldLoad stay NaN.
-    %   engine.marginTensionUlt / engine.marginTensionYield / engine.marginInteraction
-    %   now FALL BACK to a derived allowable (boltTensileAllowable:
-    %   Ptu_allow = At*Ftu, a derived convention per NASA-STD-5020B §4.4.2,
-    %   not a numbered equation; Pty_allow via Eq. 18 applied to that
-    %   ultimate) whenever the rating is unset, so this row no longer
-    %   errors — Tension-Yield resolves to a real derived number. That
-    %   number is NEGATIVE (~-1.339): the same Fig. 8 gate this row's
+    %   BoltSpec is blank on the demo row, but library.json now ships a
+    %   boltSpec for its NAS1351 3/8-24 + A286 pairing, so the auto-lookup
+    %   in data.loadJointLibrary HITS and BoltRatedUltimateLoad /
+    %   BoltRatedYieldLoad arrive as the FF-S-86F Table VII spec values,
+    %   14,050 / 10,500 lbf. boltTensileAllowable therefore takes its
+    %   "rated" basis, NOT the derived At*Ftu convention per
+    %   NASA-STD-5020B §4.4.2 and NOT the Eq. 18 yield estimate — 5020B
+    %   offers Eq. 18 only "when a value is not explicitly defined in the
+    %   corresponding fastener specification", and here one is.
+    %   (Both bases sit within 0.4% of each other on this pairing, so
+    %   seeding the catalog moved every margin below only slightly; the
+    %   BASIS changed, which is the part that matters for traceability.)
+    %   Tension-Yield resolves to a real number that is NEGATIVE
+    %   (~-1.368): the same Fig. 8 gate this row's
     %   Tension-Ultimate uses (see below) is NOT assured here, so
     %   engine.marginTensionYield ALSO takes the not-assured Eq. 16/17 branch
     %   (P'ty = (Pty_allow - PpMax)/(n*phi), then MS = P'ty/Pty - 1) rather
     %   than the separation-assured Eq. 15 this test used to assume — and
-    %   Pty_allow (10,539.6) is itself below PpMax (11,006.78), so the
-    %   joint is genuinely over-torqued relative to its derived yield
+    %   Pty_allow (10,500) is itself below PpMax (11,006.78), so the
+    %   joint is genuinely over-torqued relative to its rated yield
     %   allowable (the same fact engine.preloadWatchdog already reports on
     %   this row as a Critical warning — see tExport.m's runBulkEndToEnd).
     %   Eq. 15 never subtracts preload, so it previously masked this.
@@ -53,9 +58,9 @@ classdef tBulk < matlab.unittest.TestCase
     %   row's thermal preload now comes from the SAME stiffness geometry
     %   via TM-106943 Eq. 10, giving PpMax ~11,006.78 lbf (not the book-
     %   matching 11,069.14 lbf the old ThermalRate=12.978 override gave).
-    %   The derived Ptu_allow (14,052.8 lbf) is still low enough that the
+    %   The rated Ptu_allow (14,050 lbf) is still low enough that the
     %   Fig. 8 preload gate is NOT assured (11,006.78 exceeds
-    %   0.75*14,052.8 = 10,539.6), so the RUPTURE branch (NASA-STD-5020B
+    %   0.75*14,050 = 10,537.5), so the RUPTURE branch (NASA-STD-5020B
     %   Eq. 10) governs — and now that phi is available, it evaluates to a
     %   real margin rather than NaN. Force resolution (Axial/Shear) and the
     %   joint-mode-slip nf
@@ -223,37 +228,40 @@ classdef tBulk < matlab.unittest.TestCase
             % call the private separationBeforeRuptureGate helper, so they
             % can never disagree about which branch applies) -- and per the
             % Tension-Ultimate derivation below, that gate is NOT assured
-            % on this row (PpMax 11,006.78 > 0.75*Ptu_allow 10,539.6), so
+            % on this row (PpMax 11,006.78 > 0.75*Ptu_allow 10,537.5), so
             % Tension-Yield ALSO takes the rupture-side branch, Eq. 16/17,
             % not the separation-assured Eq. 15 this used to assume.
             % HAND-DERIVED, longhand (phi = 0.394005, PpMax = 11,006.78,
             % n = 0.5 -- the identical stiffness/preload chain the
             % Tension-Ultimate derivation below works out in full; only the
             % allowable changes, bolt yield instead of bolt ultimate):
-            %   Pty_allow = (Fty/Ftu)*Ptu_allow = (120,000/160,000)*14,052.8
-            %             = 0.75*14,052.8 = 10,539.6              (Eq. 18)
+            %   Pty_allow = 10,500 lbf, the FF-S-86F Table VII rated yield
+            %             load for NAS1351 3/8-24 in A286 -- taken as-is,
+            %             NOT estimated via Eq. 18, because 5020B offers
+            %             that estimate only when the fastener spec does
+            %             not define a value.
             %   P'ty = (Pty_allow - PpMax)/(n*phi)
-            %        = (10,539.6 - 11,006.78)/(0.5*0.394005)
-            %        = -467.18/0.197003 = -2,371.44 lbf            (Eq. 17)
+            %        = (10,500 - 11,006.78)/(0.5*0.394005)
+            %        = -506.78/0.197003 = -2,572.45 lbf            (Eq. 17)
             %   Pty  = FSY*FFY*Axial = 1.25*1*5590 = 6,987.5 lbf
-            %   MS   = P'ty/Pty - 1 = -2,371.44/6,987.5 - 1 = -1.3394 (Eq. 16)
-            % Pty_allow is ITSELF below PpMax (10,539.6 < 11,006.78), so the
+            %   MS   = P'ty/Pty - 1 = -2,572.45/6,987.5 - 1 = -1.3682 (Eq. 16)
+            % Pty_allow is ITSELF below PpMax (10,500 < 11,006.78), so the
             % numerator of Eq. 17 is negative before the division even
             % starts -- this is a genuinely over-torqued joint (the same
             % fact engine.preloadWatchdog reports on this row, see
-            % tExport.m's runBulkEndToEnd Warnings check: PpMax is 104.4% of
-            % this same 10,539.6 derived yield allowable), not a defect.
+            % tExport.m's runBulkEndToEnd Warnings check: PpMax is 104.8% of
+            % this same 10,500 rated yield allowable), not a defect.
             % Eq. 15 (which never subtracts preload) masked this.
             testCase.verifyFalse(isnan(T.TensionYield(1)));
-            expectedPtuAllow = 0.08783 * 160000;               % At*Ftu, NAS1351 3/8-24 + A286
-            expectedPtyAllow = (120000/160000) * expectedPtuAllow;  % Eq. 18
+            expectedPtuAllow = 14050;   % FF-S-86F Tbl VII, NAS1351 3/8-24 + A286
+            expectedPtyAllow = 10500;   % FF-S-86F Tbl VII rated yield (no Eq. 18)
             phi = 0.394005;   n = 0.5;   PpMax = 11006.78;      % from the Tension-Ultimate derivation below
             fac = s.Factors;
             Pty = fac.FSY * fac.FFY * 5590;
             Pprime = (expectedPtyAllow - PpMax) / (n * phi);     % Eq. 17
             expectedTensionYield = Pprime / Pty - 1;             % Eq. 16
             testCase.verifyEqual(T.TensionYield(1), expectedTensionYield, "AbsTol", 1e-3);
-            testCase.verifyEqual(T.TensionYield(1), -1.3394, "AbsTol", 1e-3);
+            testCase.verifyEqual(T.TensionYield(1), -1.3682, "AbsTol", 1e-3);
             testCase.verifyLessThan(T.TensionYield(1), 0);   % over-torqued: assert the sign plainly
 
             % Interaction: T.InteractionR (renamed from "Interaction") NOW
@@ -277,15 +285,15 @@ classdef tBulk < matlab.unittest.TestCase
             PsuAllow = 93400 * (pi/4 * 0.375^2);          % A286 Fsu * BodyArea
             Rt       = Ptu / expectedPtuAllow;
             Rs       = Psu / PsuAllow;
-            % Rt = 0.640435, Rs = 0.243473 ->
-            % R = 0.640435^1.5 + 0.243473^2.5 = 0.512614 + 0.029158 = 0.541772
+            % Rt = 0.640562, Rs = 0.243473 ->
+            % R = 0.640562^1.5 + 0.243473^2.5 = 0.512675 + 0.029250 = 0.541925
             expectedR = Rt^1.5 + Rs^2.5;
             testCase.verifyEqual(T.InteractionR(1), expectedR, "AbsTol", 1e-6);
-            testCase.verifyEqual(T.InteractionR(1), 0.541772, "AbsTol", 1e-4);
+            testCase.verifyEqual(T.InteractionR(1), 0.541925, "AbsTol", 1e-4);
             d  = struct("Ptu", Ptu, "Pty", NaN, "Psu", Psu, "Psep", NaN);
             ia = engine.marginInteraction(jl(1).Joint, d);
             testCase.verifyEqual(ia.R, expectedR, "AbsTol", 1e-6);
-            testCase.verifyEqual(ia.R, 0.541772, "AbsTol", 1e-4);
+            testCase.verifyEqual(ia.R, 0.541925, "AbsTol", 1e-4);
             testCase.verifyTrue(ia.Pass);       % R <= 1
 
             % Tension-Ultimate NOW RESOLVES (the row carries BodyLengthInGrip
@@ -343,23 +351,23 @@ classdef tBulk < matlab.unittest.TestCase
             %    override's 11,069.14 lbf -- see the class header).
             %
             % 4) Fig. 8 gate still NOT assured: PpMax(11,006.78) exceeds
-            %    0.75*Ptu_allow = 0.75*14,052.8 = 10,539.6 -> rupture branch.
+            %    0.75*Ptu_allow = 0.75*14,050 = 10,537.5 -> rupture branch.
             %
             % 5) NASA-STD-5020B Eq. 10 (rupture): with n = LoadingPlaneFactor
             %    = 0.5,
             %      P'tu = (Ptu_allow - PpMax)/(n*phi)
-            %           = (14,052.8 - 11,006.78)/(0.5*0.394005)
-            %           = 3,046.02/0.197003 = 15,461.83 lbf
+            %           = (14,050 - 11,006.78)/(0.5*0.394005)
+            %           = 3,043.22/0.197003 = 15,447.62 lbf
             %      Ptu  = FSU*FFU*Axial = 1.4*1.15*5590 = 8,999.9 lbf
-            %      MS   = P'tu/Ptu - 1 = 15,461.83/8,999.9 - 1 = 0.718000
+            %      MS   = P'tu/Ptu - 1 = 15,447.62/8,999.9 - 1 = 0.716421
             %
             % (Adding NutHeight also makes the nut-thread-shear mode
             % assessable, but its computed ultimate, Fsu*As =
             % 93,400*0.75*pi*0.3479*0.328 ~= 25,100 lbf, is well above the
-            % bolt-derived 14,052.8 lbf, so it does NOT change Ptu_allow or
+            % bolt's 14,050 lbf rating, so it does NOT change Ptu_allow or
             % this margin -- the bolt mode still governs the system
             % minimum.)
-            testCase.verifyEqual(T.TensionUlt(1), 0.718000, "AbsTol", 1e-3);
+            testCase.verifyEqual(T.TensionUlt(1), 0.716421, "AbsTol", 1e-3);
 
             % Now that Tension-Yield/Shear-Ultimate/etc. can evaluate,
             % WorstMargin is a real number, not NaN (Interaction is
@@ -441,7 +449,7 @@ classdef tBulk < matlab.unittest.TestCase
             % Interaction ratio R are identical across all four and
             % hand-derivable from the same raw constants as
             % bulkRunsTemplateJointWithoutCrashing (NAS1351 3/8-24 + A286:
-            % At*Ftu = 0.08783*160000, Eq. 18 for yield, Eq. 20/21 criterion
+            % the FF-S-86F Table VII rated pair 14,050/10,500, Eq. 20/21 criterion
             % R = Rt^1.5 + Rs^2.5 for interaction -- direct evaluation, no
             % root-find). T.InteractionR now carries this R directly
             % (renamed from "Interaction", sourced from .R not .MS -- see
@@ -452,12 +460,12 @@ classdef tBulk < matlab.unittest.TestCase
             % -- gate/phi/PpMax are pure geometry+preload, independent of
             % which element references the joint, so they carry over
             % unchanged; only Pty's per-bolt load, 4022.5 vs 5590, differs):
-            %   Pty_allow = 10,539.6 (Eq. 18, unchanged)
-            %   P'ty = (10,539.6 - 11,006.78)/(0.5*0.394005) = -2,371.44 (Eq. 17, unchanged)
+            %   Pty_allow = 10,500 (FF-S-86F Table VII rating, unchanged)
+            %   P'ty = (10,500 - 11,006.78)/(0.5*0.394005) = -2,572.45 (Eq. 17, unchanged)
             %   Pty  = FSY*FFY*4022.5 = 1.25*1*4022.5 = 5,028.125 lbf
-            %   MS   = -2,371.44/5,028.125 - 1 = -1.4716              (Eq. 16)
-            expectedPtuAllow = 0.08783 * 160000;
-            expectedPtyAllow = (120000/160000) * expectedPtuAllow;
+            %   MS   = -2,572.45/5,028.125 - 1 = -1.5116              (Eq. 16)
+            expectedPtuAllow = 14050;
+            expectedPtyAllow = 10500;
             phi = 0.394005;   n = 0.5;   PpMax = 11006.78;
             fac = s.Factors;
             Pty = fac.FSY * fac.FFY * 4022.5;
@@ -469,8 +477,8 @@ classdef tBulk < matlab.unittest.TestCase
             PsuAllow = 93400 * (pi/4 * 0.375^2);          % A286 Fsu * BodyArea
             Rt       = Ptu / expectedPtuAllow;
             Rs       = Psu / PsuAllow;
-            % Rt = 0.460849, Rs = 0.222013 ->
-            % R = 0.460849^1.5 + 0.222013^2.5 = 0.312786 + 0.023189 = 0.336076
+            % Rt = 0.460941, Rs = 0.222013 ->
+            % R = 0.460941^1.5 + 0.222013^2.5 = 0.312945 + 0.023225 = 0.336170
             expectedR = Rt^1.5 + Rs^2.5;
             d  = struct("Ptu", Ptu, "Pty", NaN, "Psu", Psu, "Psep", NaN);
             ia = engine.marginInteraction(jl(1).Joint, d);
@@ -481,31 +489,31 @@ classdef tBulk < matlab.unittest.TestCase
             % elements reference it, and ThermalRate no longer exists as an
             % analyst override -- both rows go through the same
             % engine.stiffness + TM-106943 Eq. 10 thermal path) --
-            %   Ptu_allow = 14,052.8 (unchanged); PpMax = 11,006.78 lbf
+            %   Ptu_allow = 14,050 (unchanged); PpMax = 11,006.78 lbf
             %   (unchanged -- the thermal/torque preload chain doesn't
             %   depend on the per-bolt load); phi = 0.394005 (unchanged,
-            %   pure geometry) -> P'tu = 15,461.83 lbf (unchanged, Eq. 10's
+            %   pure geometry) -> P'tu = 15,447.62 lbf (unchanged, Eq. 10's
             %   numerator/denominator don't involve the per-bolt load).
             % Only Ptu itself changes with the smaller per-bolt axial load
             % here (4022.5 vs 5590 lbf):
             %   Ptu = FSU*FFU*4022.5 = 1.4*1.15*4022.5 = 6,476.225 lbf
-            %   MS  = 15,461.83/6,476.225 - 1 = 1.387475
-            expectedTensionUlt = 1.387475;
+            %   MS  = 15,447.62/6,476.225 - 1 = 1.385282
+            expectedTensionUlt = 1.385282;
 
             for k = 1:4
                 testCase.verifyEqual(T.Error(k), "");
                 testCase.verifyEqual(T.TensionYield(k), expectedTensionYield, "AbsTol", 1e-3);
-                testCase.verifyEqual(T.TensionYield(k), -1.4716, "AbsTol", 1e-3);
+                testCase.verifyEqual(T.TensionYield(k), -1.5116, "AbsTol", 1e-3);
                 testCase.verifyLessThan(T.TensionYield(k), 0);   % over-torqued, same as bulkRunsTemplateJointWithoutCrashing
                 testCase.verifyEqual(T.InteractionR(k), expectedR, "AbsTol", 1e-6);
-                testCase.verifyEqual(T.InteractionR(k), 0.336076, "AbsTol", 1e-4);
+                testCase.verifyEqual(T.InteractionR(k), 0.336170, "AbsTol", 1e-4);
                 testCase.verifyTrue(isnan(T.Slip(k)));
                 testCase.verifyGreaterThan(strlength(T.Note(k)), 0);
                 testCase.verifySubstring(T.Note(k), "BoltCount");
                 testCase.verifyEqual(T.TensionUlt(k), expectedTensionUlt, "AbsTol", 1e-3);
             end
             testCase.verifyEqual(ia.R, expectedR, "AbsTol", 1e-6);
-            testCase.verifyEqual(ia.R, 0.336076, "AbsTol", 1e-4);
+            testCase.verifyEqual(ia.R, 0.336170, "AbsTol", 1e-4);
             testCase.verifyTrue(ia.Pass);       % R <= 1
         end
 

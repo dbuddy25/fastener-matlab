@@ -157,7 +157,7 @@ C = {
 "Name"                "Joint Name"                  "Unique joint identifier; Elements rows reference it via joint_name. Rows with a blank Name are skipped."                                    "—"          "required"
 "Bolt"                "Bolt Size"                   "Bolt thread designation — a library key resolved via lib.bolt()."                                                                          "—"          "required; pick from Lists!Bolts"
 "BoltMaterial"        "Bolt Material"               "Bolt material — a library key resolved via lib.material()."                                                                                "—"          "required; pick from Lists!Materials"
-"BoltSpec"            "Bolt Spec (optional)"        "Explicit bolt-spec key for the rated ultimate/yield loads; blank = auto-lookup of the library spec matching Bolt + Bolt Material (none found: engine derives At*Ftu)." "—"          "optional"
+"BoltSpec"            "Bolt Spec (optional)"        "Explicit bolt-spec key for the rated ultimate/yield loads; blank = auto-lookup of the library spec matching Bolt + Bolt Material (no match: engine derives At*Ftu)." "—"          "optional"
 "FrustumAngle"        "Frustum Angle (deg)"         "Conical pressure-frustum half-angle used in the clamped-stack stiffness model."                                                            "deg"        "blank → 30"
 "ThreadsInShear"      "Threads in Shear?"           "TRUE = threads lie in the shear plane (threads-in-shear allowables); FALSE = unthreaded body in the shear plane."                          "TRUE/FALSE" "blank → TRUE (threads in shear)"
 "SlipMode"            "Slip Check"                  "How the slip margin is evaluated: Ignored, SingleFastener (per-bolt), or Joint (whole bolt-pattern; needs pattern_id rows = Bolt Count)."   "—"          "blank → SingleFastener; Lists!SlipMode"
@@ -234,12 +234,12 @@ function s = sampleNutJointRow()
 %   (NAS1351/A286 vs. the book's own bolt spec) and different derived
 %   allowables, is actively misleading -- anyone comparing this row's
 %   margins to the book will get different numbers and reasonably
-%   conclude the tool is wrong. No catalog boltSpec covers this
-%   bolt+material pairing, so BoltSpec is left blank: the auto-lookup
-%   documented in jointColumns' "Bolt Spec (optional)" row misses, and
-%   BoltRatedUltimateLoad/Yield stay NaN (engine derives them from At*Ftu/
-%   Fty at analysis time) -- itself a realistic demonstration of that
-%   fallback path.
+%   conclude the tool is wrong. BoltSpec is left blank so the row
+%   demonstrates the AUTO-LOOKUP documented in jointColumns' "Bolt Spec
+%   (optional)" row: the catalog ships a boltSpec for this NAS1351
+%   3/8-24 + A286 pairing, so BoltRatedUltimateLoad/Yield arrive filled
+%   from FF-S-86F Table VII (14,050 / 10,500 lbf) without the analyst
+%   naming a spec key.
 %
 %   BodyLengthInGrip / NutHeight (added so this row's stiffness actually
 %   resolves -- see jointColumns' BodyLengthInGrip row for why blank
@@ -287,8 +287,8 @@ function s = insertExampleRow()
 %INSERTEXAMPLEROW  The Helicoil-insert example joint (template row 2).
 %   Same catalog-hardware repointing as sampleNutJointRow (real NAS1351/
 %   A286/Al 7075-T7351 keys, not the DABJ fixture). BoltSpec is left blank
-%   for the same reason: no catalog boltSpec exists for this bolt+material
-%   pairing, so the row demonstrates the auto-lookup-miss fallback rather
+%   for the same reason: the row demonstrates the catalog auto-lookup
+%   (same NAS1351 3/8-24 + A286 pairing, same 14,050 / 10,500 lbf) rather
 %   than the explicit-override path.
 %
 %   BodyLengthInGrip: grip = Flange1Thickness = 0.25 in; washers add

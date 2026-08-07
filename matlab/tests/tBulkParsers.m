@@ -67,15 +67,18 @@ classdef tBulkParsers < matlab.unittest.TestCase
             j = jl(idx).Joint;
             testCase.verifyClass(j, "model.Joint");
 
-            % Library-resolved pieces. BoltSpec is blank and no catalog
-            % boltSpec matches NAS1351 3/8-24 + A286, so the AUTO-LOOKUP
-            % misses and the rated loads stay NaN (engine derives them from
-            % At*Ftu/Fty at analysis time).
+            % Library-resolved pieces. BoltSpec is blank, but the catalog
+            % now ships a boltSpec for NAS1351 3/8-24 + A286, so the
+            % AUTO-LOOKUP HITS and fills the rated loads from FF-S-86F
+            % Table VII (heat and corrosion resistant steel = A286).
+            % This is the path data.loadJointLibrary exists to exercise:
+            % a row that names only a bolt and a material still arrives
+            % carrying the spec's allowables, with no BoltSpec cell.
             testCase.verifyEqual(j.Bolt.NominalDiameter, 0.375, "AbsTol", 1e-12);
             testCase.verifyEqual(j.Bolt.Series, model.ThreadSeries.UNF);
             testCase.verifyEqual(j.BoltMaterial.Name, "A286");
-            testCase.verifyTrue(isnan(j.BoltRatedUltimateLoad));   % auto-lookup miss
-            testCase.verifyTrue(isnan(j.BoltRatedYieldLoad));
+            testCase.verifyEqual(j.BoltRatedUltimateLoad, 14050);   % auto-lookup hit
+            testCase.verifyEqual(j.BoltRatedYieldLoad,    10500);
 
             % Direct-column pieces
             testCase.verifyEqual(j.BoltCount, 4);
@@ -188,8 +191,7 @@ classdef tBulkParsers < matlab.unittest.TestCase
             % one place Le = EngagementRatio x Bolt.NominalDiameter gets
             % computed, at analysis time against THAT row's own bolt (see
             % data/loadJointLibrary.m). HelicoilParent* -> HostName/
-            % Material, the explicit BoltSpec override, the AxialX mark,
-            % and the On-gated head washer.
+            % Material, the AxialX mark, and the On-gated head washer.
             lib = data.Library.load();
             jl  = data.loadJointLibrary( ...
                 tBulkParsers.templatePath("joint_library_template.csv"), lib);
@@ -230,13 +232,11 @@ classdef tBulkParsers < matlab.unittest.TestCase
             % analysis -- see tests/tBulk.m's class header.
             testCase.verifyEqual(j.BodyLengthInGrip, 0.15, "AbsTol", 1e-12);
 
-            % BoltSpec is blank and no catalog boltSpec matches NAS1351
-            % 3/8-24 + A286, so the rated loads stay NaN (same auto-lookup
-            % miss as loadsJointLibrary -- library.json ships no catalog
-            % boltSpec, so the explicit-override path isn't demonstrable
-            % against shipped data).
-            testCase.verifyTrue(isnan(j.BoltRatedUltimateLoad));
-            testCase.verifyTrue(isnan(j.BoltRatedYieldLoad));
+            % BoltSpec is blank here too, and this row carries the same
+            % NAS1351 3/8-24 + A286 pairing, so the same catalog auto-lookup
+            % hit fills the rated loads (FF-S-86F Table VII).
+            testCase.verifyEqual(j.BoltRatedUltimateLoad, 14050);
+            testCase.verifyEqual(j.BoltRatedYieldLoad,    10500);
 
             % A few schema spot-checks on the same row
             testCase.verifyEqual(j.ShearPlane, model.ShearPlaneCondition.ThreadsInShear);
@@ -310,15 +310,10 @@ classdef tBulkParsers < matlab.unittest.TestCase
             % A friendly banner row ABOVE the real header must be skipped:
             % the reader picks the row that best matches the known column
             % names. Also covers the no-Axial-mark default (BoltAxis Z) and
-            % the boltSpec auto-lookup on a minimal row. Library.json ships
-            % no catalog boltSpec, so a spec is added LOCALLY here (not
-            % shipped baseline data) purely to exercise the auto-lookup
-            % mechanism itself.
+            % the boltSpec auto-lookup on a minimal row -- a row naming only
+            % a bolt and a material, with no BoltSpec column at all, must
+            % still arrive carrying the catalogue's rated loads.
             lib = data.Library.load();
-            lib = lib.addBoltSpec(struct("key", "test auto-lookup spec", ...
-                "bolt", "NAS1351 3/8-24", "material", "A286", ...
-                "ratedUltimateLoad", 15200, "ratedYieldLoad", 11400, ...
-                "source", "tBulkParsers test entry"));
             f = tBulkParsers.writeTempCsv(testCase, { ...
                 'My Joint Table (friendly names go here),,,', ...
                 'Name,Bolt,BoltMaterial,SlipMode', ...
@@ -329,7 +324,8 @@ classdef tBulkParsers < matlab.unittest.TestCase
             testCase.verifyEqual(jl(1).Name, "HDR test");
             testCase.verifyEqual(jl(1).Joint.SlipMode, model.SlipMode.Ignored);
             testCase.verifyEqual(jl(1).Joint.BoltAxis, model.BoltAxis.Z);   % none marked
-            testCase.verifyEqual(jl(1).Joint.BoltRatedUltimateLoad, 15200); % auto-lookup
+            testCase.verifyEqual(jl(1).Joint.BoltRatedUltimateLoad, 14050); % auto-lookup
+            testCase.verifyEqual(jl(1).Joint.BoltRatedYieldLoad,    10500);
         end
 
         function elementsHeaderRowAutoDetect(testCase)
