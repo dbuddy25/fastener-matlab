@@ -701,19 +701,26 @@ classdef JointConfigPage < gui2.Page
             b.RowSpacing  = 4;
             b.Padding     = [6 6 6 6];
 
-            % L1 CANNOT be made automatic, despite the spec's first draft
-            % saying so. engine.stiffness derives it from
-            % Bolt.Length - Bolt.ThreadLength, and NO seeded bolt carries a
-            % thread length: it is a per-part property that varies with the
-            % ordered length, so it cannot live in a catalogue keyed by
-            % thread size. Deriving it would need per-part-number library
-            % entries (GUI2_SPEC.md 7.2d).
+            % L1 IS NOW A TRUE OVERRIDE, and this comment used to say the
+            % opposite. It claimed L1 could not be automatic because no
+            % seeded bolt carried a thread length -- true when written,
+            % false since NAS1351/NAS1352 Table II's minimum basic thread
+            % length was seeded onto all 25 catalogue bolts. Lt is keyed on
+            % SIZE, not on the ordered length, which is what made it
+            % catalogue data after all (GUI2_SPEC.md 7.2d, corrected).
+            % engine.stiffness has always had the derivation; it was only
+            % ever missing the input.
             obj.BodyLengthField = obj.addLabelledText(b, 1, ...
                 'Unthreaded body length L1 (in)', ...
                 ['L1 - the UNTHREADED shank length inside the clamp, used ' ...
                  'for bolt stiffness. NOT the bolt length and NOT the ' ...
-                 'thread length. Required for stiffness: catalogue bolts ' ...
-                 'carry no thread length, so it cannot be derived.']);
+                 'thread length. OPTIONAL: blank lets engine.stiffness ' ...
+                 'derive it from the bolt length minus the catalogue ' ...
+                 'thread length, or from the NASA-STD-5020B 4.7.4 length ' ...
+                 'estimate. A value typed here OVERRIDES that. The Bolt ' ...
+                 'length readout shows which one is in force. Note that ' ...
+                 'Lt is a MINIMUM thread length, so a derived L1 is the ' ...
+                 'longest shank the part can have.']);
             obj.bindEdit(obj.BodyLengthField, @(~, ~) obj.commitJoint());
 
             obj.RatedUltField = obj.addLabelledText(b, 2, ...
@@ -2064,7 +2071,8 @@ classdef JointConfigPage < gui2.Page
             if isempty(obj.BoltLengthLabel)
                 return
             end
-            r = engine.boltLengthCheck(obj.buildJoint());
+            j = obj.buildJoint();
+            r = engine.boltLengthCheck(j);
 
             lines = { ...
                 gui2.JointConfigPage.lineOrDash('Grip (stack + washers): %.4f in', ...
@@ -2090,7 +2098,52 @@ classdef JointConfigPage < gui2.Page
                 obj.BoltLengthLabel.FontColor  = gui2.palette('mutedText');
                 obj.BoltLengthLabel.FontWeight = 'normal';
             end
+
+            % L1 IS THE LINE THAT PREDICTS WHETHER MARGINS WILL EVALUATE.
+            % engine.stiffness needs it for phi, and phi is what the
+            % tension checks need; without it Tension-Ultimate and -Yield
+            % come back NotEvaluated with the reason buried in the Results
+            % detail. Reporting it HERE says so before Analyze is pressed,
+            % which is where the analyst can still do something about it.
+            [l1Text, l1Missing] = obj.bodyLengthLine(j);
+            lines{5} = l1Text;
+            if l1Missing && ~(r.Evaluated && r.Shortfall > 0)
+                % Amber unless the shortfall red is already the louder
+                % problem — never demote a failure to a warning.
+                obj.BoltLengthLabel.FontColor = gui2.palette('statusWarn');
+            end
             obj.BoltLengthLabel.Text = lines;
+        end
+
+        function [text, missing] = bodyLengthLine(obj, j)
+            %BODYLENGTHLINE  What L1 the stiffness model will actually use.
+            %   NOTHING IS COMPUTED HERE. engine.stiffness returns the L1
+            %   it resolved, through its own three-level precedence
+            %   (explicit override, then Bolt.Length − ThreadLength, then
+            %   the NASA-STD-5020B 4.7.4 estimate). Re-deriving any of that
+            %   in the page would be a second implementation that could
+            %   disagree with the one doing the analysis.
+            missing = false;
+            s = [];
+            try
+                s = engine.stiffness(j);
+            catch
+                % stiffness throws when it cannot resolve L1 at all -- the
+                % one case worth saying out loud.
+            end
+            if isempty(s) || isnan(s.L1)
+                missing = true;
+                text = ['Body length L1: — stiffness cannot run, so the ' ...
+                        'tension checks will report not evaluated. Supply ' ...
+                        'a bolt length, a nut engagement, or L1 itself.'];
+                return
+            end
+            if ~isnan(j.BodyLengthInGrip)
+                text = sprintf('Body length L1: %.4f in — your override', s.L1);
+            else
+                text = sprintf(['Body length L1: %.4f in — derived from ' ...
+                                'the bolt and its catalogue thread length'], s.L1);
+            end
         end
 
         function onFlangeEdited(obj)

@@ -502,12 +502,54 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
     end
     % ---- Bolt length readout -----------------------------------------------
     methods (Test)
-        function readoutIsAlwaysFourLinesAndNeverBlank(testCase)
+        function readoutIsAlwaysFiveLinesAndNeverBlank(testCase)
             txt = testCase.Page.boltLengthLabel().Text;
-            testCase.verifyNumElements(txt, 4, ...
-                'Grip, engagement, minimum, verdict - always four lines.');
+            testCase.verifyNumElements(txt, 5, ...
+                'Grip, engagement, minimum, verdict, L1 - always five lines.');
             testCase.verifyFalse(any(cellfun(@isempty, txt)), ...
                 'No line may render blank; unknown shows an em dash (A1).');
+        end
+
+        function theReadoutSaysWhenStiffnessCannotRun(testCase)
+            % THE line that predicts whether tension margins will evaluate.
+            % A blank form cannot resolve L1, and the analyst needs to know
+            % that here rather than from a NotEvaluated row after Analyze.
+            txt = testCase.Page.boltLengthLabel().Text;
+            testCase.verifyTrue( ...
+                contains(string(txt{5}), "stiffness cannot run"), ...
+                'A form that cannot resolve L1 must say so before Analyze.');
+        end
+
+        function aCataloguedBoltAndLengthDeriveL1WithoutAnOverride(testCase)
+            % REGRESSION for the whole point of seeding Table II's minimum
+            % basic thread length: engine.stiffness has always derived L1
+            % from Bolt.Length - ThreadLength, and only ever lacked the
+            % input. A real single-joint run used to lose its tension
+            % margins to this.
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltMaterialDropDown(), 'A286');
+            testCase.type(p.flangeThickness(1), '0.375');
+            testCase.choose(p.boltLengthField(), '1.25');
+
+            testCase.verifyTrue(isnan(testCase.App.State.Joint.BodyLengthInGrip), ...
+                'No override is typed - the derivation must stand alone.');
+            txt = p.boltLengthLabel().Text;
+            testCase.verifyTrue(contains(string(txt{5}), "derived"), ...
+                'L1 must come from the catalogue thread length, not a dash.');
+            testCase.verifyFalse(contains(string(txt{5}), "cannot run"));
+        end
+
+        function aTypedL1IsReportedAsTheOverrideItIs(testCase)
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.type(p.flangeThickness(1), '0.375');
+            testCase.choose(p.boltLengthField(), '1.25');
+            testCase.type(p.bodyLengthField(), '0.2');
+
+            txt = p.boltLengthLabel().Text;
+            testCase.verifyTrue(contains(string(txt{5}), "your override"), ...
+                'A typed L1 wins, and the readout must not call it derived.');
         end
 
         function anUnevaluatedCheckNamesItsCauseInAmber(testCase)
