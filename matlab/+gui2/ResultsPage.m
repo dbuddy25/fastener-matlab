@@ -87,7 +87,11 @@ classdef ResultsPage < gui2.Page
 
         function build(obj, parent)
             g = uigridlayout(parent, [6 2]);
-            g.RowHeight     = {'fit', 'fit', 'fit', '1x', 'fit', 'fit'};
+            % Rows 4 and 5 SHARE the height. The table has eight fixed rows
+            % and the detail panel grows with its citation, so giving the
+            % table all the slack left a tall band of empty grid under eight
+            % rows while the detail sat squeezed at the bottom.
+            g.RowHeight     = {'fit', 'fit', 'fit', '1x', '1x', 'fit'};
             g.ColumnWidth   = {'2x', '1x'};
             g.Padding       = [8 8 8 8];
             g.RowSpacing    = 8;
@@ -219,7 +223,10 @@ classdef ResultsPage < gui2.Page
             obj.Table.Layout.Row    = row;
             obj.Table.Layout.Column = 1;
             obj.Table.ColumnName    = {'Check', 'Value', 'Status'};
-            obj.Table.ColumnWidth   = {220, 150, 130};
+            % The last column takes the slack. Fixed widths summing to less
+            % than the cell left a dead strip inside the table's own border,
+            % which reads as a rendering fault rather than as spare room.
+            obj.Table.ColumnWidth   = {240, 150, '1x'};
             obj.Table.RowName       = {};
             obj.Table.ColumnEditable = [false false false];
             obj.Table.SelectionType = 'row';
@@ -229,7 +236,10 @@ classdef ResultsPage < gui2.Page
 
         function buildSidePanels(obj, g, row)
             side = uigridlayout(g, [2 1]);
-            side.Layout.Row    = row;
+            % Spans BOTH content rows: the decisions text is the longest
+            % thing on the page and was scrolling inside half the height it
+            % could have had.
+            side.Layout.Row    = [row row + 1];
             side.Layout.Column = 2;
             side.ColumnWidth   = {'1x'};
             side.RowHeight     = {'1x', '1x'};
@@ -353,11 +363,19 @@ classdef ResultsPage < gui2.Page
 
         function renderVerdict(obj)
             %RENDERVERDICT  Scope-qualified, always. Never "ALL CHECKS PASS".
-            %   Counts all NINE displayed checks, not the eight in the
-            %   table: Separation-before-rupture has a real Pass/Fail status
-            %   and counting only the table would let a failed Fig. 8 gate
-            %   escape the verdict entirely.
-            shown = obj.displayedMargins();
+            %   Counts the EIGHT margin rows. Separation-before-rupture is
+            %   deliberately excluded: "not assured" is a BRANCH SELECTION,
+            %   not a failure. It means the tension check took the more
+            %   conservative Eq. 10 rupture path instead of Eq. 6, and that
+            %   consequence is already fully reflected in the
+            %   Tension-Ultimate margin - counting it again reports the same
+            %   thing twice and paints a red failure on a joint that may be
+            %   entirely sound.
+            %
+            %   The engine agrees: it gives the gate MS = NaN, which
+            %   excludes it from WorstMargin. A row the engine refuses to
+            %   let govern should not govern the verdict either.
+            shown = obj.tableMargins();
             if isempty(shown)
                 % A Result carrying none of the nine names is not a pass -
                 % it is a Result this page cannot read (A1).
@@ -375,14 +393,6 @@ classdef ResultsPage < gui2.Page
             if nFail > 0
                 txt = sprintf('%d of %d displayed checks FAIL', nFail, nTotal);
                 col = gui2.palette('statusFail');
-                % The verdict counts nine and the table shows eight, so a
-                % failing Fig. 8 gate would otherwise be a failure the
-                % analyst cannot find. Point at where it actually lives.
-                decision = obj.marginNamed(gui2.ResultsPage.DecisionRow);
-                if ~isempty(decision) && decision.Status == "Fail"
-                    txt = [txt ' - including the separation-before-rupture ' ...
-                           'decision, shown under Analysis decisions below'];
-                end
             elseif nEval > 0
                 % A1 forbids an unqualified pass while anything is
                 % unevaluated - it would overstate what the engine
@@ -412,8 +422,17 @@ classdef ResultsPage < gui2.Page
 
             sbr = obj.marginNamed(gui2.ResultsPage.DecisionRow);
             if ~isempty(sbr)
-                lines{end+1} = sprintf('SEPARATION BEFORE RUPTURE: %s', ...
-                    gui2.ResultsPage.statusText(sbr.Status)); %#ok<AGROW>
+                % NOT "FAIL". The engine has only Pass/Fail/NotEvaluated to
+                % express a boolean gate with, but "not assured" selects the
+                % conservative Eq. 10 branch - it does not fail anything.
+                if sbr.Status == "Pass"
+                    verdict = 'ASSURED - Eq. 6 governs the tension check';
+                elseif sbr.Status == "Fail"
+                    verdict = 'NOT ASSURED - the conservative Eq. 10 rupture branch governs';
+                else
+                    verdict = char(gui2.ResultsPage.statusText(sbr.Status));
+                end
+                lines{end+1} = sprintf('SEPARATION BEFORE RUPTURE: %s', verdict); %#ok<AGROW>
                 if strlength(sbr.Method) > 0
                     lines{end+1} = sprintf('  %s', sbr.Method); %#ok<AGROW>
                 end
@@ -553,14 +572,6 @@ classdef ResultsPage < gui2.Page
         function rows = tableMargins(obj)
             %TABLEMARGINS  The eight table rows, in the declared order.
             rows = obj.marginsNamed(gui2.ResultsPage.TableRows);
-        end
-
-        function rows = displayedMargins(obj)
-            %DISPLAYEDMARGINS  All NINE displayed checks - the table's eight
-            %   plus the decision row, which carries a real Pass/Fail and so
-            %   belongs in the verdict count.
-            rows = obj.marginsNamed( ...
-                [gui2.ResultsPage.TableRows, gui2.ResultsPage.DecisionRow]);
         end
 
         function rows = marginsNamed(obj, names)

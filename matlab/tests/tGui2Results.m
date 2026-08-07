@@ -406,4 +406,32 @@ classdef tGui2Results < matlab.uitest.TestCase
                 Warnings  = warnings);
         end
     end
+    % ---- The gate is a branch, not a failure --------------------------------
+    methods (Test)
+        function anUnassuredGateDoesNotCountAsAFailedCheck(testCase)
+            % "decisionFails": every margin passes, only the Fig. 8 gate is
+            % not assured. That selects the conservative Eq. 10 rupture
+            % branch - and that consequence is ALREADY in the
+            % Tension-Ultimate margin, so counting it again reports the same
+            % thing twice and paints a red failure on a sound joint. The
+            % engine gives the gate MS = NaN precisely so it cannot govern.
+            testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
+
+            txt = string(testCase.App.page("Results").verdictLabel().Text);
+            testCase.verifyFalse(contains(upper(txt), "FAIL"), ...
+                'An unassured gate must not make an all-passing joint read as failing.');
+            testCase.verifyTrue(contains(txt, "8"), ...
+                'The verdict counts the eight margin rows.');
+        end
+
+        function theGateStatesItsBranchRatherThanAPassOrFail(testCase)
+            testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
+
+            txt = string(testCase.App.page("Results").decisionArea().Value);
+            testCase.verifyTrue(any(contains(txt, "NOT ASSURED")), ...
+                'The gate states its branch, not a pass/fail verdict.');
+            testCase.verifyTrue(any(contains(txt, "Eq. 10")), ...
+                'It must say which equation that branch selects.');
+        end
+    end
 end
