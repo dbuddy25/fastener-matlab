@@ -336,29 +336,23 @@ returns `BearingDiameter` and the picker already fills it. Insert / tapped
 hole: no such field in the catalogue, and physically no bearing annulus. Its
 only consumer, `marginBearingUnderHead`, is outside the displayed scope.
 
-**d. Unthreaded body length L1 — field KEPT, moved to Advanced / overrides.**
+**d. Unthreaded body length L1 — kept in Advanced / overrides, now a true
+override.**
 
-> Originally specified for removal ("make it automatic"). **It cannot be made
-> automatic today.** `engine.stiffness` resolves L1 by three-level precedence
-> (`stiffness.m:144–190`): an explicit `Joint.BodyLengthInGrip` wins; otherwise
-> `Ls = Bolt.Length − Bolt.ThreadLength`; otherwise the bolt length is estimated
-> and the same subtraction applied. **Levels 2 and 3 both require
-> `Bolt.ThreadLength`, and no library bolt has one** — all 32 seeded entries
-> omit it on purpose, per their own source note: *"thread length is a per-part
-> (length-dependent) property."* NAS1351/NAS1352 thread length varies with the
-> ordered length, so it cannot live in a catalogue keyed by thread size.
+> Originally specified for removal, then documented as impossible because no
+> library bolt carried a thread length. **Both were wrong.** NAS1351/NAS1352
+> Table II gives `Lt`, the MINIMUM BASIC THREAD LENGTH, **per size** — it
+> follows the ASME B18.3 body size rather than the thread pitch, which is why
+> the two standards list identical values for every shared dash number. It sits
+> in a catalogue keyed by thread size perfectly well; nobody had transcribed it.
 >
-> With no thread length, removing the field leaves `L1 = NaN` and
-> `engine.stiffness` throws (`stiffness.m:187`) — taking down separation, the
-> tension-rupture branch, φ, and everything downstream. `stiffness.m:146` also
-> records that DABJ Example 8-b supplies `L1 = 0.70` directly, so the validated
-> example depends on this path.
+> With `Bolt.ThreadLength` seeded, `engine.stiffness` levels 2 and 3 can fire:
+> `Ls = Bolt.Length − Bolt.ThreadLength`, clipped into the clamp. The field
+> stays, but as a genuine override rather than the only working path.
 >
-> Making it automatic requires per-part-number library entries carrying thread
-> length — a `+data` change, out of scope for a pure-GUI pass. Logged in §15.
-
-The field keeps its current tooltip, plus: *required for bolt stiffness —
-catalogue bolts carry no thread length, so it cannot be derived.*
+> Note (c) bounds it: screws shorter than `Lt` are threaded as close to the
+> head as practicable, so `Lt` is the threaded length only for screws longer
+> than it.
 
 **e. Bolt rated loads auto-fill from the library and stay editable.**
 They fill from `data.Library.boltSpecFor(bolt, material)` on every bolt or

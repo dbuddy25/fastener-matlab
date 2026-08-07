@@ -120,6 +120,37 @@ classdef tLibrary < matlab.unittest.TestCase
             end
         end
 
+        function everySeededBoltCarriesItsMinimumBasicThreadLength(testCase)
+            % Lt from NAS1351/NAS1352 Table II. Without it engine.stiffness
+            % cannot derive L1 - it needs Bolt.Length - Bolt.ThreadLength -
+            % so levels 2 and 3 of its precedence could never fire and the
+            % manual L1 field was the only working path.
+            %
+            % The transcription is checked rather than trusted: every size
+            % at D >= 0.25 must satisfy the ASME B18.3 relation
+            % Lt = 2D + 0.500. The sub-quarter-inch sizes step
+            % .500/.625/.750/.875 instead and are listed explicitly.
+            small = [0.0600 0.500; 0.0730 0.625; 0.0860 0.625; 0.0990 0.625; ...
+                     0.1120 0.750; 0.1380 0.750; 0.1640 0.875; 0.1900 0.875];
+
+            lib = data.Library.load();
+            for key = lib.boltKeys()
+                b = lib.bolt(key);
+                testCase.verifyFalse(isnan(b.ThreadLength), ...
+                    "No thread length seeded for " + key);
+                if b.NominalDiameter >= 0.25
+                    testCase.verifyEqual(b.ThreadLength, ...
+                        2*b.NominalDiameter + 0.500, "AbsTol", 1e-9, ...
+                        "Lt does not satisfy Lt = 2D + 0.500 for " + key);
+                else
+                    i = find(abs(small(:,1) - b.NominalDiameter) < 1e-4, 1);
+                    testCase.verifyNotEmpty(i, "Unlisted small size " + key);
+                    testCase.verifyEqual(b.ThreadLength, small(i,2), ...
+                        "AbsTol", 1e-9, "Lt wrong for " + key);
+                end
+            end
+        end
+
         function everySeededBoltExistsInItsOwnSpec(testCase)
             % A bolt keyed to NAS1351 or NAS1352 must appear in that
             % standard's Table I. Four did not - both specs skip dash 05

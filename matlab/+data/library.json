@@ -401,10 +401,11 @@
       "tpi": 80,
       "tensileStressArea": 0.0018,
       "minorDiameter": 0.0438,
+      "threadLength": 0.5,
       "pitchDiameter": 0.0519,
       "bodyDiameter": 0.06,
       "headBearingDiameter": 0.096,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -416,10 +417,11 @@
       "tpi": 56,
       "tensileStressArea": 0.0037,
       "minorDiameter": 0.0628,
+      "threadLength": 0.625,
       "pitchDiameter": 0.0744,
       "bodyDiameter": 0.086,
       "headBearingDiameter": 0.138,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -431,10 +433,11 @@
       "tpi": 64,
       "tensileStressArea": 0.00393,
       "minorDiameter": 0.0657,
+      "threadLength": 0.625,
       "pitchDiameter": 0.0759,
       "bodyDiameter": 0.086,
       "headBearingDiameter": 0.138,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -446,10 +449,11 @@
       "tpi": 40,
       "tensileStressArea": 0.00603,
       "minorDiameter": 0.0795,
+      "threadLength": 0.75,
       "pitchDiameter": 0.0958,
       "bodyDiameter": 0.112,
       "headBearingDiameter": 0.177,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -461,10 +465,11 @@
       "tpi": 48,
       "tensileStressArea": 0.0066,
       "minorDiameter": 0.0849,
+      "threadLength": 0.75,
       "pitchDiameter": 0.0985,
       "bodyDiameter": 0.112,
       "headBearingDiameter": 0.177,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -476,10 +481,11 @@
       "tpi": 32,
       "tensileStressArea": 0.00909,
       "minorDiameter": 0.0974,
+      "threadLength": 0.75,
       "pitchDiameter": 0.1177,
       "bodyDiameter": 0.138,
       "headBearingDiameter": 0.216,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -491,10 +497,11 @@
       "tpi": 40,
       "tensileStressArea": 0.01014,
       "minorDiameter": 0.1055,
+      "threadLength": 0.75,
       "pitchDiameter": 0.1218,
       "bodyDiameter": 0.138,
       "headBearingDiameter": 0.216,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -506,10 +513,11 @@
       "tpi": 32,
       "tensileStressArea": 0.01401,
       "minorDiameter": 0.1234,
+      "threadLength": 0.875,
       "pitchDiameter": 0.1437,
       "bodyDiameter": 0.164,
       "headBearingDiameter": 0.254,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -521,10 +529,11 @@
       "tpi": 36,
       "tensileStressArea": 0.01473,
       "minorDiameter": 0.1279,
+      "threadLength": 0.875,
       "pitchDiameter": 0.146,
       "bodyDiameter": 0.164,
       "headBearingDiameter": 0.254,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -536,10 +545,11 @@
       "tpi": 24,
       "tensileStressArea": 0.01753,
       "minorDiameter": 0.1359,
+      "threadLength": 0.875,
       "pitchDiameter": 0.1629,
       "bodyDiameter": 0.19,
       "headBearingDiameter": 0.295,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -551,10 +561,11 @@
       "tpi": 32,
       "tensileStressArea": 0.01999,
       "minorDiameter": 0.1494,
+      "threadLength": 0.875,
       "pitchDiameter": 0.1697,
       "bodyDiameter": 0.19,
       "headBearingDiameter": 0.295,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (tabulated for numbered sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -566,10 +577,11 @@
       "tpi": 20,
       "tensileStressArea": 0.03182,
       "minorDiameter": 0.185,
+      "threadLength": 1,
       "pitchDiameter": 0.2175,
       "bodyDiameter": 0.25,
       "headBearingDiameter": 0.375,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -581,10 +593,11 @@
       "tpi": 28,
       "tensileStressArea": 0.03637,
       "minorDiameter": 0.2036,
+      "threadLength": 1,
       "pitchDiameter": 0.2268,
       "bodyDiameter": 0.25,
       "headBearingDiameter": 0.375,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -596,10 +609,11 @@
       "tpi": 18,
       "tensileStressArea": 0.05243,
       "minorDiameter": 0.2403,
+      "threadLength": 1.125,
       "pitchDiameter": 0.2764,
       "bodyDiameter": 0.3125,
       "headBearingDiameter": 0.46875,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -611,10 +625,11 @@
       "tpi": 24,
       "tensileStressArea": 0.05807,
       "minorDiameter": 0.2584,
+      "threadLength": 1.125,
       "pitchDiameter": 0.2854,
       "bodyDiameter": 0.3125,
       "headBearingDiameter": 0.46875,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -626,10 +641,11 @@
       "tpi": 16,
       "tensileStressArea": 0.07749,
       "minorDiameter": 0.2938,
+      "threadLength": 1.25,
       "pitchDiameter": 0.3344,
       "bodyDiameter": 0.375,
       "headBearingDiameter": 0.5625,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -641,10 +657,11 @@
       "tpi": 24,
       "tensileStressArea": 0.08783,
       "minorDiameter": 0.3209,
+      "threadLength": 1.25,
       "pitchDiameter": 0.3479,
       "bodyDiameter": 0.375,
       "headBearingDiameter": 0.5625,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -656,10 +673,11 @@
       "tpi": 14,
       "tensileStressArea": 0.10631,
       "minorDiameter": 0.3447,
+      "threadLength": 1.375,
       "pitchDiameter": 0.3911,
       "bodyDiameter": 0.4375,
       "headBearingDiameter": 0.65625,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -671,10 +689,11 @@
       "tpi": 20,
       "tensileStressArea": 0.11872,
       "minorDiameter": 0.3725,
+      "threadLength": 1.375,
       "pitchDiameter": 0.405,
       "bodyDiameter": 0.4375,
       "headBearingDiameter": 0.65625,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -686,10 +705,11 @@
       "tpi": 13,
       "tensileStressArea": 0.1419,
       "minorDiameter": 0.4001,
+      "threadLength": 1.5,
       "pitchDiameter": 0.45,
       "bodyDiameter": 0.5,
       "headBearingDiameter": 0.75,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -701,10 +721,11 @@
       "tpi": 20,
       "tensileStressArea": 0.15995,
       "minorDiameter": 0.435,
+      "threadLength": 1.5,
       "pitchDiameter": 0.4675,
       "bodyDiameter": 0.5,
       "headBearingDiameter": 0.75,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -716,10 +737,11 @@
       "tpi": 11,
       "tensileStressArea": 0.226,
       "minorDiameter": 0.5069,
+      "threadLength": 1.75,
       "pitchDiameter": 0.566,
       "bodyDiameter": 0.625,
       "headBearingDiameter": 0.9375,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -731,10 +753,11 @@
       "tpi": 18,
       "tensileStressArea": 0.25596,
       "minorDiameter": 0.5528,
+      "threadLength": 1.75,
       "pitchDiameter": 0.5889,
       "bodyDiameter": 0.625,
       "headBearingDiameter": 0.9375,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -746,10 +769,11 @@
       "tpi": 10,
       "tensileStressArea": 0.33446,
       "minorDiameter": 0.6201,
+      "threadLength": 2,
       "pitchDiameter": 0.685,
       "bodyDiameter": 0.75,
       "headBearingDiameter": 1.125,
-      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1352 socket head cap screw (UNC). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     },
     {
@@ -761,10 +785,11 @@
       "tpi": 16,
       "tensileStressArea": 0.37296,
       "minorDiameter": 0.6688,
+      "threadLength": 2,
       "pitchDiameter": 0.7094,
       "bodyDiameter": 0.75,
       "headBearingDiameter": 1.125,
-      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. No threadLength: thread length is a per-part (length-dependent) property.",
+      "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked.",
       "origin": "baseline"
     }
   ],
