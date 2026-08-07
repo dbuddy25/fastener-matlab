@@ -1053,9 +1053,9 @@ classdef JointConfigPage < gui2.Page
             obj.Refreshing = true;
             c = onCleanup(@() obj.clearRefreshing()); %#ok<NASGU>
             obj.State.Joint = obj.buildJoint();
-            % One call site rather than one per handler: every edit path
-            % funnels through here, so the gate cannot be forgotten when a
-            % control is added.
+            % One call site per FUNNEL rather than one per handler, so the
+            % gate cannot be forgotten when a control is added. There are
+            % two funnels -- see commitLoadCase, which runs it as well.
             obj.validateRequired();
         end
 
@@ -1114,6 +1114,13 @@ classdef JointConfigPage < gui2.Page
             obj.Refreshing = true;
             c = onCleanup(@() obj.clearRefreshing()); %#ok<NASGU>
             obj.State.LoadCase = obj.buildLoadCase();
+            % The gate reads the LOAD CASE too now, so this funnel has to
+            % re-run it. There are two commit funnels, not one, and only
+            % commitJoint used to call the gate -- which was fine while
+            % the gate asked about hardware alone. Without this, typing
+            % the load that completes the form would leave Analyze
+            % disabled until some unrelated joint edit happened to run it.
+            obj.validateRequired();
         end
 
         function lc = buildLoadCase(obj)
@@ -1872,10 +1879,56 @@ classdef JointConfigPage < gui2.Page
             end
             % Flange material is required only for a row actually in the
             % stack - a row with no thickness is not part of this joint.
+            anyLayer = false;
             for i = 1:gui2.JointConfigPage.MaxFlangeLayers
-                if obj.parsePositive(obj.FlangeThickness{i}) > 0 && ...
-                        strlength(obj.selectedKey(obj.FlangeMaterial{i})) == 0
-                    missing(end + 1) = sprintf("Flange layer %d material", i); %#ok<AGROW>
+                if obj.parsePositive(obj.FlangeThickness{i}) > 0
+                    anyLayer = true;
+                    if strlength(obj.selectedKey(obj.FlangeMaterial{i})) == 0
+                        missing(end + 1) = sprintf("Flange layer %d material", i); %#ok<AGROW>
+                    end
+                end
+            end
+
+            % THE GATE NOW MATCHES WHAT THE ENGINE NEEDS, which it did not
+            % before: hardware alone let Analyze enable, and the run then
+            % came back with every margin NotEvaluated. A button that
+            % promises an answer and delivers a page of dashes is worse
+            % than one that says what is missing.
+            %
+            % Each of these three makes the analysis undefined rather than
+            % merely trivial:
+            if ~anyLayer
+                % No clamped stack means no grip, and grip is upstream of
+                % stiffness, preload and separation alike.
+                missing(end + 1) = "A flange layer thickness"; %#ok<AGROW>
+            end
+            if isnan(obj.parsePositive(obj.NominalTorqueField))
+                % Every NASA-STD-5020B check is written in terms of the
+                % preload band. This page is torque-control only, so the
+                % nominal torque IS the preload input.
+                missing(end + 1) = "Nominal torque"; %#ok<AGROW>
+            end
+            if ~obj.anyAppliedLoad()
+                % Margins are computed AGAINST applied loads. With none,
+                % every ratio is zero and every margin is infinite -- a
+                % result with no engineering content, reported as if it
+                % had some.
+                missing(end + 1) = "At least one applied limit load"; %#ok<AGROW>
+            end
+        end
+
+        function tf = anyAppliedLoad(obj)
+            %ANYAPPLIEDLOAD  Is a single limit load supplied anywhere?
+            %   The joint-level pair counts even while hidden: visibility
+            %   follows the slip mode, and a value already typed is still
+            %   part of the case.
+            fields = {obj.BoltTensileField, obj.BoltShearField, ...
+                      obj.JointTensileField, obj.JointShearField};
+            tf = false;
+            for i = 1:numel(fields)
+                if ~isempty(fields{i}) && ~isnan(obj.parseOptional(fields{i}))
+                    tf = true;
+                    return
                 end
             end
         end

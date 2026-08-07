@@ -809,51 +809,76 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 contains(string(p.requiredLabel().Text), "Flange layer 1 material"));
         end
 
-        function analyzeEnablesOnceTheFormIsCompleteAndProducesAResult(testCase)
-            p   = testCase.Page;
-            lib = testCase.App.State.Library;
-            bolts = lib.boltKeys();
-            bmats = lib.materialKeys(Role = "bolt");
-            mats  = lib.materialKeys();
-            testCase.assumeNotEmpty(bolts);
-            testCase.assumeNotEmpty(bmats);
-            testCase.assumeNotEmpty(mats);
-
-            testCase.choose(p.boltDropDown(), char(bolts(1)));
-            testCase.choose(p.boltMaterialDropDown(), char(bmats(1)));
-            testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
-            testCase.type(p.flangeThickness(1), '0.25');
-            testCase.choose(p.flangeMaterial(1), char(mats(1)));
+        function analyzeEnablesOnceTheFormIsComplete(testCase)
+            % "Complete" now means what the ENGINE needs, not just the
+            % hardware: a clamped layer, a preload and an applied load are
+            % each required before a run can say anything.
+            p = testCase.Page;
+            testCase.fillRunnableJoint();
 
             testCase.verifyEqual(char(p.analyzeButton().Enable), 'on', ...
                 'A complete form must enable Analyze.');
             testCase.verifyEmpty(char(p.requiredLabel().Text));
         end
 
-        function analyzeHandsAResultToAppState(testCase)
-            % The GATE's required set is not the ENGINE's. engine.analyze
-            % also needs a preload and limit loads before it can produce
-            % anything, so this fills a runnable joint rather than the
-            % minimum the button accepts. If the two sets should converge,
-            % that is a design decision - see the note in the step-8 report.
+        function hardwareAloneNoLongerEnablesAnalyze(testCase)
+            % REGRESSION. The gate used to pass on hardware alone, so
+            % Analyze enabled and the run came back with every margin
+            % NotEvaluated -- a button that promised an answer and
+            % delivered a page of dashes.
             p   = testCase.Page;
             lib = testCase.App.State.Library;
-            bolts = lib.boltKeys();
-            bmats = lib.materialKeys(Role = "bolt");
-            mats  = lib.materialKeys();
-            testCase.assumeNotEmpty(bolts);
-            testCase.assumeNotEmpty(bmats);
-            testCase.assumeNotEmpty(mats);
-
-            testCase.choose(p.boltDropDown(), char(bolts(1)));
-            testCase.choose(p.boltMaterialDropDown(), char(bmats(1)));
+            mats = lib.materialKeys();
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltMaterialDropDown(), 'A286');
             testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
             testCase.type(p.flangeThickness(1), '0.25');
             testCase.choose(p.flangeMaterial(1), char(mats(1)));
-            testCase.type(p.engagementLengthField(), '0.25');
+
+            testCase.verifyEqual(char(p.analyzeButton().Enable), 'off', ...
+                'Hardware alone cannot produce a margin.');
+            txt = string(p.requiredLabel().Text);
+            testCase.verifyTrue(contains(txt, "Nominal torque"), ...
+                'Every 5020B check is written in terms of the preload.');
+            testCase.verifyTrue(contains(txt, "applied limit load"), ...
+                'Margins are computed AGAINST loads.');
+        end
+
+        function anEmptyFlangeStackIsReportedAsMissing(testCase)
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.verifyTrue( ...
+                contains(string(p.requiredLabel().Text), "flange layer thickness"), ...
+                'No clamped stack means no grip, and grip is upstream of everything.');
+        end
+
+        function typingTheLastLoadEnablesAnalyzeImmediately(testCase)
+            % The load case is a SECOND commit funnel, and only the joint
+            % one used to re-run the gate. Without the gate on both,
+            % typing the load that completes the form would leave Analyze
+            % disabled until an unrelated joint edit happened to run it.
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            mats = lib.materialKeys();
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltMaterialDropDown(), 'A286');
+            testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.choose(p.flangeMaterial(1), char(mats(1)));
             testCase.type(p.nominalTorqueField(), '50');
+            testCase.assertEqual(char(p.analyzeButton().Enable), 'off');
+
             testCase.type(p.boltTensileField(), '400');
-            testCase.type(p.boltShearField(), '200');
+
+            testCase.verifyEqual(char(p.analyzeButton().Enable), 'on', ...
+                'The load edit must re-run the gate, not wait for a joint edit.');
+        end
+
+        function analyzeHandsAResultToAppState(testCase)
+            % The gate's required set and the ENGINE's have converged --
+            % what enables the button is now what a run needs.
+            p = testCase.Page;
+            testCase.fillRunnableJoint();
 
             testCase.press(p.analyzeButton());
 
@@ -1258,6 +1283,28 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
     % ---- Cascade helpers ----------------------------------------------------
     %   All of these return DISPLAY LABELS for choose(), never tokens.
     methods (Access = private)
+        function fillRunnableJoint(testCase)
+            %FILLRUNNABLEJOINT  The minimum form that can actually produce
+            %   a margin: hardware, a clamped layer, a preload and loads.
+            %   One definition, because the gate's required set and the
+            %   engine's are the same set now -- two copies of it would be
+            %   two places for them to drift apart again.
+            p    = testCase.Page;
+            lib  = testCase.App.State.Library;
+            mats = lib.materialKeys();
+            testCase.assumeNotEmpty(mats);
+
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltMaterialDropDown(), 'A286');
+            testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.choose(p.flangeMaterial(1), char(mats(1)));
+            testCase.type(p.engagementLengthField(), '0.25');
+            testCase.type(p.nominalTorqueField(), '50');
+            testCase.type(p.boltTensileField(), '400');
+            testCase.type(p.boltShearField(), '200');
+        end
+
         function [boltKey, matKey, spec] = firstBoltSpecPair(testCase)
             boltKey = ''; matKey = ''; spec = [];
             lib = testCase.App.State.Library;
