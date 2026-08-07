@@ -4,12 +4,12 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
     %
-    %   INCREMENT 1 scope: the page is a VIEW over AppState.JointLibrary.
-    %   It owns no storage, so what is worth asserting is that it renders
-    %   what state holds, re-renders when state changes, and does not
-    %   present an empty library as if it held something. The summary
-    %   panel and the load/rename/delete actions land in later increments
-    %   with their own tests.
+    %   The page is a VIEW over AppState.JointLibrary. It owns no storage,
+    %   so what is worth asserting is that it renders what state holds,
+    %   re-renders when state changes, does not present an empty library
+    %   as if it held something, and never shows an unset value as a real
+    %   one. The load / rename / delete actions land next, with their own
+    %   tests.
 
     properties
         App
@@ -93,7 +93,132 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
         end
     end
 
+    % ---- The summary ------------------------------------------------------
+    methods (Test)
+        function noSelectionPromptsRatherThanShowingABlankSummary(testCase)
+            % An all-em-dash summary panel and "nothing is selected" look
+            % the same at a glance, and one of them is a lie about a joint.
+            testCase.verifyFalse( ...
+                logical(testCase.Page.summaryPanel().Visible));
+            testCase.verifyFalse( ...
+                logical(testCase.Page.noSelectionLabel().Visible), ...
+                'With NO library at all, the empty state owns the cell.');
+            testCase.verifyTrue(logical(testCase.Page.emptyLabel().Visible));
+        end
+
+        function selectingAJointShowsItsStoredValues(testCase)
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryWith("Bracket");
+
+            testCase.verifyTrue(logical(testCase.Page.summaryPanel().Visible));
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("Bolt").Text), ...
+                "NAS1351 3/8-24");
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("BoltMat").Text), "A286");
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("BoltCount").Text), "4");
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("Torque").Text), "470 in-lbf");
+        end
+
+        function anUnsetValueReadsAsADashNotAZero(testCase)
+            % A1: an unknown must never be presentable as a fine value.
+            % NominalTorque defaults to NaN, and "0 in-lbf" would describe
+            % a joint that was never torqued rather than one not yet
+            % specified.
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryWith("Bare", Configured = false);
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("Torque").Text), "—");
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("Bolt").Text), "—");
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("Stack").Text), "—");
+        end
+
+        function theGripLengthComesFromTheModelNotFromArithmeticHere(testCase)
+            % Pins the value against model.Joint's own dependent property,
+            % so a page that started summing layers itself would diverge
+            % the moment the model's definition changed (washers, say).
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryWith("Stacked");
+            j = testCase.App.State.JointLibrary(1).Joint;
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("Grip").Text), ...
+                sprintf("%g in", j.GripLength));
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("Stack").Text), "2 layers");
+        end
+
+        function theSummaryFollowsTheSelection(testCase)
+            testCase.App.State.JointLibrary = [ ...
+                tGui2DefinedJoints.libraryWith("First",  Torque = 470), ...
+                tGui2DefinedJoints.libraryWith("Second", Torque = 250)];
+            testCase.assertEqual(numel(testCase.Page.listBox().Items), 2);
+
+            testCase.choose(testCase.Page.listBox(), 'Second');
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("Torque").Text), "250 in-lbf");
+
+            testCase.choose(testCase.Page.listBox(), 'First');
+            testCase.verifyEqual( ...
+                string(testCase.Page.summaryValue("Torque").Text), "470 in-lbf");
+        end
+
+        function aRefreshKeepsTheSelectedJointNotTheSelectedRow(testCase)
+            % Deleting the row ABOVE the selection must not slide the
+            % summary onto a different joint while the highlight appears
+            % not to move. Re-selection is by name for exactly this.
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryNamed(["A", "B", "C"]);
+            testCase.choose(testCase.Page.listBox(), 'C');
+            testCase.assertEqual(testCase.Page.selectedName(), "C");
+
+            lib = testCase.App.State.JointLibrary;
+            testCase.App.State.JointLibrary = lib([1 3]);   % drop "B"
+            testCase.verifyEqual(testCase.Page.selectedName(), "C", ...
+                'Selection must follow the joint, not the row index.');
+        end
+
+        function losingTheSelectedJointFallsToTheTopRatherThanShowingNothing(testCase)
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryNamed(["A", "B"]);
+            testCase.choose(testCase.Page.listBox(), 'B');
+            lib = testCase.App.State.JointLibrary;
+            testCase.App.State.JointLibrary = lib(1);       % drop "B" itself
+
+            testCase.verifyEqual(testCase.Page.selectedName(), "A");
+            testCase.verifyTrue(logical(testCase.Page.summaryPanel().Visible));
+        end
+    end
+
     methods (Static, Access = private)
+        function entry = libraryWith(name, opts)
+            %LIBRARYWITH  A one-entry library holding a realistic joint.
+            %   Configured=false leaves a default model.Joint, which is how
+            %   the unset-value rendering gets tested.
+            arguments
+                name            (1,1) string
+                opts.Torque     (1,1) double  = 470
+                opts.Configured (1,1) logical = true
+            end
+            j = model.Joint();
+            if opts.Configured
+                lib = data.Library.load();
+                j.Bolt         = lib.bolt("NAS1351 3/8-24");
+                j.BoltMaterial = lib.material("A286");
+                j.BoltCount    = 4;
+                al = lib.material("Al 7075-T7351");
+                j.FlangeStack  = [model.FlangeLayer(Thickness = 0.375, Material = al), ...
+                                  model.FlangeLayer(Thickness = 0.375, Material = al)];
+                p = j.PreloadSpec;
+                p.NominalTorque = opts.Torque;
+                j.PreloadSpec   = p;
+            end
+            entry = struct('Name', name, 'Joint', j);
+        end
+
         function lib = libraryNamed(names)
             %LIBRARYNAMED  A joint-library array with the given names.
             %   The Joint payload is a default model.Joint: increment 1
