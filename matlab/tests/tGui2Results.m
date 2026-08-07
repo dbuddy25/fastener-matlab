@@ -140,13 +140,26 @@ classdef tGui2Results < matlab.uitest.TestCase
             testCase.verifyFalse(contains(upper(txt), "ALL 9 DISPLAYED CHECKS PASS"));
         end
 
-        function aFailedDecisionRowStillCountsInTheVerdict(testCase)
-            % Separation-before-rupture is not in the table but IS one of the
-            % nine displayed checks. Counting only the table would let a
-            % failed Fig. 8 gate escape the verdict entirely.
+        function anUnassuredGateIsReportedButNotCountedAsAFailure(testCase)
+            % This test previously asserted the opposite - that a not-assured
+            % gate makes the verdict read FAIL - on the reasoning that
+            % counting only the table would let a failed Fig. 8 gate escape.
+            % That reasoning was wrong. Nothing escapes: the gate SELECTS the
+            % conservative Eq. 10 rupture branch, and that choice is already
+            % priced into the Tension-Ultimate margin. Counting it again
+            % reports one fact twice and paints a red failure on a sound
+            % joint. The engine gives the gate MS = NaN so it cannot govern
+            % WorstMargin; the verdict follows the same rule.
             testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
-            testCase.verifyTrue( ...
-                contains(string(testCase.Page.verdictLabel().Text), "FAIL"));
+
+            verdict = string(testCase.Page.verdictLabel().Text);
+            testCase.verifyFalse(contains(upper(verdict), "FAIL"), ...
+                'A branch selection must not read as a failed check.');
+
+            % Reported, though - never silently dropped.
+            decisions = string(testCase.Page.decisionArea().Value);
+            testCase.verifyTrue(any(contains(decisions, "NOT ASSURED")), ...
+                'The gate must still be stated plainly under Analysis decisions.');
         end
     end
 
@@ -406,28 +419,8 @@ classdef tGui2Results < matlab.uitest.TestCase
                 Warnings  = warnings);
         end
     end
-    % ---- The gate is a branch, not a failure --------------------------------
+    % ---- The gate names the branch it selects -------------------------------
     methods (Test)
-        function anUnassuredGateDoesNotCountAsAFailedCheck(testCase)
-            % "decisionFails": every margin passes, only the Fig. 8 gate is
-            % not assured. That selects the conservative Eq. 10 rupture
-            % branch - and that consequence is ALREADY in the
-            % Tension-Ultimate margin, so counting it again reports the same
-            % thing twice and paints a red failure on a sound joint. The
-            % engine gives the gate MS = NaN precisely so it cannot govern.
-            testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
-
-            txt = string(testCase.App.page("Results").verdictLabel().Text);
-            testCase.verifyFalse(contains(upper(txt), "FAIL"), ...
-                'An unassured gate must not make an all-passing joint read as failing.');
-            % The discriminator is the BRANCH taken, not a literal count:
-            % counting nine would hit the failure branch ("1 of 9 ... FAIL"),
-            % counting eight reaches the unevaluated branch, because the
-            % eight table rows are six passes and two NotEvaluated.
-            testCase.verifyTrue(contains(upper(txt), "NOT EVALUATED"), ...
-                'The verdict must describe the eight table rows, not the gate.');
-        end
-
         function theGateStatesItsBranchRatherThanAPassOrFail(testCase)
             testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
 
