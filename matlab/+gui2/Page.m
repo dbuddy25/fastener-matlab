@@ -66,6 +66,11 @@ classdef (Abstract) Page < handle
         % unit test building one in isolation) still works: setStatus is a
         % no-op rather than an error.
         StatusFcn = function_handle.empty
+
+        % Route to the shell's navigation, injected the same way and for
+        % the same reason: a page that held the app could reach the rail
+        % and other pages' widgets, which Section 5 forbids.
+        NavigateFcn = function_handle.empty
     end
 
     properties (Access = protected)
@@ -142,6 +147,18 @@ classdef (Abstract) Page < handle
             lb.FontColor       = gui2.palette('bannerInfoFg');
         end
 
+        function goToPage(obj, pageId)
+            %GOTOPAGE  Ask the shell to show another page.
+            %   For the handful of places where finishing an action means
+            %   the answer is elsewhere - Analyze landing on Results. A
+            %   no-op when unattached, so a page built outside a shell
+            %   still works.
+            if isempty(obj.NavigateFcn)
+                return
+            end
+            obj.NavigateFcn(string(pageId));
+        end
+
         function setStatus(obj, msg)
             %SETSTATUS  Write a one-line message to the shell's status bar.
             %   The route every page uses for INFORMATIONAL outcomes —
@@ -163,6 +180,15 @@ classdef (Abstract) Page < handle
 
     % ---- Shell-facing plumbing. Called by gui2.FastenerApp only. ---------
     methods (Sealed)
+        function attachNavigate(obj, fcn)
+            %ATTACHNAVIGATE  Give the page its route to navigation.
+            arguments
+                obj (1,1) gui2.Page
+                fcn (1,1) function_handle
+            end
+            obj.NavigateFcn = fcn;
+        end
+
         function attachStatus(obj, fcn)
             %ATTACHSTATUS  Give the page its route to the status bar.
             %   Called once by the shell as it registers the page. Pages

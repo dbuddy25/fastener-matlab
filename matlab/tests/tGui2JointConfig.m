@@ -767,6 +767,8 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyClass(testCase.App.State.Result, 'engine.Result', ...
                 'Analyze must hand a Result to AppState.');
             testCase.verifyFalse(testCase.App.State.ResultStale);
+            testCase.verifyEqual(testCase.App.activePageId(), "Results", ...
+                'Analyze must land on the answer - an analyst should never have to go find it.');
         end
 
         function savingWithNoNameIsRefused(testCase)

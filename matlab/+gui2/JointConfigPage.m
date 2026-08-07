@@ -1765,6 +1765,10 @@ classdef JointConfigPage < gui2.Page
                 return
             end
             obj.State.setResult(r);
+            % Section 8.3: the answer is on another page, so go there. An
+            % analyst should never have to find the result they just asked
+            % for.
+            obj.goToPage("Results");
             obj.setStatus(sprintf('Analyzed "%s".', ...
                 gui2.JointConfigPage.orPlaceholder(obj.State.Joint.Name, ...
                                                    'untitled joint')));

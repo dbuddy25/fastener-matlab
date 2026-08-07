@@ -22,6 +22,7 @@ function c = palette(name)
 %     statusPass / statusFail / statusWarn — bold status text colors
 %     defaultText / mutedText              — plain and de-emphasized text
 %     tablePassBg / tableFailBg / tableNaBg — margin-table cell backgrounds
+%     tableNotEvalBg                       — amber, a check that could not run (A1)
 %     fieldBg / requiredBlankBg            — editable-field background:
 %                                            normal, and the pale red for a
 %                                            REQUIRED field left blank
@@ -76,6 +77,12 @@ switch char(name)
     case 'tablePassBg', c = [0.78 0.94 0.78];
     case 'tableFailBg', c = [1.00 0.78 0.78];
     case 'tableNaBg',   c = [0.94 0.94 0.94];
+
+    % A check that could NOT RUN is amber, never the muted grey above.
+    % Grey reads as "nothing to report", which is the opposite of what an
+    % unevaluated check means (GUI2_HARVEST.md A1). tableNaBg stays for
+    % genuinely not-applicable cells and for muting a stale table.
+    case 'tableNotEvalBg', c = [1.000 0.953 0.804];
 
     % ---- Editable-field backgrounds (required-field validation) ----------
     % requiredBlankBg is the "missing required input" pale red from
