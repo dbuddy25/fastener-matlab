@@ -569,37 +569,47 @@ classdef DefinedJointsPage < gui2.Page
             %   does nothing" — a symptom three steps from its cause.
             %
             %   Two ways the answer is no:
-            %     - nothing has been built yet (no name, no bolt), or
+            %     - nothing has been built yet, or
             %     - what is there is already stored under some name.
+            %
+            %   ISEQUALN, NEVER ISEQUAL. This is the whole bug this method
+            %   was rewritten twice for. isequal(NaN, NaN) is FALSE, and an
+            %   unset joint is mostly NaN — BoltRatedUltimateLoad,
+            %   BodyLengthInGrip, NominalTorque, both washers' diameters.
+            %   So isequal called a joint different from ITSELF, the gate
+            %   answered "unsaved work" every time, and Load put up a
+            %   confirm it should never have shown. The symptom was a
+            %   button that appeared to do nothing. (matlab.unittest's own
+            %   verifyEqual uses isequaln, which is why the tests around
+            %   this never tripped over the same thing.)
             %
             %   COMPARISON IS ON THE SERIALIZED FORM, not on the objects.
             %   data.toStruct is what File > Save writes, so "already
-            %   saved" is being asked in exactly the terms that make it
-            %   true, and the answer cannot turn on object-comparison
-            %   semantics — dependent properties, class metadata — that
-            %   have nothing to do with whether work would be lost.
-            j = obj.State.Joint;
+            %   saved" is asked in exactly the terms that make it true.
+            here = gui2.DefinedJointsPage.serialized(obj.State.Joint);
+            if isempty(here)
+                tf = false;
+                return   % cannot compare: say nothing is at risk
+            end
 
-            % Cheap and decisive for the common case: a joint with neither
-            % a name nor a bolt is a fresh start, not work.
-            tf = strlength(strtrim(j.Name)) > 0 || ...
-                 strlength(strtrim(j.Bolt.Designation)) > 0;
-            if ~tf
+            % Nothing built yet. Compared rather than guessed at from a
+            % name-or-bolt heuristic: a joint carrying only a typed torque
+            % has no name and no bolt, and it is still work to lose.
+            blank = gui2.DefinedJointsPage.serialized(model.Joint());
+            if isequaln(here, blank)
+                tf = false;
                 return
             end
 
-            here = gui2.DefinedJointsPage.serialized(j);
-            if isempty(here)
-                return   % cannot compare: say nothing is at risk
-            end
             lib = obj.State.JointLibrary;
             for i = 1:numel(lib)
                 saved = gui2.DefinedJointsPage.serialized(lib(i).Joint);
-                if ~isempty(saved) && isequal(saved, here)
+                if ~isempty(saved) && isequaln(saved, here)
                     tf = false;
                     return
                 end
             end
+            tf = true;
         end
 
         function b = loadButton(obj)

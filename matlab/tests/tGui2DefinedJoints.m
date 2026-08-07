@@ -226,15 +226,33 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
         end
 
         function anEditedJointConfigIsWorthWarningAbout(testCase)
-            j = model.Joint(Name = "Half-built");
-            testCase.App.State.Joint = j;
+            testCase.App.State.Joint = model.Joint(Name = "Half-built");
             testCase.verifyTrue(testCase.Page.hasUnsavedJointWork());
         end
 
+        function workWithNeitherANameNorABoltStillCounts(testCase)
+            % A name-or-bolt heuristic reads this joint as a fresh start
+            % and lets Load discard it without asking. Only a comparison
+            % against a genuinely blank joint gets it right.
+            j = model.Joint();
+            p = j.PreloadSpec; p.NominalTorque = 999; j.PreloadSpec = p;
+            testCase.App.State.Joint = j;
+            testCase.verifyTrue(testCase.Page.hasUnsavedJointWork(), ...
+                'A typed torque is work, even with nothing else filled in.');
+        end
+
         function aJointAlreadyInTheLibraryIsNotUnsavedWork(testCase)
+            % ALSO THE NaN GUARD. A joint carries NaN in every unset
+            % numeric field, and isequal(NaN, NaN) is false — so an
+            % isequal-based gate calls this joint different from itself
+            % and warns about losing work that is already saved. Only
+            % isequaln can pass this.
             entry = tGui2DefinedJoints.libraryWith("Bracket", Torque = 310);
             testCase.App.State.JointLibrary = entry;
             testCase.App.State.Joint = entry.Joint;
+            testCase.verifyTrue( ...
+                isnan(entry.Joint.BoltRatedUltimateLoad), ...
+                'This joint must carry a NaN for the guard to mean anything.');
             testCase.verifyFalse(testCase.Page.hasUnsavedJointWork(), ...
                 'A joint already stored under a name cannot be lost.');
         end
