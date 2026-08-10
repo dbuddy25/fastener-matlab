@@ -24,6 +24,23 @@ classdef ResultsPage < gui2.Page
     %   a minimum over the displayed subset — that would be the view
     %   deriving a number, and it could overstate the margin (Section 2).
     %
+    %   THE READOUT ROW carries Result.Preload and Result.DesignLoads — the
+    %   nine numbers the margins were computed FROM. Both come straight off
+    %   the Result; neither is recomputed here, and in particular this page
+    %   never calls engine.preload. It could: the function is pure. But it
+    %   would then be answering for the joint currently on Joint Config
+    %   rather than the joint that produced this Result, so a stale result
+    %   would show fresh preload — exactly what the stale banner exists to
+    %   prevent. (engine.preload also lets stiffness errors propagate rather
+    %   than returning NotEvaluated, so a live readout would throw on a
+    %   half-filled joint.)
+    %
+    %   The readout panels are PERMANENT, never Visible-toggled: they render
+    %   em dashes when the Result carries no preload block, so the layout
+    %   does not jump between "no analysis" and "analysis". Both structs
+    %   default to struct() with NO fields, so absent-field is the normal
+    %   case, not an error case.
+    %
     %   Backed by AppState.Result. Repaints on ResultChanged, which fires
     %   both for a fresh result and for markResultStale.
 
@@ -47,6 +64,46 @@ classdef ResultsPage < gui2.Page
 
         % Above this, a capped margin renders ">+5". Display only.
         CapThreshold = 5
+
+        % The readout rows: field name on Result.Preload, the gloss, and the
+        % citation + written equation. Columns 2 and 3 become the tooltip, so
+        % the equation behind each number is one hover away (CLAUDE.md's
+        % traceability rule: reference, number, and the equation written out).
+        %
+        % Field names are shown VERBATIM rather than prettified, because they
+        % are the names engine.summary, the reports and the case JSON all use
+        % - an analyst cross-referencing this panel against a report must be
+        % able to match rows by eye.
+        PreloadRows = [ ...
+            "PpiMax", "Maximum initial (installation) preload", ...
+              "NASA-STD-5020B Eq. 3 - PpiMax = c_max*(1 + Gamma)*Ppi_nom"; ...
+            "PpiMin", "Minimum initial (installation) preload", ...
+              "NASA-STD-5020B Eq. 4 (separation-critical) - " + ...
+              "PpiMin = c_min*(1 - Gamma)*Ppi_nom; otherwise Eq. 5 - " + ...
+              "PpiMin = c_min*(1 - Gamma/sqrt(nf))*Ppi_nom"; ...
+            "ThermalDelta", "Thermal preload change - MAXIMUM SIDE ONLY", ...
+              "NASA TM-106943 (Chambers) Eq. 10 - " + ...
+              "Pth = (Kb*Kc/(Kb + Kc))*L*dT*(alpha_j - alpha_b). " + ...
+              "This is the GAIN added to PpMax. The minimum-side thermal " + ...
+              "LOSS is a different number: the engine folds it into PpMin " + ...
+              "and does not return it separately, so it cannot be shown here."; ...
+            "PpMax", "Maximum in-service preload", ...
+              "NASA-STD-5020B Eq. 1 - PpMax = PpiMax + Pth_max"; ...
+            "PpMin", "Minimum in-service preload", ...
+              "NASA-STD-5020B Eq. 2 - " + ...
+              "PpMin = (1 - relaxation)*PpiMin - creep - Pth_min"]
+
+        % Field name on Result.DesignLoads, gloss, formula. These are limit
+        % loads factored up; no 5020B equation number attaches to them.
+        DesignLoadRows = [ ...
+            "Ptu",  "Design ultimate tension", ...
+              "Ptu = FSU * FFU * BoltTensileLimitLoad"; ...
+            "Pty",  "Design yield tension", ...
+              "Pty = FSY * FFY * BoltTensileLimitLoad"; ...
+            "Psu",  "Design ultimate shear", ...
+              "Psu = FSU * FFU * BoltShearLimitLoad"; ...
+            "Psep", "Design separation load", ...
+              "Psep = FSSep * FFSep * BoltTensileLimitLoad"]
     end
 
     properties (Access = private)
@@ -54,6 +111,8 @@ classdef ResultsPage < gui2.Page
         VerdictLabel
         CapCheck
         StaleBanner
+        PreloadValues       % 1x5 gobjects, in PreloadRows order
+        DesignLoadValues    % 1x4 gobjects, in DesignLoadRows order
         Table
         DetailArea
         DecisionArea
@@ -86,12 +145,18 @@ classdef ResultsPage < gui2.Page
         end
 
         function build(obj, parent)
-            g = uigridlayout(parent, [6 2]);
-            % Rows 4 and 5 SHARE the height. The table has eight fixed rows
+            g = uigridlayout(parent, [7 2]);
+            % Rows 5 and 6 SHARE the height. The table has eight fixed rows
             % and the detail panel grows with its citation, so giving the
             % table all the slack left a tall band of empty grid under eight
             % rows while the detail sat squeezed at the bottom.
-            g.RowHeight     = {'fit', 'fit', 'fit', '1x', '1x', 'fit'};
+            %
+            % Row 4 (the preload / design-loads readout) is 'fit' and spans
+            % both columns. It sits ABOVE the table because it is the input
+            % side of the story - these are the loads the margins were
+            % computed from - and because column 2 has no free cell: the
+            % decisions/warnings panel deliberately spans both content rows.
+            g.RowHeight     = {'fit', 'fit', 'fit', 'fit', '1x', '1x', 'fit'};
             g.ColumnWidth   = {'2x', '1x'};
             g.Padding       = [8 8 8 8];
             g.RowSpacing    = 8;
@@ -120,16 +185,17 @@ classdef ResultsPage < gui2.Page
             obj.StaleBanner.FontWeight      = 'bold';
             obj.StaleBanner.Visible         = 'off';
 
-            obj.buildTable(g, 4);
-            obj.buildSidePanels(g, 4);
-            obj.buildDetailPanel(g, 5);
+            obj.buildReadoutRow(g, 4);
+            obj.buildTable(g, 5);
+            obj.buildSidePanels(g, 5);
+            obj.buildDetailPanel(g, 6);
 
             % PERMANENT, never Visible-toggled. A margin table that reads as
             % a complete 5020B assessment when six checks are missing is a
             % compliance problem, so the statement is always on screen.
             obj.ScopeLabel = uilabel(g, 'WordWrap', 'on', ...
                 'Text', obj.scopeFooterText());
-            obj.ScopeLabel.Layout.Row    = 6;
+            obj.ScopeLabel.Layout.Row    = 7;
             obj.ScopeLabel.Layout.Column = [1 2];
             obj.ScopeLabel.FontColor     = gui2.palette('mutedText');
 
@@ -157,12 +223,17 @@ classdef ResultsPage < gui2.Page
                 obj.DetailArea.Value      = {''};
                 obj.DecisionArea.Value    = {'Nothing decided yet - run Analyze on Joint Config.'};
                 obj.WarningArea.Value     = {''};
+                % Painted here too, not skipped: the readout must return to
+                % em dashes when a case is closed, or it would keep showing
+                % the previous joint's preload under an empty margin table.
+                obj.renderReadouts();
                 return
             end
 
             r = obj.State.Result;
             obj.StaleBanner.Visible = matlab.lang.OnOffSwitchState(obj.State.ResultStale);
 
+            obj.renderReadouts();
             obj.renderTable();
             obj.selectDefaultRow();
             obj.renderVerdict();
@@ -204,6 +275,65 @@ classdef ResultsPage < gui2.Page
                 'table of +47.30, +112.80, -0.14 buries the only number ' ...
                 'that matters.'];
             obj.CapCheck.ValueChangedFcn = @(~, ~) obj.onCapToggled();
+        end
+
+        function buildReadoutRow(obj, g, row)
+            %BUILDREADOUTROW  Preload and design loads, side by side.
+            %   Two panels rather than one: they come from two different
+            %   engine functions and one is an installation quantity while
+            %   the other is a factored load. Merging them into a single
+            %   nine-row list would invite reading PpMax against Ptu as if
+            %   they were the same kind of number.
+            strip = uigridlayout(g, [1 2]);
+            strip.Layout.Row    = row;
+            strip.Layout.Column = [1 2];
+            strip.ColumnWidth   = {'1x', '1x'};
+            strip.RowHeight     = {'fit'};
+            strip.Padding       = [0 0 0 0];
+            strip.ColumnSpacing = 10;
+
+            obj.PreloadValues = obj.buildReadoutPanel(strip, 1, ...
+                'Preload (engine.preload, lbf)', ...
+                gui2.ResultsPage.PreloadRows);
+            obj.DesignLoadValues = obj.buildReadoutPanel(strip, 2, ...
+                'Design loads (engine.designLoads, lbf)', ...
+                gui2.ResultsPage.DesignLoadRows);
+        end
+
+        function vals = buildReadoutPanel(~, parent, col, titleText, spec)
+            %BUILDREADOUTPANEL  One label/value panel. Returns the value labels.
+            p = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, ...
+                'Title', titleText);
+            p.Layout.Row    = 1;
+            p.Layout.Column = col;
+
+            n = size(spec, 1);
+            b = uigridlayout(p, [n 2]);
+            % Fixed label column: the two panels are siblings and an analyst
+            % reads across them, so 'fit' - which would size each panel's
+            % labels independently - puts the two value columns at different
+            % x positions and the row of numbers stops scanning as a row.
+            b.ColumnWidth   = {104, '1x'};
+            b.RowHeight     = repmat({20}, 1, n);
+            b.Padding       = [6 4 6 4];
+            b.RowSpacing    = 2;
+
+            vals = gobjects(1, n);
+            for i = 1:n
+                tip = char(spec(i, 2) + " - " + spec(i, 3));
+
+                lb = uilabel(b, 'Text', char(spec(i, 1)), 'Tooltip', tip);
+                lb.Layout.Row    = i;
+                lb.Layout.Column = 1;
+
+                % Right-aligned: these are magnitudes read against each
+                % other, and ragged-left digits defeat that comparison.
+                v = uilabel(b, 'Text', char(8212), 'Tooltip', tip, ...
+                    'HorizontalAlignment', 'right');
+                v.Layout.Row    = i;
+                v.Layout.Column = 2;
+                vals(i) = v;
+            end
         end
 
         function buildTable(obj, g, row)
@@ -364,6 +494,43 @@ classdef ResultsPage < gui2.Page
             catch
                 % Styling unavailable - the numbers and the banner still
                 % carry the result.
+            end
+        end
+
+        function renderReadouts(obj)
+            %RENDERREADOUTS  Result.Preload and Result.DesignLoads -> labels.
+            %   Reads fields off the Result and formats them. Computes
+            %   nothing, derives nothing, and never falls back to calling
+            %   engine.preload - see the class note.
+            r = obj.State.Result;
+            if isempty(r)
+                pre  = struct();
+                load = struct();
+            else
+                pre  = r.Preload;
+                load = r.DesignLoads;
+            end
+
+            % Muted while stale, matching the table: a number that no longer
+            % describes the joint on screen must not read as current.
+            stale = ~isempty(r) && obj.State.ResultStale;
+
+            obj.fillReadout(obj.PreloadValues, ...
+                gui2.ResultsPage.PreloadRows(:, 1), pre, stale);
+            obj.fillReadout(obj.DesignLoadValues, ...
+                gui2.ResultsPage.DesignLoadRows(:, 1), load, stale);
+        end
+
+        function fillReadout(~, labels, names, src, stale)
+            %FILLREADOUT  One panel's value labels, in spec order.
+            if stale
+                col = gui2.palette('mutedText');
+            else
+                col = gui2.palette('defaultText');
+            end
+            for i = 1:numel(labels)
+                labels(i).Text      = gui2.ResultsPage.readoutValue(src, names(i));
+                labels(i).FontColor = col;
             end
         end
 
@@ -630,6 +797,55 @@ classdef ResultsPage < gui2.Page
             end
         end
 
+        function s = readoutValue(src, name)
+            %READOUTVALUE  One preload / design-load field, formatted.
+            %   Absent field, non-numeric, empty and NaN all render the same
+            %   em dash. Absent is the NORMAL case, not an error: Preload and
+            %   DesignLoads both default to struct() with no fields, so any
+            %   Result not built by engine.analyze arrives empty.
+            %
+            %   A1: an em dash, never a blank and never a zero. A zero here
+            %   would read as "this joint has no preload", which is a
+            %   statement the engine never made.
+            s = char(8212);
+            if ~isstruct(src) || ~isscalar(src) || ~isfield(src, char(name))
+                return
+            end
+            v = src.(char(name));
+            if ~isnumeric(v) || ~isscalar(v) || isnan(v)
+                return
+            end
+            s = gui2.ResultsPage.withThousands(v);
+        end
+
+        function s = withThousands(v)
+            %WITHTHOUSANDS  A force in lbf, 0 dp, comma-grouped.
+            %   Zero decimals per GUI2_HARVEST.md Section D. Forces here run
+            %   to five figures, and 15200 is materially harder to read
+            %   against 1520 than 15,200 is.
+            if isinf(v)
+                if v > 0
+                    s = '+inf';
+                else
+                    s = '-inf';
+                end
+                return
+            end
+            s = sprintf('%.0f', v);
+
+            % Group the digits only - the sign must not collect a comma.
+            neg = startsWith(s, '-');
+            if neg
+                s = s(2:end);
+            end
+            for k = (numel(s) - 3):-3:1
+                s = [s(1:k) ',' s(k + 1:end)];
+            end
+            if neg
+                s = ['-' s];
+            end
+        end
+
         function s = statusText(status)
             %STATUSTEXT  Engine status -> what the analyst reads.
             switch string(status)
@@ -713,6 +929,46 @@ classdef ResultsPage < gui2.Page
 
         function l = scopeLabel(obj)
             l = obj.ScopeLabel;
+        end
+
+        function v = preloadValues(obj)
+            v = obj.PreloadValues;
+        end
+
+        function v = designLoadValues(obj)
+            v = obj.DesignLoadValues;
+        end
+
+        function s = readoutText(obj, name)
+            %READOUTTEXT  The displayed string for one readout field, by name.
+            %   Keyed by the engine field name so a test asks for "PpMin"
+            %   rather than for an index into a panel - the panels are
+            %   ordered by a private constant a test cannot reach anyway, and
+            %   an index would silently follow a reordering to the wrong row.
+            s = char(obj.readoutLabel(name).Text);
+        end
+
+        function s = readoutTooltip(obj, name)
+            %READOUTTOOLTIP  The citation shown for one readout field, by name.
+            s = char(obj.readoutLabel(name).Tooltip);
+        end
+
+        function h = readoutLabel(obj, name)
+            %READOUTLABEL  The value label for one readout field, by name.
+            %   Errors rather than returning empty on an unknown name: a test
+            %   asking for a field that is not displayed has found a real
+            %   disagreement, and a silent '' would read as a passing assert.
+            k = find(gui2.ResultsPage.PreloadRows(:, 1) == name, 1);
+            if ~isempty(k)
+                h = obj.PreloadValues(k);
+                return
+            end
+            k = find(gui2.ResultsPage.DesignLoadRows(:, 1) == name, 1);
+            if isempty(k)
+                error('gui2:ResultsPage:noSuchReadout', ...
+                    'No readout row named "%s".', name);
+            end
+            h = obj.DesignLoadValues(k);
         end
     end
 end

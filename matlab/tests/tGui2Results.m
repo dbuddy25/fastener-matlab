@@ -362,6 +362,12 @@ classdef tGui2Results < matlab.uitest.TestCase
             %   "noFailures"    nothing fails, something unevaluated
             %   "decisionFails" only Separation-before-rupture fails
             %   "withWarning"   as "mixed", plus one warning row
+            %   "withPreload"   as "mixed", plus Preload and DesignLoads
+            %
+            %   EVERY OTHER VARIANT LEAVES Preload AND DesignLoads EMPTY, and
+            %   that is deliberate: struct() with no fields is what
+            %   engine.Result defaults to, so the readout's absent-field path
+            %   is the one most of this file exercises.
             row = @(n, ms, rr, st, me, de) struct( ...
                 'Name', string(n), 'MS', ms, 'R', rr, 'Status', string(st), ...
                 'Method', string(me), 'Detail', string(de));
@@ -417,8 +423,126 @@ classdef tGui2Results < matlab.uitest.TestCase
                 Margins   = margins, ...
                 Narrative = "Separation before rupture is assured.", ...
                 Warnings  = warnings);
+
+            if variant == "withPreload"
+                % Values chosen to be checkable by eye: PpMax crosses the
+                % comma boundary, ThermalDelta is small, and Psep is under
+                % 1000 so the ungrouped path is covered too.
+                r.Preload = struct( ...
+                    'PpiMax', 4210, 'PpiMin', 2890, 'ThermalDelta', 145, ...
+                    'PpMax', 4355, 'PpMin', 2731);
+                r.DesignLoads = struct( ...
+                    'Ptu', 15200, 'Pty', 11400, 'Psu', 9120, 'Psep', 962);
+            end
         end
     end
+    % ---- The preload / design-loads readout --------------------------------
+    methods (Test)
+        function theReadoutShowsThePreloadBandAndTheDesignLoads(testCase)
+            testCase.showResult(tGui2Results.syntheticResult("withPreload"));
+            p = testCase.Page;
+
+            testCase.verifyEqual(p.readoutText("PpiMax"), '4,210');
+            testCase.verifyEqual(p.readoutText("PpiMin"), '2,890');
+            testCase.verifyEqual(p.readoutText("ThermalDelta"), '145');
+            testCase.verifyEqual(p.readoutText("PpMax"), '4,355');
+            testCase.verifyEqual(p.readoutText("PpMin"), '2,731');
+
+            testCase.verifyEqual(p.readoutText("Ptu"),  '15,200');
+            testCase.verifyEqual(p.readoutText("Pty"),  '11,400');
+            testCase.verifyEqual(p.readoutText("Psu"),  '9,120');
+            testCase.verifyEqual(p.readoutText("Psep"), '962');
+        end
+
+        function theReadoutFrameStaysVisibleWithNoAnalysisAtAll(testCase)
+            % GUI2_HARVEST.md Section B: the frame stays visible when empty,
+            % so the layout does not jump once a result arrives.
+            p = testCase.Page;
+            testCase.verifyEqual(numel(p.preloadValues()), 5);
+            testCase.verifyEqual(numel(p.designLoadValues()), 4);
+
+            for v = [p.preloadValues(), p.designLoadValues()]
+                testCase.verifyEqual(char(v.Visible), 'on');
+            end
+        end
+
+        function anAbsentPreloadBlockRendersEmDashesNotZeros(testCase)
+            % A1, and the case that actually happens: Preload defaults to
+            % struct() with no fields, so a Result from anywhere but
+            % engine.analyze arrives empty. A zero would assert that this
+            % joint has no preload - something the engine never said.
+            testCase.showSynthetic();          % no Preload block
+            p = testCase.Page;
+
+            testCase.verifyEqual(p.readoutText("PpMax"), char(8212));
+            testCase.verifyEqual(p.readoutText("Ptu"), char(8212));
+        end
+
+        function closingTheResultReturnsTheReadoutToEmDashes(testCase)
+            % Otherwise the panel keeps showing the previous joint's preload
+            % under an empty margin table.
+            testCase.showResult(tGui2Results.syntheticResult("withPreload"));
+            testCase.verifyEqual(testCase.Page.readoutText("PpMax"), '4,355');
+
+            testCase.App.State.setResult([]);
+
+            testCase.verifyEqual(testCase.Page.readoutText("PpMax"), char(8212), ...
+                'A cleared result must clear the readout with it.');
+        end
+
+        function aStaleReadoutIsMutedButKeepsItsNumbers(testCase)
+            % Same rule the table follows (A3): the numbers were true when
+            % produced, so they stay readable - but they must not read as
+            % current.
+            testCase.showResult(tGui2Results.syntheticResult("withPreload"));
+            p = testCase.Page;
+
+            testCase.App.State.markDirty();    % as any edit would
+
+            testCase.verifyEqual(p.readoutText("PpMax"), '4,355', ...
+                'Muting is cosmetic and must never blank a number.');
+            vals = p.preloadValues();
+            testCase.verifyEqual(vals(1).FontColor, gui2.palette('mutedText'), ...
+                'A stale preload must not be presented as current.');
+        end
+
+        function theReadoutNamesTheEquationBehindEachNumber(testCase)
+            % CLAUDE.md's traceability rule: reference, equation number and
+            % the equation written out, at the point of use.
+            p = testCase.Page;
+            testCase.showResult(tGui2Results.syntheticResult("withPreload"));
+
+            testCase.verifyTrue( ...
+                contains(string(p.readoutTooltip("PpiMax")), "NASA-STD-5020B Eq. 3"));
+            testCase.verifyTrue( ...
+                contains(string(p.readoutTooltip("ThermalDelta")), "NASA TM-106943"), ...
+                'The thermal term is a TM-106943 formula, not a 5020B one.');
+            testCase.verifyTrue( ...
+                contains(string(p.readoutTooltip("PpMax")), "PpMax = PpiMax + Pth_max"), ...
+                'A citation without the written equation is not traceability.');
+        end
+
+        function theThermalRowSaysItIsTheMaximumSideOnly(testCase)
+            % The engine returns only the max-side GAIN. The min-side loss is
+            % folded into PpMin and never returned, so an unqualified
+            % "thermal delta" would overstate what is on screen.
+            testCase.showResult(tGui2Results.syntheticResult("withPreload"));
+            tip = string(testCase.Page.readoutTooltip("ThermalDelta"));
+
+            testCase.verifyTrue(contains(tip, "MAXIMUM SIDE ONLY"));
+            testCase.verifyTrue(contains(tip, "PpMin"), ...
+                'It must say where the minimum-side loss actually went.');
+        end
+
+        function theReadoutNeverMarksTheCaseDirty(testCase)
+            % A4. It is a readout; showing a result is not an edit.
+            testCase.showResult(tGui2Results.syntheticResult("withPreload"));
+
+            testCase.verifyFalse(testCase.App.State.IsDirty);
+            testCase.verifyFalse(testCase.App.State.ResultStale);
+        end
+    end
+
     % ---- The gate names the branch it selects -------------------------------
     methods (Test)
         function theGateStatesItsBranchRatherThanAPassOrFail(testCase)
