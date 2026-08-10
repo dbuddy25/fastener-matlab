@@ -1979,7 +1979,7 @@ classdef JointConfigPage < gui2.Page
             %   around construction catches nothing thrown from the event
             %   loop (GUI2_SPEC.md Section 11).
             try
-                r = engine.analyze(obj.buildJoint(), obj.buildLoadCase(), ...
+                r = engine.analyze(obj.jointForAnalysis(), obj.buildLoadCase(), ...
                     obj.State.Factors);
             catch err
                 % A failed run must not leave a confident verdict on
@@ -2001,6 +2001,28 @@ classdef JointConfigPage < gui2.Page
             obj.setStatus(sprintf('Analyzed "%s".', ...
                 gui2.JointConfigPage.orPlaceholder(obj.State.Joint.Name, ...
                                                    'untitled joint')));
+        end
+
+        function j = jointForAnalysis(obj)
+            %JOINTFORANALYSIS  The form's joint with the GLOBAL temperatures on.
+            %   Service temperatures are project-level, live on Temp &
+            %   Loads, and are NOT joint properties the form edits - so
+            %   buildJoint cannot know them and every joint it returns
+            %   carries model.Joint's 20/20/20 degC defaults.
+            %
+            %   Stamping them here, at the moment of analysis, is exactly
+            %   what engine.runBulk and engine.runWorkbook do. Until this
+            %   existed the single-joint path never applied them at all:
+            %   editing Temp & Loads changed the summary bar and nothing
+            %   else, and every run produced a thermal preload term of
+            %   exactly zero.
+            %
+            %   Through engine.applyTemperatures rather than three property
+            %   writes here, so the settings -> joint mapping stays in one
+            %   place and the Min <= Ref <= Max invariant is re-asserted on
+            %   this path too. It throws on an out-of-order settings file;
+            %   onAnalyze's catch turns that into the standard alert.
+            j = engine.applyTemperatures(obj.buildJoint(), obj.State.Settings);
         end
 
         function onSaveJoint(obj)
@@ -2633,6 +2655,14 @@ classdef JointConfigPage < gui2.Page
 
         function b = sectionButton(obj)
             b = obj.SectionButton;
+        end
+
+        function j = analysisJoint(obj)
+            %ANALYSISJOINT  Exactly the joint Analyze would hand the engine.
+            %   Seamed because the bug it guards was invisible from
+            %   outside: the run succeeded, the margins looked plausible,
+            %   and only the thermal term was silently zero.
+            j = obj.jointForAnalysis();
         end
 
         function l = requiredLabel(obj)

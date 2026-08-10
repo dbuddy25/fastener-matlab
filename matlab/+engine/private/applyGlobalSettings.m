@@ -45,16 +45,18 @@ function [jl, factors] = applyGlobalSettings(jl, s)
 %   rows "Bulk runner + XLSX export" and "Single-workbook end-to-end".
 factors = s.Factors;
 
-% Re-assert the invariant here (see header): the loop below writes these
-% three temperatures onto an already-built Joint's properties directly,
-% which does not go through model.Joint's constructor.
+% Re-asserted HERE TOO, not only inside engine.applyTemperatures: an
+% EMPTY joint library never enters the loop, and an out-of-order settings
+% file must be rejected on its own terms rather than going unnoticed
+% because there happened to be no joints to stamp it onto.
 model.Joint.checkTemperatureOrder(s.ColdTempC, s.NominalTempC, s.HotTempC);
 
+% Delegated per joint. The settings -> joint MAPPING lives in exactly one
+% place (engine.applyTemperatures), because the gui2 single-joint Analyze
+% path needs the same mapping and this function is private to +engine —
+% unreachable from the GUI, which is how single-joint runs ended up
+% silently using model.Joint's 20/20/20 degC defaults.
 for i = 1:numel(jl)
-    j = jl(i).Joint;
-    j.ReferenceTemperature = s.NominalTempC;
-    j.MaxTemperature       = s.HotTempC;
-    j.MinTemperature       = s.ColdTempC;
-    jl(i).Joint = j;
+    jl(i).Joint = engine.applyTemperatures(jl(i).Joint, s);
 end
 end

@@ -1295,6 +1295,58 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
     % ---- Cascade helpers ----------------------------------------------------
     %   All of these return DISPLAY LABELS for choose(), never tokens.
+    % ---- Global temperatures reach the engine ------------------------------
+    %   REGRESSION. Service temperatures are project-level and live on Temp
+    %   & Loads, so buildJoint cannot know them; nothing stamped them onto
+    %   the single-joint run, and every Analyze used model.Joint's 20/20/20
+    %   degC defaults. The run succeeded and the margins looked plausible -
+    %   only the thermal preload term was silently zero.
+    methods (Test)
+        function analyzeUsesTheGlobalServiceTemperatures(testCase)
+            testCase.App.State.Settings = struct( ...
+                'NominalTempC', 22, 'HotTempC', 71, 'ColdTempC', -54);
+
+            j = testCase.Page.analysisJoint();
+
+            testCase.verifyEqual(j.ReferenceTemperature, 22, ...
+                'Nominal is the reference temperature.');
+            testCase.verifyEqual(j.MaxTemperature, 71, ...
+                'Hot is the maximum service temperature.');
+            testCase.verifyEqual(j.MinTemperature, -54, ...
+                'Cold is the minimum service temperature.');
+        end
+
+        function changingTheTemperaturesChangesTheNextRun(testCase)
+            % The trickle itself: edit the global temps, and the joint the
+            % engine is handed must follow. It used to keep the defaults
+            % however the Temp & Loads page was edited.
+            testCase.App.State.Settings = struct( ...
+                'NominalTempC', 20, 'HotTempC', 20, 'ColdTempC', 20);
+            before = testCase.Page.analysisJoint().MaxTemperature;
+
+            testCase.App.State.Settings = struct( ...
+                'NominalTempC', 20, 'HotTempC', 90, 'ColdTempC', 20);
+            after = testCase.Page.analysisJoint().MaxTemperature;
+
+            testCase.verifyEqual(before, 20);
+            testCase.verifyEqual(after, 90, ...
+                'A changed service temperature must reach the analysis.');
+        end
+
+        function anEditedTemperatureStalesTheShownResult(testCase)
+            % The other half of "it did not trickle": numbers computed at
+            % the old temperatures must stop reading as current.
+            testCase.App.State.setResult(engine.Result(JointName = "prior"));
+            testCase.verifyFalse(testCase.App.State.ResultStale);
+
+            testCase.App.navigateTo("TempLoads");
+            testCase.type(testCase.App.page("TempLoads").hotField(), 85);
+
+            testCase.verifyTrue(testCase.App.State.ResultStale, ...
+                'A temperature edit invalidates the result it preceded.');
+        end
+    end
+
     methods (Access = private)
         function s = readoutLine(testCase, needle)
             %READOUTLINE  The first bolt-length readout line containing needle.
