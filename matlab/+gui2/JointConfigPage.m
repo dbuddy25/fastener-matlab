@@ -293,9 +293,7 @@ classdef JointConfigPage < gui2.Page
     % ---- Layout -----------------------------------------------------------
     methods (Access = private)
         function buildBoltGroup(obj, parent, row)
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Bolt');
-            panel.Layout.Row    = row;
-            panel.Layout.Column = 1;
+            panel = obj.collapsibleGroup(parent, row, "Bolt", false);
 
             b = uigridlayout(panel, [4 3]);
             b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
@@ -339,10 +337,8 @@ classdef JointConfigPage < gui2.Page
             % Named to head off the obvious misreading: the threaded member
             % is NOT a layer here. Nut, insert or tapped parent is its own
             % group - the stack is what the bolt clamps, nothing else.
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', ...
-                'Flange stack (clamped layers only - not the threaded member)');
-            panel.Layout.Row    = row;
-            panel.Layout.Column = 1;
+            panel = obj.collapsibleGroup(parent, row, ...
+                "Flange stack (clamped layers only - not the threaded member)", false);
 
             outer = uigridlayout(panel, [2 1]);
             outer.RowHeight   = {'fit', 'fit'};
@@ -454,9 +450,13 @@ classdef JointConfigPage < gui2.Page
             %   Both groups come from here, so the two structs carry
             %   identical fields in identical order - the thing that makes
             %   them safe to treat alike.
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', titleText);
-            panel.Layout.Row    = row;
-            panel.Layout.Column = 1;
+            % THE NUT GROUP STARTS FOLDED. withSameAsHead is true for
+            % exactly one of the two callers - the nut washer - which is
+            % also the group that earns its space least: it mirrors the head
+            % washer by default, so on most joints there is nothing in it to
+            % read. The head washer stays open.
+            panel = obj.collapsibleGroup(parent, row, string(titleText), ...
+                withSameAsHead);
 
             nRows = 7;
             b = uigridlayout(panel, [nRows 3]);
@@ -556,9 +556,7 @@ classdef JointConfigPage < gui2.Page
         end
 
         function buildMemberGroup(obj, parent, row)
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Threaded member');
-            panel.Layout.Row    = row;
-            panel.Layout.Column = 1;
+            panel = obj.collapsibleGroup(parent, row, "Threaded member", false);
 
             b = uigridlayout(panel, [5 3]);
             b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
@@ -641,9 +639,7 @@ classdef JointConfigPage < gui2.Page
             %   threaded member's engagement, so it has to sit below every
             %   input it consumes. The first build put a readout above two
             %   of its own inputs.
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Bolt length');
-            panel.Layout.Row    = row;
-            panel.Layout.Column = 1;
+            panel = obj.collapsibleGroup(parent, row, "Bolt length", false);
 
             b = uigridlayout(panel, [2 3]);
             b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
@@ -691,9 +687,7 @@ classdef JointConfigPage < gui2.Page
             %   left blank. They are grouped at the bottom rather than mixed
             %   into the stack because an override that sits among required
             %   inputs reads as one.
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Advanced / overrides');
-            panel.Layout.Row    = row;
-            panel.Layout.Column = 1;
+            panel = obj.collapsibleGroup(parent, row, "Advanced / overrides", true);
 
             b = uigridlayout(panel, [4 3]);
             b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
@@ -770,9 +764,7 @@ classdef JointConfigPage < gui2.Page
             %   first build removed the selector for the same reason.
             %   CreepLoss and ThermalRate have no controls either - the
             %   model keeps them for headless and fixture use.
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Preload (torque-controlled)');
-            panel.Layout.Row    = row;
-            panel.Layout.Column = 1;
+            panel = obj.collapsibleGroup(parent, row, "Preload (torque-controlled)", false);
 
             b = obj.groupGrid(panel, 6);
 
@@ -834,9 +826,7 @@ classdef JointConfigPage < gui2.Page
 
         function buildLoadsGroup(obj, parent, row)
             %BUILDLOADSGROUP  model.LoadCase - the single-joint limit loads.
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Applied loads (single joint)');
-            panel.Layout.Row    = row;
-            panel.Layout.Column = 1;
+            panel = obj.collapsibleGroup(parent, row, "Applied loads (single joint)", false);
 
             b = obj.groupGrid(panel, 5);
 
@@ -875,9 +865,7 @@ classdef JointConfigPage < gui2.Page
         end
 
         function buildAssumptionsGroup(obj, parent, row)
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Analysis assumptions');
-            panel.Layout.Row    = row;
-            panel.Layout.Column = 1;
+            panel = obj.collapsibleGroup(parent, row, "Analysis assumptions", false);
 
             b = obj.groupGrid(panel, 6);
 
@@ -935,9 +923,7 @@ classdef JointConfigPage < gui2.Page
         end
 
         function buildActionsGroup(obj, parent, row)
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Actions');
-            panel.Layout.Row    = row;
-            panel.Layout.Column = 1;
+            panel = obj.collapsibleGroup(parent, row, "Actions", false);
 
             b = uigridlayout(panel, [4 1]);
             b.ColumnWidth = {'1x'};

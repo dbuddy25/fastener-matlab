@@ -550,6 +550,10 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
         function aTypedL1IsReportedAsTheOverrideItIs(testCase)
             p = testCase.Page;
+            % Advanced starts COLLAPSED (Section 7.5), and matlab.uitest
+            % refuses a control in an invisible hierarchy - so open it
+            % first, exactly as the user would have to.
+            p.expandGroup("Advanced");
             testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
             testCase.choose(p.boltMaterialDropDown(), 'A286');
             testCase.type(p.flangeThickness(1), '0.375');
@@ -664,6 +668,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
         function bodyLengthAndRatedLoadsReachTheModel(testCase)
             p = testCase.Page;
+            p.expandGroup("Advanced");
             testCase.type(p.bodyLengthField(), '0.70');
             testCase.type(p.ratedUltField(), '4210');
             j = testCase.App.State.Joint;
@@ -675,6 +680,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % BoltRatedUltimateLoad is mustBeNONNEGATIVEOrNaN, unlike the
             % geometry fields: zero is a legitimate rating, so it must not
             % be silently converted to "not supplied".
+            testCase.Page.expandGroup("Advanced");
             testCase.type(testCase.Page.ratedUltField(), '0');
             testCase.verifyEqual(testCase.App.State.Joint.BoltRatedUltimateLoad, 0);
         end
@@ -683,6 +689,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % BodyLengthInGrip is mustBePositiveOrNaN - the same trap as
             % the flange geometry, the washer diameters and bolt length.
             p = testCase.Page;
+            p.expandGroup("Advanced");
             testCase.type(p.jointNameField(), "Zero L1 probe");
             testCase.type(p.bodyLengthField(), '0');
             testCase.verifyEqual(testCase.App.State.Joint.Name, "Zero L1 probe");
@@ -1295,6 +1302,63 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
     % ---- Cascade helpers ----------------------------------------------------
     %   All of these return DISPLAY LABELS for choose(), never tokens.
+    % ---- Collapsible groups (GUI2_SPEC.md Section 7.5) ---------------------
+    methods (Test)
+        function advancedAndTheNutWasherStartFolded(testCase)
+            % The two groups that earn their space least: Advanced is
+            % overrides most joints never set, and the nut washer mirrors
+            % the head washer by default.
+            folded = testCase.Page.collapsedGroups();
+
+            testCase.verifyTrue(any(contains(folded, "Advanced")));
+            testCase.verifyTrue(any(contains(folded, "Washer under nut")));
+        end
+
+        function thePhysicalStackGroupsStartOpen(testCase)
+            % Collapsing the joint itself by default would hide the form.
+            folded = testCase.Page.collapsedGroups();
+
+            for open = ["Bolt", "Flange stack", "Threaded member", "Actions"]
+                testCase.verifyFalse(any(contains(folded, open)), ...
+                    sprintf('"%s" must start open.', open));
+            end
+        end
+
+        function expandingAGroupRevealsIt(testCase)
+            p = testCase.Page;
+            testCase.verifyTrue(any(contains(p.collapsedGroups(), "Advanced")));
+
+            p.expandGroup("Advanced");
+
+            testCase.verifyFalse(any(contains(p.collapsedGroups(), "Advanced")));
+        end
+
+        function anUnknownGroupNameErrorsRatherThanDoingNothing(testCase)
+            % A silent no-op here would surface much later as a test that
+            % cannot type into a field, with nothing pointing back here.
+            testCase.verifyError(@() testCase.Page.expandGroup("No Such Group"), ...
+                'gui2:Page:noSuchGroup');
+        end
+
+        function aCollapsedGroupStillMarshalsIntoTheJoint(testCase)
+            % SECTION 7.5's whole reason for building bodies eagerly:
+            % buildJoint reads EVERY control, so a folded group must still
+            % contribute its value. If collapsing ever became lazy building,
+            % this is the test that catches it.
+            p = testCase.Page;
+            p.expandGroup("Advanced");
+            testCase.type(p.bodyLengthField(), '0.70');
+
+            % Fold it back up - the value must survive being hidden.
+            testCase.press(p.groupHeader("Advanced"));
+
+            testCase.verifyTrue(any(contains(p.collapsedGroups(), "Advanced")), ...
+                'The header press must have folded the group.');
+            testCase.verifyEqual(testCase.App.State.Joint.BodyLengthInGrip, 0.70, ...
+                'A collapsed group must still marshal into the joint.');
+        end
+    end
+
     % ---- Global temperatures reach the engine ------------------------------
     %   REGRESSION. Service temperatures are project-level and live on Temp
     %   & Loads, so buildJoint cannot know them; nothing stamped them onto

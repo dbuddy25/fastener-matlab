@@ -39,6 +39,12 @@ classdef (Abstract) Page < handle
     %   call state.markDirty(): refreshing is reading, and a dirty flag set
     %   by a refresh is a lie (GUI2_HARVEST.md A4).
 
+    properties (Constant)
+        % Header height of a collapsible group, px. A collapsed group is
+        % exactly this tall.
+        GroupHeaderH = 24
+    end
+
     properties (SetAccess = immutable, GetAccess = protected)
         % The one shared model. Immutable: a page is bound to its AppState
         % at construction and can never be repointed at another.
@@ -87,6 +93,14 @@ classdef (Abstract) Page < handle
         % page — dangling listeners on deleted objects leak and then throw
         % (GUI2_SPEC.md Section 5).
         Listeners = event.listener.empty(1, 0)
+
+        % Collapsible groups built by collapsibleGroup, in build order.
+        %   Title  string — the header label, and the key expandGroup takes
+        %   Grid   the 2-row [header; body] uigridlayout, whose RowHeight is
+        %          what actually collapses
+        %   Header the uibutton that toggles it
+        %   Body   the uipanel every caller fills
+        Groups = struct('Title', {}, 'Grid', {}, 'Header', {}, 'Body', {})
     end
 
     methods (Abstract)
@@ -113,6 +127,64 @@ classdef (Abstract) Page < handle
             %   Default: nothing. A page with no state-dependent rendering
             %   (a static placeholder, a help pane) legitimately needs no
             %   refresh, and forcing an empty override on it would be noise.
+        end
+
+        function expandGroup(obj, titleSubstring)
+            %EXPANDGROUP  Open a collapsible group by (partial) title.
+            %   Public because a control inside a COLLAPSED group is in an
+            %   invisible hierarchy, and matlab.uitest refuses to drive one
+            %   - a test that types into a collapsed group errors rather
+            %   than fails. So a test opens the group first, exactly as the
+            %   user would have to. Also the honest way for a later feature
+            %   ("go to the field that failed validation") to reveal it.
+            %
+            %   Substring, not exact: titles are long sentences here
+            %   ("Flange stack (clamped layers only - ...)").
+            arguments
+                obj             (1,1) gui2.Page
+                titleSubstring  (1,1) string
+            end
+            g = obj.groupNamed(titleSubstring);
+            gui2.Page.setGroupCollapsed(g.Grid, g.Header, g.Body, g.Title, false);
+        end
+
+        function h = groupHeader(obj, titleSubstring)
+            %GROUPHEADER  The toggle button of one collapsible group.
+            %   For tests that need to drive the toggle as a user does,
+            %   rather than call expandGroup and bypass the very thing
+            %   under test.
+            h = obj.groupNamed(titleSubstring).Header;
+        end
+
+        function g = groupNamed(obj, titleSubstring)
+            %GROUPNAMED  One group's handles, by partial title.
+            %   ERRORS on an unknown name rather than returning empty: a
+            %   silent no-op surfaces much later as a test that cannot type
+            %   into a field, with nothing pointing back here.
+            arguments
+                obj            (1,1) gui2.Page
+                titleSubstring (1,1) string
+            end
+            if isempty(obj.Groups)
+                error('gui2:Page:noSuchGroup', ...
+                    'This page has no collapsible groups.');
+            end
+            k = find(contains([obj.Groups.Title], titleSubstring), 1);
+            if isempty(k)
+                error('gui2:Page:noSuchGroup', ...
+                    'No collapsible group matching "%s".', titleSubstring);
+            end
+            g = obj.Groups(k);
+        end
+
+        function t = collapsedGroups(obj)
+            %COLLAPSEDGROUPS  Titles of the groups currently folded away.
+            t = string.empty(1, 0);
+            for i = 1:numel(obj.Groups)
+                if strcmp(char(obj.Groups(i).Body.Visible), 'off')
+                    t(end + 1) = obj.Groups(i).Title; %#ok<AGROW>
+                end
+            end
         end
 
         function s = railStatus(obj) %#ok<MANU>
@@ -269,6 +341,57 @@ classdef (Abstract) Page < handle
                 obj.State, char(eventName), @(~, ~) handler());
         end
 
+        function host = collapsibleGroup(obj, parent, row, titleText, startCollapsed)
+            %COLLAPSIBLEGROUP  A titled group whose body folds away (Section 7.5).
+            %   host = obj.collapsibleGroup(parent, row, "Bolt") returns the
+            %   container to build into, so a caller converts by replacing
+            %   its uipanel + Layout lines with one call and leaves the
+            %   uigridlayout that follows exactly as it was.
+            %
+            %   BODIES ARE BUILT EAGERLY; THIS TOGGLES VISIBILITY ONLY.
+            %   Section 7.5 settled that and the reason is marshalling:
+            %   buildJoint reads EVERY control to assemble a model.Joint, so
+            %   a control that was never built is not a saving, it is a
+            %   joint with a missing field. (Section 10's "collapsed groups
+            %   stay unbuilt" predates that and is superseded by it.)
+            %
+            %   The row height does the collapsing, not visibility alone: a
+            %   'fit' row still reserves space for a hidden child, so the
+            %   body row drops to 1 px and the group shrinks to its header.
+            arguments
+                obj            (1,1) gui2.Page
+                parent
+                row            (1,1) double
+                titleText      (1,1) string
+                startCollapsed (1,1) logical = false
+            end
+
+            panel = uipanel(parent);
+            panel.Layout.Row    = row;
+            panel.Layout.Column = 1;
+
+            pg = uigridlayout(panel, [2 1]);
+            pg.ColumnWidth = {'1x'};
+            pg.Padding     = [0 0 0 0];
+            pg.RowSpacing  = 0;
+
+            hdr = uibutton(pg, 'push', 'FontWeight', 'bold', 'FontSize', 13);
+            hdr.Layout.Row = 1;
+
+            host = uipanel(pg, 'BorderType', 'none');
+            host.Layout.Row = 2;
+
+            % Reads the CURRENT state at click time rather than capturing a
+            % flag, so the closure cannot go stale against expandGroup.
+            hdr.ButtonPushedFcn = @(~, ~) gui2.Page.setGroupCollapsed( ...
+                pg, hdr, host, titleText, strcmp(char(host.Visible), 'on'));
+
+            gui2.Page.setGroupCollapsed(pg, hdr, host, titleText, startCollapsed);
+
+            obj.Groups(end + 1) = struct('Title', titleText, 'Grid', pg, ...
+                'Header', hdr, 'Body', host);
+        end
+
         function bindEdit(obj, control, callback)
             %BINDEDIT  Wire an editable control so it CANNOT forget the dirty flag.
             %   The first build's hardest-won lesson: a dirty feed wired on
@@ -300,6 +423,19 @@ classdef (Abstract) Page < handle
     end
 
     methods (Static, Access = private)
+        function setGroupCollapsed(pg, hdr, host, titleText, collapsed)
+            %SETGROUPCOLLAPSED  The one place a group's two states are defined.
+            if collapsed
+                pg.RowHeight = {gui2.Page.GroupHeaderH, 1};
+                glyph = char(9654);   % right-pointing triangle
+            else
+                pg.RowHeight = {gui2.Page.GroupHeaderH, 'fit'};
+                glyph = char(9660);   % down-pointing triangle
+            end
+            host.Visible = matlab.lang.OnOffSwitchState(~collapsed);
+            hdr.Text     = char(string(glyph) + " " + titleText);
+        end
+
         function runEdit(state, callback, src, evt)
             %RUNEDIT  Dirty first, then the control's own callback.
             state.markDirty();
