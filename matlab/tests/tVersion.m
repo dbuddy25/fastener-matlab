@@ -29,17 +29,24 @@ classdef tVersion < matlab.unittest.TestCase
                 'The version must be MAJOR.MINOR.PATCH and nothing else.');
         end
 
-        function everyShellReportsTheSameVersion(testCase)
-            % The drift guard, on the constant a test can actually see.
-            testCase.verifyEqual(gui2.AppState.ToolVersion, toolVersion());
-
-            % gui.FastenerApp.ToolVersion is deliberately NOT asserted here:
-            % it is a PRIVATE constant, so reading it from a test errors
-            % with MATLAB:class:GetProhibited. Nothing is lost. It now reads
-            % toolVersion() rather than carrying its own literal, so it
-            % cannot drift by construction - which is the property this test
-            % was protecting - and +gui is slated for deletion at step 10.
+        function noShellKeepsItsOwnCopyOfTheVersion(testCase)
+            % THE DRIFT GUARD, and it now checks the thing that actually
+            % drifts. Both shells used to hold `ToolVersion = toolVersion()`
+            % as a Constant property, which looks like a single source and
+            % is not: MATLAB evaluates a Constant default ONCE at class load
+            % and caches it, so bumping toolVersion.m left both stale until
+            % the classes were cleared. That is how this test caught a
+            % 0.1.0 against a 0.2.0 in the same session.
+            %
+            % So the guard is no longer "do the copies agree" - there are no
+            % copies. It is "does anything still keep one".
+            src = fileread(fullfile(fileparts(fileparts( ...
+                which("tVersion"))), "+gui2", "AppState.m"));
+            testCase.verifyEmpty( ...
+                regexp(src, '^\s*ToolVersion\s*=', 'once', 'lineanchors'), ...
+                'gui2.AppState must not cache its own copy of the version.');
         end
+
 
         function theCaseFormatIsNotTiedToTheToolVersion(testCase)
             % Bumping a release must never invalidate a user's saved

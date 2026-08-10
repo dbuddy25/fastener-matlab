@@ -654,7 +654,7 @@ classdef FastenerApp < handle
                 'other 6 are computed and not displayed. Every results ' ...
                 'view and export names them.\n\n' ...
                 'Case files: JSON, format "%s".'], ...
-                app.State.ToolVersion, app.State.CaseFormat);
+                toolVersion(), app.State.CaseFormat);
             uialert(app.Fig, msg, 'About — Fastener Analysis Tool', 'Icon', 'info');
         end
     end
@@ -868,7 +868,7 @@ classdef FastenerApp < handle
             %   prefixed "* " when dirty (GUI2_SPEC.md Section 4).
             if strlength(app.State.CurrentFile) == 0
                 t = sprintf('Fastener Analysis Tool v%s — NASA-STD-5020B', ...
-                    app.State.ToolVersion);
+                    toolVersion());
             else
                 t = sprintf('Fastener Analysis Tool — %s', app.State.CurrentFile);
             end

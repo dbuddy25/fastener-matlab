@@ -121,6 +121,14 @@ classdef tGui2Shell < matlab.uitest.TestCase
             testCase.verifyTrue(startsWith(testCase.App.Fig.Name, ...
                 'Fastener Analysis Tool v'), ...
                 'A case with no file should show the version in the title.');
+            % The ACTUAL version, not just the letter v. This is the
+            % end-to-end guard on toolVersion reaching a surface a user
+            % reads: both shells used to cache it in a Constant property,
+            % which MATLAB evaluates once at class load, so a bumped
+            % version could sit stale in the title bar with nothing saying
+            % so.
+            testCase.verifyTrue(contains(testCase.App.Fig.Name, toolVersion()), ...
+                'The title must carry the CURRENT version, not a cached one.');
             testCase.verifyFalse(startsWith(testCase.App.Fig.Name, '*'));
         end
 

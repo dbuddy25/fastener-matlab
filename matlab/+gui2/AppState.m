@@ -64,11 +64,14 @@ classdef AppState < handle
         % Case-file format tag. Shared with +gui — do not fork it.
         CaseFormat = "fastener-analysis-matlab-v1"
 
-        % Stamped into the window title and exports. Read from
-        % toolVersion(), never re-declared: three hand-kept copies of this
-        % literal is what it used to be, with nothing to fail if they
-        % drifted apart.
-        ToolVersion = toolVersion()
+        % NO ToolVersion CONSTANT. It was `ToolVersion = toolVersion()`,
+        % which reads like a single source of truth and is not one: MATLAB
+        % evaluates a Constant property's default ONCE at class load and
+        % caches it, so this was a COPY taken whenever gui2 first loaded.
+        % Bumping toolVersion.m left it stale until the class was cleared -
+        % the very drift the constant was meant to prevent, on a shorter
+        % fuse and harder to see. Callers ask toolVersion() where they use
+        % it.
     end
 
     events

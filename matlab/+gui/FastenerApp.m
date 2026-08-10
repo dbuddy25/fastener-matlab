@@ -668,10 +668,9 @@ classdef FastenerApp < handle
         % a silent blank). Disabled whenever this is the sole item.
         WasherSizeNA = '(n/a — Custom)'
 
-        % Software version stamped into exports. Read from
-        % toolVersion() -- the "keep in sync with fastenerTool.m" this
-        % comment used to ask for is now structural rather than manual.
-        ToolVersion = toolVersion()
+        % NO ToolVersion CONSTANT -- see gui2.AppState for why a Constant
+        % initialised by a function call is a cached copy and not a single
+        % source. Callers ask toolVersion() directly.
     end
 
     methods
@@ -9864,7 +9863,7 @@ classdef FastenerApp < handle
                 char(string(datetime('now'), 'yyyy-MM-dd HH:mm'))};
             info(end + 1, :) = {'Software Version', ...
                 ['Fastener Analysis Tool (MATLAB) v' ...
-                 char(gui.FastenerApp.ToolVersion)]};
+                 char(toolVersion())]};
             info(end + 1, :) = {'Units', ['Forces lbf; moments/torque ' ...
                 'in-lbf; lengths in; temperatures ' degC]};
             info(end + 1, :) = {['Service Temperatures (' degC ...
