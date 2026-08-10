@@ -185,11 +185,13 @@ evalMask = allT.Status ~= "NotEvaluated";
 add(ch, MATLABTable(allT(evalMask, ["Name", "Method"])));
 add(rpt, ch);
 
-% ---- 9. Provenance -----------------------------------------------------------
+% ---- 9. About this report ---------------------------------------------------
 % REPEATED FROM THE TITLE PAGE ON PURPOSE. Title pages get separated from
 % the pages people actually circulate, and a table of margins with no
 % version on it is untraceable the moment that happens.
-ch = Chapter("Provenance");
+% Named to match the About sheet report.exportResults writes, so the
+% two outputs call the same thing the same name.
+ch = Chapter("About This Report");
 add(ch, Paragraph(stamp + ", run " + generated + "."));
 add(ch, Paragraph("Analysis per NASA-STD-5020B; supplementary relations " + ...
     "per NASA TM-106943 where 5020B defers to it. The version above " + ...

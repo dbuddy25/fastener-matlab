@@ -24,7 +24,7 @@ function file = exportResults(T, file, opts)
 %                  from.
 %   For .csv only the main table is written (CSV has no sheets, and a
 %   metadata banner row would corrupt readtable), so a CSV export carries
-%   NO version stamp -- use .xlsx when provenance must travel with it.
+%   NO version stamp -- use .xlsx when the version has to travel with it.
 %
 %   An existing file at the target path is deleted first, so the output is
 %   always a clean workbook (no stale sheets/cells from a previous run).
@@ -82,7 +82,7 @@ if isXlsx
     Value = ["Fastener Analysis Tool"; toolVersion(); ...
              string(datetime("now", "Format", "yyyy-MM-dd HH:mm")); ...
              "NASA-STD-5020B"];
-    % Caller notes ride on the SAME sheet as the provenance, because they
+    % Caller notes ride on the SAME sheet as the version stamp, because they
     % are the same kind of claim: a scope statement naming checks that are
     % computed and not exported has to travel with the file, or the
     % spreadsheet reads as a complete assessment when it is not.
@@ -95,7 +95,7 @@ else
     % CSV HAS NO SHEETS, so there is nowhere to put the stamp that would
     % not corrupt the data. Left unstamped deliberately rather than
     % prepending comment lines that readtable would then have to be told
-    % to skip -- use .xlsx when provenance has to travel with the numbers.
+    % to skip -- use .xlsx when the stamp has to travel with the numbers.
     writetable(T, file);
 end
 
