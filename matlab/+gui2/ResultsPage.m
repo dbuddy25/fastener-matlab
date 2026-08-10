@@ -728,7 +728,28 @@ classdef ResultsPage < gui2.Page
         end
 
         function updateDetail(obj)
-            %UPDATEDETAIL  Method and Detail for the selected row.
+            %UPDATEDETAIL  The selected row, laid out rather than dumped.
+            %   Three things it used to get wrong.
+            %
+            %   IT NEVER SHOWED THE NUMBER. It named the check and its
+            %   status and then printed citations, so the one thing you had
+            %   selected the row to look at was back in the table. The value
+            %   comes from the SAME formatValue the table uses, so the cap
+            %   rule and Interaction's ratio form cannot disagree between
+            %   the two.
+            %
+            %   METHOD AND DETAIL ARRIVED AS BARE PARAGRAPHS, with nothing
+            %   saying which was which. On a NotEvaluated row Method is not
+            %   a governing equation at all - it carries the REASON the
+            %   check did not run - so it is labelled accordingly.
+            %
+            %   AND THE GLUED SENTENCE MOVED HERE. analyze sets the
+            %   Tension-Ultimate row's Detail to tu.Decision, the same
+            %   string as Result.Narrative, so taking it out of the
+            %   decisions panel just relocated it one panel over. Where a
+            %   row's Detail IS the Narrative, it is not reprinted: the
+            %   decisions panel renders those facts from Result.Gate and
+            %   Result.Allowables as structure, and this points there.
             if isempty(obj.State.Result)
                 obj.DetailArea.Value = {''};
                 return
@@ -741,16 +762,53 @@ classdef ResultsPage < gui2.Page
                 return
             end
             m = rows(k(1));
+
             lines = {sprintf('%s - %s', char(m.Name), ...
                              gui2.ResultsPage.statusText(m.Status))};
+
+            notEval = string(m.Status) == "NotEvaluated";
+            if ~notEval
+                lines{end+1} = sprintf('  %s', ...
+                    gui2.ResultsPage.formatValue(m, logical(obj.CapCheck.Value)));
+            end
+
             if strlength(m.Method) > 0
-                lines{end+1} = char(m.Method); %#ok<AGROW>
+                lines{end+1} = '';
+                if notEval
+                    % Method carries the REASON on these rows, not a
+                    % governing equation - calling it one would be a lie.
+                    lines{end+1} = 'Why it did not run:';
+                else
+                    lines{end+1} = 'Governing equation:';
+                end
+                lines{end+1} = sprintf('  %s', char(m.Method));
             end
-            if strlength(m.Detail) > 0
-                lines{end+1} = ''; %#ok<AGROW>
-                lines{end+1} = char(m.Detail); %#ok<AGROW>
+
+            detail = obj.rowDetail(m);
+            if strlength(detail) > 0
+                lines{end+1} = '';
+                lines{end+1} = 'Detail:';
+                lines{end+1} = sprintf('  %s', char(detail));
             end
+
             obj.DetailArea.Value = lines;
+        end
+
+        function d = rowDetail(obj, m)
+            %ROWDETAIL  A row's Detail, minus the sentence that belongs elsewhere.
+            %   Compared against Result.Narrative by EQUALITY rather than by
+            %   row name: the two rows carrying this today are
+            %   Tension-Ultimate and the Fig. 8 gate, but what actually
+            %   makes the text redundant is that it is the same string the
+            %   decisions panel already renders as structure - not which row
+            %   it happens to sit on.
+            d = m.Detail;
+            r = obj.State.Result;
+            if strlength(d) > 0 && strcmp(string(d), string(r.Narrative))
+                d = "The Fig. 8 gate and the 5020B 4.4.1 system allowable " + ...
+                    "that govern this check are laid out under Analysis " + ...
+                    "decisions.";
+            end
         end
 
         function selectDefaultRow(obj)

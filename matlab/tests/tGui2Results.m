@@ -365,6 +365,15 @@ classdef tGui2Results < matlab.uitest.TestCase
     end
 
     methods (Static, Access = private)
+        function s = gluedDecision()
+            %GLUEDDECISION  The one string analyze puts in TWO places.
+            %   engine.analyze sets the Tension-Ultimate row's Detail to
+            %   tu.Decision AND Result.Narrative to the same tu.Decision.
+            %   The fixture has to reproduce that, or it cannot exercise
+            %   the rule that stops the panel reprinting it.
+            s = "Gate assured. Ptu_allow: governed by the bolt, 15200 lbf.";
+        end
+
         function r = syntheticResult(variant)
             %SYNTHETICRESULT  A Result with known margins, for exact assertions.
             %   "mixed"         one over the cap, one failure, two unevaluated
@@ -395,7 +404,7 @@ classdef tGui2Results < matlab.uitest.TestCase
             margins = [ ...
                 row("Tension-Ultimate", 47.3, NaN, "Pass", ...
                     "NASA-STD-5020B Eq. 6 (separation before rupture)", ...
-                    "Gate assured. Ptu_allow: governed by the bolt, 15200 lbf."), ...
+                    tGui2Results.gluedDecision()), ...
                 row("Tension-Yield", tyMS, NaN, tyStatus, ...
                     "NASA-STD-5020B Eq. 15", ""), ...
                 row("Shear-Ultimate", NaN, NaN, "NotEvaluated", ...
@@ -430,7 +439,7 @@ classdef tGui2Results < matlab.uitest.TestCase
                 JointName = "Synthetic joint", ...
                 CaseName  = "Synthetic case", ...
                 Margins   = margins, ...
-                Narrative = "Separation before rupture is assured.", ...
+                Narrative = tGui2Results.gluedDecision(), ...
                 Warnings  = warnings);
 
             % The Fig. 8 gate and the 4.4.1 allowable as STRUCTURED data -
@@ -577,6 +586,76 @@ classdef tGui2Results < matlab.uitest.TestCase
 
             testCase.verifyFalse(testCase.App.State.IsDirty);
             testCase.verifyFalse(testCase.App.State.ResultStale);
+        end
+    end
+
+    % ---- Selected check ----------------------------------------------------
+    methods (Test)
+        function theSelectedCheckShowsItsValue(testCase)
+            % It named the check and its status and then printed citations,
+            % so the number you selected the row to read was back in the
+            % table.
+            testCase.showSynthetic();
+            p = testCase.Page;
+            p.selectRow(2);   % Tension-Yield, MS = -0.14
+
+            txt = strjoin(string(p.detailArea().Value), newline);
+            testCase.verifyTrue(contains(txt, "-0.14"));
+        end
+
+        function theSelectedCheckUsesTheTablesOwnFormatting(testCase)
+            % Interaction is a RATIO on the opposite scale. The panel must
+            % render it exactly as the table does - same formatValue - or
+            % the two disagree about the same row.
+            testCase.showSynthetic();
+            p = testCase.Page;
+            % Interaction is last of the eight table rows - the row count
+            % itself is pinned by tableShowsEightRowsAndOmits...
+            p.selectRow(8);
+
+            txt = strjoin(string(p.detailArea().Value), newline);
+            testCase.verifyTrue(contains(txt, "R = 0.86"));
+            testCase.verifyTrue(contains(txt, "<= 1"), ...
+                'The ratio must keep its criterion here too.');
+        end
+
+        function anUnevaluatedRowLabelsItsMethodAsTheReason(testCase)
+            % On a NotEvaluated row Method carries WHY it did not run, not
+            % a governing equation. Calling it one would be a lie.
+            testCase.showSynthetic();
+            p = testCase.Page;
+            p.selectRow(3);   % Shear-Ultimate, NotEvaluated in this fixture
+
+            txt = strjoin(string(p.detailArea().Value), newline);
+            testCase.verifyTrue(contains(txt, "Why it did not run"));
+            testCase.verifyFalse(contains(txt, "Governing equation"));
+        end
+
+        function theGluedSentenceIsNotReprintedHere(testCase)
+            % analyze sets the Tension-Ultimate row's Detail to the SAME
+            % string as Result.Narrative. Taking it out of the decisions
+            % panel and leaving it here would just move it one panel over.
+            testCase.showSynthetic();
+            p = testCase.Page;
+            p.selectRow(1);   % Tension-Ultimate
+
+            txt = strjoin(string(p.detailArea().Value), newline);
+            testCase.verifyFalse(contains(txt, tGui2Results.gluedDecision()), ...
+                'The glued sentence must not reappear in Selected check.');
+            testCase.verifyTrue(contains(txt, "Analysis decisions"), ...
+                'It must point at where those facts are laid out.');
+        end
+
+        function anOrdinaryRowStillShowsItsOwnDetail(testCase)
+            % The redirect must apply ONLY to the row whose Detail is the
+            % Narrative - every other row's detail is its own.
+            testCase.showSynthetic();
+            p = testCase.Page;
+            p.selectRow(8);   % Interaction
+
+            txt = strjoin(string(p.detailArea().Value), newline);
+            testCase.verifyFalse(contains(txt, "Analysis decisions"), ...
+                'Only the Narrative-carrying row redirects.');
         end
     end
 
