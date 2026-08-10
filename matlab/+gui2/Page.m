@@ -71,6 +71,11 @@ classdef (Abstract) Page < handle
         % the same reason: a page that held the app could reach the rail
         % and other pages' widgets, which Section 5 forbids.
         NavigateFcn = function_handle.empty
+
+        % Route to the shell's secondary windows. A window outlives the
+        % page that opened it and must be a singleton, so the shell owns
+        % it — a page that constructed its own would leak one per press.
+        ShowSectionFcn = function_handle.empty
     end
 
     properties (Access = protected)
@@ -176,6 +181,18 @@ classdef (Abstract) Page < handle
             end
             obj.StatusFcn(string(msg));
         end
+
+        function showSection(obj)
+            %SHOWSECTION  Ask the shell for the joint cross-section window.
+            %   The window is a SINGLETON owned by the shell, for the same
+            %   reason navigation is: it outlives the page that opened it,
+            %   and a page constructing its own would leak one per press.
+            %   A no-op when unattached, like goToPage.
+            if isempty(obj.ShowSectionFcn)
+                return
+            end
+            obj.ShowSectionFcn();
+        end
     end
 
     % ---- Shell-facing plumbing. Called by gui2.FastenerApp only. ---------
@@ -199,6 +216,15 @@ classdef (Abstract) Page < handle
                 fcn (1,1) function_handle
             end
             obj.StatusFcn = fcn;
+        end
+
+        function attachShowSection(obj, fcn)
+            %ATTACHSHOWSECTION  Give the page its route to the section window.
+            arguments
+                obj (1,1) gui2.Page
+                fcn (1,1) function_handle
+            end
+            obj.ShowSectionFcn = fcn;
         end
 
         function buildOnce(obj, parent)

@@ -33,6 +33,13 @@
 %                          bolt-length readout, required-field gating, and
 %                          Analyze / Save to Defined Joints. Backed by
 %                          AppState.Joint + LoadCase.
+%   gui2.JointSectionView— NON-MODAL to-scale axial section of the joint,
+%                          opened from Joint Config and owned as a singleton
+%                          by the shell. Repaints on JointChanged. Draws in
+%                          DATA coordinates, never pixels. layout() is a pure
+%                          static so the geometry is testable without a
+%                          figure; head height and hex geometry are drawing
+%                          conventions the model does not carry.
 %   gui2.palette         — semantic color name -> RGB; the ONLY place GUI2
 %                          colors live (no literal RGB triples elsewhere).
 %   gui2.recentFiles     — the persisted Open Recent list (max 5, dead paths

@@ -71,6 +71,11 @@ classdef FastenerApp < handle
 
         % AppState listeners, held so they die with the app.
         Listeners = event.listener.empty(1, 0)
+
+        % The joint cross-section window. A SINGLETON owned here rather than
+        % by Joint Config: it is a window, it outlives the page that opened
+        % it, and one per button press would litter the desktop.
+        SectionView = gui2.JointSectionView.empty
     end
 
     % ---- Construction -----------------------------------------------------
@@ -135,9 +140,26 @@ classdef FastenerApp < handle
                 delete(app.Listeners(isvalid(app.Listeners)));
             catch
             end
+            % The section window is a separate figure and would otherwise
+            % outlive the app that feeds it, repainting from an AppState
+            % nothing else references any more.
+            if ~isempty(app.SectionView) && isvalid(app.SectionView)
+                delete(app.SectionView);
+            end
             if ~isempty(app.Fig) && isvalid(app.Fig)
                 delete(app.Fig);
             end
+        end
+
+        function showSection(app)
+            %SHOWSECTION  Open the joint cross-section window, or raise it.
+            %   Reconstructs after the user has closed the window: the view
+            %   deletes itself on close, so a stale handle here means gone,
+            %   not hidden.
+            if isempty(app.SectionView) || ~isvalid(app.SectionView)
+                app.SectionView = gui2.JointSectionView(app.State);
+            end
+            app.SectionView.show();
         end
     end
 
@@ -500,6 +522,7 @@ classdef FastenerApp < handle
                 % the rail and other pages' widgets, which Section 5 forbids.
                 pg.attachStatus(@(m) app.setStatus(m));
                 pg.attachNavigate(@(id) app.navigateTo(id));
+                pg.attachShowSection(@() app.showSection());
 
                 app.Pages(end + 1) = struct( ...
                     'Section', section, 'Prefix', prefix, ...
@@ -873,6 +896,10 @@ classdef FastenerApp < handle
 
         function requestOpenPath(app, file)
             app.openPath(file);
+        end
+
+        function v = sectionView(app)
+            v = app.SectionView;
         end
     end
 end

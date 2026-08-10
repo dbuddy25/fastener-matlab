@@ -104,6 +104,7 @@ classdef JointConfigPage < gui2.Page
 
         AnalyzeButton
         SaveJointButton
+        SectionButton
         RequiredLabel
 
         MemberTypeDropDown
@@ -938,9 +939,9 @@ classdef JointConfigPage < gui2.Page
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
 
-            b = uigridlayout(panel, [3 1]);
+            b = uigridlayout(panel, [4 1]);
             b.ColumnWidth = {'1x'};
-            b.RowHeight   = {36, 'fit', 'fit'};
+            b.RowHeight   = {36, 'fit', 'fit', 'fit'};
             b.RowSpacing  = 6;
             b.Padding     = [6 6 6 6];
 
@@ -966,6 +967,19 @@ classdef JointConfigPage < gui2.Page
             obj.SaveJointButton.Tooltip = ['Store this joint in the ' ...
                 'defined-joints library under its name. Saved with the ' ...
                 'case file and used by the bulk workflow.'];
+
+            % NOT gated on the Analyze requirements. The section is most
+            % useful on a half-filled joint - a washer wider than its
+            % flange is worth seeing long before the joint is runnable.
+            obj.SectionButton = uibutton(b, 'push', ...
+                'Text', 'View Cross-Section', ...
+                'ButtonPushedFcn', @(~, ~) obj.showSection());
+            obj.SectionButton.Layout.Row    = 4;
+            obj.SectionButton.Layout.Column = 1;
+            obj.SectionButton.Tooltip = ['Open a to-scale axial section of ' ...
+                'this joint in its own window. It stays open and redraws ' ...
+                'as you edit. Head height and hex geometry are drawing ' ...
+                'conventions - the model does not carry them.'];
         end
 
         function b = groupGrid(~, panel, rows)
@@ -2589,6 +2603,10 @@ classdef JointConfigPage < gui2.Page
 
         function b = saveJointButton(obj)
             b = obj.SaveJointButton;
+        end
+
+        function b = sectionButton(obj)
+            b = obj.SectionButton;
         end
 
         function l = requiredLabel(obj)
