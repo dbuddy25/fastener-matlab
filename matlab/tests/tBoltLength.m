@@ -131,35 +131,44 @@ classdef tBoltLength < matlab.unittest.TestCase
             % see boltLengthCheck's header. Le itself is still the
             % DERIVED CONVENTION (supplied EngagementLength, else 1.5·D;
             % 5020B gives no formula for Le).
-            % HAND-DERIVED on the 8-b geometry (grip 0.94 in; 3/8-24 UNF,
-            % so pitch p = 1/24 in, 2p = 2/24 = 0.083333... in):
-            %   Le supplied 0.5 in  -> Lmin = 0.94 + 0.5 + 2/24
-            %                       = 1.44 + 0.083333... = 1.523333... in
+            % HAND-DERIVED on the 8-b geometry. NOTE THE GRIP: 8-b ships
+            % as a NUT joint whose grip is 0.94 in, but switching it to a
+            % threaded-in configuration DROPS ITS 0.062 in NUT WASHER --
+            % there is no nut for one to sit under -- so the grip here is
+            % 0.40 + 0.40 + 0.078 = 0.878 in. 3/8-24 UNF, so pitch
+            % p = 1/24 in and 2p = 2/24 = 0.083333... in:
+            %   Le supplied 0.5 in  -> Lmin = 0.878 + 0.5 + 2/24
+            %                       = 1.378 + 0.083333... = 1.461333... in
             %   Le unspecified      -> Le = 1.5·D = 1.5·0.375 = 0.5625 in
-            %                          (reference-tool default)
-            %                       -> Lmin = 0.94 + 0.5625 + 2/24
-            %                       = 1.5025 + 0.083333... = 1.585833... in
+            %                       -> Lmin = 0.878 + 0.5625 = 1.4405 in
+            %                          (TappedHole: no 2p term)
             c = validation.dabjExample8b();
             j = c.Joint;
             j.ThreadedMember.Type = model.ThreadedMemberType.Insert;
             j.ThreadedMember.EngagementLength = 0.5;
-            j.Bolt.Length = 1.5;
+            % 1.40 in is chosen deliberately: it CLEARS grip + Le
+            % (1.378 in) and fails only once the 2·pitch term is added.
+            % The bolt's adequacy therefore turns on that term alone,
+            % which is the whole point of this test.
+            j.Bolt.Length = 1.40;
             r = engine.boltLengthCheck(j);
-            required = 0.94 + 0.5 + 2/24;
+            grip     = 0.40 + 0.40 + 0.078;   % nut washer dropped -- see above
+            required = grip + 0.5 + 2/24;
+            testCase.verifyEqual(r.GripLength, grip, "AbsTol", 1e-12, ...
+                'A threaded-in joint does not clamp a nut washer.');
             testCase.verifyEqual(r.ThreadAllowance, 2/24, "AbsTol", 1e-12);
             testCase.verifyEqual(r.RequiredLength, required, "AbsTol", 1e-12);
             testCase.verifyEqual(r.EngagementBasis, "specified engagement");
             testCase.verifyTrue(r.Evaluated);
-            % Supplied 1.5 in is now SHORT of 1.523333... in by 2/24 in
-            % (the newly-applied 2·pitch term) -- this bolt was adequate
-            % under the old (wrong) Insert formula, but is not under the
-            % corrected one.
-            testCase.verifyFalse(r.IsAdequate);
-            testCase.verifyEqual(r.Shortfall, required - 1.5, "AbsTol", 1e-12);
+            testCase.verifyGreaterThan(j.Bolt.Length, grip + 0.5, ...
+                'The chosen length must clear the sum WITHOUT the 2p term.');
+            testCase.verifyFalse(r.IsAdequate, ...
+                'It is the 2·pitch protrusion that makes this bolt short.');
+            testCase.verifyEqual(r.Shortfall, required - 1.40, "AbsTol", 1e-12);
             testCase.verifySubstring(r.Method, "4.7.4");
 
             % A length that actually clears the corrected minimum.
-            j.Bolt.Length = 1.6;
+            j.Bolt.Length = 1.5;
             r = engine.boltLengthCheck(j);
             testCase.verifyTrue(r.IsAdequate);
             testCase.verifyEqual(r.Shortfall, 0, "AbsTol", 1e-12);
@@ -172,7 +181,7 @@ classdef tBoltLength < matlab.unittest.TestCase
             % TappedHole is NOT named in §4.7.4's 2·pitch sentence -- no
             % allowance term, Lmin = grip + Le only (see header).
             testCase.verifyEqual(r.ThreadAllowance, 0, "AbsTol", 1e-12);
-            testCase.verifyEqual(r.RequiredLength, 0.94 + 1.5 * 0.375, ...
+            testCase.verifyEqual(r.RequiredLength, grip + 1.5 * 0.375, ...
                 "AbsTol", 1e-12);
             testCase.verifySubstring(r.Method, "does not");
         end
@@ -342,6 +351,56 @@ classdef tBoltLength < matlab.unittest.TestCase
             testCase.verifyTrue(startsWith(labels(2), "Flanges"));
             testCase.verifyEqual(labels(3), "Nut washer");
             testCase.verifyEqual(labels(4), "Thread engagement Le");
+        end
+
+        function aNutWasherOnAThreadedInJointIsNotPartOfTheGrip(testCase)
+            % REGRESSION. There is no nut on an Insert or TappedHole joint,
+            % so there is nothing for a nut washer to sit under, and one
+            % left set on the form must not lengthen the bolt.
+            %
+            % engine.stiffness has always read only HeadWasher on the
+            % threaded-in branch; this function counted the nut washer for
+            % every configuration, so the same joint got a stiffness
+            % computed without the washer and a required length inflated by
+            % it. Two engine functions describing different joints.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            % 8-b ships as a NUT joint -- switch it, or this test would be
+            % asserting the opposite rule and passing for the wrong reason.
+            j.ThreadedMember.Type             = model.ThreadedMemberType.Insert;
+            j.ThreadedMember.EngagementLength = 0.3;
+            j.NutWasher                       = model.Washer();
+
+            before = engine.boltLengthCheck(j).RequiredLength;
+            j.NutWasher = model.Washer(Thickness = 0.040);
+            after  = engine.boltLengthCheck(j);
+
+            testCase.verifyEqual(after.RequiredLength, before, ...
+                "AbsTol", 1e-12, ...
+                'A nut washer on an insert joint must not change the length.');
+            testCase.verifyFalse( ...
+                any(contains(string({after.Components.Label}), "Nut washer")), ...
+                'It must not appear in the breakdown either.');
+        end
+
+        function aNutWasherOnANutJointStillCounts(testCase)
+            % The other half of the same rule -- the fix must not have
+            % dropped the washer everywhere.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.ThreadedMember.Type             = model.ThreadedMemberType.Nut;
+            j.ThreadedMember.EngagementLength = 0.3;
+            j.NutWasher                       = model.Washer();
+
+            before = engine.boltLengthCheck(j).RequiredLength;
+            j.NutWasher = model.Washer(Thickness = 0.040);
+            after  = engine.boltLengthCheck(j);
+
+            testCase.verifyEqual(after.RequiredLength, before + 0.040, ...
+                "AbsTol", 1e-12, ...
+                'A through-bolted joint really does clamp its nut washer.');
+            testCase.verifyTrue( ...
+                any(contains(string({after.Components.Label}), "Nut washer")));
         end
 
         function anAbsentWasherGetsNoLineAtAll(testCase)

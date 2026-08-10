@@ -16,6 +16,10 @@ function r = boltLengthCheck(joint)
 %   Grip (clamped length) counts the washers:
 %       grip = sum(FlangeStack.Thickness) + head washer + nut washer
 %   (an EMPTY flange stack means the grip is not yet defined -> NaN).
+%   THE NUT WASHER COUNTS ONLY IN THE Nut CONFIGURATION. Insert and
+%   TappedHole thread into the parent, so there is no nut for a washer to
+%   sit under and any NutWasher set on such a joint is ignored here --
+%   matching engine.stiffness, which reads only HeadWasher on that branch.
 %
 %   Required minimum bolt length, by threaded-member configuration. In all
 %   three, Le itself is resolved by the shared private helper
@@ -123,11 +127,29 @@ arguments
 end
 
 % ---- Grip: clamped stack + washers (washers count toward grip) -----------
+% A NUT WASHER ONLY EXISTS ON A THROUGH-BOLTED (Nut) JOINT. On Insert and
+% TappedHole the bolt threads into the parent, so there is no nut for a
+% washer to sit under and a NutWasher left set on the form is not part of
+% the clamped stack. engine.stiffness has always taken exactly this
+% position -- "a threaded-in joint has no nut washer", reading only
+% HeadWasher on that branch -- while this function counted it for every
+% configuration. The two therefore described different joints: the same
+% insert joint got a stiffness computed without the washer and a required
+% bolt length inflated by it, and nothing in the GUI prevents the
+% combination (the nut-washer fields gate on their own Present checkbox,
+% not on the member type).
+isNutConfig = joint.ThreadedMember.Type == model.ThreadedMemberType.Nut;
+if isNutConfig
+    tNutWasher = joint.NutWasher.Thickness;   % in
+else
+    tNutWasher = 0;                           % no nut, so no nut washer
+end
+
 if isempty(joint.FlangeStack)
     grip = NaN;                        % no clamped stack yet -> grip unknown
 else
     grip = sum([joint.FlangeStack.Thickness]) + ...
-        joint.HeadWasher.Thickness + joint.NutWasher.Thickness;
+        joint.HeadWasher.Thickness + tNutWasher;
 end
 
 D = joint.Bolt.NominalDiameter;        % major dia, in
@@ -223,9 +245,10 @@ if ~isempty(joint.FlangeStack)
     components(end+1) = struct( ...
         'Label', string(sprintf('Flanges (%d)', numel(joint.FlangeStack))), ...
         'Value', sum([joint.FlangeStack.Thickness]));
-    if joint.NutWasher.Thickness > 0
+    if tNutWasher > 0
+        % Nut config only -- see the grip note above.
         components(end+1) = struct('Label', "Nut washer", ...
-            'Value', joint.NutWasher.Thickness);
+            'Value', tNutWasher);
     end
 end
 components(end+1) = struct('Label', "Thread engagement Le", ...
