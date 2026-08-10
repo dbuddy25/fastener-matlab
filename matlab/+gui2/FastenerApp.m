@@ -644,9 +644,11 @@ classdef FastenerApp < handle
             %   Unsaved edits are just as real before the case has a
             %   filename, and skipping that case is the classic way File >
             %   New silently destroys work.
-            if ~app.confirmDiscard('starting a new case')
-                return
-            end
+            app.confirmDiscard('starting a new case', @() app.commitNewCase());
+        end
+
+        function commitNewCase(app)
+            %COMMITNEWCASE  The blank case, once discarding is agreed.
             app.State.newCase();
             app.setStatus(['New case — choose a bolt and materials on ' ...
                 'Joint Config to begin.']);
@@ -657,9 +659,11 @@ classdef FastenerApp < handle
             %   Confirms BEFORE the file picker. Asking after the user has
             %   chosen a file, then refusing, wastes the choice they just
             %   made.
-            if ~app.confirmDiscard('opening another case')
-                return
-            end
+            app.confirmDiscard('opening another case', @() app.pickAndOpen());
+        end
+
+        function pickAndOpen(app)
+            %PICKANDOPEN  The file picker, once discarding is agreed.
             [f, p] = uigetfile('*.json', 'Open Case');
             if isequal(f, 0)
                 return
@@ -672,10 +676,7 @@ classdef FastenerApp < handle
             %   Open Recent bypasses onFileOpen, so the confirm lives here
             %   too — but loadPath must NOT confirm, or File > Open would
             %   ask twice.
-            if ~app.confirmDiscard('opening another case')
-                return
-            end
-            app.loadPath(file);
+            app.confirmDiscard('opening another case', @() app.loadPath(file));
         end
 
         function loadPath(app, file)
@@ -759,24 +760,50 @@ classdef FastenerApp < handle
             app.setStatus(sprintf('Saved %s', file));
         end
 
-        function tf = confirmDiscard(app, actionText)
-            %CONFIRMDISCARD  True when it is safe to destroy unsaved edits.
+        function confirmDiscard(app, actionText, onProceed)
+            %CONFIRMDISCARD  Run onProceed once destroying unsaved edits is agreed.
             %   Asks only when dirty, but ALWAYS when dirty — including with
             %   no file open. Cancel is both the default (Enter) and the
             %   Esc/close action: destroying work must never be the path of
             %   least resistance.
+            %
+            %   CONTINUATION-PASSING, and it has to be. This used the
+            %   BLOCKING uiconfirm - the form that returns a choice - which
+            %   halts execution inside the callback until a human answers.
+            %   That deadlocks any programmatic driver, including the App
+            %   Testing Framework: the test cannot reach its answer because
+            %   the press that opened the dialog has never returned. Nothing
+            %   exercised File > New, so it sat silent; the first test to
+            %   touch it would have hung the whole ~8-minute run.
+            %
+            %   The consequence is that this CANNOT return a boolean - the
+            %   answer arrives later, through the event. Every caller passes
+            %   what it wants done instead. Matches DefinedJointsPage and
+            %   JointConfigPage, which already use the CloseFcn form.
             if ~app.State.IsDirty
-                tf = true;
+                onProceed();
                 return
             end
-            choice = string(uiconfirm(app.Fig, sprintf( ...
+            uiconfirm(app.Fig, sprintf( ...
                 'You have unsaved changes. Discard them before %s?', actionText), ...
                 'Unsaved Changes', ...
                 'Options',       {'Discard Changes', 'Cancel'}, ...
                 'DefaultOption', 'Cancel', ...
                 'CancelOption',  'Cancel', ...
-                'Icon',          'question'));
-            tf = (choice == "Discard Changes");
+                'Icon',          'question', ...
+                'CloseFcn', @(~, evt) app.onDiscardAnswered(evt, onProceed));
+        end
+
+        function onDiscardAnswered(~, evt, onProceed)
+            %ONDISCARDANSWERED  Run the continuation only on an explicit Discard.
+            %   Every other way out of the dialog - Cancel, Esc, the close
+            %   box - leaves the work alone. Anything but an exact match on
+            %   'Discard Changes' is treated as Cancel, so a dialog dismissed
+            %   by its figure being destroyed at test teardown can never
+            %   discard a case on its way out.
+            if strcmp(evt.SelectedOption, 'Discard Changes')
+                onProceed();
+            end
         end
 
         function onCloseRequest(app)
@@ -787,16 +814,26 @@ classdef FastenerApp < handle
             %   with no way to close it. A user must always be able to
             %   quit; the worst case is losing the confirmation, not being
             %   trapped in the application.
+            %
+            %   Note the shape change: the window no longer closes when this
+            %   returns, because with a dirty case it returns while the
+            %   question is still on screen. Closing IS the continuation.
             try
-                if ~app.confirmDiscard('closing')
-                    return
-                end
+                app.confirmDiscard('closing', @() app.closeNow());
             catch err
                 warning('gui2:FastenerApp:closePromptFailed', ...
                     'Unsaved-changes prompt failed (%s); closing anyway.', ...
                     err.message);
+                app.closeNow();
             end
-            delete(app);
+        end
+
+        function closeNow(app)
+            %CLOSENOW  Destroy the app. Guarded so a double call is harmless.
+            %   The catch above can reach here after the try already did.
+            if isvalid(app)
+                delete(app);
+            end
         end
     end
 
@@ -816,6 +853,26 @@ classdef FastenerApp < handle
                 t = ['* ' t];
             end
             app.Fig.Name = t;
+        end
+    end
+
+    % ---- Test seams -------------------------------------------------------
+    %   File > New is reachable from a test ONLY because confirmDiscard is
+    %   now the CloseFcn form: the call returns while the question is still
+    %   on screen. Under the blocking form these seams would have hung the
+    %   run rather than exposed anything.
+    %
+    %   Following the suite's rule (tGui2DefinedJoints, "Load / rename /
+    %   delete"), tests DO NOT answer the dialog - they assert that nothing
+    %   changed while the question is outstanding, and let the dialog die
+    %   with the figure at teardown.
+    methods
+        function requestFileNew(app)
+            app.onFileNew();
+        end
+
+        function requestOpenPath(app, file)
+            app.openPath(file);
         end
     end
 end

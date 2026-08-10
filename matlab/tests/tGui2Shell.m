@@ -454,4 +454,61 @@ classdef tGui2Shell < matlab.uitest.TestCase
                 'The same file occupied two recent slots.');
         end
     end
+
+    % ---- Discarding unsaved work ------------------------------------------
+    %   THESE TESTS EXIST BECAUSE THEY COULD NOT. confirmDiscard used the
+    %   blocking uiconfirm, which halts inside the callback until a human
+    %   answers - so the first test to trigger File > New with a dirty case
+    %   would have hung the entire run rather than failed. The CloseFcn form
+    %   returns while the question is still on screen, which is what makes
+    %   the dirty path assertable at all.
+    %
+    %   The dialog is NEVER answered here, per the rule in
+    %   tGui2DefinedJoints: what gets asserted is that nothing changed while
+    %   the question is outstanding. The dialog dies with the figure at
+    %   teardown.
+    methods (Test)
+        function fileNewOnACleanCaseResetsWithoutAsking(testCase)
+            % The undirty path runs the continuation straight through - no
+            % dialog, no deferral.
+            testCase.App.State.Joint = model.Joint(Name = "Throwaway");
+            testCase.App.State.clearDirty("");
+
+            testCase.App.requestFileNew();
+
+            testCase.verifyFalse(testCase.App.State.IsDirty);
+            testCase.verifyNotEqual(string(testCase.App.State.Joint.Name), ...
+                "Throwaway", 'A clean case must reset immediately.');
+        end
+
+        function fileNewOnADirtyCaseReturnsWithTheCaseIntact(testCase)
+            % The test that would have hung. Reaching the assertions at all
+            % is half of what is being verified.
+            testCase.App.State.Joint = model.Joint(Name = "Half-built");
+            testCase.App.State.markDirty();
+
+            testCase.App.requestFileNew();      % must RETURN, dialog pending
+
+            testCase.verifyEqual(string(testCase.App.State.Joint.Name), ...
+                "Half-built", ...
+                'An unanswered confirm must not have discarded the case.');
+            testCase.verifyTrue(testCase.App.State.IsDirty, ...
+                'An unanswered confirm must not have cleared the dirty flag.');
+        end
+
+        function openRecentOnADirtyCaseAsksBeforeLoadingAnything(testCase)
+            % Open Recent bypasses File > Open, so it carries its own
+            % confirm. Same shape: it must return, and load nothing yet.
+            testCase.App.State.Joint = model.Joint(Name = "Half-built");
+            testCase.App.State.markDirty();
+
+            testCase.App.requestOpenPath("no-such-case.json");
+
+            testCase.verifyEqual(string(testCase.App.State.Joint.Name), ...
+                "Half-built", ...
+                'Open Recent replaced the case without an answer.');
+            testCase.verifyEqual(strlength(testCase.App.State.CurrentFile), 0, ...
+                'Nothing should have been opened while the confirm is pending.');
+        end
+    end
 end
