@@ -124,6 +124,22 @@ classdef Result
         CaseName       (1,1) string = ""
         Preload        struct = struct()          % from engine.preload
         DesignLoads    struct = struct()          % from engine.designLoads
+
+        % The NASA-STD-5020B Fig. 8 gate, UNGLUED. Fields: Assessed,
+        % Assured, Trace (condition-by-condition), Equation (which of
+        % Eq. 6 / Eq. 10 actually governed), Phi and N (Eq. 10 only, NaN
+        % otherwise). Narrative below is the same information as one
+        % sentence and is kept for consumers that want prose; anything
+        % laying it out should read this instead of parsing that.
+        Gate           struct = struct()          % from engine.marginTensionUlt
+
+        % The §4.4.1 fastening-system tensile allowable, as DATA. Fields:
+        % PtuAllow, GoverningMode, Modes (struct array: Name, Allowable,
+        % Assessed, Note), Unassessed, Complete, Note. Complete == false
+        % means the minimum was taken over an incomplete set of modes and
+        % is therefore OPTIMISTIC — a flag a view must be able to act on,
+        % not a clause buried in a sentence.
+        Allowables     struct = struct()          % from engine.systemTensileAllowable
         Margins        (1,:) struct = repmat(struct( ...
                            "Name", "", "MS", NaN, "R", NaN, ...
                            "Status", "NotEvaluated", ...

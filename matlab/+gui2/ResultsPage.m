@@ -585,66 +585,121 @@ classdef ResultsPage < gui2.Page
 
         function renderDecisions(obj)
             %RENDERDECISIONS  Which branches ran, and on what authority.
-            %   Everything here is surfaced VERBATIM from the Result. The
-            %   shear-plane line in particular reads the Method citations
-            %   rather than AppState.Joint.ShearPlane, because the joint on
-            %   screen may already have moved on from the joint that
-            %   produced this result.
+            %   DECISIONS ONLY. Equation citations were duplicated here for
+            %   every check that had one, while the Selected check panel
+            %   already shows Method and Detail for whichever row is
+            %   clicked - so the longest text on the page repeated what was
+            %   one click away, twice over, because tu.Decision also
+            %   arrives as Result.Narrative AND as the gate row's Detail.
+            %
+            %   Everything below is read from STRUCTURED fields
+            %   (Result.Gate, Result.Allowables), never parsed out of prose.
+            %   The engine had this structure and used to flatten it into
+            %   one sentence on the way out; it does not any more.
             r = obj.State.Result;
             lines = {};
 
-            sbr = obj.marginNamed(gui2.ResultsPage.DecisionRow);
-            if ~isempty(sbr)
-                % NOT "FAIL". The engine has only Pass/Fail/NotEvaluated to
-                % express a boolean gate with, but "not assured" selects the
-                % conservative Eq. 10 branch - it does not fail anything.
-                if sbr.Status == "Pass"
-                    verdict = 'ASSURED - Eq. 6 governs the tension check';
-                elseif sbr.Status == "Fail"
-                    verdict = 'NOT ASSURED - the conservative Eq. 10 rupture branch governs';
-                else
-                    verdict = char(gui2.ResultsPage.statusText(sbr.Status));
-                end
-                lines{end+1} = sprintf('SEPARATION BEFORE RUPTURE: %s', verdict); %#ok<AGROW>
-                if strlength(sbr.Method) > 0
-                    lines{end+1} = sprintf('  %s', sbr.Method); %#ok<AGROW>
-                end
-            end
-            if strlength(r.Narrative) > 0
-                lines{end+1} = sprintf('  %s', r.Narrative); %#ok<AGROW>
-            end
+            lines = [lines, obj.gateLines(r)];
+            lines = [lines, obj.allowableLines(r)];
 
-            lines{end+1} = ''; %#ok<AGROW>
-            lines{end+1} = 'BOLT BENDING: not included (fbu = 0).'; %#ok<AGROW>
+            lines{end+1} = '';
+            lines{end+1} = 'BOLT BENDING: not included (fbu = 0).';
             lines{end+1} = ['  NASA-STD-5020B 4.4.4 exemption ASSUMED, ' ...
-                            'not verified - close fit assumed.']; %#ok<AGROW>
+                            'not verified - close fit assumed.'];
 
+            % The shear PLANE is a decision - it selects which equations
+            % run at all - so it stays. Its citation is read from the
+            % Method the engine returned rather than from
+            % AppState.Joint.ShearPlane, because the joint on screen may
+            % already have moved on from the joint that produced this
+            % result. One line, not two: Interaction's citation says the
+            % same thing and is on its own row in the table.
             su = obj.marginNamed("Shear-Ultimate");
-            ia = obj.marginNamed("Interaction");
-            if ~isempty(su) || ~isempty(ia)
-                lines{end+1} = ''; %#ok<AGROW>
-                lines{end+1} = 'SHEAR PLANE - the equations that actually ran:'; %#ok<AGROW>
-                if ~isempty(su)
-                    lines{end+1} = sprintf('  %s', su.Method); %#ok<AGROW>
-                end
-                if ~isempty(ia)
-                    lines{end+1} = sprintf('  %s', ia.Method); %#ok<AGROW>
-                end
-            end
-
-            % Section 2's "Allowable from" requirement. The Tension-Ultimate
-            % Detail already carries the system-allowable trace naming the
-            % governing mode, so it is surfaced whole rather than parsed -
-            % the hidden 4.4.1 rows must not hide their effect on the
-            % tension number.
-            tu = obj.marginNamed("Tension-Ultimate");
-            if ~isempty(tu) && strlength(tu.Detail) > 0
-                lines{end+1} = ''; %#ok<AGROW>
-                lines{end+1} = 'FASTENING-SYSTEM ALLOWABLE (5020B 4.4.1):'; %#ok<AGROW>
-                lines{end+1} = sprintf('  %s', tu.Detail); %#ok<AGROW>
+            if ~isempty(su) && strlength(su.Method) > 0
+                lines{end+1} = '';
+                lines{end+1} = 'SHEAR PLANE - the equations that actually ran:';
+                lines{end+1} = sprintf('  %s', su.Method);
             end
 
             obj.DecisionArea.Value = lines;
+        end
+
+        function lines = gateLines(~, r)
+            %GATELINES  The Fig. 8 gate, one fact per line.
+            lines = {};
+            if ~isfield(r.Gate, 'Assessed')
+                return
+            end
+            g = r.Gate;
+
+            if ~g.Assessed
+                verdict = 'NOT ASSESSED';
+            elseif g.Assured
+                verdict = 'ASSURED';
+            else
+                % NOT "FAIL". The engine has only Pass/Fail/NotEvaluated to
+                % express a boolean gate with, but "not assured" SELECTS
+                % the conservative rupture branch - it does not fail
+                % anything, and that consequence is already priced into the
+                % Tension-Ultimate margin.
+                verdict = 'NOT ASSURED';
+            end
+            lines{end+1} = sprintf('SEPARATION BEFORE RUPTURE: %s', verdict);
+
+            if strlength(g.Equation) > 0
+                lines{end+1} = sprintf('  Governing equation: %s', g.Equation);
+            end
+            if isfinite(g.Phi)
+                % Only the rupture branch has these, and they are the
+                % numbers someone re-deriving that margin by hand needs.
+                lines{end+1} = sprintf('  phi = %.4g (Eq. 9), n = %.2f', ...
+                    g.Phi, g.N);
+            end
+            if strlength(g.Trace) > 0
+                lines{end+1} = sprintf('  Gate: %s', g.Trace);
+            end
+        end
+
+        function lines = allowableLines(~, r)
+            %ALLOWABLELINES  The 5020B 4.4.1 system allowable, as a list.
+            %   It IS a table - one row per tensile failure mode, with the
+            %   minimum governing - and it used to be rendered as a single
+            %   prose sentence carrying all of it.
+            lines = {};
+            if ~isfield(r.Allowables, 'PtuAllow')
+                return
+            end
+            a = r.Allowables;
+
+            lines{end+1} = '';
+            lines{end+1} = 'FASTENING-SYSTEM ALLOWABLE (5020B 4.4.1):';
+            lines{end+1} = sprintf('  Governing: %s, %s lbf', ...
+                gui2.ResultsPage.orPlaceholder(a.GoverningMode, 'unknown'), ...
+                gui2.ResultsPage.withThousands(a.PtuAllow));
+
+            if isfield(a, 'Modes') && ~isempty(a.Modes)
+                for i = 1:numel(a.Modes)
+                    m = a.Modes(i);
+                    if m.Assessed
+                        val = gui2.ResultsPage.withThousands(m.Allowable) + " lbf";
+                    else
+                        % A1: an unassessed mode is not a zero and not a
+                        % blank - it is a hole in the minimum below.
+                        val = "not assessed";
+                    end
+                    lines{end+1} = sprintf('    %-28s %s', ...
+                        char(m.Name), char(val)); %#ok<AGROW>
+                end
+            end
+
+            % THE FLAG THAT USED TO BE A CLAUSE. An incomplete set means
+            % the minimum was taken over fewer modes than apply, so the
+            % allowable - and every margin derived from it - is optimistic.
+            if isfield(a, 'Complete') && ~a.Complete
+                lines{end+1} = ['  INCOMPLETE - a mode that applies could ' ...
+                    'not be assessed, so this minimum is over an ' ...
+                    'incomplete set and is OPTIMISTIC.'];
+            end
         end
 
         function renderWarnings(obj)
@@ -823,6 +878,12 @@ classdef ResultsPage < gui2.Page
             %   Zero decimals per GUI2_HARVEST.md Section D. Forces here run
             %   to five figures, and 15200 is materially harder to read
             %   against 1520 than 15,200 is.
+            if isnan(v)
+                % A1 again: an unknown allowable is an em dash, and in
+                % particular is never a zero.
+                s = char(8212);
+                return
+            end
             if isinf(v)
                 if v > 0
                     s = '+inf';

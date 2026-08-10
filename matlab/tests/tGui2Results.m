@@ -424,6 +424,34 @@ classdef tGui2Results < matlab.uitest.TestCase
                 Narrative = "Separation before rupture is assured.", ...
                 Warnings  = warnings);
 
+            % The Fig. 8 gate and the 4.4.1 allowable as STRUCTURED data -
+            % what the decisions panel now reads. Before, it dug the same
+            % facts out of tu.Decision prose that arrived as Narrative AND
+            % as the gate row's Detail.
+            if sbrStatus == "Pass"
+                r.Gate = struct('Assessed', true, 'Assured', true, ...
+                    'Trace', "e/D >= 1.5 ASSUMED (no EdgeDistance set)", ...
+                    'Equation', "NASA-STD-5020B Eq. 6", 'Phi', NaN, 'N', NaN);
+            else
+                r.Gate = struct('Assessed', true, 'Assured', false, ...
+                    'Trace', "Pp_min below the separation load", ...
+                    'Equation', "NASA-STD-5020B Eq. 10", ...
+                    'Phi', 0.336, 'N', 1.00);
+            end
+
+            % Modes is a STRUCT ARRAY, so it is cell-wrapped: struct()
+            % replicates over array-valued fields and would otherwise make
+            % the whole thing a 1x3 struct array.
+            modes = struct( ...
+                'Name',      {"bolt tension", "nut thread shear", "insert pull-out"}, ...
+                'Allowable', {15200, 18400, NaN}, ...
+                'Assessed',  {true, true, false}, ...
+                'Note',      {"", "", "no engagement area"});
+            r.Allowables = struct('PtuAllow', 15200, ...
+                'GoverningMode', "bolt tension", 'Modes', {modes}, ...
+                'Unassessed', {"insert pull-out"}, 'Complete', false, ...
+                'Note', "bolt governs");
+
             if variant == "withPreload"
                 % Values chosen to be checkable by eye: PpMax crosses the
                 % comma boundary, ThermalDelta is small, and Psep is under
@@ -540,6 +568,85 @@ classdef tGui2Results < matlab.uitest.TestCase
 
             testCase.verifyFalse(testCase.App.State.IsDirty);
             testCase.verifyFalse(testCase.App.State.ResultStale);
+        end
+    end
+
+    % ---- Decisions read structure, not prose -------------------------------
+    %   The panel used to render tu.Decision, which the engine built by
+    %   gluing the gate trace, the equation that won and the Ptu_allow
+    %   basis into one sentence - and which arrived TWICE, as
+    %   Result.Narrative and as the gate row's Detail. It now reads
+    %   Result.Gate and Result.Allowables, which carry the same facts as
+    %   separate fields.
+    methods (Test)
+        function theGoverningEquationIsItsOwnLine(testCase)
+            testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
+            txt = string(testCase.Page.decisionArea().Value);
+
+            testCase.verifyTrue(any(contains(txt, "Governing equation")), ...
+                'Which equation governed is a fact, not a clause.');
+            testCase.verifyTrue(any(contains(txt, "Eq. 10")));
+        end
+
+        function theRuptureBranchShowsTheNumbersBehindIt(testCase)
+            % phi and n only exist on the Eq. 10 branch, and they are what
+            % someone re-deriving that margin by hand needs.
+            testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
+            txt = string(testCase.Page.decisionArea().Value);
+
+            testCase.verifyTrue(any(contains(txt, "phi = 0.336")));
+        end
+
+        function theAssuredBranchShowsNoPhi(testCase)
+            % Eq. 6 does not use phi; printing one would imply it did.
+            testCase.showSynthetic();          % gate assured
+            txt = string(testCase.Page.decisionArea().Value);
+
+            testCase.verifyTrue(any(contains(txt, "Eq. 6")));
+            testCase.verifyFalse(any(contains(txt, "phi =")));
+        end
+
+        function theSystemAllowableIsListedPerMode(testCase)
+            % It is a table - one row per tensile failure mode, the minimum
+            % governing - and used to be one prose sentence carrying all of
+            % it.
+            testCase.showSynthetic();
+            txt = string(testCase.Page.decisionArea().Value);
+
+            testCase.verifyTrue(any(contains(txt, "Governing: bolt tension")));
+            testCase.verifyTrue(any(contains(txt, "nut thread shear")));
+            testCase.verifyTrue(any(contains(txt, "15,200")));
+        end
+
+        function anUnassessedModeSaysSoRatherThanShowingAZero(testCase)
+            % A1. An unassessed mode is a HOLE in the minimum below it.
+            testCase.showSynthetic();
+            txt = string(testCase.Page.decisionArea().Value);
+
+            testCase.verifyTrue(any(contains(txt, "not assessed")));
+        end
+
+        function anIncompleteAllowableSetIsFlaggedAsOptimistic(testCase)
+            % The clause that used to be buried mid-sentence. If a mode
+            % that applies could not be assessed, the minimum is over an
+            % incomplete set and every margin from it is optimistic.
+            testCase.showSynthetic();
+            txt = string(testCase.Page.decisionArea().Value);
+
+            testCase.verifyTrue(any(contains(txt, "INCOMPLETE")));
+            testCase.verifyTrue(any(contains(txt, "OPTIMISTIC")));
+        end
+
+        function equationCitationsAreNotDuplicatedIntoDecisions(testCase)
+            % The Selected check panel already shows Method and Detail for
+            % whichever row is clicked. Interaction's citation was repeated
+            % in the decisions panel as well; only Shear-Ultimate's stays,
+            % because the shear PLANE is a decision.
+            testCase.showSynthetic();
+            txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
+
+            testCase.verifyFalse(contains(txt, "Eq. 22/23"), ...
+                'Interaction''s citation belongs to its own row.');
         end
     end
 

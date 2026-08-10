@@ -121,7 +121,9 @@ if ~gate.Assessed
         "SeparationBeforeRupture", false, ...
         "Decision",                gate.Trace, ...
         "Method",                  "NASA-STD-5020B Eq. 6/Eq. 10 (separation before rupture) — not evaluated", ...
-        "SystemAllowable",         gate.SystemAllowable);
+        "SystemAllowable",         gate.SystemAllowable, ...
+        "Gate",                    gateOut(false, false, gate.Trace, ...
+                                       "not evaluated", NaN, NaN));
     return
 end
 sys      = gate.SystemAllowable;
@@ -130,11 +132,19 @@ assured  = gate.Assured;
 n        = joint.LoadingPlaneFactor;
 
 % ---- Margin ------------------------------------------------------------
+% Phi and N are recorded ONLY on the Eq. 10 branch and stay NaN on the
+% others -- they are the parameters of that equation, not of the check, and
+% a consumer must be able to tell "Eq. 6 governed" from "Eq. 10 governed
+% with these numbers" without parsing a sentence.
+phiUsed = NaN;
+nUsed   = NaN;
+
 if assured
     % NASA-STD-5020B Eq. 6 — MS = Ptu_allow / Ptu - 1
     MS = PtuAllow / designLoads.Ptu - 1;
     Method = "NASA-STD-5020B Eq. 6 (separation before rupture)";
     Decision = gate.Trace + " -> Eq. 6.";
+    eqRan = "NASA-STD-5020B Eq. 6";
 else
     try
         s   = engine.stiffness(joint);   % errors for threaded-in / missing geometry
@@ -146,6 +156,9 @@ else
         Method = "NASA-STD-5020B Eq. 10 (rupture — bolt sees preload + n·phi·load)";
         Decision = gate.Trace + string(sprintf( ...
             ". -> Eq. 10 with phi = %.4g (NASA-STD-5020B Eq. 9), n = %.2f.", phi, n));
+        eqRan   = "NASA-STD-5020B Eq. 10";
+        phiUsed = phi;
+        nUsed   = n;
     catch stiffErr
         % Stiffness unavailable (threaded-in configuration or missing
         % frustum geometry) — report NotEvaluated, do not crash analyze.
@@ -154,6 +167,7 @@ else
         Decision = gate.Trace + ...
             ". Eq. 10 needs phi from engine.stiffness, which could not run: " + ...
             string(stiffErr.message);
+        eqRan = "NASA-STD-5020B Eq. 10 (could not run)";
     end
 end
 
@@ -167,5 +181,26 @@ r = struct( ...
     "SeparationBeforeRupture", assured, ...
     "Decision",                Decision, ...
     "Method",                  Method, ...
-    "SystemAllowable",         sys);
+    "SystemAllowable",         sys, ...
+    "Gate",                    gateOut(true, assured, gate.Trace, eqRan, ...
+                                   phiUsed, nUsed));
+end
+
+% ---- Local helpers --------------------------------------------------------
+function g = gateOut(assessed, assured, trace, equation, phi, n)
+%GATEOUT  The Fig. 8 outcome as SEPARATE FIELDS rather than one sentence.
+%   Decision (above) remains the human sentence, and every existing
+%   consumer keeps reading it. This is the same information unglued:
+%   Decision concatenates the gate trace, the equation that won, and the
+%   Ptu_allow basis, so a view that wants to lay those out on three lines
+%   -- or put the equation where equations belong and the decision where
+%   decisions belong -- has to unpick prose it should never have been
+%   handed. The structure existed here and was destroyed on the way out.
+g = struct( ...
+    "Assessed", assessed, ...
+    "Assured",  assured, ...
+    "Trace",    string(trace), ...
+    "Equation", string(equation), ...
+    "Phi",      phi, ...
+    "N",        n);
 end
