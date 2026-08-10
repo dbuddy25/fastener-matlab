@@ -375,7 +375,12 @@ classdef (Abstract) Page < handle
             pg.Padding     = [0 0 0 0];
             pg.RowSpacing  = 0;
 
-            hdr = uibutton(pg, 'push', 'FontWeight', 'bold', 'FontSize', 13);
+            % LEFT-JUSTIFIED. A centred header reads as a button that does
+            % something to the form rather than as the title of the group
+            % beneath it, and the disclosure triangle has to sit at a fixed
+            % left edge or the eye cannot run down the column of them.
+            hdr = uibutton(pg, 'push', 'FontWeight', 'bold', 'FontSize', 13, ...
+                'HorizontalAlignment', 'left');
             hdr.Layout.Row = 1;
 
             host = uipanel(pg, 'BorderType', 'none');

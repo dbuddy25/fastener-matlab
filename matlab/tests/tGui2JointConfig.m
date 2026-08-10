@@ -414,6 +414,9 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % greys the nut group, and matlab.uitest refuses to type into a
             % disabled component exactly as a user cannot.
             p = testCase.Page;
+            % The nut washer group starts FOLDED (Section 7.5) and
+            % matlab.uitest will not drive a control inside one.
+            p.expandGroup("Washer under nut");
             h = p.headWasher();
             n = p.nutWasher();
 
@@ -435,6 +438,9 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
         function headEditsPropagateLiveWhileSameAsHeadIsTicked(testCase)
             p = testCase.Page;
+            % The nut washer group starts FOLDED (Section 7.5) and
+            % matlab.uitest will not drive a control inside one.
+            p.expandGroup("Washer under nut");
             h = p.headWasher();
             n = p.nutWasher();
             testCase.press(h.Present);
@@ -449,6 +455,9 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
         function untickingSameAsHeadKeepsTheMirroredValues(testCase)
             p = testCase.Page;
+            % The nut washer group starts FOLDED (Section 7.5) and
+            % matlab.uitest will not drive a control inside one.
+            p.expandGroup("Washer under nut");
             h = p.headWasher();
             n = p.nutWasher();
             testCase.press(h.Present);
@@ -465,6 +474,9 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
         function sameAsHeadIsOnlyOfferedOnceThereIsANutWasher(testCase)
             p = testCase.Page;
+            % The nut washer group starts FOLDED (Section 7.5) and
+            % matlab.uitest will not drive a control inside one.
+            p.expandGroup("Washer under nut");
             testCase.verifyEqual(char(p.sameAsHeadCheck().Enable), 'off', ...
                 'Nothing to mirror onto while there is no nut washer.');
             testCase.press(p.nutWasher().Present);
