@@ -1,4 +1,4 @@
-function file = exportResults(T, file)
+function file = exportResults(T, file, opts)
 %EXPORTRESULTS  Write a bulk results table to .xlsx or .csv (Phase 3.6).
 %   file = report.exportResults(T, file) writes the engine.analyzeBulk
 %   results table T to the given file — .xlsx or .csv, chosen by the file
