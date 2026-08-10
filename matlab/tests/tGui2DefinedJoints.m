@@ -28,7 +28,7 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
 
     methods (TestMethodSetup)
         function launchApp(testCase)
-            testCase.App = gui2.FastenerApp(Visible = false);
+            testCase.App = gui2.FastenerApp();
             testCase.addTeardown(@() delete(testCase.App));
             testCase.App.navigateTo("DefinedJoints");
             testCase.Page = testCase.App.page("DefinedJoints");

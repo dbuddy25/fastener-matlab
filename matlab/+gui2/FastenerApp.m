@@ -76,33 +76,13 @@ classdef FastenerApp < handle
         % by Joint Config: it is a window, it outlives the page that opened
         % it, and one per button press would litter the desktop.
         SectionView = gui2.JointSectionView.empty
-
-        % True when the app was built with Visible=false. Passed on to any
-        % secondary window, or the section view would put one on screen
-        % during a run that was asked not to.
-        HeadlessWindows (1,1) logical = false
     end
 
     % ---- Construction -----------------------------------------------------
     methods
-        function app = FastenerApp(opts)
+        function app = FastenerApp()
             %FASTENERAPP  Build the window; returns once it is on screen.
-            %   FastenerApp(Visible=false) builds the whole app WITHOUT
-            %   putting a window on screen. Only the test suite uses it:
-            %   207 of the ~545 tests construct a real app, and each one
-            %   flashing a 1250x820 window steals focus for the seven
-            %   minutes the suite takes, which makes the machine unusable
-            %   while it runs.
-            %
-            %   The window is built hidden either way - see the uifigure
-            %   call below, which has always passed Visible='off' so the
-            %   half-built shell is never seen. This option simply declines
-            %   to reveal it at the end.
-            arguments
-                opts.Visible (1,1) logical = true
-            end
             app.State = gui2.AppState();
-            app.HeadlessWindows = ~opts.Visible;
 
             app.Fig = uifigure('Position', [80 80 1250 820], 'Visible', 'off');
             app.Fig.CloseRequestFcn = @(~, ~) app.onCloseRequest();
@@ -135,7 +115,7 @@ classdef FastenerApp < handle
             app.refreshSummary();
             app.navigateTo(app.Pages(1).Page.pageId());
 
-            app.Fig.Visible = matlab.lang.OnOffSwitchState(opts.Visible);
+            app.Fig.Visible = 'on';
 
             % Non-blocking, and only AFTER the window is up: a modal dialog
             % during construction would leave the user staring at nothing.
@@ -177,8 +157,7 @@ classdef FastenerApp < handle
             %   deletes itself on close, so a stale handle here means gone,
             %   not hidden.
             if isempty(app.SectionView) || ~isvalid(app.SectionView)
-                app.SectionView = gui2.JointSectionView(app.State, ...
-                    Visible = ~app.HeadlessWindows);
+                app.SectionView = gui2.JointSectionView(app.State);
             end
             app.SectionView.show();
         end

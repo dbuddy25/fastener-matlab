@@ -85,22 +85,14 @@ classdef JointSectionView < handle
         Ax
         NoteLabel
         Listener = event.listener.empty(1, 0)
-
-        % False only under test: build the window but never put it on
-        % screen or raise it.
-        Showing (1,1) logical = true
     end
 
     methods
-        function obj = JointSectionView(state, opts)
-            %JOINTSECTIONVIEW  Visible=false builds without showing a window.
-            %   For the test suite only - see gui2.FastenerApp's constructor.
+        function obj = JointSectionView(state)
             arguments
                 state (1,1) gui2.AppState
-                opts.Visible (1,1) logical = true
             end
-            obj.State   = state;
-            obj.Showing = opts.Visible;
+            obj.State = state;
         end
 
         function show(obj)
@@ -108,12 +100,7 @@ classdef JointSectionView < handle
             %   Create-or-focus, so repeated presses of the button on Joint
             %   Config cannot litter the desktop with identical windows.
             if ~isempty(obj.Fig) && isvalid(obj.Fig)
-                if obj.Showing
-                    % Raises AND focuses, which is the point when a user
-                    % presses the button and exactly the wrong thing during
-                    % a test run.
-                    figure(obj.Fig);
-                end
+                figure(obj.Fig);
                 obj.redraw();
                 return
             end
@@ -134,8 +121,7 @@ classdef JointSectionView < handle
     methods (Access = private)
         function build(obj)
             obj.Fig = uifigure('Name', 'Joint Cross-Section', ...
-                'Position', [200 160 560 680], ...
-                'Visible', matlab.lang.OnOffSwitchState(obj.Showing));
+                'Position', [200 160 560 680]);
 
             g = uigridlayout(obj.Fig, [2 1]);
             g.RowHeight   = {'1x', 'fit'};

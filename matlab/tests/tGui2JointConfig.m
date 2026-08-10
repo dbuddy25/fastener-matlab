@@ -29,7 +29,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
     methods (TestMethodSetup)
         function launchApp(testCase)
-            testCase.App = gui2.FastenerApp(Visible = false);
+            testCase.App = gui2.FastenerApp();
             testCase.addTeardown(@() delete(testCase.App));
             testCase.App.navigateTo("JointConfig");
             testCase.Page = testCase.App.page("JointConfig");

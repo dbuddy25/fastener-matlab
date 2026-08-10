@@ -329,7 +329,7 @@ classdef tGui2JointSection < matlab.uitest.TestCase
     %   Lifecycle only. Nothing here asserts what was painted.
     methods (Test)
         function openingTheSectionTwiceKeepsOneWindow(testCase)
-            app = gui2.FastenerApp(Visible = false);
+            app = gui2.FastenerApp();
             testCase.addTeardown(@() delete(app));
 
             app.showSection();
@@ -343,7 +343,7 @@ classdef tGui2JointSection < matlab.uitest.TestCase
 
         function theSectionWindowDiesWithTheApp(testCase)
             % Otherwise it outlives the AppState it repaints from.
-            app = gui2.FastenerApp(Visible = false);
+            app = gui2.FastenerApp();
             app.showSection();
             fig = app.sectionView().figureHandle();
             testCase.verifyTrue(isvalid(fig));
