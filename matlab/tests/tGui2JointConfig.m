@@ -502,21 +502,29 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
     end
     % ---- Bolt length readout -----------------------------------------------
     methods (Test)
-        function readoutIsAlwaysFiveLinesAndNeverBlank(testCase)
+        function readoutCarriesItsFixedLinesAndNeverBlanks(testCase)
+            % NO LONGER A FIXED LINE COUNT. The readout itemises the minimum
+            % bolt length, so a washer present or absent changes the number
+            % of lines. What is invariant is that the four fixed lines are
+            % always there - grip, the minimum, the verdict, and L1 - and
+            % that none of them renders blank.
             txt = testCase.Page.boltLengthLabel().Text;
-            testCase.verifyNumElements(txt, 5, ...
-                'Grip, engagement, minimum, verdict, L1 - always five lines.');
             testCase.verifyFalse(any(cellfun(@isempty, txt)), ...
                 'No line may render blank; unknown shows an em dash (A1).');
+
+            for needle = ["Grip (stack", "Minimum bolt length", "Body length L1"]
+                testCase.verifyNotEqual(testCase.readoutLine(needle), "", ...
+                    sprintf('The "%s" line must always be present.', needle));
+            end
         end
 
         function theReadoutSaysWhenStiffnessCannotRun(testCase)
             % THE line that predicts whether tension margins will evaluate.
             % A blank form cannot resolve L1, and the analyst needs to know
             % that here rather than from a NotEvaluated row after Analyze.
-            txt = testCase.Page.boltLengthLabel().Text;
             testCase.verifyTrue( ...
-                contains(string(txt{5}), "stiffness cannot run"), ...
+                contains(testCase.readoutLine("Body length L1"), ...
+                         "stiffness cannot run"), ...
                 'A form that cannot resolve L1 must say so before Analyze.');
         end
 
@@ -534,10 +542,10 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
             testCase.verifyTrue(isnan(testCase.App.State.Joint.BodyLengthInGrip), ...
                 'No override is typed - the derivation must stand alone.');
-            txt = p.boltLengthLabel().Text;
-            testCase.verifyTrue(contains(string(txt{5}), "derived"), ...
+            l1 = testCase.readoutLine("Body length L1");
+            testCase.verifyTrue(contains(l1, "derived"), ...
                 'L1 must come from the catalogue thread length, not a dash.');
-            testCase.verifyFalse(contains(string(txt{5}), "cannot run"));
+            testCase.verifyFalse(contains(l1, "cannot run"));
         end
 
         function aTypedL1IsReportedAsTheOverrideItIs(testCase)
@@ -548,8 +556,8 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.choose(p.boltLengthField(), '1.25');
             testCase.type(p.bodyLengthField(), '0.2');
 
-            txt = p.boltLengthLabel().Text;
-            testCase.verifyTrue(contains(string(txt{5}), "your override"), ...
+            testCase.verifyTrue( ...
+                contains(testCase.readoutLine("Body length L1"), "your override"), ...
                 ['A typed L1 wins, and the readout must not call it ' ...
                  'derived - which also means typing one has to REFRESH ' ...
                  'that readout, not just commit the model.']);
@@ -559,8 +567,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % A1: a check that CANNOT RUN is amber and says why. Muted grey
             % would read as "nothing to report", which is the opposite.
             p = testCase.Page;
-            txt = p.boltLengthLabel().Text;
-            testCase.verifyTrue(contains(string(txt{4}), "Not evaluated"), ...
+            testCase.verifyNotEqual(testCase.readoutLine("Not evaluated"), "", ...
                 'A blank form cannot evaluate bolt length and must say so.');
             testCase.verifyEqual(p.boltLengthLabel().FontColor, ...
                 gui2.palette('statusWarn'), ...
@@ -568,8 +575,8 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
         end
 
         function anEmptyGripRendersAsAnEmDashNotZero(testCase)
-            txt = testCase.Page.boltLengthLabel().Text;
-            testCase.verifyTrue(contains(string(txt{1}), char(8212)), ...
+            testCase.verifyTrue( ...
+                contains(testCase.readoutLine("Grip (stack"), char(8212)), ...
                 'An undefined grip shows an em dash, never 0.0000.');
         end
 
@@ -956,12 +963,15 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.choose(p.boltDropDown(), char(bolts(1)));
             testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
             testCase.type(p.engagementRatioField(), '1.5');
-            before = string(p.boltLengthLabel().Text{2});
-            testCase.assumeFalse(contains(before, char(8212)), ...
-                'The readout must be evaluable before this test means anything.');
+            % The engagement ADDEND, found by name. It is shown whenever it
+            % is known, even on a form whose total is not computable yet,
+            % which is what makes this assertable without a full joint.
+            before = testCase.readoutLine("Thread engagement Le");
+            testCase.assumeNotEqual(before, "", ...
+                'The readout must show an engagement before this test means anything.');
 
             testCase.type(p.engagementRatioField(), '2.5');
-            after = string(p.boltLengthLabel().Text{2});
+            after = testCase.readoutLine("Thread engagement Le");
 
             testCase.verifyNotEqual(after, before, ...
                 'Changing the insert engagement must update the readout.');
@@ -970,12 +980,15 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
         function theBoltLengthReadoutFollowsANutEngagementLength(testCase)
             p = testCase.Page;
             testCase.choose(p.memberTypeDropDown(), 'Nut');
-            before = string(p.boltLengthLabel().Text{2});
+            before = testCase.readoutLine("Thread engagement Le");
 
             testCase.type(p.engagementLengthField(), '0.31');
-            after = string(p.boltLengthLabel().Text{2});
+            after = testCase.readoutLine("Thread engagement Le");
 
-            testCase.verifyNotEqual(after, before);
+            testCase.verifyNotEqual(after, before, ...
+                'Changing the nut engagement must update the readout.');
+            testCase.verifyTrue(contains(after, "0.3100"), ...
+                'The engagement addend must show the value just typed.');
         end
     end
     % ---- Library cascades ---------------------------------------------------
@@ -1283,6 +1296,24 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
     % ---- Cascade helpers ----------------------------------------------------
     %   All of these return DISPLAY LABELS for choose(), never tokens.
     methods (Access = private)
+        function s = readoutLine(testCase, needle)
+            %READOUTLINE  The first bolt-length readout line containing needle.
+            %   BY CONTENT, NEVER BY INDEX. The readout itemises the minimum
+            %   bolt length, so its length varies with the joint - a washer
+            %   present or absent adds or removes a line. Every assertion
+            %   here used to index a fixed position, and itemising the sum
+            %   broke six of them at once. Returns "" when absent, so a
+            %   contains() assertion fails rather than erroring on a bad
+            %   subscript.
+            txt = string(testCase.Page.boltLengthLabel().Text);
+            k   = find(contains(txt, needle), 1);
+            if isempty(k)
+                s = "";
+            else
+                s = txt(k);
+            end
+        end
+
         function fillRunnableJoint(testCase)
             %FILLRUNNABLEJOINT  The minimum form that can actually produce
             %   a margin: hardware, a clamped layer, a preload and loads.

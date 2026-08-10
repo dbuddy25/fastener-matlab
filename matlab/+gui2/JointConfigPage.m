@@ -2171,12 +2171,18 @@ classdef JointConfigPage < gui2.Page
             % (r.Components); rebuilding them from the form here would be a
             % second implementation that could disagree with the verdict
             % printed directly above it.
-            if ~isnan(r.RequiredLength)
-                for i = 1:numel(r.Components)
-                    c = r.Components(i);
-                    lines{end + 1} = sprintf('      %s: %.4f in', ...
-                        char(c.Label), c.Value); %#ok<AGROW>
+            % PER ADDEND, not gated on the total. An addend you know is
+            % worth showing even when the sum is not computable yet: typing
+            % an engagement on a form with no flange stack still tells you
+            % what that engagement is. Unknown addends are dropped rather
+            % than dashed - a list of em dashes is not a breakdown.
+            for i = 1:numel(r.Components)
+                c = r.Components(i);
+                if ~isfinite(c.Value)
+                    continue
                 end
+                lines{end + 1} = sprintf('      %s: %.4f in', ...
+                    char(c.Label), c.Value); %#ok<AGROW>
             end
 
             if ~r.Evaluated
