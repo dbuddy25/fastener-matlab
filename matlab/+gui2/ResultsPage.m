@@ -20,7 +20,7 @@ classdef ResultsPage < gui2.Page
     %
     %   NO WORST-MARGIN HEADLINE. Result.WorstMargin and GoverningCheck span
     %   all fifteen checks, so either could name a row that is not in an
-    %   eight-row table. Neither is displayed, and the view never recomputes
+    %   ten-row table. Neither is displayed, and the view never recomputes
     %   a minimum over the displayed subset — that would be the view
     %   deriving a number, and it could overstate the margin (Section 2).
     %
@@ -45,21 +45,39 @@ classdef ResultsPage < gui2.Page
     %   both for a fresh result and for markResultStale.
 
     properties (Constant, Access = private)
-        % The eight table rows, in solver order, INTERACTION LAST.
+        % The ten table rows, in solver order, INTERACTION LAST.
         % Separation-before-rupture is deliberately absent: see the class
         % note and Section 8.2.
+        %
+        % Bearing-under-head and Bolt-thread shear were hidden here for no
+        % reason anyone could state. Bearing-under-head is REQUIRED -
+        % NASA-STD-5020B 4.4.2 calls for margins on the joint members and
+        % prints no member-strength equations, so TM-106943 Eq. 74/75
+        % supply them - and it was computed on every run and shown nowhere.
+        % Bolt-thread shear is a real failure mode that 5020B defers on
+        % (TM-106943 Eq. 63) and, unlike the four remaining hidden rows, is
+        % NOT folded into Ptu_allow: those are the INTERNAL threads.
         TableRows = ["Tension-Ultimate", "Tension-Yield", "Shear-Ultimate", ...
-                     "Separation", "Slip", "Bearing", "Shear-tearout", ...
-                     "Interaction"]
+                     "Separation", "Slip", "Bearing", "Bearing-under-head", ...
+                     "Shear-tearout", "Bolt-thread shear", "Interaction"]
 
         % The ninth displayed check. A decision, not a margin.
         DecisionRow = "Separation-before-rupture"
 
-        % Computed by the engine, deliberately not displayed (Section 2).
-        % Named in the scope footer, because a margin table that reads as
-        % complete when it is not is a compliance problem.
-        HiddenChecks = ["Bearing-under-head", "Bolt-thread shear", ...
-                        "Nut strength", "Insert internal-thread", ...
+        % Computed and not given a row of their own — but NOT unreported.
+        % These four are the NASA-STD-5020B 4.4.1 tensile modes of the
+        % threaded member. Whichever one applies to the joint in hand feeds
+        % engine.systemTensileAllowable, sets Ptu_allow, and therefore
+        % GOVERNS the Tension-Ultimate row at the top of the table; its
+        % allowable is listed by name under Analysis decisions. Giving them
+        % margin rows as well would report one fact twice.
+        %
+        % The scope footer says exactly this. It used to name six checks
+        % and call the assessment incomplete, which was wrong in both
+        % directions at once: it undersold what was on screen, and it
+        % buried the one check that really was missing (Bearing-under-head,
+        % now a row) in a list of four that never were.
+        HiddenChecks = ["Nut strength", "Insert internal-thread", ...
                         "Insert external-thread", "Tapped-hole parent-thread"]
 
         % Above this, a capped margin renders ">+5". Display only.
@@ -148,9 +166,9 @@ classdef ResultsPage < gui2.Page
 
         function build(obj, parent)
             g = uigridlayout(parent, [7 2]);
-            % Rows 5 and 6 SHARE the height. The table has eight fixed rows
+            % Rows 5 and 6 SHARE the height. The table has ten fixed rows
             % and the detail panel grows with its citation, so giving the
-            % table all the slack left a tall band of empty grid under eight
+            % table all the slack left a tall band of empty grid under the
             % rows while the detail sat squeezed at the bottom.
             %
             % Row 4 (the preload / design-loads readout) is 'fit' and spans
@@ -996,9 +1014,21 @@ classdef ResultsPage < gui2.Page
         end
 
         function t = scopeFooterText(~)
-            t = sprintf(['SCOPE: 9 of 15 checks shown. %d computed and NOT ' ...
-                'displayed: %s. This is not a complete NASA-STD-5020B ' ...
-                'assessment.'], numel(gui2.ResultsPage.HiddenChecks), ...
+            %SCOPEFOOTERTEXT  What is shown, what is not, and why not.
+            %   Says where the unlisted checks WENT rather than only that
+            %   they are absent. "Not a complete assessment" over a list
+            %   that includes four modes which govern the row above it is a
+            %   statement an analyst learns to ignore, and the moment it is
+            %   ignored it stops protecting the case it was written for.
+            nShown = numel(gui2.ResultsPage.TableRows) + 1;   % + the Fig. 8 gate
+            t = sprintf(['SCOPE: %d of 15 checks shown (%d margins plus the ' ...
+                'Fig. 8 gate). The other %d - %s - are the 5020B 4.4.1 ' ...
+                'tensile modes of the threaded member: whichever applies ' ...
+                'here sets Ptu_allow and so governs Tension-Ultimate, and ' ...
+                'its allowable is listed by name under Analysis decisions. ' ...
+                'No computed check goes unreported.'], ...
+                nShown, numel(gui2.ResultsPage.TableRows), ...
+                numel(gui2.ResultsPage.HiddenChecks), ...
                 strjoin(cellstr(gui2.ResultsPage.HiddenChecks), ', '));
         end
     end

@@ -436,10 +436,18 @@ commit, or the summary and the form disagree.
 
 ## 8. Single Joint Results
 
-### 8.1 The margin table — 8 rows
+### 8.1 The margin table — 10 rows
 
-The nine displayed checks minus `Separation-before-rupture`, which is not a
+The eleven displayed checks minus `Separation-before-rupture`, which is not a
 margin (§8.2). Solver order, no sorting, **`Interaction` last**.
+
+`Bearing-under-head` and `Bolt-thread shear` were hidden in the first build and
+are rows now. NASA-STD-5020B §4.4.2 REQUIRES margins on the joint members and
+prints no member-strength equations (TM-106943 Eq. 74/75 supply them), so
+bearing-under-head was a required check computed on every run and displayed
+nowhere. `Bolt-thread shear` is a real mode 5020B defers on (TM-106943 Eq. 63)
+and, unlike the four checks that remain unlisted, is **not** folded into
+`Ptu_allow` — those are the internal threads.
 
 - Colour from `Margins(i).Status` — `"Pass" | "Fail" | "NotEvaluated"`. The
   view never re-thresholds (A2).

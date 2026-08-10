@@ -71,16 +71,22 @@ classdef tGui2Results < matlab.uitest.TestCase
         end
     end
 
-    % ---- The table: eight rows, Interaction last --------------------------
+    % ---- The table: ten rows, Interaction last ----------------------------
     methods (Test)
-        function tableShowsEightRowsAndOmitsSeparationBeforeRupture(testCase)
+        function tableShowsTenRowsAndOmitsSeparationBeforeRupture(testCase)
             % Separation-before-rupture carries no number - it records which
             % branch the tension check took. Listing it among margins is the
             % category error this page exists to correct.
             testCase.showSynthetic();
             names = string(testCase.Page.marginTable().Data(:, 1));
 
-            testCase.verifyNumElements(names, 8);
+            testCase.verifyNumElements(names, 10);
+            testCase.verifyTrue(any(names == "Bearing-under-head"), ...
+                ['5020B 4.4.2 requires member margins, and this one was ' ...
+                 'computed every run and displayed nowhere.']);
+            testCase.verifyTrue(any(names == "Bolt-thread shear"), ...
+                ['A real mode 5020B defers on - and NOT folded into ' ...
+                 'Ptu_allow, which covers the internal threads.']);
             testCase.verifyFalse(any(names == "Separation-before-rupture"), ...
                 'A decision must never appear in the margin table.');
         end
@@ -172,14 +178,34 @@ classdef tGui2Results < matlab.uitest.TestCase
                 'Every verdict names the checks it did not cover.');
         end
 
-        function theScopeFooterNamesAllSixHiddenChecks(testCase)
+        function theScopeFooterNamesTheFourUnlistedModes(testCase)
+            % The four that have no row of their own. Bearing-under-head
+            % and Bolt-thread shear are no longer among them - they are
+            % rows now - and naming them here would send a reader looking
+            % for something that is on screen.
             txt = string(testCase.Page.scopeLabel().Text);
-            for name = ["Bearing-under-head", "Bolt-thread shear", ...
-                        "Nut strength", "Insert internal-thread", ...
+            for name = ["Nut strength", "Insert internal-thread", ...
                         "Insert external-thread", "Tapped-hole parent-thread"]
                 testCase.verifyTrue(contains(txt, name), ...
                     sprintf('The scope footer must name %s.', name));
             end
+            for shown = ["Bearing-under-head", "Bolt-thread shear"]
+                testCase.verifyFalse(contains(txt, shown), ...
+                    sprintf('%s has a row now; the footer must not list it.', shown));
+            end
+        end
+
+        function theScopeFooterSaysWhereTheUnlistedModesWent(testCase)
+            % "Not a complete assessment" over a list of four modes that
+            % GOVERN the row above them is a statement an analyst learns to
+            % ignore - and once ignored it protects nothing. It now says
+            % they set Ptu_allow and where to read their allowables.
+            txt = string(testCase.Page.scopeLabel().Text);
+
+            testCase.verifyTrue(contains(txt, "Ptu_allow"));
+            testCase.verifyTrue(contains(txt, "Analysis decisions"));
+            testCase.verifyTrue(contains(txt, "11 of 15"), ...
+                'Ten margin rows plus the Fig. 8 gate.');
         end
 
         function theScopeFooterIsThereBeforeAnyRun(testCase)
@@ -344,7 +370,7 @@ classdef tGui2Results < matlab.uitest.TestCase
 
             p = testCase.Page;
             testCase.verifyEqual(char(p.marginTable().Visible), 'on');
-            testCase.verifyNumElements(p.marginTable().Data(:, 1), 8);
+            testCase.verifyNumElements(p.marginTable().Data(:, 1), 10);
             testCase.verifyTrue( ...
                 contains(string(p.verdictLabel().Text), "not shown"));
         end
@@ -619,14 +645,14 @@ classdef tGui2Results < matlab.uitest.TestCase
                 char(testCase.Page.reportButton().Enable), 'on');
         end
 
-        function theExportCarriesTheNineDisplayedChecks(testCase)
-            % Section 2: an export shows what the page shows - the eight
+        function theExportCarriesTheElevenDisplayedChecks(testCase)
+            % Section 2: an export shows what the page shows - the ten
             % margin rows PLUS the gate, which is displayed but carries no
             % margin.
             testCase.showSynthetic();
             T = testCase.Page.exportTable();
 
-            testCase.verifyEqual(height(T), 9);
+            testCase.verifyEqual(height(T), 11);
             testCase.verifyTrue(any(T.Check == "Separation-before-rupture"), ...
                 'The gate is the ninth displayed check.');
         end
@@ -678,9 +704,9 @@ classdef tGui2Results < matlab.uitest.TestCase
             % the two disagree about the same row.
             testCase.showSynthetic();
             p = testCase.Page;
-            % Interaction is last of the eight table rows - the row count
-            % itself is pinned by tableShowsEightRowsAndOmits...
-            p.selectRow(8);
+            % Interaction is last of the ten table rows - the count itself
+            % is pinned by tableShowsTenRowsAndOmits...
+            p.selectRow(10);
 
             txt = strjoin(string(p.detailArea().Value), newline);
             testCase.verifyTrue(contains(txt, "R = 0.86"));
@@ -720,7 +746,7 @@ classdef tGui2Results < matlab.uitest.TestCase
             % Narrative - every other row's detail is its own.
             testCase.showSynthetic();
             p = testCase.Page;
-            p.selectRow(8);   % Interaction
+            p.selectRow(10);   % Interaction
 
             txt = strjoin(string(p.detailArea().Value), newline);
             testCase.verifyFalse(contains(txt, "Analysis decisions"), ...
