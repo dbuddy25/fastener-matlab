@@ -267,4 +267,96 @@ classdef tBoltLength < matlab.unittest.TestCase
             testCase.verifyTrue(r.IsAdequate);
         end
     end
+
+    % ---- The minimum, itemised --------------------------------------------
+    %   Components exists so a readout can SHOW what the minimum is made of.
+    %   The 2*pitch protrusion term is the reason: it is the one people do
+    %   not expect, and on a 1/4-20 insert joint it is the whole difference
+    %   between a 1.75 in bolt passing and failing.
+    methods (Test)
+        function theComponentsAddUpToTheRequiredLength(testCase)
+            % If these ever drift apart, the readout is contradicting the
+            % verdict printed directly above it.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.ThreadedMember.EngagementLength = 0.3;
+
+            r = engine.boltLengthCheck(j);
+
+            testCase.verifyEqual(sum([r.Components.Value]), r.RequiredLength, ...
+                "AbsTol", 1e-12, ...
+                'The itemised breakdown must sum to the number it explains.');
+        end
+
+        function theProtrusionTermIsNamedAndCited(testCase)
+            % Buried in the total it looks like the tool is wrong.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.ThreadedMember.EngagementLength = 0.3;
+
+            r = engine.boltLengthCheck(j);
+            labels = string({r.Components.Label});
+
+            testCase.verifyTrue(any(contains(labels, "Protrusion")), ...
+                'The 2 x pitch term must appear as its own line.');
+            testCase.verifyTrue(any(contains(labels, "4.7.4")), ...
+                'A term that decides a verdict must carry its citation.');
+        end
+
+        function aTappedHoleShowsNoProtrusionTermBecauseItHasNone(testCase)
+            % 5020B 4.7.4's 2*pitch sentence stops at "insert" -- a tapped
+            % hole gets no allowance, and the breakdown must not imply one.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.ThreadedMember.Type             = model.ThreadedMemberType.TappedHole;
+            j.ThreadedMember.EngagementLength = 0.3;
+
+            r = engine.boltLengthCheck(j);
+            labels = string({r.Components.Label});
+
+            testCase.verifyFalse(any(contains(labels, "Protrusion")));
+            testCase.verifyEqual(sum([r.Components.Value]), r.RequiredLength, ...
+                "AbsTol", 1e-12);
+        end
+
+        function theBreakdownRunsInPhysicalStackOrder(testCase)
+            % It is read against the joint, top to bottom.
+            %
+            % A NUT joint deliberately: a nut washer is unambiguously real
+            % here. On the Insert joint this fixture ships as, whether a nut
+            % washer belongs in the grip at all is an open question --
+            % engine.stiffness says a threaded-in joint has none, while this
+            % function counts it. Pinning the order on that case would
+            % freeze the disputed behaviour into a test.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.ThreadedMember.Type             = model.ThreadedMemberType.Nut;
+            j.ThreadedMember.EngagementLength = 0.3;
+            j.HeadWasher.Thickness = 0.032;
+            j.NutWasher.Thickness  = 0.040;
+
+            r = engine.boltLengthCheck(j);
+            labels = string({r.Components.Label});
+
+            testCase.verifyEqual(labels(1), "Head washer");
+            testCase.verifyTrue(startsWith(labels(2), "Flanges"));
+            testCase.verifyEqual(labels(3), "Nut washer");
+            testCase.verifyEqual(labels(4), "Thread engagement Le");
+        end
+
+        function anAbsentWasherGetsNoLineAtAll(testCase)
+            % A zero-thickness row is noise, and reads as a washer that is
+            % there but does nothing.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.ThreadedMember.EngagementLength = 0.3;
+            j.HeadWasher = model.Washer();
+            j.NutWasher  = model.Washer();
+
+            r = engine.boltLengthCheck(j);
+            labels = string({r.Components.Label});
+
+            testCase.verifyFalse(any(contains(labels, "washer")));
+        end
+    end
 end

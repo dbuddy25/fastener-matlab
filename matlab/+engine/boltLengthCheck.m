@@ -66,6 +66,15 @@ function r = boltLengthCheck(joint)
 %                       — applies to all three configurations; "nut height"
 %                       is Nut's EngagementLength-only label). Lets the GUI
 %                       label the line without arithmetic.
+%       Components      1xN struct array (Label string, Value double, in)
+%                       — the ADDENDS of RequiredLength in physical stack
+%                       order: head washer (if any), flanges, nut washer
+%                       (if any), engagement Le, 2·pitch protrusion (Nut and
+%                       Insert only). They sum to RequiredLength. Provided so
+%                       a readout can ITEMISE the minimum rather than
+%                       reassembling it from the joint — the 2·pitch term is
+%                       the one that surprises people, and a term that
+%                       decides a verdict must be visible.
 %       RequiredLength  minimum bolt length, in (NaN when underdefined)
 %       SuppliedLength  joint.Bolt.Length, in (NaN = not supplied)
 %       IsAdequate      logical. FALSE only when the check affirmatively
@@ -198,6 +207,34 @@ else
         "1.5·D when unspecified)";
 end
 
+% ---- What the required length is actually made of ------------------------
+% The ADDENDS, in physical stack order, exactly as used above. Returned
+% rather than left for a caller to reassemble: a readout that rebuilds this
+% sum from the joint is a second implementation of it, and the 2*pitch
+% protrusion term is precisely the one nobody expects to find in the total
+% -- it is the difference between a 1.75 in bolt passing and failing on a
+% 1/4-20 insert joint. Something that decides a verdict has to be visible.
+components = struct('Label', {}, 'Value', {});
+if ~isempty(joint.FlangeStack)
+    if joint.HeadWasher.Thickness > 0
+        components(end+1) = struct('Label', "Head washer", ...
+            'Value', joint.HeadWasher.Thickness);
+    end
+    components(end+1) = struct( ...
+        'Label', string(sprintf('Flanges (%d)', numel(joint.FlangeStack))), ...
+        'Value', sum([joint.FlangeStack.Thickness]));
+    if joint.NutWasher.Thickness > 0
+        components(end+1) = struct('Label', "Nut washer", ...
+            'Value', joint.NutWasher.Thickness);
+    end
+end
+components(end+1) = struct('Label', "Thread engagement Le", ...
+    'Value', engagement);
+if allowance > 0
+    components(end+1) = struct( ...
+        'Label', "Protrusion 2 x pitch (5020B 4.7.4)", 'Value', allowance);
+end
+
 supplied  = joint.Bolt.Length;         % overall bolt length, in (NaN = not supplied)
 evaluated = ~isnan(supplied) && ~isnan(required);
 
@@ -274,4 +311,10 @@ r = struct( ...
     "Shortfall",       shortfall, ...
     "Method",          method, ...
     "Detail",          detail);
+
+% ASSIGNED SEPARATELY, NOT PASSED TO struct(). A struct ARRAY handed to
+% struct() as a value replicates the whole result into a struct array
+% instead of nesting -- r would silently become 1xN and every caller
+% reading r.RequiredLength would get a comma-list.
+r.Components = components;
 end

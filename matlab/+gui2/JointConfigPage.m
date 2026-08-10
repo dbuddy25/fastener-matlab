@@ -2136,7 +2136,10 @@ classdef JointConfigPage < gui2.Page
         end
 
         function updateBoltLengthLabel(obj)
-            %UPDATEBOLTLENGTHLABEL  Four lines from engine.boltLengthCheck.
+            %UPDATEBOLTLENGTHLABEL  The bolt-length verdict, itemised.
+            %   Grip, the minimum, ITS ADDENDS, the verdict, then L1. The
+            %   line count varies with the joint, so every line after the
+            %   itemisation is appended rather than placed by index.
             %   ALL arithmetic is the engine's; this formats the struct and
             %   nothing more. boltLengthCheck is a pure query that never
             %   throws and degrades any missing input to NaN, which is why
@@ -2154,24 +2157,41 @@ classdef JointConfigPage < gui2.Page
             lines = { ...
                 gui2.JointConfigPage.lineOrDash('Grip (stack + washers): %.4f in', ...
                     r.GripLength, 'Grip (stack + washers): —'), ...
-                gui2.JointConfigPage.lineOrDash('Engagement Le: %.4f in', ...
-                    r.Engagement, 'Engagement Le: —'), ...
                 gui2.JointConfigPage.lineOrDash('Minimum bolt length: %.4f in', ...
                     r.RequiredLength, 'Minimum bolt length: —')};
+
+            % ITEMISED, because a total nobody can decompose is a total
+            % nobody can argue with. The 2 x pitch protrusion term is the
+            % specific reason: it is 5020B 4.7.4, it applies to inserts as
+            % well as nuts, and it is the difference between a 1/4-20 at
+            % 1.75 in passing and failing. Anyone reading only the total
+            % would conclude the tool was wrong.
+            %
+            % The engine hands over the addends it actually used
+            % (r.Components); rebuilding them from the form here would be a
+            % second implementation that could disagree with the verdict
+            % printed directly above it.
+            if ~isnan(r.RequiredLength)
+                for i = 1:numel(r.Components)
+                    c = r.Components(i);
+                    lines{end + 1} = sprintf('      %s: %.4f in', ...
+                        char(c.Label), c.Value); %#ok<AGROW>
+                end
+            end
 
             if ~r.Evaluated
                 % Named cause, not a bare dash: the analyst needs to know
                 % WHICH input is missing to act on it.
-                lines{4} = sprintf('Not evaluated — %s', char(r.Detail));
+                lines{end + 1} = sprintf('Not evaluated — %s', char(r.Detail));
                 obj.BoltLengthLabel.FontColor  = gui2.palette('statusWarn');
                 obj.BoltLengthLabel.FontWeight = 'normal';
             elseif r.Shortfall > 0
-                lines{4} = sprintf('Selected %.4f in — TOO SHORT by %.4f in', ...
+                lines{end + 1} = sprintf('Selected %.4f in — TOO SHORT by %.4f in', ...
                     r.SuppliedLength, r.Shortfall);
                 obj.BoltLengthLabel.FontColor  = gui2.palette('statusFail');
                 obj.BoltLengthLabel.FontWeight = 'bold';
             else
-                lines{4} = sprintf('Selected %.4f in — OK', r.SuppliedLength);
+                lines{end + 1} = sprintf('Selected %.4f in — OK', r.SuppliedLength);
                 obj.BoltLengthLabel.FontColor  = gui2.palette('mutedText');
                 obj.BoltLengthLabel.FontWeight = 'normal';
             end
@@ -2183,7 +2203,7 @@ classdef JointConfigPage < gui2.Page
             % detail. Reporting it HERE says so before Analyze is pressed,
             % which is where the analyst can still do something about it.
             [l1Text, l1Missing] = obj.bodyLengthLine(j);
-            lines{5} = l1Text;
+            lines{end + 1} = l1Text;
             if l1Missing && ~(r.Evaluated && r.Shortfall > 0)
                 % Amber unless the shortfall red is already the louder
                 % problem — never demote a failure to a warning.
