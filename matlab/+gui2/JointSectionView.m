@@ -57,6 +57,19 @@ classdef JointSectionView < handle
         % to this gets a dashed outer edge.
         AssumedFlangeHalfWidth = 2.0   % x nominal diameter
 
+        % Type sizes. Set explicitly rather than left to the uiaxes default,
+        % which renders small enough to be unreadable at the window's
+        % opening size - the first thing anyone said about this view.
+        AxisFontSize  = 11
+        LabelFontSize = 11
+        AnnotFontSize = 10
+
+        % Thread teeth are skipped outside this range: below it there is
+        % nothing to see, above it the teeth merge into a grey band and the
+        % dotted root outline reads better.
+        MinThreadTeeth = 2
+        MaxThreadTeeth = 120
+
         % Fill colours. Deliberately muted and few: this is a diagram, not
         % a rendering, and Section 13 says skip the gradients.
         BoltFill   = [0.62 0.66 0.72]
@@ -128,11 +141,12 @@ classdef JointSectionView < handle
             % else in this app.
             obj.Ax.YDir     = 'reverse';
             obj.Ax.Box      = 'on';
-            obj.Ax.FontSize = 9;
+            obj.Ax.FontSize = gui2.JointSectionView.AxisFontSize;
             xlabel(obj.Ax, 'radius (in)');
             ylabel(obj.Ax, 'axial position from under-head (in)');
 
-            obj.NoteLabel = uilabel(g, 'WordWrap', 'on', 'Text', '');
+            obj.NoteLabel = uilabel(g, 'WordWrap', 'on', 'Text', '', ...
+                'FontSize', gui2.JointSectionView.LabelFontSize);
             obj.NoteLabel.Layout.Row    = 2;
             obj.NoteLabel.Layout.Column = 1;
             obj.NoteLabel.FontColor     = gui2.palette('mutedText');
@@ -222,7 +236,8 @@ classdef JointSectionView < handle
                 if strlength(b.Label) > 0
                     text(obj.Ax, b.OuterR + 0.04 * g.Scale, ...
                         b.Y0 + b.Height / 2, char(b.Label), ...
-                        'FontSize', 8, 'VerticalAlignment', 'middle', ...
+                        'FontSize', gui2.JointSectionView.AnnotFontSize, ...
+                        'VerticalAlignment', 'middle', ...
                         'Color', gui2.palette('mutedText'));
                 end
             end
@@ -248,6 +263,8 @@ classdef JointSectionView < handle
                 'FaceColor', obj.BoltFill, 'EdgeColor', obj.EdgeColour, ...
                 'LineWidth', 0.5);
 
+            % The unthreaded run only. Drawing the shank full length and
+            % the thread over it left the crests buried under the shank fill.
             if b.ShankLength > 0
                 rectangle(obj.Ax, 'Position', ...
                     [-b.ShankR, 0, 2 * b.ShankR, b.ShankLength], ...
@@ -255,14 +272,22 @@ classdef JointSectionView < handle
                     'LineWidth', 0.5);
             end
 
-            % Threads at MINOR diameter - narrower than the shank, which is
-            % the visual cue that matters. Section 13 says skip the coil
-            % hatching, and a to-scale thread profile would be invisible.
-            if b.ThreadLength > 0
-                rectangle(obj.Ax, 'Position', ...
-                    [-b.ThreadR, b.ThreadTop, 2 * b.ThreadR, b.ThreadLength], ...
-                    'FaceColor', obj.BoltFill, 'EdgeColor', obj.EdgeColour, ...
-                    'LineStyle', ':', 'LineWidth', 0.5);
+            if b.ThreadLength <= 0
+                return
+            end
+
+            % The root cylinder, always. Teeth ride on top of it when the
+            % thread data supports them.
+            rectangle(obj.Ax, 'Position', ...
+                [-b.ThreadR, b.ThreadTop, 2 * b.ThreadR, b.ThreadLength], ...
+                'FaceColor', obj.BoltFill, 'EdgeColor', obj.EdgeColour, ...
+                'LineStyle', ':', 'LineWidth', 0.5);
+
+            if b.Thread.Ok
+                plot(obj.Ax, b.Thread.R, b.Thread.Y, '-', ...
+                    'Color', obj.EdgeColour, 'LineWidth', 0.5);
+                plot(obj.Ax, -b.Thread.R, b.Thread.Y, '-', ...
+                    'Color', obj.EdgeColour, 'LineWidth', 0.5);
             end
         end
 
@@ -273,11 +298,17 @@ classdef JointSectionView < handle
             if ~g.Frustum.Ok
                 return
             end
-            f = g.Frustum;
-            plot(obj.Ax, f.R, f.Y, '--', 'Color', [0.55 0.40 0.65], ...
-                'LineWidth', 0.75);
-            plot(obj.Ax, -f.R, f.Y, '--', 'Color', [0.55 0.40 0.65], ...
-                'LineWidth', 0.75);
+            f   = g.Frustum;
+            col = [0.55 0.40 0.65];
+            plot(obj.Ax, f.R, f.Y, '--', 'Color', col, 'LineWidth', 1);
+            plot(obj.Ax, -f.R, f.Y, '--', 'Color', col, 'LineWidth', 1);
+
+            % Named, and carrying its angle. Two dashed lines on a diagram
+            % of a bolt are not self-evidently a compression cone - the
+            % first person to see this asked what they were.
+            text(obj.Ax, f.R(2), f.Y(2), sprintf('  compression cone %g deg', ...
+                f.Angle), 'FontSize', gui2.JointSectionView.AnnotFontSize, ...
+                'Color', col, 'VerticalAlignment', 'middle');
         end
 
         function paintLoadingPlane(obj, g)
@@ -296,7 +327,8 @@ classdef JointSectionView < handle
             plot(obj.Ax, [-lp.HalfWidth lp.HalfWidth], [lp.Y lp.Y], '-', ...
                 'Color', col, 'LineWidth', 1.25);
             text(obj.Ax, -lp.HalfWidth, lp.Y, ' loading plane', ...
-                'FontSize', 8, 'Color', col, 'VerticalAlignment', 'bottom');
+                'FontSize', gui2.JointSectionView.AnnotFontSize, ...
+                'Color', col, 'VerticalAlignment', 'bottom');
         end
     end
 
@@ -325,7 +357,7 @@ classdef JointSectionView < handle
             g.YTop         = 0;
             g.YBottom      = 0;
             g.Bolt         = struct();
-            g.Frustum      = struct('Ok', false, 'R', [], 'Y', []);
+            g.Frustum      = struct('Ok', false, 'R', [], 'Y', [], 'Angle', NaN);
             g.LoadingPlane = struct('Ok', false, 'Y', NaN, ...
                                     'Outside', false, 'HalfWidth', 0);
 
@@ -432,7 +464,9 @@ classdef JointSectionView < handle
             % ---- extents ----
             outerR = max([bands.OuterR, g.Bolt.HeadR, memberOuter]);
             g.YTop    = g.Bolt.HeadTop;
-            g.YBottom = max(memberBottom, g.Bolt.ShankLength);
+            % TotalLength, not ShankLength: the latter is now the unthreaded
+            % run, and clipping the axis to it would cut off the threads.
+            g.YBottom = max(memberBottom, g.Bolt.TotalLength);
             pad = 0.25 * D;
             g.XLim = [-(outerR + pad), outerR + pad];
             g.YLim = [g.YTop - pad, g.YBottom + pad];
@@ -552,15 +586,72 @@ classdef JointSectionView < handle
 
             b = struct( ...
                 'HeadR', headR, 'HeadHeight', headH, 'HeadTop', -headH, ...
-                'ShankR', shankR, 'ShankLength', L, ...
-                'ThreadR', threadR, 'ThreadLength', tl, 'ThreadTop', L - tl);
+                'ShankR', shankR, ...
+                'TotalLength', L, ...
+                'ShankLength', L - tl, ...
+                'ThreadR', threadR, 'ThreadLength', tl, 'ThreadTop', L - tl, ...
+                'MajorR', D / 2, ...
+                'Thread', gui2.JointSectionView.threadProfile( ...
+                              joint, D, L - tl, tl, threadR));
+        end
+
+        function t = threadProfile(joint, D, yTop, len, minorR)
+            %THREADPROFILE  Real thread teeth, when the thread data supports them.
+            %   NOT a convention: pitch is model.Bolt.Pitch (a Dependent
+            %   property, = 1/ThreadsPerInch) and the crest and root radii
+            %   are NominalDiameter and MinorDiameter. Every tooth is at its
+            %   true axial position, so a 28-TPI thread draws 28 teeth to
+            %   the inch and the picture stays to scale.
+            %
+            %   Section 13 says to skip coil hatching, and this is not that:
+            %   hatching is decoration, whereas a visible pitch is how you
+            %   see at a glance that a thread runs where you meant it to.
+            %
+            %   One polyline per side, whatever the tooth count.
+            t = struct('Ok', false, 'R', [], 'Y', [], 'Teeth', 0);
+            if ~isfinite(len) || len <= 0
+                return
+            end
+            p = joint.Bolt.Pitch;
+            if ~isfinite(p) || p <= 0
+                return
+            end
+            majorR = D / 2;
+            if ~isfinite(minorR) || minorR <= 0 || majorR <= minorR
+                return
+            end
+
+            % Nudged before flooring. A thread length that is an exact whole
+            % number of pitches - 0.500 in at 28 TPI is exactly 14 - lands
+            % either side of the integer depending on the division, and
+            % losing the last tooth to floating point is a silent wrong
+            % answer in a picture that claims to be to scale.
+            n = floor(len / p + 1e-9);
+            if n < gui2.JointSectionView.MinThreadTeeth || ...
+               n > gui2.JointSectionView.MaxThreadTeeth
+                return
+            end
+
+            % Root, crest, root, crest ... one full tooth per pitch.
+            r = zeros(1, 2 * n + 1);
+            y = zeros(1, 2 * n + 1);
+            for i = 0:(n - 1)
+                r(2 * i + 1) = minorR;
+                y(2 * i + 1) = yTop + i * p;
+                r(2 * i + 2) = majorR;
+                y(2 * i + 2) = yTop + (i + 0.5) * p;
+            end
+            r(end) = minorR;
+            y(end) = yTop + n * p;
+
+            t = struct('Ok', true, 'R', r, 'Y', y, 'Teeth', n);
         end
 
         function f = frustumProfile(joint, gripTop, gripBottom, headR)
             %FRUSTUMPROFILE  The compression cone at the user's half-angle.
             %   Expands from each bearing face toward mid-grip. One polyline
             %   per side; the caller mirrors it.
-            f = struct('Ok', false, 'R', [], 'Y', []);
+            f = struct('Ok', false, 'R', [], 'Y', [], 'Angle', NaN);
             h = gripBottom - gripTop;
             if ~isfinite(h) || h <= 0
                 return
@@ -569,11 +660,12 @@ classdef JointSectionView < handle
             if ~isfinite(ang) || ang <= 0 || ang >= 90
                 return
             end
-            yMid = gripTop + h / 2;
-            rMid = headR + tand(ang) * (h / 2);
-            f.R  = [headR, rMid, headR];
-            f.Y  = [gripTop, yMid, gripBottom];
-            f.Ok = true;
+            yMid    = gripTop + h / 2;
+            rMid    = headR + tand(ang) * (h / 2);
+            f.R     = [headR, rMid, headR];
+            f.Y     = [gripTop, yMid, gripBottom];
+            f.Angle = ang;
+            f.Ok    = true;
         end
 
         function lp = loadingPlane(joint, gripTop, gripBottom, halfWidth)

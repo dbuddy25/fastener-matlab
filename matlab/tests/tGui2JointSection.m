@@ -167,6 +167,68 @@ classdef tGui2JointSection < matlab.uitest.TestCase
         end
     end
 
+    % ---- Threads -----------------------------------------------------------
+    %   These are DATA, not a convention: pitch is model.Bolt.Pitch
+    %   (= 1/ThreadsPerInch) and the crest and root are NominalDiameter and
+    %   MinorDiameter. So the tooth count is checkable arithmetic.
+    methods (Test)
+        function threadsAreDrawnAtTheirTruePitch(testCase)
+            % 0.500 in of thread at 28 TPI is 14 teeth, and every one is at
+            % its real axial position - the drawing stays to scale.
+            g = gui2.JointSectionView.layout(tGui2JointSection.fullJoint());
+
+            testCase.verifyTrue(g.Bolt.Thread.Ok);
+            testCase.verifyEqual(g.Bolt.Thread.Teeth, 14);
+        end
+
+        function theToothProfileRunsBetweenRootAndCrest(testCase)
+            g = gui2.JointSectionView.layout(tGui2JointSection.fullJoint());
+            t = g.Bolt.Thread;
+
+            testCase.verifyEqual(min(t.R), 0.210 / 2, 'AbsTol', 1e-12, ...
+                'The root must be the minor diameter.');
+            testCase.verifyEqual(max(t.R), 0.250 / 2, 'AbsTol', 1e-12, ...
+                'The crest must be the nominal diameter.');
+        end
+
+        function theThreadStaysInsideTheThreadedLength(testCase)
+            % ThreadLength is measured FROM THE TIP, so the teeth belong at
+            % the bottom of the bolt - drawing them from the head down is
+            % the easy way to get this exactly backwards.
+            g = gui2.JointSectionView.layout(tGui2JointSection.fullJoint());
+            t = g.Bolt.Thread;
+
+            testCase.verifyGreaterThanOrEqual(min(t.Y), g.Bolt.ThreadTop - 1e-12);
+            testCase.verifyLessThanOrEqual(max(t.Y), g.Bolt.TotalLength + 1e-12);
+            testCase.verifyEqual(g.Bolt.ThreadTop, 0.500, 'AbsTol', 1e-12, ...
+                'A 1.000 in bolt with 0.500 in of thread starts threading at mid-length.');
+        end
+
+        function noThreadDataMeansNoTeethRatherThanInventedOnes(testCase)
+            % The rule the whole view follows: what is not known is not
+            % drawn. The root outline still renders.
+            j = tGui2JointSection.fullJoint();
+            j.Bolt.ThreadsPerInch = NaN;
+
+            g = gui2.JointSectionView.layout(j);
+
+            testCase.verifyTrue(g.Ok, 'A bolt with no TPI must still draw.');
+            testCase.verifyFalse(g.Bolt.Thread.Ok);
+        end
+
+        function anUnthreadedBoltHasNoTeeth(testCase)
+            j = tGui2JointSection.fullJoint();
+            j.Bolt.ThreadLength = NaN;
+
+            g = gui2.JointSectionView.layout(j);
+
+            testCase.verifyFalse(g.Bolt.Thread.Ok);
+            testCase.verifyEqual(g.Bolt.ShankLength, g.Bolt.TotalLength, ...
+                'AbsTol', 1e-12, ...
+                'With no thread length the whole bolt is shank.');
+        end
+    end
+
     % ---- The loading plane -------------------------------------------------
     methods (Test)
         function aLoadingPlaneInsideTheGripIsNotFlagged(testCase)
