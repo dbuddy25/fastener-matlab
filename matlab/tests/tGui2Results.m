@@ -294,11 +294,20 @@ classdef tGui2Results < matlab.uitest.TestCase
         function theAllowableFromTraceReachesTheDecisionsSection(testCase)
             % Section 2: the hidden 4.4.1 rows produce the allowable that
             % GOVERNS Tension-Ultimate. Hiding the rows must not hide that.
+            %
+            % This asserted the literal "Ptu_allow" - a word that happened
+            % to appear in the prose the panel used to dump. The panel now
+            % renders the same fact from Result.Allowables as a per-mode
+            % list, so the assertion moved onto the FACT: which mode
+            % governs, and at what load. Strictly stronger than the token
+            % it replaced, and no longer coupled to a sentence's wording.
             testCase.showSynthetic();
             txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
             testCase.verifyTrue(contains(txt, "FASTENING-SYSTEM ALLOWABLE"));
-            testCase.verifyTrue(contains(txt, "Ptu_allow"), ...
-                'The governing-mode trace must be surfaced, not dropped.');
+            testCase.verifyTrue(contains(txt, "bolt tension"), ...
+                'The governing mode must be named, not dropped.');
+            testCase.verifyTrue(contains(txt, "15,200"), ...
+                'And the load at which it governs.');
         end
 
         function theBendingExemptionIsStatedAsAssumed(testCase)
