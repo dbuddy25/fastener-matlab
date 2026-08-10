@@ -355,6 +355,27 @@ classdef tExport < matlab.unittest.TestCase
             testCase.assertGreaterThan(height(T), 0);
         end
     end
+
+    % ---- Caller notes travel with the file ---------------------------------
+    methods (Test)
+        function notesAreWrittenToTheAboutSheet(testCase)
+            % A scope statement naming checks that were computed and NOT
+            % exported has to travel with the file. On screen it is a
+            % footer; in a workbook it has to be a row, or the spreadsheet
+            % reads as a complete assessment when it is not.
+            T = table("a", 1, 'VariableNames', {'Check', 'MS'});
+            f = string(tempname) + ".xlsx";
+            testCase.addTeardown(@() delete(f));
+
+            report.exportResults(T, f, Notes = "SCOPE: 9 of 15 checks shown.");
+
+            A = readtable(f, "Sheet", "About", "TextType", "string");
+            testCase.verifyTrue(any(contains(A.Value, "9 of 15")), ...
+                'The note must reach the About sheet.');
+            testCase.verifyTrue(any(A.Value == toolVersion()), ...
+                'And must not have displaced the version stamp.');
+        end
+    end
 end
 
 % =========================================================================

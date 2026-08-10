@@ -17,7 +17,11 @@ function file = exportResults(T, file)
 %                  column). Skipped when T lacks WorstMargin/Error columns.
 %       About    — tool name, version (toolVersion), run timestamp and the
 %                  governing standard, so an exported workbook stays
-%                  traceable to the build that produced it.
+%                  traceable to the build that produced it. Any strings
+%                  passed as Notes are appended here — a scope statement
+%                  naming checks that were computed and NOT exported
+%                  belongs with the file, not just on the screen it came
+%                  from.
 %   For .csv only the main table is written (CSV has no sheets, and a
 %   metadata banner row would corrupt readtable), so a CSV export carries
 %   NO version stamp -- use .xlsx when provenance must travel with it.
@@ -29,6 +33,7 @@ function file = exportResults(T, file)
 arguments
     T    table
     file (1,1) string
+    opts.Notes (1,:) string = string.empty(1, 0)
 end
 
 [~, ~, ext] = fileparts(file);
@@ -77,6 +82,14 @@ if isXlsx
     Value = ["Fastener Analysis Tool"; toolVersion(); ...
              string(datetime("now", "Format", "yyyy-MM-dd HH:mm")); ...
              "NASA-STD-5020B"];
+    % Caller notes ride on the SAME sheet as the provenance, because they
+    % are the same kind of claim: a scope statement naming checks that are
+    % computed and not exported has to travel with the file, or the
+    % spreadsheet reads as a complete assessment when it is not.
+    for k = 1:numel(opts.Notes)
+        Item(end+1)  = "Note"; %#ok<AGROW>
+        Value(end+1) = opts.Notes(k); %#ok<AGROW>
+    end
     writetable(table(Item, Value), file, "Sheet", "About");
 else
     % CSV HAS NO SHEETS, so there is nowhere to put the stamp that would

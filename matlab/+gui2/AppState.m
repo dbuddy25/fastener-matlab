@@ -140,6 +140,13 @@ classdef AppState < handle
         % Set by markDirty and by the whole-case replacement paths; cleared
         % only by a successful run (GUI2_HARVEST.md A3).
         ResultStale (1,1) logical = false
+
+        % The joint / loadCase / factors that produced Result, or empty.
+        % NOT a copy of the form: the form moves on (that is exactly what
+        % ResultStale means) while these stay pinned to the numbers on
+        % screen, so anything re-deriving from the analysed inputs — the
+        % PDF report — documents what was actually displayed.
+        ResultInputs struct = struct.empty
         BulkStale   (1,1) logical = false
 
         % True when the library loaded AND carries usable content. Gates
@@ -273,11 +280,26 @@ classdef AppState < handle
             notify(obj, 'BulkChanged');
         end
 
-        function setResult(obj, r)
+        function setResult(obj, r, inputs)
             %SETRESULT  Record a fresh single-joint result and clear stale.
             %   The ONLY path that clears ResultStale — a successful run.
-            obj.ResultStale = false;
-            obj.Result      = r;   % fires ResultChanged
+            %
+            %   `inputs` is the joint / loadCase / factors that PRODUCED r,
+            %   kept because report.singleJointReport re-runs engine.analyze
+            %   rather than taking a Result: handed the form's current
+            %   contents it would document a DIFFERENT analysis from the one
+            %   on screen, which is the whole failure the stale banner
+            %   exists to catch. Optional, so a test can still stage a bare
+            %   Result; ResultInputs then stays empty and the report action
+            %   stays disabled rather than reporting the wrong joint.
+            arguments
+                obj    (1,1) gui2.AppState
+                r
+                inputs struct = struct.empty
+            end
+            obj.ResultStale  = false;
+            obj.ResultInputs = inputs;
+            obj.Result       = r;   % fires ResultChanged, so it goes LAST
         end
 
         function setBulkTable(obj, T)
@@ -376,9 +398,13 @@ classdef AppState < handle
             % A replaced case invalidates anything on screen. Clear rather
             % than stale: these results belong to a case that is gone, not
             % to an edited version of the current one.
-            obj.ResultStale = false;
-            obj.BulkStale   = false;
-            obj.Result      = [];   % fires ResultChanged
+            obj.ResultStale  = false;
+            obj.BulkStale    = false;
+            % Cleared WITH the Result. Left behind, they would pin the
+            % previous case's joint to an empty result and a later report
+            % would document a case the user had already closed.
+            obj.ResultInputs = struct.empty;
+            obj.Result       = [];   % fires ResultChanged
             obj.BulkTable   = [];   % fires BulkChanged
         end
 

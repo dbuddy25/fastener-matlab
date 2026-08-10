@@ -589,6 +589,75 @@ classdef tGui2Results < matlab.uitest.TestCase
         end
     end
 
+    % ---- Report and export -------------------------------------------------
+    methods (Test)
+        function bothActionsAreDisabledWithNothingToWrite(testCase)
+            p = testCase.Page;
+            testCase.verifyEqual(char(p.exportButton().Enable), 'off');
+            testCase.verifyEqual(char(p.reportButton().Enable), 'off');
+        end
+
+        function reportStaysDisabledWithoutTheInputsThatMadeTheResult(testCase)
+            % report.singleJointReport RE-RUNS engine.analyze rather than
+            % taking a Result, so without the joint that produced this one
+            % it would document a different analysis. Disabled beats wrong.
+            testCase.showSynthetic();          % staged, no inputs
+            p = testCase.Page;
+
+            testCase.verifyEqual(char(p.exportButton().Enable), 'on', ...
+                'The table can always be written - it IS the Result.');
+            testCase.verifyEqual(char(p.reportButton().Enable), 'off', ...
+                'The PDF cannot, without the inputs behind the numbers.');
+        end
+
+        function reportIsOfferedOnceTheInputsAreKnown(testCase)
+            testCase.App.State.setResult( ...
+                tGui2Results.syntheticResult("mixed"), ...
+                struct('Joint', model.Joint(), 'LoadCase', [], 'Factors', []));
+
+            testCase.verifyEqual( ...
+                char(testCase.Page.reportButton().Enable), 'on');
+        end
+
+        function theExportCarriesTheNineDisplayedChecks(testCase)
+            % Section 2: an export shows what the page shows - the eight
+            % margin rows PLUS the gate, which is displayed but carries no
+            % margin.
+            testCase.showSynthetic();
+            T = testCase.Page.exportTable();
+
+            testCase.verifyEqual(height(T), 9);
+            testCase.verifyTrue(any(T.Check == "Separation-before-rupture"), ...
+                'The gate is the ninth displayed check.');
+        end
+
+        function theExportIsNeverCapped(testCase)
+            % The cap is a reading convenience. A file someone will do
+            % arithmetic on must carry the real number, whatever the
+            % checkbox says.
+            testCase.showSynthetic();          % Tension-Ultimate MS = 47.3
+            testCase.verifyTrue(logical(testCase.Page.capCheck().Value), ...
+                'The cap is on by default - that is the point of this test.');
+
+            T = testCase.Page.exportTable();
+            v = T.Value(T.Check == "Tension-Ultimate");
+
+            testCase.verifyFalse(contains(v, ">"), ...
+                'A capped ">+5" must never reach the file.');
+            testCase.verifyTrue(contains(v, "47.30"));
+        end
+
+        function theExportedRowsMatchTheDisplayedRows(testCase)
+            % Built from the same tableMargins as the grid, so file and
+            % screen cannot disagree about which checks were assessed.
+            testCase.showSynthetic();
+            shown = string(testCase.Page.marginTable().Data(:, 1));
+            T     = testCase.Page.exportTable();
+
+            testCase.verifyEqual(T.Check(1:numel(shown)), shown);
+        end
+    end
+
     % ---- Selected check ----------------------------------------------------
     methods (Test)
         function theSelectedCheckShowsItsValue(testCase)

@@ -1964,9 +1964,17 @@ classdef JointConfigPage < gui2.Page
             %   Its own try/catch, inside its own callback: an outer one
             %   around construction catches nothing thrown from the event
             %   loop (GUI2_SPEC.md Section 11).
+            % Marshalled ONCE and kept: the same joint/loadCase/factors go
+            % to the engine and into AppState beside the Result, so a PDF
+            % report re-running analyze re-runs it on exactly what produced
+            % the numbers on screen rather than on the form as it stands by
+            % then.
+            inputs = struct( ...
+                'Joint',    obj.jointForAnalysis(), ...
+                'LoadCase', obj.buildLoadCase(), ...
+                'Factors',  obj.State.Factors);
             try
-                r = engine.analyze(obj.jointForAnalysis(), obj.buildLoadCase(), ...
-                    obj.State.Factors);
+                r = engine.analyze(inputs.Joint, inputs.LoadCase, inputs.Factors);
             catch err
                 % A failed run must not leave a confident verdict on
                 % screen. Flag the previous result stale rather than
@@ -1979,7 +1987,7 @@ classdef JointConfigPage < gui2.Page
                     'Analysis failed');
                 return
             end
-            obj.State.setResult(r);
+            obj.State.setResult(r, inputs);
             % Section 8.3: the answer is on another page, so go there. An
             % analyst should never have to find the result they just asked
             % for.
