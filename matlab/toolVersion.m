@@ -1,7 +1,7 @@
 function v = toolVersion()
 %TOOLVERSION  The tool's version string. THE ONE PLACE IT IS DEFINED.
 %   v = toolVersion() returns the semantic version of the Fastener
-%   Analysis Tool as a (1,1) string, e.g. "0.1.0".
+%   Analysis Tool as a (1,1) string, e.g. "0.2.0".
 %
 %   WHY A FUNCTION AT THE PATH ROOT rather than a constant on a class.
 %   The version is needed by three unrelated layers — the command-line
@@ -25,9 +25,22 @@ function v = toolVersion()
 %     MAJOR  reserved for the first validated packaged release (1.0.0)
 %            and any later break in analysis behaviour or case-file
 %            compatibility.
-%     MINOR  one per completed build phase/step that lands user-visible
-%            capability — Headless Release, GUI complete, and so on.
+%     MINOR  one per completed CAPABILITY — something an analyst can now
+%            do end to end — rather than per numbered build step. The two
+%            are not the same: the single-joint path became usable while
+%            steps 6-10 were still untouched, and a version that could not
+%            move until step 10 would have stamped every report of that
+%            work 0.1.0.
 %     PATCH  fixes and corrections between those.
+%
+%   WHAT EACH VERSION MEANT. Kept here because this string is stamped on
+%   every PDF and workbook the tool writes, and a reader holding one of
+%   those needs somewhere that says what it was:
+%     0.1.0  Foundation, validated engine, headless single-joint analysis.
+%     0.2.0  Single joint complete in the GUI: configure, analyse, read the
+%            margins, and export or report them. Six of the fifteen checks
+%            are computed and deliberately not displayed — every view and
+%            every export says so.
 %
 %   THIS IS NOT THE CASE-FILE FORMAT VERSION, and the two must never be
 %   tied together. gui2.AppState.CaseFormat
@@ -39,5 +52,5 @@ function v = toolVersion()
 %   Consumers: fastenerTool, gui.FastenerApp, gui2.AppState,
 %   report.singleJointReport, report.exportResults.
 
-v = "0.1.0";
+v = "0.2.0";
 end
