@@ -26,7 +26,7 @@ classdef tGui2SetupPages < matlab.uitest.TestCase
 
     methods (TestMethodSetup)
         function launchApp(testCase)
-            testCase.App = gui2.FastenerApp();
+            testCase.App = gui2.FastenerApp(Visible = false);
             testCase.addTeardown(@() delete(testCase.App));
         end
     end
