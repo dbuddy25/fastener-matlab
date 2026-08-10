@@ -668,10 +668,10 @@ classdef FastenerApp < handle
         % a silent blank). Disabled whenever this is the sole item.
         WasherSizeNA = '(n/a — Custom)'
 
-        % Software version stamped into exports. Keep in sync with
-        % fastenerTool.m (Phase 5.1 formalizes version/build stamping —
-        % this constant becomes its consumer then).
-        ToolVersion = "0.1.0"
+        % Software version stamped into exports. Read from
+        % toolVersion() -- the "keep in sync with fastenerTool.m" this
+        % comment used to ask for is now structural rather than manual.
+        ToolVersion = toolVersion()
     end
 
     methods

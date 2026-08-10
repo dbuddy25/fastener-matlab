@@ -10,12 +10,17 @@ function file = exportResults(T, file)
 %       T = engine.analyzeBulk(jl, el, factors);
 %       report.exportResults(T, "margins.xlsx");
 %
-%   For .xlsx the workbook gets TWO sheets:
+%   For .xlsx the workbook gets THREE sheets:
 %       Results  — the full results table (one row per element)
 %       Summary  — counts: total elements, Pass (WorstMargin >= 0, no
 %                  Error), Fail (WorstMargin < 0), Error (nonempty Error
 %                  column). Skipped when T lacks WorstMargin/Error columns.
-%   For .csv only the main table is written (CSV has no sheets).
+%       About    — tool name, version (toolVersion), run timestamp and the
+%                  governing standard, so an exported workbook stays
+%                  traceable to the build that produced it.
+%   For .csv only the main table is written (CSV has no sheets, and a
+%   metadata banner row would corrupt readtable), so a CSV export carries
+%   NO version stamp -- use .xlsx when provenance must travel with it.
 %
 %   An existing file at the target path is deleted first, so the output is
 %   always a clean workbook (no stale sheets/cells from a previous run).
@@ -61,7 +66,23 @@ if isXlsx
         Count  = [height(T); nnz(isPass); nnz(isFail); nnz(isErr)];
         writetable(table(Metric, Count), file, "Sheet", "Summary");
     end
+
+    % About sheet — the tool version and the run time, so a workbook that
+    % has been emailed on is still traceable to the build that produced
+    % it. A SEPARATE SHEET, not extra columns or a banner row on Results:
+    % that sheet is read by writetable/readtable and by whatever the
+    % analyst pivots it with, and a metadata row would corrupt every one
+    % of them.
+    Item  = ["Tool"; "Version"; "Generated"; "Standard"];
+    Value = ["Fastener Analysis Tool"; toolVersion(); ...
+             string(datetime("now", "Format", "yyyy-MM-dd HH:mm")); ...
+             "NASA-STD-5020B"];
+    writetable(table(Item, Value), file, "Sheet", "About");
 else
+    % CSV HAS NO SHEETS, so there is nowhere to put the stamp that would
+    % not corrupt the data. Left unstamped deliberately rather than
+    % prepending comment lines that readtable would then have to be told
+    % to skip -- use .xlsx when provenance has to travel with the numbers.
     writetable(T, file);
 end
 

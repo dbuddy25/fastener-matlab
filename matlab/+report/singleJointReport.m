@@ -96,9 +96,18 @@ end
 rpt = Report(reportName, "pdf");
 
 % ---- 1. Title page ---------------------------------------------------------
+% STAMPED WITH THE TOOL VERSION AND THE RUN TIME. A margin report is
+% read away from the machine that made it, often much later, and the
+% first question asked of one is which version of the tool produced it.
+% Without this there was no way to answer that from the document.
+generated = string(datetime("now", "Format", "yyyy-MM-dd HH:mm"));
+stamp     = "Fastener Analysis Tool v" + toolVersion();
+
 tp = TitlePage();
-tp.Title    = "Bolted Joint Analysis";
-tp.Subtitle = joint.Name + " -- per NASA-STD-5020B";
+tp.Title     = "Bolted Joint Analysis";
+tp.Subtitle  = joint.Name + " -- per NASA-STD-5020B";
+tp.PubDate   = generated;
+tp.Publisher = stamp;
 add(rpt, tp);
 add(rpt, TableOfContents());
 
@@ -174,6 +183,17 @@ add(ch, Paragraph("Equation citation for each EVALUATED check, traceable " + ...
 allT     = r.asTable();
 evalMask = allT.Status ~= "NotEvaluated";
 add(ch, MATLABTable(allT(evalMask, ["Name", "Method"])));
+add(rpt, ch);
+
+% ---- 9. Provenance -----------------------------------------------------------
+% REPEATED FROM THE TITLE PAGE ON PURPOSE. Title pages get separated from
+% the pages people actually circulate, and a table of margins with no
+% version on it is untraceable the moment that happens.
+ch = Chapter("Provenance");
+add(ch, Paragraph(stamp + ", run " + generated + "."));
+add(ch, Paragraph("Analysis per NASA-STD-5020B; supplementary relations " + ...
+    "per NASA TM-106943 where 5020B defers to it. The version above " + ...
+    "identifies the build that produced every number in this report."));
 add(rpt, ch);
 
 close(rpt);

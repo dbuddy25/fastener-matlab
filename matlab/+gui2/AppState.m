@@ -64,8 +64,11 @@ classdef AppState < handle
         % Case-file format tag. Shared with +gui — do not fork it.
         CaseFormat = "fastener-analysis-matlab-v1"
 
-        % Stamped into the window title and exports.
-        ToolVersion = "0.1.0"
+        % Stamped into the window title and exports. Read from
+        % toolVersion(), never re-declared: three hand-kept copies of this
+        % literal is what it used to be, with nothing to fail if they
+        % drifted apart.
+        ToolVersion = toolVersion()
     end
 
     events

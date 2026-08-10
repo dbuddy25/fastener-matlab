@@ -8,7 +8,7 @@ function fastenerTool()
 %   Usage (from the matlab/ folder, or with matlab/ on the path):
 %       fastenerTool
 
-    v = "0.1.0";   % version numbering starts fresh with this tool
+    v = toolVersion();   % THE one definition -- see toolVersion.m
     fprintf("Fastener Analysis Tool (MATLAB) v%s\n", v);
     fprintf("  Stub entry point — engine not built yet (Phase 1).\n");
 end
