@@ -229,6 +229,80 @@ classdef tGui2JointSection < matlab.uitest.TestCase
         end
     end
 
+    % ---- The threaded host -------------------------------------------------
+    %   The distinction this section exists to hold: a NUT ends where its
+    %   threads end, so its height is the engagement. A PARENT is a body of
+    %   material the bolt bites into, and drawing it at the engagement depth
+    %   made a tapped plate look like foil.
+    methods (Test)
+        function aNutIsExactlyItsEngagement(testCase)
+            g = gui2.JointSectionView.layout(tGui2JointSection.fullJoint());
+            nut = g.Bands(end);
+
+            testCase.verifyEqual(nut.Label, "nut");
+            % Against the resolved Le rather than a literal: the engagement
+            % comes from engine.boltLengthCheck, and this test is about the
+            % nut tracking it, not about what the engine resolved.
+            testCase.verifyGreaterThan(g.Engagement.Le, 0);
+            testCase.verifyEqual(nut.Height, g.Engagement.Le, 'AbsTol', 1e-12, ...
+                'A nut''s height IS its thread engagement.');
+        end
+
+        function aTappedParentIsDeeperThanTheThreadsBiteIntoIt(testCase)
+            j = tGui2JointSection.fullJoint();
+            j.ThreadedMember = model.ThreadedMember( ...
+                Type             = model.ThreadedMemberType.TappedHole, ...
+                EngagementLength = 0.220);
+
+            g    = gui2.JointSectionView.layout(j);
+            host = g.Bands(end);
+
+            testCase.verifyEqual(host.Label, "tapped parent");
+            testCase.verifyGreaterThan(host.Height, g.Engagement.Le, ...
+                'The parent is a body of material, not just the engaged depth.');
+            testCase.verifyGreaterThanOrEqual(host.Height, 0.250, ...
+                'engine.stiffness assumes t2 >= D; the drawing must not contradict it.');
+        end
+
+        function theParentShowsWhereEngagementActuallyStops(testCase)
+            % The parent's depth is a convention; Le is data, and it is the
+            % number that governs thread shear. The two must be separable.
+            j = tGui2JointSection.fullJoint();
+            j.ThreadedMember = model.ThreadedMember( ...
+                Type             = model.ThreadedMemberType.Insert, ...
+                EngagementLength = 0.220);
+
+            g = gui2.JointSectionView.layout(j);
+
+            testCase.verifyTrue(g.Engagement.Ok);
+            testCase.verifyGreaterThan(g.Engagement.Le, 0);
+            testCase.verifyEqual(g.Engagement.Y, ...
+                g.Bands(end).Y0 + g.Engagement.Le, 'AbsTol', 1e-12, ...
+                'The engagement line must sit Le below the top of the host.');
+            testCase.verifyLessThan(g.Engagement.Y, ...
+                g.Bands(end).Y0 + g.Bands(end).Height, ...
+                'The threads must stop inside the parent, not below it.');
+        end
+
+        function aNutNeedsNoEngagementLine(testCase)
+            % It would land exactly on the band's own bottom edge.
+            g = gui2.JointSectionView.layout(tGui2JointSection.fullJoint());
+            testCase.verifyFalse(g.Engagement.Ok);
+        end
+
+        function anAssumedParentDepthIsStated(testCase)
+            j = tGui2JointSection.fullJoint();
+            j.ThreadedMember = model.ThreadedMember( ...
+                Type             = model.ThreadedMemberType.TappedHole, ...
+                EngagementLength = 0.220);
+
+            g = gui2.JointSectionView.layout(j);
+
+            testCase.verifyTrue(any(contains(g.Notes, "Parent thickness")), ...
+                'A drawn depth that is not modelled must say so.');
+        end
+    end
+
     % ---- The loading plane -------------------------------------------------
     methods (Test)
         function aLoadingPlaneInsideTheGripIsNotFlagged(testCase)

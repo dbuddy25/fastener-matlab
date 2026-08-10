@@ -203,6 +203,7 @@ classdef JointSectionView < handle
             obj.paintClampedStack(g);
             obj.paintBolt(g);
             obj.paintFrustum(g);
+            obj.paintEngagement(g);
             obj.paintLoadingPlane(g);
 
             % Centreline last so it sits over the fills.
@@ -311,6 +312,22 @@ classdef JointSectionView < handle
                 'Color', col, 'VerticalAlignment', 'middle');
         end
 
+        function paintEngagement(obj, g)
+            %PAINTENGAGEMENT  Where the threads stop inside the parent.
+            %   The parent's own depth is a convention; THIS line is data,
+            %   and it is the number that governs thread shear. Drawn so the
+            %   two can never be confused for each other.
+            if ~g.Engagement.Ok
+                return
+            end
+            e = g.Engagement;
+            plot(obj.Ax, [-e.R e.R], [e.Y e.Y], '--', ...
+                'Color', [0.30 0.45 0.30], 'LineWidth', 1);
+            text(obj.Ax, e.R, e.Y, sprintf('  Le = %.3f in', e.Le), ...
+                'FontSize', gui2.JointSectionView.AnnotFontSize, ...
+                'Color', [0.30 0.45 0.30], 'VerticalAlignment', 'middle');
+        end
+
         function paintLoadingPlane(obj, g)
             %PAINTLOADINGPLANE  n x grip, measured from the grip top.
             %   Turns RED when it lands outside the grip, which is one of
@@ -360,6 +377,7 @@ classdef JointSectionView < handle
             g.Frustum      = struct('Ok', false, 'R', [], 'Y', [], 'Angle', NaN);
             g.LoadingPlane = struct('Ok', false, 'Y', NaN, ...
                                     'Outside', false, 'HalfWidth', 0);
+            g.Engagement   = struct('Ok', false, 'Y', NaN, 'R', 0, 'Le', NaN);
 
             if isempty(joint) || ~isa(joint, 'model.Joint')
                 g.Notes(end + 1) = "No joint to draw.";
@@ -436,19 +454,51 @@ classdef JointSectionView < handle
             if ~isfinite(memberOuter) || memberOuter <= 0
                 memberOuter = gui2.JointSectionView.MemberWidthFactor * D;
             end
+            % HOST HEIGHT IS NOT ENGAGEMENT, except for a nut.
+            %   A nut ends where its threads end, so its height IS Le.
+            %   A parent - tapped or insert-carrying - is a BODY of material
+            %   that the bolt bites Le into. Drawing it at Le made a tapped
+            %   plate look like foil the bolt barely caught.
+            %
+            % Its thickness t2 is not modelled anywhere (engine.stiffness
+            % says so in as many words and assumes h = min(D/2, t2/2) = D/2,
+            % i.e. that t2 >= D). So the drawn depth is a CONVENTION resting
+            % on the engine's own assumption: at least D, and always enough
+            % material past the last engaged thread to read as a body.
             if isNut
                 memberLabel = "nut";
-            elseif joint.ThreadedMember.Type == model.ThreadedMemberType.Insert
-                memberLabel = "insert + parent";
+                hostHeight  = Le;
+                hostAssumed = false;
             else
-                memberLabel = "tapped parent";
+                if joint.ThreadedMember.Type == model.ThreadedMemberType.Insert
+                    memberLabel = "insert + parent";
+                else
+                    memberLabel = "tapped parent";
+                end
+                hostHeight  = max(Le + D / 2, D);
+                hostAssumed = true;
             end
-            bands(end + 1) = struct('Y0', y, 'Height', Le, ...
+
+            bands(end + 1) = struct('Y0', y, 'Height', hostHeight, ...
                 'InnerR', gui2.JointSectionView.threadRadius(joint, D), ...
                 'OuterR', memberOuter, ...
                 'Fill', gui2.JointSectionView.MemberFill, ...
                 'Label', memberLabel, 'WidthAssumed', false);
-            memberBottom = y + Le;
+            memberBottom = y + hostHeight;
+
+            % Where the threads actually stop. Only worth drawing when the
+            % host is deeper than the engagement - on a nut the two are the
+            % same line and it would just be the band's own edge.
+            % Le is carried whatever the member type - a nut simply has no
+            % separate line to draw, because its own bottom edge IS the end
+            % of engagement.
+            g.Engagement = struct('Ok', hostAssumed && isfinite(Le) && Le > 0, ...
+                'Y', y + Le, 'R', memberOuter, 'Le', Le);
+            if hostAssumed
+                g.Notes(end + 1) = "Parent thickness is not modelled - the " + ...
+                    "host is drawn to the engine's t2 >= D assumption. The " + ...
+                    "dashed line is where thread engagement ends.";
+            end
 
             g.Bands = bands;
 
