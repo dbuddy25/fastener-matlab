@@ -714,6 +714,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % input rather than letting marshalling be handed something the
             % model will reject.
             p = testCase.Page;
+            p.expandGroup("Advanced");
             testCase.verifyEqual(p.frustumAngleField().Value, 30);
             testCase.verifyEqual(testCase.App.State.Joint.FrustumAngle, 30);
 

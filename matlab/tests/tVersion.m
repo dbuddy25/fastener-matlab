@@ -30,10 +30,15 @@ classdef tVersion < matlab.unittest.TestCase
         end
 
         function everyShellReportsTheSameVersion(testCase)
-            % The drift guard. These are separate Constant properties on
-            % separate classes; only their shared source keeps them equal.
+            % The drift guard, on the constant a test can actually see.
             testCase.verifyEqual(gui2.AppState.ToolVersion, toolVersion());
-            testCase.verifyEqual(gui.FastenerApp.ToolVersion, toolVersion());
+
+            % gui.FastenerApp.ToolVersion is deliberately NOT asserted here:
+            % it is a PRIVATE constant, so reading it from a test errors
+            % with MATLAB:class:GetProhibited. Nothing is lost. It now reads
+            % toolVersion() rather than carrying its own literal, so it
+            % cannot drift by construction - which is the property this test
+            % was protecting - and +gui is slated for deletion at step 10.
         end
 
         function theCaseFormatIsNotTiedToTheToolVersion(testCase)
