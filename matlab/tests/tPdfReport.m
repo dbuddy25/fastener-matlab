@@ -60,6 +60,31 @@ classdef tPdfReport < matlab.unittest.TestCase
 
     % ---- Paper and screen must agree about a verdict ------------------------
     methods (Test)
+        function theGateIsNotAMarginRowInTheReport(testCase)
+            % REGRESSION. Separation-before-rupture carries no number - it
+            % records which branch the tension check took - and the engine
+            % gives it Pass/Fail only because Status has no third word for
+            % a boolean gate. It rendered as a red FAILED row, which counts
+            % a consequence already priced into Tension-Ultimate a second
+            % time and reads as a failure on a joint that may be sound.
+            %
+            % Asserted on the table BUILDER rather than the PDF: the file
+            % is a binary this suite cannot read back, so the check has to
+            % sit where the rows are chosen.
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+
+            names = [r.Margins.Name];
+            testCase.assertTrue(any(names == "Separation-before-rupture"), ...
+                'The engine must still COMPUTE the gate - only the report table drops it.');
+
+            shown = report.reportedMarginNames(r);
+            testCase.verifyFalse(any(shown == "Separation-before-rupture"), ...
+                'The gate must not appear as a margin row.');
+            testCase.verifyEqual(numel(shown), numel(names) - 1, ...
+                'Exactly one row is removed, and it is that one.');
+        end
+
         function reportColoursMatchTheGuiPalette(testCase)
             % THE DRIFT GUARD. report.reportStyle restates gui2.palette's
             % result colours instead of importing them, because +report is

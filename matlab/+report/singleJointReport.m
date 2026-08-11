@@ -169,8 +169,11 @@ add(rpt, ch);
 
 % ---- 7. Separation-before-rupture -------------------------------------------
 ch = Chapter("Separation-Before-Rupture");
-add(ch, Paragraph("NASA-STD-5020B Fig. 8 (DABJ Fig. 9-9) decision tree:"));
-add(ch, Paragraph(r.Narrative));
+add(ch, Paragraph("NASA-STD-5020B Fig. 8 (DABJ Fig. 9-9) decision tree. " + ...
+    "This is a BRANCH SELECTION, not a margin: it decides which tension " + ...
+    "equation governs, and it is deliberately absent from the Margins of " + ...
+    "Safety table above for that reason."));
+add(ch, gateVerdict(r));
 add(rpt, ch);
 
 % ---- 8. Governing equations --------------------------------------------------
@@ -226,6 +229,49 @@ for i = 1:numel(order)
     vals(i) = fmtNum(s.(order(i)));
 end
 tbl = styledTable(["Field", "Value"], [order(:), vals(:)]);
+end
+
+function p = gateVerdict(r)
+%GATEVERDICT  The Fig. 8 outcome, stated rather than left in prose.
+%   Reads Result.Gate. It used to print Result.Narrative, which is the
+%   engine's glued sentence -- gate trace, winning equation and Ptu_allow
+%   basis in one run-on line -- the same string the Results page stopped
+%   showing once Gate carried the pieces separately. Paper had kept it.
+import mlreportgen.dom.*
+st = report.reportStyle();
+p  = Paragraph();
+
+if ~isfield(r.Gate, 'Assessed')
+    append(p, Text(string(r.Narrative)));   % pre-Gate Result, best effort
+    return
+end
+g = r.Gate;
+
+if ~g.Assessed
+    verdict = "NOT ASSESSED";
+elseif g.Assured
+    verdict = "ASSURED -- separation occurs before rupture";
+else
+    % NOT a failure. The conservative branch is SELECTED, and its effect
+    % is already carried by the Tension-Ultimate margin.
+    verdict = "NOT ASSURED -- the conservative rupture branch governs";
+end
+
+head = Text(verdict);
+head.Bold = true;
+append(p, head);
+
+if strlength(g.Equation) > 0
+    append(p, Text("  Governing equation: " + g.Equation + "."));
+end
+if isfinite(g.Phi)
+    append(p, Text(sprintf("  phi = %.4g (Eq. 9), n = %.2f.", g.Phi, g.N)));
+end
+if strlength(g.Trace) > 0
+    trace = Text("  Gate: " + g.Trace);
+    trace.Color = "#" + st.MutedText;
+    append(p, trace);
+end
 end
 
 function tbl = tableFromMATLAB(T)
@@ -316,12 +362,33 @@ import mlreportgen.dom.*
 st = report.reportStyle();
 T  = r.asTable();
 
+% SEPARATION-BEFORE-RUPTURE IS NOT A MARGIN AND DOES NOT BELONG HERE.
+% It carries no number -- it records which branch the tension check took
+% (NASA-STD-5020B Fig. 8) -- and the engine gives it Pass/Fail only
+% because Status has no third word for a boolean gate. Left in this
+% table it rendered as a red FAILED row, which is wrong twice: the joint
+% has not failed anything, and the consequence of the branch it selected
+% is ALREADY priced into Tension-Ultimate, so a reader counting red rows
+% would count it twice. Its own chapter reports it properly.
+%
+% The mask indexes r.Margins as well as T -- rowValueText reads
+% r.Margins(i).R for the Interaction row, so dropping a row from one and
+% not the other would silently shift every R after it.
+% Through report.reportedMarginNames, not a second copy of the rule --
+% that function is what tests/tPdfReport.m asserts against, and a PDF is
+% a binary the suite cannot read back, so if the two derived the row set
+% separately the test would be checking a claim the document need not
+% honour.
+keep = ismember(T.Name, report.reportedMarginNames(r));
+M    = r.Margins(keep);
+T    = T(keep, :);
+
 tbl = newStyledTable(["Name", "MS", "Status", "Method"]);
 
 for i = 1:height(T)
     row = TableRow();
     append(row, TableEntry(Paragraph(T.Name(i))));
-    append(row, TableEntry(Paragraph(rowValueText(T.MS(i), r.Margins(i).R))));
+    append(row, TableEntry(Paragraph(rowValueText(T.MS(i), M(i).R))));
     append(row, TableEntry(Paragraph(T.Status(i))));
     append(row, TableEntry(Paragraph(T.Method(i))));
 
