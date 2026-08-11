@@ -1,7 +1,7 @@
 function v = toolVersion()
 %TOOLVERSION  The tool's version string. THE ONE PLACE IT IS DEFINED.
 %   v = toolVersion() returns the semantic version of the Fastener
-%   Analysis Tool as a (1,1) string, e.g. "0.2.0".
+%   Analysis Tool as a (1,1) string, e.g. "0.3.0".
 %
 %   WHY A FUNCTION AT THE PATH ROOT rather than a constant on a class.
 %   The version is needed by three unrelated layers — the command-line
@@ -39,8 +39,16 @@ function v = toolVersion()
 %     0.1.0  Foundation, validated engine, headless single-joint analysis.
 %     0.2.0  Single joint complete in the GUI: configure, analyse, read the
 %            margins, and export or report them. Six of the fifteen checks
-%            are computed and deliberately not displayed — every view and
-%            every export says so.
+%            were computed and not displayed — every view and every export
+%            said so.
+%     0.3.0  Bolt bending (TFSR 11 / NASA-STD-5020B §4.4.4). The fbu term
+%            is computed and carried into the Eq. 20/22 interaction
+%            criterion, from a typed moment or from the FE moments the
+%            bulk path already resolved; a clearance-or-gapped joint gets
+%            an answer instead of NotEvaluated. Eq. 21/23 (plastic
+%            bending, needs Fbu) stay out. Bearing-under-head and
+%            bolt-thread shear became displayed rows in this line too, so
+%            eleven of the fifteen checks are now shown.
 %
 %   THIS IS NOT THE CASE-FILE FORMAT VERSION, and the two must never be
 %   tied together. gui2.AppState.CaseFormat
@@ -52,5 +60,5 @@ function v = toolVersion()
 %   Consumers: fastenerTool, gui.FastenerApp, gui2.AppState,
 %   report.singleJointReport, report.exportResults.
 
-v = "0.2.0";
+v = "0.3.0";
 end
