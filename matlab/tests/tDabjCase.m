@@ -619,6 +619,7 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyClass(t, "table");
             testCase.verifySize(t, [15 4]);
         end
+    end
 
     % ---- Bolt bending, NASA-STD-5020B Eq. 20/22 (TFSR 11) ------------------
     %   No worked example exists -- DABJ SS9's R is an fbu = 0 number -- so
@@ -803,7 +804,6 @@ classdef tDabjCase < matlab.unittest.TestCase
             d = struct("Ptu", 4000, "Pty", NaN, "Psu", 2000, ...
                 "Psep", NaN, "Mbu", Mbu);
         end
-    end
     end
 end
 

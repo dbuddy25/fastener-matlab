@@ -83,6 +83,7 @@ classdef tForces < matlab.unittest.TestCase
             j = model.Joint();
             testCase.verifyEqual(j.BoltAxis, model.BoltAxis.Z);
         end
+    end
 
     % ---- Bending reaches the LoadCase --------------------------------------
     methods (Test)
@@ -125,6 +126,5 @@ classdef tForces < matlab.unittest.TestCase
 
             testCase.verifyEqual(lc.BoltBendingLimitMoment, 10, "AbsTol", 1e-9);
         end
-    end
     end
 end
