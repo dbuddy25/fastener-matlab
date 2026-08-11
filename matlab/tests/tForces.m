@@ -83,5 +83,48 @@ classdef tForces < matlab.unittest.TestCase
             j = model.Joint();
             testCase.verifyEqual(j.BoltAxis, model.BoltAxis.Z);
         end
+
+    % ---- Bending reaches the LoadCase --------------------------------------
+    methods (Test)
+        function loadCaseCarriesTheBendingMoment(testCase)
+            % REGRESSION for a value that was computed and thrown away.
+            % resolveForces has always derived Bending from the transverse
+            % moments; loadCaseFromForces built a LoadCase without it, so
+            % it died one line after being computed. Axis Z, MX 3 / MY 4 ->
+            % hypot = 5 in-lbf, and MZ (torsion) is still ignored.
+            F = struct("FX", 30, "FY", 40, "FZ", 500, ...
+                       "MX", 3, "MY", 4, "MZ", 1e6);
+
+            lc = engine.loadCaseFromForces(F, model.BoltAxis.Z);
+
+            testCase.verifyEqual(lc.BoltBendingLimitMoment, 5, "AbsTol", 1e-9);
+            testCase.verifyEqual(lc.BoltShearLimitLoad, 50, "AbsTol", 1e-9);
+            testCase.verifyEqual(lc.BoltTensileLimitLoad, 500, "AbsTol", 1e-9);
+        end
+
+        function noMomentsGiveAZeroBendingMomentNotNaN(testCase)
+            % resolveForces defaults missing moment fields to zero, so a
+            % force-only element yields 0 rather than NaN. Both mean "no
+            % bending" downstream, but 0 is what the pipeline actually
+            % produces and the distinction matters if anyone ever keys on
+            % isnan.
+            F = struct("FX", 0, "FY", 0, "FZ", 100);
+
+            lc = engine.loadCaseFromForces(F, model.BoltAxis.Z);
+
+            testCase.verifyEqual(lc.BoltBendingLimitMoment, 0, "AbsTol", 1e-9);
+        end
+
+        function aScaleFactorScalesTheMomentToo(testCase)
+            % loadCaseFromForces scales MX/MY/MZ alongside the forces
+            % before resolving, so the bending moment must follow.
+            F = struct("FX", 0, "FY", 0, "FZ", 100, ...
+                       "MX", 3, "MY", 4, "MZ", 0);
+
+            lc = engine.loadCaseFromForces(F, model.BoltAxis.Z, ScaleFactor = 2);
+
+            testCase.verifyEqual(lc.BoltBendingLimitMoment, 10, "AbsTol", 1e-9);
+        end
+    end
     end
 end

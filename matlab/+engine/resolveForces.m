@@ -15,8 +15,11 @@ function r = resolveForces(F, axis)
 %   Returned struct fields:
 %       Axial    signed force along the bolt axis, lbf (+ = tension)
 %       Shear    RSS of the two transverse forces, lbf (always >= 0)
-%       Bending  RSS of the two transverse moments, in-lbf (informational —
-%                the LoadCase carries no bending field)
+%       Bending  RSS of the two transverse moments, in-lbf. Carried onto
+%                LoadCase.BoltBendingLimitMoment by
+%                engine.loadCaseFromForces and used for the
+%                NASA-STD-5020B Eq. 20/22 fbu term — no longer
+%                informational, and no longer discarded.
 %   Torsion (the moment ABOUT the bolt axis) is ignored.
 %
 %   For axis = Z:  Axial = FZ, Shear = hypot(FX,FY), Bending = hypot(MX,MY).

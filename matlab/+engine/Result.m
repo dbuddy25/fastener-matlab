@@ -140,6 +140,15 @@ classdef Result
         % is therefore OPTIMISTIC — a flag a view must be able to act on,
         % not a clause buried in a sentence.
         Allowables     struct = struct()          % from engine.systemTensileAllowable
+
+        % The NASA-STD-5020B Eq. 20/22 bending term, as data. Fields:
+        % Included (logical), Fbu (psi), Rb (= fbu/Ftu), Diameter (in),
+        % Basis ("body"/"minor"/"none"), Condition (the §4.4.4
+        % determination recorded on the joint). Included == false with a
+        % Condition of NotDeclared is the exemption being ASSUMED rather
+        % than verified — a view must be able to tell those apart without
+        % reading prose.
+        Bending        struct = struct()          % from engine.marginInteraction
         Margins        (1,:) struct = repmat(struct( ...
                            "Name", "", "MS", NaN, "R", NaN, ...
                            "Status", "NotEvaluated", ...

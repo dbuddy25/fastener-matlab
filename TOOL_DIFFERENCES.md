@@ -389,8 +389,32 @@ squarely inside that condition. The standard also notes that including the term
 is conservative, and that the criteria without it rest on MSFC combined-load
 tests of A-286 3/8-24 fasteners (NASA/TM-2012-217454).
 
-**This tool:** absent at three levels, so `fbu = 0` throughout and every
-interaction criterion collapses to `Rt^et + Rs^es`:
+**This tool: IMPLEMENTED (2026-08-10) for Eq. 20/22.** `fbu` is computed and
+added to `Rt` **inside** the tension bracket:
+`R = Rs^es + (Rt + Rb)^et`, `Rb = fbu/Ftu`.
+
+| Layer | State |
+|---|---|
+| `model.LoadCase` | `BoltBendingLimitMoment`, in-lbf (NaN = none supplied) |
+| `engine.designLoads` | `Mbu = FSU*FFU*MbL`, in-lbf |
+| `engine/private/boltBendingStress` | `fbu = 32*Mbu/(pi*d^3)`, section per shear plane |
+| `engine.marginInteraction` | `Rb` inside the Eq. 20/22 bracket; `Result.Bending` |
+| `engine.loadCaseFromForces` | carries `r.Bending` instead of discarding it |
+
+**Still omitted: Eq. 21/23**, the plastic-bending variants with a separate
+`fbu/Fbu` term. `Fbu` is not on `model.Material`, and 5020B says including the
+term in Eq. 20/22 "is considered to be conservative" — the reachable option is
+the conservative one.
+
+**Derived convention: which section.** 5020B defines `fbu` as linear-elastic but
+never says which diameter. The section follows the **shear plane** — body for
+`BodyInShear`, minor for `ThreadsInShear` — mirroring Eq. 12 vs Eq. 13 for the
+shear allowable in these same criteria. Nominal `D` throughout would put bending
+on a section 5020B has just said is not the critical one when the threads are in
+the shear plane.
+
+**Historical — what it looked like before**, so the three levels the gap used to
+span stay on record:
 
 | Layer | State |
 |---|---|
@@ -399,11 +423,14 @@ interaction criterion collapses to `Rt^et + Rs^es`:
 | `engine.designLoads` / `marginInteraction` | no `fbu` term |
 
 So the forces pipeline already computes the quantity and drops it one step later.
-The GUI's Applied Loads group has an Axial / Shear / Bending row per
-`GUI_PORT_SPEC.md` §3, so the single-joint input path exists too and is simply
-not wired to a model field.
+(That old note claimed gui2's Applied Loads group already had a Bending row per
+`GUI_PORT_SPEC.md` §3. **It did not** — `buildLoadsGroup` had exactly five rows,
+none of them bending, and gui2 had no `ShearTransferCondition` control either, so
+the `ClearanceOrGapped` path was unreachable from the new GUI entirely. Both are
+addressed with this work.)
 
-**DECIDED (2026-07-31): omitted deliberately, deferred to a later version.**
+**DECIDED (2026-07-31): omitted deliberately, deferred to a later version.
+SUPERSEDED (2026-08-10) — built; see above.**
 No bending physics (`M·c/I`) is implemented anywhere in this tool. §4.4.4 makes
 the omission conditional, though, not an unconditional simplification — so the
 gap that remained after the 2026-07-31 decision was that nothing recorded
@@ -431,12 +458,13 @@ VERIFIED, label on it, and a `ClearanceOrGapped` declaration turns that into an
 honest NotEvaluated rather than a wrong number. Bending physics itself
 (`M·c/I`) is still not built — see the three still-open decisions below.
 
-**If bending physics is built later, three decisions are already scoped:**
-1. **Eq. 20/22 or Eq. 21/23** — bending inside the tension bracket against `Ftu`,
+**The three scoped decisions, as resolved when it was built:**
+1. ~~**Eq. 20/22 or Eq. 21/23**~~ — **RESOLVED: Eq. 20/22.** Bending inside the tension bracket against `Ftu`,
    or broken out against `Fbu` (allowable flexural stress) crediting plastic
    bending. `Fbu` is not in the material table, so Eq. 20/22 is both the
    reachable option and the conservative one.
-2. **How `fbu` is computed** — `M·c/I`. The straightforward form takes the full
+2. ~~**How `fbu` is computed**~~ — **RESOLVED: section follows the shear plane.**
+   `M·c/I`. The straightforward form takes the full
    nominal diameter (`c = D/2`, `I = πD⁴/64`) regardless of shear plane. For a
    threads-in-shear joint the stressed section is the minor diameter, and 5020B
    is pointed that tension and shear peak at the same section there — so nominal

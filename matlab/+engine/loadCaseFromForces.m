@@ -60,7 +60,12 @@ else
     PtL = max(r.Axial, 0);
 end
 
+% r.Bending is CARRIED now, not dropped. resolveForces has always derived
+% it from the transverse FE moments; until bending existed downstream this
+% line built a LoadCase without it and the value died here, one step after
+% being computed.
 lc = model.LoadCase(Name = opts.Name, ...
-    BoltTensileLimitLoad = PtL, ...
-    BoltShearLimitLoad   = r.Shear);
+    BoltTensileLimitLoad   = PtL, ...
+    BoltShearLimitLoad     = r.Shear, ...
+    BoltBendingLimitMoment = r.Bending);
 end

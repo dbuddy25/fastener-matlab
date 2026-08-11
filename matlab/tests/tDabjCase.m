@@ -619,6 +619,191 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyClass(t, "table");
             testCase.verifySize(t, [15 4]);
         end
+
+    % ---- Bolt bending, NASA-STD-5020B Eq. 20/22 (TFSR 11) ------------------
+    %   No worked example exists -- DABJ SS9's R is an fbu = 0 number -- so
+    %   these are HAND-DERIVED against a synthetic fixture with round
+    %   inputs. VALIDATION.md row 13b.
+    methods (Test)
+        function aJointWithNoMomentReproducesTheFbuZeroResultExactly(testCase)
+            % THE CONSTRAINT THE WHOLE FEATURE HANGS ON. Every pinned R in
+            % this repo predates bending; if an absent moment did anything
+            % other than Rb = 0 EXACTLY, all of them would drift and there
+            % would be no way to tell a real change from an arithmetic one.
+            c = validation.dabjSection9();
+            testCase.verifyTrue(isnan(c.LoadCase.BoltBendingLimitMoment), ...
+                'The fixture supplies no moment - that is the point.');
+
+            d = engine.designLoads(c.LoadCase, c.Factors);
+            testCase.verifyTrue(isnan(d.Mbu));
+
+            r = engine.marginInteraction(c.Joint, d);
+            testCase.verifyEqual(r.R, 0.483642, "AbsTol", 1e-4);
+            testCase.verifyFalse(r.Bending.Included);
+            testCase.verifyEqual(r.Bending.Rb, 0, ...
+                'Rb must be EXACTLY zero, not merely small.');
+            testCase.verifySubstring(r.Method, "Eq. 20/21");
+        end
+
+        function bendingGoesInsideTheTensionBracketNotBesideIt(testCase)
+            % HAND-DERIVED. NASA-STD-5020B Eq. 20 (body in shear):
+            %   (Psu/Psu_allow)^2.5 + (Ptu/Ptu_allow + fbu/Ftu)^1.5 <= 1
+            % D = 0.500 body, minor 0.400, Ftu 160,000, Fsu 50,000 psi,
+            % rated Ptu_allow 10,000 lbf; Ptu 4,000, Psu 2,000, Mbu 200:
+            %   BodyArea = pi/4*0.5^2      = 0.196350 in^2
+            %   Psu_allow = 50000*0.196350 = 9,817.4770 lbf
+            %   Rt  = 4000/10000           = 0.400000
+            %   Rs  = 2000/9817.4770       = 0.203718
+            %   fbu = 32*200/(pi*0.5^3)    = 16,297.4662 psi
+            %   Rb  = 16297.4662/160000    = 0.101859
+            %   R   = 0.203718^2.5 + (0.400000+0.101859)^1.5
+            %       = 0.018732 + 0.355527  = 0.374259
+            % With fbu = 0 the same joint gives 0.271714, so bending moves
+            % R by +0.102545 here.
+            [j, d] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, 200);
+
+            r = engine.marginInteraction(j, d);
+
+            testCase.verifyEqual(r.R, 0.374259, "AbsTol", 1e-5);
+            testCase.verifyEqual(r.Bending.Fbu, 16297.4662, "AbsTol", 1e-3);
+            testCase.verifyEqual(r.Bending.Rb, 0.101859, "AbsTol", 1e-6);
+            testCase.verifyTrue(r.Bending.Included);
+
+            % THE STRUCTURAL POINT: inside the bracket, not a separate
+            % term. A third addend would give 0.271714 + 0.101859^1.5 =
+            % 0.304219, which is nowhere near 0.374259 -- so this
+            % assertion actually discriminates between the two readings.
+            separateTerm = 0.203718^2.5 + 0.400000^1.5 + 0.101859^1.5;
+            testCase.verifyNotEqual(round(r.R, 4), round(separateTerm, 4));
+        end
+
+        function theBendingSectionFollowsTheShearPlane(testCase)
+            % HAND-DERIVED, and the reason decision 1 was made: with the
+            % threads in the shear plane the stressed section is the MINOR
+            % diameter, so the same moment produces a larger fbu.
+            %   body  0.500: fbu = 32*200/(pi*0.5^3) = 16,297.4662 psi
+            %   minor 0.400: fbu = 32*200/(pi*0.4^3) = 31,830.9886 psi
+            %   ratio = (0.5/0.4)^3 = 1.953125 -- fbu goes as 1/d^3
+            [jb, db] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, 200);
+            [jt, dt] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.ThreadsInShear, 200);
+
+            rb = engine.marginInteraction(jb, db);
+            rt = engine.marginInteraction(jt, dt);
+
+            testCase.verifyEqual(rb.Bending.Fbu, 16297.4662, "AbsTol", 1e-3);
+            testCase.verifyEqual(rt.Bending.Fbu, 31830.9886, "AbsTol", 1e-3);
+            testCase.verifyEqual(rt.Bending.Fbu / rb.Bending.Fbu, 1.953125, ...
+                "AbsTol", 1e-6, 'fbu goes as 1/d^3.');
+            testCase.verifyEqual(rb.Bending.Basis, "body");
+            testCase.verifyEqual(rt.Bending.Basis, "minor");
+            testCase.verifyGreaterThan(rt.Bending.Fbu, rb.Bending.Fbu, ...
+                'Taking bending on the nominal diameter here would be the unconservative choice.');
+        end
+
+        function aClearanceOrGappedJointWithAMomentNowComputes(testCase)
+            % THE PAYOFF. This configuration has always returned NaN
+            % because bending was required and unavailable. It is exactly
+            % the case Joint.ShearTransferCondition was created to make
+            % visible, and it can finally be answered.
+            [j, d] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, 200);
+            j.ShearTransferCondition = ...
+                model.ShearTransferCondition.ClearanceOrGapped;
+
+            r = engine.marginInteraction(j, d);
+
+            testCase.verifyFalse(isnan(r.R), ...
+                'A declared clearance joint WITH a moment must now evaluate.');
+            testCase.verifyEqual(r.R, 0.374259, "AbsTol", 1e-5);
+            testCase.verifyTrue(r.Bending.Included);
+            testCase.verifyEqual(r.Bending.Condition, "ClearanceOrGapped");
+        end
+
+        function aClearanceOrGappedJointWithNoMomentIsStillNotEvaluated(testCase)
+            % The other half: the analyst has said bending matters and
+            % supplied nothing to compute it from, so there is still no
+            % honest answer - and the Detail must now name the field to set.
+            [j, d] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, NaN);
+            j.ShearTransferCondition = ...
+                model.ShearTransferCondition.ClearanceOrGapped;
+
+            r = engine.marginInteraction(j, d);
+
+            testCase.verifyTrue(isnan(r.R));
+            testCase.verifyFalse(r.Pass);
+            testCase.verifySubstring(r.Detail, "BoltBendingLimitMoment");
+        end
+
+        function aMomentOnAnUndeclaredJointIsStillIncluded(testCase)
+            % 5020B calls including the bending term conservative, so a
+            % moment is never refused for want of a declaration.
+            [j, d] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, 200);
+            testCase.verifyEqual(j.ShearTransferCondition, ...
+                model.ShearTransferCondition.NotDeclared);
+
+            r = engine.marginInteraction(j, d);
+
+            testCase.verifyTrue(r.Bending.Included);
+            testCase.verifySubstring(r.Method, "INCLUDED");
+            testCase.verifyFalse(contains(r.Method, "Eq. 20/21"), ...
+                'Eq. 21 is the plastic-bending variant and is NOT what ran.');
+            testCase.verifySubstring(r.Method, "Eq. 20");
+        end
+
+        function aMomentWithNoFtuIsNotEvaluatedRatherThanThrown(testCase)
+            % Ftu only matters once there IS a moment - the fbu/Ftu term
+            % cannot be formed without it.
+            [j, d] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, 200);
+            j.BoltMaterial.Ftu = NaN;
+
+            r = engine.marginInteraction(j, d);   % must not throw
+
+            testCase.verifyTrue(isnan(r.R));
+            testCase.verifySubstring(r.Detail, "Ftu");
+        end
+
+        function aBareDesignLoadsStructWithoutMbuStillWorks(testCase)
+            % Driving marginInteraction with a hand-built designLoads
+            % struct is an established pattern in this suite. One written
+            % before bending existed has no Mbu field, and that means "no
+            % moment", not an error.
+            [j, ~] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, 200);
+            bare = struct("Ptu", 4000, "Pty", NaN, "Psu", 2000, "Psep", NaN);
+
+            r = engine.marginInteraction(j, bare);   % must not throw
+
+            testCase.verifyFalse(r.Bending.Included);
+            testCase.verifyEqual(r.Bending.Rb, 0);
+        end
+    end
+
+    methods (Static, Access = private)
+        function [j, d] = bendingFixture(bodyDia, minorDia, plane, Mbu)
+            %BENDINGFIXTURE  Round-number joint for the hand-derived bending pins.
+            %   Rated Ptu_allow 10,000 lbf so Rt is exactly 0.4 at
+            %   Ptu = 4,000 -- the arithmetic in the comments above stays
+            %   checkable by eye.
+            mat = model.Material(Name = "bending fixture", ...
+                Ftu = 160000, Fty = 120000, Fsu = 50000);
+            b = model.Bolt(Designation = "1/2 synthetic", ...
+                NominalDiameter = bodyDia, BodyDiameter = bodyDia, ...
+                MinorDiameter = minorDia, ThreadsPerInch = 20, ...
+                TensileStressArea = 0.1);
+            j = model.Joint(Name = "bending fixture", Bolt = b, ...
+                BoltMaterial = mat, ShearPlane = plane, ...
+                BoltRatedUltimateLoad = 10000, ...
+                FlangeStack = model.FlangeLayer(Material = mat, Thickness = 0.25));
+            d = struct("Ptu", 4000, "Pty", NaN, "Psu", 2000, ...
+                "Psep", NaN, "Mbu", Mbu);
+        end
+    end
     end
 end
 

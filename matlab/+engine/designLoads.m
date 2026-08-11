@@ -42,5 +42,17 @@ d = struct( ...
     "Ptu",  factors.FSU   * factors.FFU   * loadCase.BoltTensileLimitLoad, ... % NASA-STD-5020B design ultimate tension (FSU*FFU*PtL)
     "Pty",  factors.FSY   * factors.FFY   * loadCase.BoltTensileLimitLoad, ... % NASA-STD-5020B design yield tension (FSY*FFY*PtL)
     "Psu",  factors.FSU   * factors.FFU   * loadCase.BoltShearLimitLoad, ...   % NASA-STD-5020B design ultimate shear (FSU*FFU*PsL)
-    "Psep", factors.FSSep * factors.FFSep * loadCase.BoltTensileLimitLoad);    % NASA-STD-5020B separation load (FSSep*FFSep*PtL)
+    "Psep", factors.FSSep * factors.FFSep * loadCase.BoltTensileLimitLoad, ...  % NASA-STD-5020B separation load (FSSep*FFSep*PtL)
+    "Mbu",  factors.FSU   * factors.FFU   * loadCase.BoltBendingLimitMoment);  % design ultimate bending MOMENT, IN-LBF (FSU*FFU*MbL)
+
+% Mbu IS IN-LBF, not lbf -- the only field here that is not a force. It
+% takes the same FSU*FFU pair as Ptu and Psu because bending enters the
+% ULTIMATE interaction criterion (NASA-STD-5020B Eq. 20/22) alongside them,
+% and 5020B defines fbu as "the design ultimate bending stress".
+%
+% The MOMENT stops here; the STRESS fbu does not belong in this function.
+% fbu = 32*Mbu/(pi*d^3) needs a bolt diameter, and this function takes only
+% a LoadCase and Factors -- deliberately, since its whole job is applying
+% FS*FF to limit loads. engine.marginInteraction owns the geometry step
+% (see engine/private/boltBendingStress).
 end

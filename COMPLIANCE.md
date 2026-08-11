@@ -39,7 +39,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 8 | 4.4.1 | Ultimate design loads, µ = 0 in analysis | IMPLEMENTED | `engine.designLoads`, `engine.marginTensionUlt` |
 | 9 | 4.4.2 | Yield design loads | IMPLEMENTED | `engine.marginTensionYield`, Eq. 15/16/17, Eq. 18 |
 | 10 | 4.4.3 | Separation loads | IMPLEMENTED | `engine.marginSeparation`, Eq. 19 |
-| 11 | 4.4.4 | Combination of loads — **incl. bending** | OMITTED-BY-DECISION | `TOOL_DIFFERENCES.md` §7.4; `fbu = 0`. Condition now recorded per joint (`Joint.ShearTransferCondition`) — see below |
+| 11 | 4.4.4 | Combination of loads — **incl. bending** | IMPLEMENTED (Eq. 20/22; Eq. 21/23 plastic-bending variants omitted — no `Fbu`) | `engine.marginInteraction` + `engine/private/boltBendingStress`; `LoadCase.BoltBendingLimitMoment` |
 | 12 | 4.4.5 | Preload included when rupture precedes separation | IMPLEMENTED | `separationBeforeRuptureGate`, `boltDesignLoad` |
 | 13 | 4.4.6a | Friction credited only at limit/yield | IMPLEMENTED (structurally) | µ appears only in `marginSlip`; no ultimate check calls it |
 | 14 | 4.4.6b | µ ≤ 0.20 / ≤ 0.10 absent test substantiation | OMITTED-BY-DECISION | Working practice keeps µ at 0.10–0.20 — see below |
@@ -62,7 +62,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 31 | 4.8.5 | Hardware inspection before installation | OUT-OF-SCOPE | Physical inspection |
 | 32 | 4.8.6 | Procurement/receiving/storage per NASA-STD-8739.14 | OUT-OF-SCOPE | Procurement process |
 
-**Counts** — IMPLEMENTED 9 · OMITTED-BY-DECISION 4 · ABSENT 5 · OUT-OF-SCOPE 14.
+**Counts** — IMPLEMENTED 10 · OMITTED-BY-DECISION 3 · ABSENT 5 · OUT-OF-SCOPE 14.
 
 ---
 
@@ -293,7 +293,24 @@ unconditionally regardless of configuration, and a joint with real clearance,
 or shear transferred across a gap or spacer, received a silently
 non-conservative interaction result with no warning.
 
-**Closed (2026-08-04):** `model.Joint.ShearTransferCondition`
+**Closed (2026-08-10) — bending is now computed.** `LoadCase.BoltBendingLimitMoment`
+carries the limit moment (in-lbf), `engine.designLoads` factors it to `Mbu`,
+`engine/private/boltBendingStress` converts it to `fbu = 32*Mbu/(pi*d^3)` on the
+section the shear plane selects, and `engine.marginInteraction` adds `Rb = fbu/Ftu`
+to `Rt` **inside** the Eq. 20/22 tension bracket. `engine.loadCaseFromForces` no
+longer discards the moment `engine.resolveForces` derives from the FE moments, so
+the bulk path carries bending too. A `ClearanceOrGapped` joint with a moment now
+evaluates instead of returning NaN — the case the enum was created to expose.
+
+**What remains omitted:** Eq. 21/23, the plastic-bending variants with a separate
+`fbu/Fbu` term. `Fbu` (allowable flexural stress) is not a field on
+`model.Material`, and 5020B states that including the bending term in Eq. 20/22
+"is considered to be conservative" — so the reachable option is also the
+conservative one. The section choice (body vs minor diameter, by shear plane) is
+a **derived convention**: 5020B defines `fbu` as linear-elastic but does not say
+which section to take it on.
+
+**Previously closed (2026-08-04):** `model.Joint.ShearTransferCondition`
 (`model.ShearTransferCondition`) now records the §4.4.4 determination per
 joint, and `engine.marginInteraction` branches on it: `NotDeclared` (default)
 computes exactly as before with the exemption marked ASSUMED, not verified;
@@ -306,10 +323,10 @@ silent-failure mode is: the exemption no longer travels unrecorded, and
 `NotDeclared` (still the default when an analyst has not looked at this) is
 now visibly ASSUMED rather than indistinguishable from a verified result.
 
-TFSR 11 also explicitly names bending among the loads whose interaction shall
-be accounted for, so the remaining `fbu = 0` computation (on the
-`NotDeclared`/`CloseToleranceOrInterference` paths) is still a deliberate
-deviation from a shall, not from guidance.
+`fbu = 0` on the `NotDeclared`/`CloseToleranceOrInterference` paths is no longer
+a deviation: it is what §4.4.4's exemption permits, and it now applies only when
+no moment was supplied. Supplying one includes bending on any determination —
+5020B calls that conservative, so the tool never refuses a moment it was given.
 
 ### TFSR 15 — fatigue
 

@@ -352,9 +352,13 @@ function [PtJ, PsJ] = groupTotals(group, axis)
 %            tension demand; |total| if ANY group element is Reversible)
 %       PsJ  RSS of the two transverse component sums (the resultant
 %            in-plane shear on the pattern)
-%   Moments are not summed: resolveForces ignores torsion, and transverse
-%   moments only feed the informational Bending output — pattern torsion is
-%   out of scope here (same as NASA-STD-5020B Eq. 84, resultant force only).
+%   Moments are not summed, and that is now a narrower statement than it
+%   used to be: transverse moments DO feed a real bending term per element
+%   (LoadCase.BoltBendingLimitMoment -> the Eq. 20/22 fbu), but summing
+%   them across a PATTERN is a different quantity that 5020B Eq. 84 does
+%   not define — that equation takes the resultant force only. So bending
+%   is per-element here; a pattern total carries no moment and its
+%   interaction runs at fbu = 0. resolveForces ignores torsion throughout.
 Fsum   = struct("FX", 0, "FY", 0, "FZ", 0);
 anyRev = false;
 for g = 1:numel(group)
