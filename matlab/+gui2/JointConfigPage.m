@@ -91,12 +91,14 @@ classdef JointConfigPage < gui2.Page
         CaseNameField
         BoltTensileField
         BoltShearField
+        BoltBendingField
         JointTensileField
         JointShearField
         JointTensileLabel
         JointShearLabel
 
         ShearPlaneDropDown
+        ShearTransferDropDown
         SlipModeDropDown
         FrictionField
         BoltAxisDropDown
@@ -248,6 +250,8 @@ classdef JointConfigPage < gui2.Page
             obj.ShearPlaneDropDown.Value = char(string(j.ShearPlane));
             obj.SlipModeDropDown.Value   = char(string(j.SlipMode));
             obj.BoltAxisDropDown.Value   = char(string(j.BoltAxis));
+            obj.ShearTransferDropDown.Value = ...
+                char(string(j.ShearTransferCondition));
 
             ps = j.PreloadSpec;
             obj.NominalTorqueField.Value      = obj.fmtOptional(ps.NominalTorque);
@@ -261,6 +265,7 @@ classdef JointConfigPage < gui2.Page
             obj.CaseNameField.Value     = char(lc.Name);
             obj.BoltTensileField.Value  = obj.fmtOptional(lc.BoltTensileLimitLoad);
             obj.BoltShearField.Value    = obj.fmtOptional(lc.BoltShearLimitLoad);
+            obj.BoltBendingField.Value  = obj.fmtOptional(lc.BoltBendingLimitMoment);
             obj.JointTensileField.Value = obj.fmtOptional(lc.JointTensileLimitLoad);
             obj.JointShearField.Value   = obj.fmtOptional(lc.JointShearLimitLoad);
 
@@ -828,7 +833,7 @@ classdef JointConfigPage < gui2.Page
             %BUILDLOADSGROUP  model.LoadCase - the single-joint limit loads.
             panel = obj.collapsibleGroup(parent, row, "Applied loads (single joint)", false);
 
-            b = obj.groupGrid(panel, 5);
+            b = obj.groupGrid(panel, 6);
 
             obj.CaseNameField = obj.addLabelledText(b, 1, 'Case name', ...
                 'Label for this load case. Never analysed.');
@@ -844,6 +849,17 @@ classdef JointConfigPage < gui2.Page
                 'Most-loaded bolt shear limit load, lbf.');
             obj.bindEdit(obj.BoltShearField, @(~, ~) obj.commitLoadCase());
 
+            % Directly under the shear it accompanies: bending is caused BY
+            % the shear loading (5020B 4.4.4's own framing), so it reads as
+            % part of that pair rather than as a third independent load.
+            obj.BoltBendingField = obj.addLabelledText(b, 4, ...
+                'Bolt bending limit MbL', ...
+                ['Most-loaded bolt bending limit MOMENT, IN-LBF (not lbf). ' ...
+                 'Feeds the NASA-STD-5020B Eq. 20/22 fbu term. Leave blank ' ...
+                 'when 4.4.4 exempts bending - see the shear-transfer ' ...
+                 'condition under Analysis assumptions.']);
+            obj.bindEdit(obj.BoltBendingField, @(~, ~) obj.commitLoadCase());
+
             % Joint totals are shown ONLY for joint-mode slip. NASA-STD-5020B
             % Eq. 84 needs them; Eq. 86 (the single-fastener default) does
             % not, and showing them unconditionally is what made them
@@ -851,14 +867,14 @@ classdef JointConfigPage < gui2.Page
             % marginSlip says so explicitly, because of bolt-pattern load
             % distribution - so blank leaves the Slip row not evaluated.
             [obj.JointTensileField, obj.JointTensileLabel] = ...
-                obj.addLabelledText(b, 4, 'Joint tensile total', ...
+                obj.addLabelledText(b, 5, 'Joint tensile total', ...
                     ['Joint-level tensile total, lbf. Required for ' ...
                      'joint-mode slip (5020B Eq. 84). NOT bolt count x ' ...
                      'the per-bolt load.']);
             obj.bindEdit(obj.JointTensileField, @(~, ~) obj.commitLoadCase());
 
             [obj.JointShearField, obj.JointShearLabel] = ...
-                obj.addLabelledText(b, 5, 'Joint shear total', ...
+                obj.addLabelledText(b, 6, 'Joint shear total', ...
                     ['Joint-level shear total, lbf. Required for ' ...
                      'joint-mode slip (5020B Eq. 84).']);
             obj.bindEdit(obj.JointShearField, @(~, ~) obj.commitLoadCase());
@@ -907,19 +923,30 @@ classdef JointConfigPage < gui2.Page
             obj.LoadingPlaneField.Value = 1.0;
             obj.bindEdit(obj.LoadingPlaneField, @(~, ~) obj.commitJoint());
 
-            % GUI2_SPEC.md 7.2f: the shear-transfer condition control is
-            % deliberately absent and model.Joint keeps its NotDeclared
-            % default, which computes fbu = 0 and records the exemption as
-            % ASSUMED rather than VERIFIED. Hard-setting the "verified"
-            % member instead would have every joint claim a verification
-            % nobody performed. This note is the future-feature marker.
-            note = uilabel(b, 'WordWrap', 'on', 'Text', ...
-                ['Close-fit assumed - bolt bending (fbu = 0) not yet ' ...
-                 'implemented; NASA-STD-5020B 4.4.4 exemption assumed, ' ...
-                 'not verified.']);
-            note.Layout.Row = 6;
-            note.Layout.Column = [1 3];
-            note.FontColor = gui2.palette('mutedText');
+            % GUI2_SPEC.md 7.2f left this control out while bending was
+            % unimplemented, on the reasoning that a "verified" member the
+            % analyst could pick would have joints claiming a verification
+            % nobody performed. The static note that stood here instead was
+            % wired to nothing, and it had a worse consequence than a
+            % missing control: NotDeclared was the ONLY value gui2 could
+            % produce, so the ClearanceOrGapped path -- the whole reason
+            % the enum exists -- was unreachable from this GUI.
+            %
+            % The default is still NotDeclared, so nothing claims a
+            % verification by accident. Picking a value is now a positive
+            % act by the analyst, which is what the original objection
+            % actually wanted.
+            obj.ShearTransferDropDown = obj.addDropdown(b, 6, ...
+                'Shear transfer (4.4.4)', ...
+                gui2.JointConfigPage.enumItems('model.ShearTransferCondition'), ...
+                ['Records the NASA-STD-5020B 4.4.4 determination. ' ...
+                 'NotDeclared: bending exemption ASSUMED, not verified. ' ...
+                 'CloseToleranceOrInterference: exemption VERIFIED - no ' ...
+                 'bending needed. ClearanceOrGapped: shear crosses a gap ' ...
+                 'or clearance, so bending MUST be accounted for - supply ' ...
+                 'a bolt bending limit moment under Applied loads, or the ' ...
+                 'interaction check reports not evaluated.']);
+            obj.bindEdit(obj.ShearTransferDropDown, @(~, ~) obj.commitJoint());
         end
 
         function buildActionsGroup(obj, parent, row)
@@ -1087,6 +1114,8 @@ classdef JointConfigPage < gui2.Page
                 'model.SlipMode', obj.SlipModeDropDown.Value);
             joint.BoltAxis   = gui2.JointConfigPage.enumFromLabel( ...
                 'model.BoltAxis', obj.BoltAxisDropDown.Value);
+            joint.ShearTransferCondition = gui2.JointConfigPage.enumFromLabel( ...
+                'model.ShearTransferCondition', obj.ShearTransferDropDown.Value);
             joint.PreloadSpec    = obj.buildPreloadSpec();
             joint.ThreadedMember = obj.buildThreadedMember();
             joint.HeadWasher     = obj.buildWasher(obj.HeadWasher);
@@ -1131,6 +1160,7 @@ classdef JointConfigPage < gui2.Page
             lc.Name                  = string(obj.CaseNameField.Value);
             lc.BoltTensileLimitLoad  = obj.parseOptional(obj.BoltTensileField);
             lc.BoltShearLimitLoad    = obj.parseOptional(obj.BoltShearField);
+            lc.BoltBendingLimitMoment = obj.parseOptional(obj.BoltBendingField);
             lc.JointTensileLimitLoad = obj.parseOptional(obj.JointTensileField);
             lc.JointShearLimitLoad   = obj.parseOptional(obj.JointShearField);
         end
@@ -1922,7 +1952,14 @@ classdef JointConfigPage < gui2.Page
             %   The joint-level pair counts even while hidden: visibility
             %   follows the slip mode, and a value already typed is still
             %   part of the case.
+            % The bending moment counts. It cannot drive a margin on its
+            % own -- Rt and Rs would both be NaN -- but neither can a joint
+            % total, and the same rule already applies to those: a value
+            % the analyst has typed is part of the case. Excluding it would
+            % report "at least one applied limit load" missing while one
+            % sits filled in on the same panel.
             fields = {obj.BoltTensileField, obj.BoltShearField, ...
+                      obj.BoltBendingField, ...
                       obj.JointTensileField, obj.JointShearField};
             tf = false;
             for i = 1:numel(fields)
@@ -2623,6 +2660,10 @@ classdef JointConfigPage < gui2.Page
             f = obj.BoltShearField;
         end
 
+        function f = boltBendingField(obj)
+            f = obj.BoltBendingField;
+        end
+
         function f = jointTensileField(obj)
             f = obj.JointTensileField;
         end
@@ -2633,6 +2674,10 @@ classdef JointConfigPage < gui2.Page
 
         function d = shearPlaneDropDown(obj)
             d = obj.ShearPlaneDropDown;
+        end
+
+        function d = shearTransferDropDown(obj)
+            d = obj.ShearTransferDropDown;
         end
 
         function d = boltAxisDropDown(obj)

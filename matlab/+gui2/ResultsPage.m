@@ -740,10 +740,7 @@ classdef ResultsPage < gui2.Page
             lines = [lines, obj.gateLines(r)];
             lines = [lines, obj.allowableLines(r)];
 
-            lines{end+1} = '';
-            lines{end+1} = 'BOLT BENDING: not included (fbu = 0).';
-            lines{end+1} = ['  NASA-STD-5020B 4.4.4 exemption ASSUMED, ' ...
-                            'not verified - close fit assumed.'];
+            lines = [lines, obj.bendingLines(r)];
 
             % The shear PLANE is a decision - it selects which equations
             % run at all - so it stays. Its citation is read from the
@@ -795,6 +792,52 @@ classdef ResultsPage < gui2.Page
             end
             if strlength(g.Trace) > 0
                 lines{end+1} = sprintf('  Gate: %s', g.Trace);
+            end
+        end
+
+        function lines = bendingLines(~, r)
+            %BENDINGLINES  The §4.4.4 determination, read from the Result.
+            %   These four lines were HARDCODED to "not included (fbu = 0),
+            %   exemption ASSUMED, not verified" -- printed unconditionally,
+            %   without consulting anything. That was true while bending was
+            %   unimplemented and false the moment a joint declared
+            %   CloseToleranceOrInterference, which the engine has recorded
+            %   since 2026-08-04. It now reads Result.Bending.
+            lines = {''};
+            if ~isfield(r.Bending, 'Condition')
+                % A Result from before bending, or one staged directly.
+                lines{end+1} = 'BOLT BENDING: not reported by this result.';
+                return
+            end
+            bnd = r.Bending;
+
+            if bnd.Included
+                lines{end+1} = sprintf( ...
+                    'BOLT BENDING: INCLUDED - fbu = %s psi on the %s diameter.', ...
+                    gui2.ResultsPage.withThousands(bnd.Fbu), bnd.Basis);
+                lines{end+1} = sprintf( ...
+                    '  Rb = fbu/Ftu = %.4f, added to Rt inside the Eq. 20/22 bracket.', ...
+                    bnd.Rb);
+                lines{end+1} = sprintf('  Determination: %s.', bnd.Condition);
+                return
+            end
+
+            lines{end+1} = 'BOLT BENDING: not included (fbu = 0).';
+            switch bnd.Condition
+                case "CloseToleranceOrInterference"
+                    lines{end+1} = ['  NASA-STD-5020B 4.4.4 exemption ' ...
+                        'VERIFIED - close-tolerance or interference fit.'];
+                case "ClearanceOrGapped"
+                    % The one combination that is not a quiet default: the
+                    % analyst has said bending applies and supplied nothing.
+                    lines{end+1} = ['  4.4.4 says bending APPLIES here, and ' ...
+                        'no bending moment was supplied - the interaction ' ...
+                        'check is not evaluated. Enter a bolt bending ' ...
+                        'limit moment on Joint Config.'];
+                otherwise
+                    lines{end+1} = ['  NASA-STD-5020B 4.4.4 exemption ' ...
+                        'ASSUMED, not verified - record the determination ' ...
+                        'with the shear-transfer condition on Joint Config.'];
             end
         end
 

@@ -411,6 +411,23 @@ The same note appears under the Interaction row on Single Joint Results.
 > **and** the interaction exponents (Eq. 20/21 body 2.5/1.5; Eq. 22/23 threads
 > 1.2/2.0). **Threads** is the conservative choice.
 
+### 7.4a Shear-transfer condition (§4.4.4) — now a real control
+
+The first build deliberately omitted this dropdown and left
+`Joint.ShearTransferCondition` at `NotDeclared`, reasoning that a selectable
+"verified" member would have joints claiming a verification nobody performed.
+The static note that stood in its place was wired to nothing, and the omission
+had a worse consequence than the one it avoided: `NotDeclared` was the only
+value gui2 could produce, so `ClearanceOrGapped` — the case the enum exists to
+expose — was **unreachable from this GUI**.
+
+The dropdown now exists and the default is still `NotDeclared`, so nothing
+claims a verification by accident; picking a value is a positive act by the
+analyst, which is what the original objection actually wanted. Applied loads
+gained a **Bolt bending limit MbL** field (in-lbf) alongside it — declaring
+`ClearanceOrGapped` without one leaves the interaction check NotEvaluated, and
+the Results bending line says so.
+
 ### 7.5 Groups are collapsible
 
 Eight groups on the left, four on the right. Collapsing shrinks what an analyst
@@ -479,7 +496,7 @@ It gets its own section, which generalises to everything that determined
 | Decision | Source |
 |---|---|
 | Separation before rupture — assured or not | `Result.Narrative`, 5020B Fig. 8 |
-| Bolt bending exemption — **assumed, not verified** | 5020B §4.4.4, `ShearTransferCondition` (§7.2f) |
+| Bolt bending — included, or the §4.4.4 determination that excused it | 5020B §4.4.4 / Eq. 20/22, `Result.Bending` |
 | Shear plane — which area and which exponents ran | `Joint.ShearPlane`, Eq. 12/13 and 20–23 |
 | Fastening-system allowable — which member governs | §2's `Allowable from:` line |
 

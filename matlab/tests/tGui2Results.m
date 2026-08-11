@@ -483,6 +483,22 @@ classdef tGui2Results < matlab.uitest.TestCase
                     'Phi', 0.336, 'N', 1.00);
             end
 
+            % The §4.4.4 bending block the decisions panel now reads
+            % instead of printing a hardcoded sentence.
+            if variant == "bendingIncluded"
+                r.Bending = struct('Included', true, 'Fbu', 16297.4662, ...
+                    'Rb', 0.101859, 'Diameter', 0.5, 'Basis', "body", ...
+                    'Condition', "ClearanceOrGapped");
+            elseif variant == "bendingVerifiedExempt"
+                r.Bending = struct('Included', false, 'Fbu', 0, 'Rb', 0, ...
+                    'Diameter', NaN, 'Basis', "none", ...
+                    'Condition', "CloseToleranceOrInterference");
+            else
+                r.Bending = struct('Included', false, 'Fbu', 0, 'Rb', 0, ...
+                    'Diameter', NaN, 'Basis', "none", ...
+                    'Condition', "NotDeclared");
+            end
+
             % Modes is a STRUCT ARRAY, so it is cell-wrapped: struct()
             % replicates over array-valued fields and would otherwise make
             % the whole thing a 1x3 struct array.
@@ -681,6 +697,55 @@ classdef tGui2Results < matlab.uitest.TestCase
             T     = testCase.Page.exportTable();
 
             testCase.verifyEqual(T.Check(1:numel(shown)), shown);
+        end
+    end
+
+    % ---- The bending line is read, not hardcoded ---------------------------
+    methods (Test)
+        function anAssumedExemptionStillSaysAssumed(testCase)
+            testCase.showSynthetic();          % NotDeclared
+            txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
+
+            testCase.verifyTrue(contains(txt, "not included"));
+            testCase.verifyTrue(contains(txt, "ASSUMED"));
+        end
+
+        function aVerifiedExemptionDoesNotSayAssumed(testCase)
+            % The lines were hardcoded to "ASSUMED, not verified" and
+            % printed unconditionally, so a joint that HAD recorded the
+            % determination was told its own verification did not exist.
+            testCase.showResult( ...
+                tGui2Results.syntheticResult("bendingVerifiedExempt"));
+            txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
+
+            testCase.verifyTrue(contains(txt, "VERIFIED"));
+            testCase.verifyFalse(contains(txt, "ASSUMED"), ...
+                'A recorded verification must not be reported as an assumption.');
+        end
+
+        function includedBendingReportsItsStressAndRatio(testCase)
+            testCase.showResult(tGui2Results.syntheticResult("bendingIncluded"));
+            txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
+
+            testCase.verifyTrue(contains(txt, "INCLUDED"));
+            testCase.verifyTrue(contains(txt, "16,297"), ...
+                'fbu belongs on screen - it is the number behind Rb.');
+            testCase.verifyTrue(contains(txt, "0.1019"));
+            testCase.verifyTrue(contains(txt, "body"), ...
+                'Which section fbu was taken on is a real choice, not a detail.');
+        end
+
+        function aResultWithNoBendingBlockSaysSoRatherThanGuessing(testCase)
+            % A1. A Result staged without the block must not be reported as
+            % a joint whose exemption was assumed - that would be inventing
+            % a determination nobody made.
+            r = tGui2Results.syntheticResult("mixed");
+            r.Bending = struct();
+            testCase.showResult(r);
+            txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
+
+            testCase.verifyTrue(contains(txt, "not reported"));
+            testCase.verifyFalse(contains(txt, "ASSUMED"));
         end
     end
 

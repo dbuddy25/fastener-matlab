@@ -1372,6 +1372,58 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
         end
     end
 
+    % ---- Bolt bending inputs (NASA-STD-5020B §4.4.4) ------------------------
+    methods (Test)
+        function theBendingMomentReachesTheModel(testCase)
+            p = testCase.Page;
+
+            testCase.type(p.boltBendingField(), '250');
+
+            testCase.verifyEqual( ...
+                testCase.App.State.LoadCase.BoltBendingLimitMoment, 250);
+        end
+
+        function theShearTransferDeterminationReachesTheModel(testCase)
+            % gui2 had NO control for this at all, so NotDeclared was the
+            % only value it could produce and the ClearanceOrGapped path --
+            % the whole reason the enum exists -- was unreachable from this
+            % GUI.
+            p = testCase.Page;
+            testCase.verifyEqual(testCase.App.State.Joint.ShearTransferCondition, ...
+                model.ShearTransferCondition.NotDeclared, ...
+                'The default must stay NotDeclared - nothing claims a verification by accident.');
+
+            testCase.choose(p.shearTransferDropDown(), 'ClearanceOrGapped');
+
+            testCase.verifyEqual(testCase.App.State.Joint.ShearTransferCondition, ...
+                model.ShearTransferCondition.ClearanceOrGapped);
+        end
+
+        function aBendingMomentCountsAsAnAppliedLoad(testCase)
+            % The Analyze gate asks for "at least one applied limit load".
+            % A typed moment is one - reporting it missing while it sits
+            % filled in on the same panel would be the form arguing with
+            % itself.
+            p = testCase.Page;
+            testCase.type(p.boltBendingField(), '250');
+
+            testCase.verifyFalse( ...
+                contains(string(p.requiredLabel().Text), "applied limit load"), ...
+                'A supplied bending moment is an applied load.');
+        end
+
+        function theBendingMomentRoundTripsThroughTheForm(testCase)
+            % A4: repopulating from the model must not mark dirty, and the
+            % value must survive the trip.
+            lc = testCase.App.State.LoadCase;
+            lc.BoltBendingLimitMoment = 175;
+            testCase.App.State.LoadCase = lc;
+
+            testCase.verifyEqual( ...
+                str2double(testCase.Page.boltBendingField().Value), 175);
+        end
+    end
+
     % ---- Global temperatures reach the engine ------------------------------
     %   REGRESSION. Service temperatures are project-level and live on Temp
     %   & Loads, so buildJoint cannot know them; nothing stamped them onto
