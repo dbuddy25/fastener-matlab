@@ -71,16 +71,23 @@ classdef tGui2Results < matlab.uitest.TestCase
         end
     end
 
-    % ---- The table: ten rows, Interaction last ----------------------------
+    % ---- The table: fourteen rows, Interaction last -----------------------
     methods (Test)
-        function tableShowsTenRowsAndOmitsSeparationBeforeRupture(testCase)
+        function tableShowsAllFourteenMarginsAndOmitsTheGate(testCase)
             % Separation-before-rupture carries no number - it records which
             % branch the tension check took. Listing it among margins is the
             % category error this page exists to correct.
             testCase.showSynthetic();
             names = string(testCase.Page.marginTable().Data(:, 1));
 
-            testCase.verifyNumElements(names, 10);
+            testCase.verifyNumElements(names, 14);
+            for mode = ["Nut strength", "Insert internal-thread", ...
+                        "Insert external-thread", "Tapped-hole parent-thread"]
+                testCase.verifyTrue(any(names == mode), sprintf( ...
+                    ['%s carries its own MS against the preload-included ' ...
+                     'Eq. 8 design load - it is NOT recoverable from ' ...
+                     'Tension-Ultimate, so it needs a row.'], mode));
+            end
             testCase.verifyTrue(any(names == "Bearing-under-head"), ...
                 ['5020B 4.4.2 requires member margins, and this one was ' ...
                  'computed every run and displayed nowhere.']);
@@ -171,41 +178,46 @@ classdef tGui2Results < matlab.uitest.TestCase
 
     % ---- Scope: the verdict and footer are always qualified ---------------
     methods (Test)
-        function theVerdictIsAlwaysScopeQualified(testCase)
+        function theVerdictDoesNotQualifyAgainstNothing(testCase)
+            % It used to end "- N more computed, not shown". Nothing is
+            % hidden any more, so that would read "0 more computed, not
+            % shown" - a qualification about nothing, and exactly the kind
+            % of boilerplate a reader learns to skip and then misses when
+            % it says something real. The scope statement lives in the
+            % footer, which still refuses to claim a complete assessment.
             testCase.showSynthetic();
-            testCase.verifyTrue( ...
-                contains(string(testCase.Page.verdictLabel().Text), "not shown"), ...
-                'Every verdict names the checks it did not cover.');
+            txt = string(testCase.Page.verdictLabel().Text);
+
+            testCase.verifyFalse(contains(txt, "not shown"));
+            testCase.verifyTrue(contains(txt, "displayed checks"), ...
+                'The verdict still says it counts DISPLAYED checks.');
         end
 
-        function theScopeFooterNamesTheFourUnlistedModes(testCase)
-            % The four that have no row of their own. Bearing-under-head
-            % and Bolt-thread shear are no longer among them - they are
-            % rows now - and naming them here would send a reader looking
-            % for something that is on screen.
+        function theScopeFooterNoLongerClaimsChecksAreMissing(testCase)
+            % It used to name the checks with no row and say where they
+            % went. All fifteen have rows now, so naming any would send a
+            % reader hunting for something that is on screen.
             txt = string(testCase.Page.scopeLabel().Text);
-            for name = ["Nut strength", "Insert internal-thread", ...
-                        "Insert external-thread", "Tapped-hole parent-thread"]
-                testCase.verifyTrue(contains(txt, name), ...
-                    sprintf('The scope footer must name %s.', name));
-            end
-            for shown = ["Bearing-under-head", "Bolt-thread shear"]
-                testCase.verifyFalse(contains(txt, shown), ...
-                    sprintf('%s has a row now; the footer must not list it.', shown));
+
+            testCase.verifyTrue(contains(txt, "all 15"));
+            for shown = ["Nut strength", "Insert internal-thread", ...
+                         "Tapped-hole parent-thread", "Bearing-under-head"]
+                testCase.verifyFalse(contains(txt, shown), sprintf( ...
+                    '%s has a row; the footer must not list it as absent.', shown));
             end
         end
 
-        function theScopeFooterSaysWhereTheUnlistedModesWent(testCase)
-            % "Not a complete assessment" over a list of four modes that
-            % GOVERN the row above them is a statement an analyst learns to
-            % ignore - and once ignored it protects nothing. It now says
-            % they set Ptu_allow and where to read their allowables.
+        function theScopeFooterStillRefusesToClaimACompleteAssessment(testCase)
+            % The check list being complete is NOT the assessment being
+            % complete. TFSR 11 requires yield and separation to account
+            % for combined loading and neither is implemented
+            % (COMPLIANCE.md, TFSR 11 PARTIAL), so fifteen green rows still
+            % do not make a finished 5020B case.
             txt = string(testCase.Page.scopeLabel().Text);
 
-            testCase.verifyTrue(contains(txt, "Ptu_allow"));
-            testCase.verifyTrue(contains(txt, "Analysis decisions"));
-            testCase.verifyTrue(contains(txt, "11 of 15"), ...
-                'Ten margin rows plus the Fig. 8 gate.');
+            testCase.verifyTrue(contains(txt, "NOT a complete"));
+            testCase.verifyTrue(contains(txt, "combined"), ...
+                'It must say WHICH gap, or it is boilerplate.');
         end
 
         function theScopeFooterIsThereBeforeAnyRun(testCase)
@@ -370,7 +382,7 @@ classdef tGui2Results < matlab.uitest.TestCase
 
             p = testCase.Page;
             testCase.verifyEqual(char(p.marginTable().Visible), 'on');
-            testCase.verifyNumElements(p.marginTable().Data(:, 1), 10);
+            testCase.verifyNumElements(p.marginTable().Data(:, 1), 14);
             testCase.verifyTrue( ...
                 contains(string(p.verdictLabel().Text), "not shown"));
         end
@@ -683,14 +695,14 @@ classdef tGui2Results < matlab.uitest.TestCase
                 char(testCase.Page.reportButton().Enable), 'on');
         end
 
-        function theExportCarriesTheElevenDisplayedChecks(testCase)
-            % Section 2: an export shows what the page shows - the ten
-            % margin rows PLUS the gate, which is displayed but carries no
-            % margin.
+        function theExportCarriesAllFifteenChecks(testCase)
+            % Section 2: an export shows what the page shows - the
+            % fourteen margin rows PLUS the gate, which is displayed but
+            % carries no margin.
             testCase.showSynthetic();
             T = testCase.Page.exportTable();
 
-            testCase.verifyEqual(height(T), 11);
+            testCase.verifyEqual(height(T), 15);
             testCase.verifyTrue(any(T.Check == "Separation-before-rupture"), ...
                 'The gate is the ninth displayed check.');
         end
@@ -791,9 +803,9 @@ classdef tGui2Results < matlab.uitest.TestCase
             % the two disagree about the same row.
             testCase.showSynthetic();
             p = testCase.Page;
-            % Interaction is last of the ten table rows - the count itself
-            % is pinned by tableShowsTenRowsAndOmits...
-            p.selectRow(10);
+            % Interaction is last of the fourteen table rows - the count
+            % itself is pinned by tableShowsAllFourteenMargins...
+            p.selectRow(14);
 
             txt = strjoin(string(p.detailArea().Value), newline);
             testCase.verifyTrue(contains(txt, "R = 0.86"));
@@ -833,7 +845,7 @@ classdef tGui2Results < matlab.uitest.TestCase
             % Narrative - every other row's detail is its own.
             testCase.showSynthetic();
             p = testCase.Page;
-            p.selectRow(10);   % Interaction
+            p.selectRow(14);   % Interaction
 
             txt = strjoin(string(p.detailArea().Value), newline);
             testCase.verifyFalse(contains(txt, "Analysis decisions"), ...

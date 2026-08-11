@@ -59,26 +59,34 @@ classdef ResultsPage < gui2.Page
         % NOT folded into Ptu_allow: those are the INTERNAL threads.
         TableRows = ["Tension-Ultimate", "Tension-Yield", "Shear-Ultimate", ...
                      "Separation", "Slip", "Bearing", "Bearing-under-head", ...
-                     "Shear-tearout", "Bolt-thread shear", "Interaction"]
+                     "Shear-tearout", "Bolt-thread shear", "Nut strength", ...
+                     "Insert internal-thread", "Insert external-thread", ...
+                     "Tapped-hole parent-thread", "Interaction"]
 
         % The ninth displayed check. A decision, not a margin.
         DecisionRow = "Separation-before-rupture"
 
-        % Computed and not given a row of their own — but NOT unreported.
-        % These four are the NASA-STD-5020B 4.4.1 tensile modes of the
-        % threaded member. Whichever one applies to the joint in hand feeds
-        % engine.systemTensileAllowable, sets Ptu_allow, and therefore
-        % GOVERNS the Tension-Ultimate row at the top of the table; its
-        % allowable is listed by name under Analysis decisions. Giving them
-        % margin rows as well would report one fact twice.
+        % NOTHING IS HIDDEN ANY MORE, and the reasoning that hid the four
+        % §4.4.1 threaded-member modes was wrong. It claimed a margin row
+        % for them would "report one fact twice", because whichever mode
+        % applies sets Ptu_allow and so governs Tension-Ultimate. They are
+        % not one fact. The modes carry their own margins against a
+        % DIFFERENT design load -- engine.boltDesignLoad's preload-included
+        % Eq. 8 form, Pb = PpMax + FFU*FSU*n*phi*PtL -- while
+        % Tension-Ultimate divides by Ptu = FSU*FFU*PtL with no preload and
+        % no n*phi. A nut-strength MS is therefore not recoverable from the
+        % Tension-Ultimate row, and hiding it meant four computed margins
+        % appeared nowhere while the scope footer asserted that nothing was
+        % omitted.
         %
-        % The scope footer says exactly this. It used to name six checks
-        % and call the assessment incomplete, which was wrong in both
-        % directions at once: it undersold what was on screen, and it
-        % buried the one check that really was missing (Bearing-under-head,
-        % now a row) in a list of four that never were.
-        HiddenChecks = ["Nut strength", "Insert internal-thread", ...
-                        "Insert external-thread", "Tapped-hole parent-thread"]
+        % All fifteen checks are now displayed: fourteen margin rows plus
+        % the Fig. 8 gate, which leads Analysis decisions because it is a
+        % branch selection rather than a margin (see the class note).
+        %
+        % Only one threaded-member mode applies to any given joint, so the
+        % other three come back NotEvaluated and render amber. That is the
+        % honest outcome and the table already handles it: Slip does the
+        % same whenever mu = 0.
 
         % Above this, a capped margin renders ">+5". Display only.
         CapThreshold = 5
@@ -699,7 +707,6 @@ classdef ResultsPage < gui2.Page
             nFail  = sum(status == "Fail");
             nEval  = sum(status == "NotEvaluated");
             nTotal = numel(shown);
-            nHid   = numel(gui2.ResultsPage.HiddenChecks);
 
             if nFail > 0
                 txt = sprintf('%d of %d displayed checks FAIL', nFail, nTotal);
@@ -716,8 +723,13 @@ classdef ResultsPage < gui2.Page
                 col = gui2.palette('statusPass');
             end
 
-            obj.VerdictLabel.Text = sprintf('%s - %d more computed, not shown.', ...
-                txt, nHid);
+            % NO "N more computed, not shown" TAIL. It existed because six,
+            % then four, computed checks had no row; every one of them has
+            % a row now, so the sentence would read "0 more computed, not
+            % shown" -- a qualification about nothing, which is exactly the
+            % kind of boilerplate an analyst stops reading and then misses
+            % when it says something real.
+            obj.VerdictLabel.Text = txt;
             obj.VerdictLabel.FontColor = col;
         end
 
@@ -1064,22 +1076,27 @@ classdef ResultsPage < gui2.Page
         end
 
         function t = scopeFooterText(~)
-            %SCOPEFOOTERTEXT  What is shown, what is not, and why not.
-            %   Says where the unlisted checks WENT rather than only that
-            %   they are absent. "Not a complete assessment" over a list
-            %   that includes four modes which govern the row above it is a
-            %   statement an analyst learns to ignore, and the moment it is
-            %   ignored it stops protecting the case it was written for.
-            nShown = numel(gui2.ResultsPage.TableRows) + 1;   % + the Fig. 8 gate
-            t = sprintf(['SCOPE: %d of 15 checks shown (%d margins plus the ' ...
-                'Fig. 8 gate). The other %d - %s - are the 5020B 4.4.1 ' ...
-                'tensile modes of the threaded member: whichever applies ' ...
-                'here sets Ptu_allow and so governs Tension-Ultimate, and ' ...
-                'its allowable is listed by name under Analysis decisions. ' ...
-                'No computed check goes unreported.'], ...
-                nShown, numel(gui2.ResultsPage.TableRows), ...
-                numel(gui2.ResultsPage.HiddenChecks), ...
-                strjoin(cellstr(gui2.ResultsPage.HiddenChecks), ', '));
+            %SCOPEFOOTERTEXT  What the table covers, and what it does not.
+            %   It used to name the checks that had no row and explain
+            %   where they went. There are none: all fifteen are displayed.
+            %
+            %   THE STATEMENT STAYS ANYWAY, because the thing it guards
+            %   never went away -- a margin table that reads as a complete
+            %   NASA-STD-5020B assessment when it is not is a compliance
+            %   problem, and completeness of the CHECK LIST is not
+            %   completeness of the assessment. TFSR 11 still requires
+            %   yield and separation to account for combined loading and
+            %   the tool implements neither (COMPLIANCE.md, TFSR 11
+            %   PARTIAL), so a reader who takes fifteen green rows as a
+            %   finished 5020B case is still wrong, just for a different
+            %   reason than before.
+            t = sprintf(['SCOPE: all 15 computed checks are shown - %d ' ...
+                'margin rows plus the NASA-STD-5020B Fig. 8 gate, which ' ...
+                'leads Analysis decisions because it selects a branch ' ...
+                'rather than carrying a margin. NOT a complete 5020B ' ...
+                'assessment even so: yield and separation under COMBINED ' ...
+                'loading (TFSR 11) are required and not implemented.'], ...
+                numel(gui2.ResultsPage.TableRows));
         end
     end
 

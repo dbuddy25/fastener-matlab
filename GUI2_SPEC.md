@@ -34,12 +34,33 @@ surfaced, and what the app refuses to do silently.
 
 ---
 
-## 2. Check scope — 9 of 15 displayed
+## 2. Check scope — all 15 displayed
 
-The engine computes all 15 checks, unchanged. The GUI renders a whitelist.
-Adding a check later is an edit to this list and nothing else.
+The engine computes all 15 checks, and the GUI now shows all 15: **14 margin
+rows plus the Fig. 8 gate**, which leads Analysis decisions because it selects a
+branch rather than carrying a margin.
 
-**Displayed (9)** — exact `Result.Margins(i).Name` strings:
+It did not always. The first build displayed 9 and named the other 6 as
+"computed and not displayed", and that whitelist was wrong in two separate ways,
+both found in use:
+
+- **`Bearing-under-head` was REQUIRED and invisible.** §4.4.2 calls for margins
+  on the joint members and prints no member-strength equations, so TM-106943
+  Eq. 74/75 supply them — the check ran on every analysis and appeared nowhere.
+  `Bolt-thread shear` joined it as a row at the same time.
+- **The four §4.4.1 threaded-member modes were hidden on a false premise** — that
+  a row for them would report one fact twice, since whichever applies sets
+  `Ptu_allow` and governs Tension-Ultimate. They are not one fact. Those modes
+  carry their own margins against a **different** design load
+  (`engine.boltDesignLoad`'s preload-included Eq. 8 form,
+  `Pb = PpMax + FFU·FSU·n·φ·PtL`) while Tension-Ultimate divides by
+  `Ptu = FSU·FFU·PtL`. A nut-strength MS is not recoverable from the
+  Tension-Ultimate row.
+
+Only one threaded-member mode applies to any given joint, so the other three
+render NotEvaluated in amber — the same honest treatment Slip gets when µ = 0.
+
+**Displayed (all 15)** — exact `Result.Margins(i).Name` strings:
 
 | Row | Governing |
 |---|---|
@@ -64,10 +85,13 @@ Adding a check later is an edit to this list and nothing else.
   *governs* Tension-Ultimate. Hiding the rows must not hide their effect: the
   Tension-Ultimate detail names the governing member and its value, e.g.
   `Allowable from: insert (derived), 4,210 lbf`.
-- **Scope footer, everywhere margins are shown or exported.**
-  *"9 of 15 checks shown; 6 computed and not displayed"*, listing the six by
-  name. A margin table that reads as complete when it is not is a compliance
-  problem, not a cosmetic one.
+- **Scope footer, everywhere margins are shown or exported.** It no longer
+  names absent checks — there are none. It still refuses to claim a complete
+  assessment, because **a complete check list is not a complete assessment**:
+  TFSR 11 requires yield and separation to account for combined loading and the
+  tool implements neither (`COMPLIANCE.md`, TFSR 11 **PARTIAL**). A margin table
+  that reads as a finished 5020B case when it is not is a compliance problem,
+  not a cosmetic one — only the reason has changed.
 
 ### The displayed 9 is the tool's scope
 
@@ -455,9 +479,9 @@ commit, or the summary and the form disagree.
 
 ## 8. Single Joint Results
 
-### 8.1 The margin table — 10 rows
+### 8.1 The margin table — 14 rows
 
-The eleven displayed checks minus `Separation-before-rupture`, which is not a
+All fifteen displayed checks minus `Separation-before-rupture`, which is not a
 margin (§8.2). Solver order, no sorting, **`Interaction` last**.
 
 `Bearing-under-head` and `Bolt-thread shear` were hidden in the first build and
@@ -512,7 +536,7 @@ named for decisions rather than for a path.
 - Warnings from `Result.Warnings`, rebuilt from scratch on every render and
   never accumulated. Refreshed only from the show-result path — refreshing them
   when the user starts editing would be anti-conservative (A3).
-- Scope footer per §2: 9 of 15 shown, the six named.
+- Scope footer per §2: all 15 shown, and still not a complete assessment.
 - Stale banner when any input changed since the shown result was computed, with
   the table muted and the rail carrying its amber dot. Muting is cosmetic and
   never allowed to break the numbers.
