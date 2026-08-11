@@ -12,7 +12,7 @@ function file = singleJointReport(joint, loadCase, factors, file)
 %       1. Title page          "Bolted Joint Analysis" + the joint Name +
 %                               "per NASA-STD-5020B"
 %       2. Inputs               engine.summary(joint, loadCase, factors)
-%                               as a MATLABTable
+%                               as a styled table
 %       3. Preload               r.Preload (PpiMax/PpiMin/PpMax/PpMin/
 %                               ThermalDelta), lbf
 %       4. Design loads          r.DesignLoads (Ptu/Pty/Psu/Psep), lbf
@@ -116,7 +116,7 @@ ch = Chapter("Inputs");
 add(ch, Paragraph("Every input to the analysis (bolt, materials, " + ...
     "clamped stack, threaded member, preload spec, joint config, " + ...
     "applied loads, factors), plus the computed min/max preload band."));
-add(ch, MATLABTable(engine.summary(joint, loadCase, factors)));
+add(ch, tableFromMATLAB(engine.summary(joint, loadCase, factors)));
 add(rpt, ch);
 
 % ---- 3. Preload ---------------------------------------------------------------
@@ -182,7 +182,7 @@ add(ch, Paragraph("Equation citation for each EVALUATED check, traceable " + ...
     "see the Margins of Safety table for the complete 15-row set."));
 allT     = r.asTable();
 evalMask = allT.Status ~= "NotEvaluated";
-add(ch, MATLABTable(allT(evalMask, ["Name", "Method"])));
+add(ch, tableFromMATLAB(allT(evalMask, ["Name", "Method"])));
 add(rpt, ch);
 
 % ---- 9. About this report ---------------------------------------------------
@@ -220,13 +220,83 @@ end
 end
 
 function tbl = structTable(s, order)
-%STRUCTTABLE  A small Field/Value MATLABTable from a struct + field order.
+%STRUCTTABLE  A small Field/Value table from a struct + field order.
 vals = strings(numel(order), 1);
 for i = 1:numel(order)
     vals(i) = fmtNum(s.(order(i)));
 end
-t   = table(order(:), vals(:), VariableNames = ["Field", "Value"]);
-tbl = mlreportgen.dom.MATLABTable(t);
+tbl = styledTable(["Field", "Value"], [order(:), vals(:)]);
+end
+
+function tbl = tableFromMATLAB(T)
+%TABLEFROMMATLAB  A MATLAB table rendered in the report's look.
+%   The drop-in for mlreportgen.dom.MATLABTable. Everything is stringified
+%   through fmtCell so a numeric column prints the way the rest of the
+%   report prints numbers rather than however the table happens to store
+%   them -- MATLABTable's own formatting was the other half of why these
+%   pages looked unlike the ones built by hand.
+cells = strings(height(T), width(T));
+for j = 1:width(T)
+    col = T.(j);
+    for i = 1:height(T)
+        if isnumeric(col) || islogical(col)
+            cells(i, j) = fmtNum(col(i));
+        else
+            cells(i, j) = string(col(i));
+        end
+    end
+end
+tbl = styledTable(string(T.Properties.VariableNames), cells);
+end
+
+function tbl = newStyledTable(headers)
+%NEWSTYLEDTABLE  An empty table carrying the report's one table look.
+%   Grid, header band, type scale. Callers append their own rows, which is
+%   what the margins table needs so it can colour rows by Status.
+%
+%   This replaces mlreportgen.dom.MATLABTable, which renders a MATLAB
+%   table with the toolbox's stock styling -- that default was the whole
+%   of why the report looked unfinished. The DOM layer underneath does
+%   everything ReportLab's TableStyle does; it simply was not being used.
+import mlreportgen.dom.*
+st = report.reportStyle();
+
+tbl = Table();
+tbl.Style = { ...
+    Border("solid", "#" + st.GridColor, "0.5pt"), ...
+    ColSep("solid", "#" + st.GridColor, "0.5pt"), ...
+    RowSep("solid", "#" + st.GridColor, "0.5pt"), ...
+    FontFamily(st.FontFamily), ...
+    FontSize(st.TableSize)};
+
+hdr = TableRow();
+hdr.Style = {Bold(true), BackgroundColor("#" + st.HeaderBg), ...
+             Color("#" + st.HeaderText)};
+for h = string(headers)
+    append(hdr, TableEntry(Paragraph(h)));
+end
+append(tbl, hdr);
+end
+
+function tbl = styledTable(headers, cells)
+%STYLEDTABLE  A plain data table in the report's look, with row banding.
+import mlreportgen.dom.*
+st  = report.reportStyle();
+tbl = newStyledTable(headers);
+cells = string(cells);
+
+for i = 1:size(cells, 1)
+    row = TableRow();
+    for j = 1:size(cells, 2)
+        append(row, TableEntry(Paragraph(cells(i, j))));
+    end
+    % Banding, not colour-coding: these tables carry inputs and loads, not
+    % verdicts, so nothing here should read as pass or fail.
+    if mod(i, 2) == 0
+        row.Style = {BackgroundColor("#" + st.BandBg)};
+    end
+    append(tbl, row);
+end
 end
 
 function tbl = marginsTable(r)
@@ -243,16 +313,10 @@ function tbl = marginsTable(r)
 %   the opposite pass/fail direction (R <= 1, not MS >= 0) is spelled out
 %   inline rather than left for the reader to infer.
 import mlreportgen.dom.*
-T = r.asTable();
+st = report.reportStyle();
+T  = r.asTable();
 
-tbl = Table();
-
-header = TableRow();
-for h = ["Name", "MS", "Status", "Method"]
-    append(header, TableEntry(Paragraph(h)));
-end
-header.Style = {Bold(true)};
-append(tbl, header);
+tbl = newStyledTable(["Name", "MS", "Status", "Method"]);
 
 for i = 1:height(T)
     row = TableRow();
@@ -261,16 +325,25 @@ for i = 1:height(T)
     append(row, TableEntry(Paragraph(T.Status(i))));
     append(row, TableEntry(Paragraph(T.Method(i))));
 
+    % COLOUR COMES FROM Status, NEVER FROM RE-READING MS. The report does
+    % not re-threshold a margin any more than the Results page does
+    % (GUI2_SPEC.md Section 2) -- the engine decided, and paper and screen
+    % have to agree about what it decided. These are gui2.palette's own
+    % result colours, restated in report.reportStyle.
     rowStyle = {};
+    switch T.Status(i)
+        case "Pass"
+            rowStyle = {BackgroundColor("#" + st.PassBg)};
+        case "Fail"
+            rowStyle = {BackgroundColor("#" + st.FailBg), ...
+                        Color("#" + st.FailText)};
+        otherwise   % NotEvaluated -- amber, never the grey of "nothing here"
+            rowStyle = {BackgroundColor("#" + st.NotEvalBg)};
+    end
     if strlength(r.GoverningCheck) > 0 && T.Name(i) == r.GoverningCheck
         rowStyle = [rowStyle, {Bold(true)}]; %#ok<AGROW>
     end
-    if T.Status(i) == "Fail"
-        rowStyle = [rowStyle, {Color("red")}]; %#ok<AGROW>
-    end
-    if ~isempty(rowStyle)
-        row.Style = rowStyle;
-    end
+    row.Style = rowStyle;
     append(tbl, row);
 end
 end

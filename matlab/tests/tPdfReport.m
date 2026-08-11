@@ -57,6 +57,60 @@ classdef tPdfReport < matlab.unittest.TestCase
             testCase.verifyGreaterThan(d(1).bytes, 0);
         end
     end
+
+    % ---- Paper and screen must agree about a verdict ------------------------
+    methods (Test)
+        function reportColoursMatchTheGuiPalette(testCase)
+            % THE DRIFT GUARD. report.reportStyle restates gui2.palette's
+            % result colours instead of importing them, because +report is
+            % callable headless and must not depend on a GUI package. Two
+            % copies need a test, or a margin drifts to reading green on
+            % screen and something else on paper - and a reviewer holding
+            % the PDF while an analyst holds the screen would be looking at
+            % what appears to be two different answers.
+            st = report.reportStyle();
+
+            pairs = { ...
+                st.PassBg,    'tablePassBg'; ...
+                st.FailBg,    'tableFailBg'; ...
+                st.NotEvalBg, 'tableNotEvalBg'; ...
+                st.NaBg,      'tableNaBg'; ...
+                st.PassText,  'statusPass'; ...
+                st.FailText,  'statusFail'; ...
+                st.MutedText, 'mutedText'};
+
+            for k = 1:size(pairs, 1)
+                rgb = tPdfReport.hex2rgb(pairs{k, 1});
+                % AbsTol of 1/255: hex is 8-bit, the palette is double, so
+                % 0.78 and 0xC7 are the same colour quantised differently.
+                testCase.verifyEqual(rgb, gui2.palette(pairs{k, 2}), ...
+                    "AbsTol", 1/255, sprintf( ...
+                        'Report colour %s has drifted from gui2.palette(''%s'').', ...
+                        pairs{k, 1}, pairs{k, 2}));
+            end
+        end
+
+        function everyStyleFieldIsPopulated(testCase)
+            % A blank colour renders as a default rather than failing, so
+            % an unset field would surface as a table that quietly looks
+            % wrong rather than as an error.
+            st = report.reportStyle();
+            f  = fieldnames(st);
+
+            for i = 1:numel(f)
+                testCase.verifyGreaterThan(strlength(st.(f{i})), 0, ...
+                    sprintf('reportStyle.%s is empty.', f{i}));
+            end
+        end
+    end
+
+    methods (Static, Access = private)
+        function rgb = hex2rgb(h)
+            %HEX2RGB  "C7F0C7" -> [0.78 0.94 0.78].
+            h = char(h);
+            rgb = [hex2dec(h(1:2)), hex2dec(h(3:4)), hex2dec(h(5:6))] / 255;
+        end
+    end
 end
 
 % =========================================================================
