@@ -216,7 +216,12 @@ classdef tGui2Results < matlab.uitest.TestCase
             txt = string(testCase.Page.scopeLabel().Text);
 
             testCase.verifyTrue(contains(txt, "NOT a complete"));
-            testCase.verifyTrue(contains(txt, "combined"), ...
+            % IgnoreCase: the footer shouts COMBINED because that is the
+            % qualifier doing the work, and a test that pinned the casing
+            % would fail the next time someone softened the emphasis
+            % without changing the meaning.
+            testCase.verifyTrue( ...
+                contains(txt, "combined", "IgnoreCase", true), ...
                 'It must say WHICH gap, or it is boilerplate.');
         end
 
@@ -383,8 +388,10 @@ classdef tGui2Results < matlab.uitest.TestCase
             p = testCase.Page;
             testCase.verifyEqual(char(p.marginTable().Visible), 'on');
             testCase.verifyNumElements(p.marginTable().Data(:, 1), 14);
+            % The verdict no longer carries a "N more computed, not shown"
+            % tail - nothing is hidden. It still states what it counted.
             testCase.verifyTrue( ...
-                contains(string(p.verdictLabel().Text), "not shown"));
+                contains(string(p.verdictLabel().Text), "displayed checks"));
         end
     end
 
