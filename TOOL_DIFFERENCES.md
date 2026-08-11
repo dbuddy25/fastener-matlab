@@ -406,6 +406,16 @@ added to `Rt` **inside** the tension bracket:
 term in Eq. 20/22 "is considered to be conservative" — the reachable option is
 the conservative one.
 
+**A supplied moment is honoured or ignored by determination.** Bulk resolves a
+bending moment from the FE moments for *every* element, so what happens to it
+depends on `Joint.ShearTransferCondition`: `ClearanceOrGapped` and `NotDeclared`
+use it (the latter conservatively — nobody assessed the joint and the model
+reports a moment), while `CloseToleranceOrInterference` **ignores** it and
+records that it did. Using a moment on a joint the analyst declared exempt would
+override a recorded engineering determination, and FE moments on a stiff
+connection are frequently an artefact of the idealisation rather than real bolt
+bending — which is precisely what "exempt" is for.
+
 **Derived convention: which section.** 5020B defines `fbu` as linear-elastic but
 never says which diameter. The section follows the **shear plane** — body for
 `BodyInShear`, minor for `ThreadsInShear` — mirroring Eq. 12 vs Eq. 13 for the

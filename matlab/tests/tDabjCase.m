@@ -756,6 +756,59 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifySubstring(r.Method, "Eq. 20");
         end
 
+        function anExemptJointIgnoresASuppliedMoment(testCase)
+            % A bulk run resolves a bending moment from the FE moments for
+            % EVERY element, whatever the joint is. On a joint the analyst
+            % has declared exempt, using it would override a recorded
+            % engineering determination - and FE moments on a stiff
+            % connection are often an artefact of the idealisation rather
+            % than real bolt bending, which is exactly what "exempt" says.
+            [j, d] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, 200);
+            j.ShearTransferCondition = ...
+                model.ShearTransferCondition.CloseToleranceOrInterference;
+
+            r = engine.marginInteraction(j, d);
+
+            testCase.verifyFalse(r.Bending.Included);
+            testCase.verifyEqual(r.Bending.Rb, 0, ...
+                'An exempt joint must compute exactly as it would with no moment.');
+            testCase.verifyTrue(r.Bending.MomentIgnored, ...
+                'And it must RECORD that a moment was dropped, not just drop it.');
+            testCase.verifySubstring(r.Detail, "deliberately not used");
+        end
+
+        function anExemptJointMatchesTheNoMomentResultExactly(testCase)
+            % The consequence stated as a number: exempt-with-moment and
+            % exempt-without must be the same R, or "exempt" would quietly
+            % mean "slightly conservative".
+            [jm, dm] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, 200);
+            [jn, dn] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, NaN);
+            exemptCond = model.ShearTransferCondition.CloseToleranceOrInterference;
+            jm.ShearTransferCondition = exemptCond;
+            jn.ShearTransferCondition = exemptCond;
+
+            testCase.verifyEqual(engine.marginInteraction(jm, dm).R, ...
+                engine.marginInteraction(jn, dn).R, "AbsTol", 1e-12);
+        end
+
+        function anUndeterminedJointUsesTheMomentAndSaysWhy(testCase)
+            % The default. Nobody has assessed the joint and the model is
+            % reporting a moment, so dropping it silently would be the
+            % quiet non-conservatism ShearTransferCondition exists to stop.
+            [j, d] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, 200);
+            testCase.verifyEqual(j.ShearTransferCondition, ...
+                model.ShearTransferCondition.NotDeclared);
+
+            r = engine.marginInteraction(j, d);
+
+            testCase.verifyTrue(r.Bending.Included);
+            testCase.verifyFalse(r.Bending.MomentIgnored);
+        end
+
         function aMomentWithNoFtuIsNotEvaluatedRatherThanThrown(testCase)
             % Ftu only matters once there IS a moment - the fbu/Ftu term
             % cannot be formed without it.

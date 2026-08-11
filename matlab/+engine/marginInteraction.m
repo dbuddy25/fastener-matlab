@@ -110,9 +110,21 @@ function r = marginInteraction(joint, designLoads)
 %                                      from, so there is still no honest
 %                                      answer.
 %
-%   Supplying a moment on a NotDeclared or CloseToleranceOrInterference
-%   joint also includes bending — 5020B calls that conservative, so the
-%   tool never refuses a moment it was given.
+%   WHAT A SUPPLIED MOMENT DOES, by determination — a bulk run resolves
+%   one from the FE moments for EVERY element, so this matters:
+%       NotDeclared   — USED, conservatively. Nobody assessed the joint
+%                       and the model reports a moment; dropping it
+%                       silently is the quiet non-conservatism this enum
+%                       exists to prevent.
+%       CloseTolerance— IGNORED, and said so. The analyst has stated
+%                       §4.4.4 does not require bending here. FE moments
+%                       on a stiff connection are frequently an artefact
+%                       of the idealisation rather than real bolt
+%                       bending, and "exempt" is how that is recorded —
+%                       using it anyway would make the determination a
+%                       label rather than a setting. Bending.MomentIgnored
+%                       flags it and the Detail names the value dropped.
+%       ClearanceOrGapped — USED. That is the point of the declaration.
 %
 %   SECONDARY, INFORMATIONAL field "a": the load-scale factor solving
 %   (a*Rt)^et + (a*Rs)^es = 1 — "how far could BOTH design loads scale,
@@ -224,6 +236,27 @@ else
 end
 bend = boltBendingStress(joint, Mbu);
 
+% DOES THE DETERMINATION LET US USE THE MOMENT?
+%   Exempt        — the analyst has stated §4.4.4 does not require bending
+%                   here. A moment may still arrive (a bulk run resolves
+%                   one from the FE moments for EVERY element, whatever
+%                   the joint is), and it is deliberately NOT used: FE
+%                   moments on a stiff connection are frequently an
+%                   artefact of the idealisation rather than real bolt
+%                   bending, and "exempt" is exactly how an analyst says
+%                   so. Including it anyway would make the determination a
+%                   label rather than a setting.
+%   Required      — use it (that is the whole point of the declaration).
+%   Not determined — USE IT, conservatively. Nobody has assessed the
+%                   joint and the model is reporting a moment; silently
+%                   dropping it there is precisely the quiet
+%                   non-conservatism ShearTransferCondition exists to
+%                   prevent. It is included and the Detail says it was
+%                   included because nothing said otherwise.
+exempt     = joint.ShearTransferCondition == ...
+             model.ShearTransferCondition.CloseToleranceOrInterference;
+useBending = bend.HasMoment && ~exempt;
+
 % A ClearanceOrGapped joint is one the analyst has declared §4.4.4's
 % exemption does NOT cover, so bending has to be accounted for. It now can
 % be -- but only if a moment was actually supplied. With none, this is
@@ -244,8 +277,10 @@ if joint.ShearTransferCondition == model.ShearTransferCondition.ClearanceOrGappe
     return
 end
 
-% A moment was supplied but the section it needs is not defined.
-if bend.HasMoment && ~bend.Assessed
+% A moment was supplied but the section it needs is not defined. Only
+% fatal when the moment is actually going to be used -- an exempt joint
+% does not need a section for a stress it will not compute.
+if useBending && ~bend.Assessed
     r = bendingNotEvaluated("Not evaluated: " + bend.Reason + ".", bend, ...
         joint.ShearTransferCondition);
     return
@@ -312,7 +347,7 @@ Rs = designLoads.Psu / shearUlt.ShearAllowable;
 % ultimate tensile stress; the standard pairs fbu with Ftu (not with the
 % rated allowable behind Rt) in Eq. 20 and Eq. 22 as printed.
 Ftu = joint.BoltMaterial.Ftu;
-if bend.HasMoment && (~isfinite(Ftu) || Ftu <= 0)
+if useBending && (~isfinite(Ftu) || Ftu <= 0)
     % Only fatal WITH a moment: with none, Rb is 0 and Ftu never matters.
     r = bendingNotEvaluated("Not evaluated: a bending moment was supplied " + ...
         "but the bolt material has no Ftu, so the NASA-STD-5020B Eq. 20/22 " + ...
@@ -322,7 +357,7 @@ end
 % Rb is EXACTLY zero with no moment, so a joint that supplies none
 % reproduces its pre-bending R bit for bit -- that is what keeps every
 % existing DABJ and bulk pin intact.
-if bend.HasMoment
+if useBending
     Rb = bend.Value / Ftu;
 else
     Rb = 0;
@@ -370,7 +405,7 @@ end
 % branches produce the IDENTICAL numeric R, a — only the ASSUMED/VERIFIED
 % wording differs, mirroring engine.private.separationBeforeRuptureGate's
 % own e/D ASSUMED-vs-VERIFIED distinction.
-if bend.HasMoment
+if useBending
     % BENDING IS IN THE NUMBER. Eq. 21/23 are the plastic-bending variants
     % (a separate fbu/Fbu term) and are NOT what ran, so the label drops to
     % the single equation that did -- the paired "Eq. 20/21" wording is
@@ -386,6 +421,14 @@ else
         case model.ShearTransferCondition.CloseToleranceOrInterference
             bendingNote = "§4.4.4 bolt-bending exemption VERIFIED (fbu = 0; " + ...
                 "Joint.ShearTransferCondition = CloseToleranceOrInterference)";
+            if bend.HasMoment
+                % Say it out loud. A supplied moment that vanishes without
+                % comment is indistinguishable from one that was never read.
+                bendingNote = bendingNote + string(sprintf( ...
+                    " -- a bending moment WAS supplied (Mbu = %.4g in-lbf) and " + ...
+                    "deliberately not used, because the exemption is recorded " + ...
+                    "as verified", Mbu));
+            end
             methodLabel = methodLabel + " -- §4.4.4 bending VERIFIED exempt";
         otherwise   % NotDeclared (the default)
             bendingNote = "§4.4.4 bolt-bending exemption ASSUMED, not confirmed " + ...
@@ -406,7 +449,7 @@ r = struct( ...
     "a",       a, ...
     "Method",  methodLabel, ...
     "Detail",  detail, ...
-    "Bending", bendingOut(bend, Rb, joint.ShearTransferCondition));
+    "Bending", bendingOut(bend, Rb, joint.ShearTransferCondition, useBending));
 end
 
 % ---- Local helpers --------------------------------------------------------
@@ -424,16 +467,17 @@ r = struct( ...
     "a",       NaN, ...
     "Method",  "NASA-STD-5020B Eq. 20-23 — not evaluated (§4.4.4 bending)", ...
     "Detail",  string(detail), ...
-    "Bending", bendingOut(bend, NaN, condition));
+    "Bending", bendingOut(bend, NaN, condition, false));
 end
 
-function o = bendingOut(bend, Rb, condition)
+function o = bendingOut(bend, Rb, condition, included)
 %BENDINGOUT  The bending story as STRUCTURE, for a view to lay out.
 %   Same reasoning as Result.Gate and Result.Allowables: a panel that has
 %   to parse a sentence to find out whether bending was included is a panel
 %   that will eventually parse it wrong.
 o = struct( ...
-    "Included",  bend.HasMoment && bend.Assessed, ...
+    "Included",  included, ...
+    "MomentIgnored", bend.HasMoment && ~included, ...
     "Fbu",       bend.Value, ...
     "Rb",        Rb, ...
     "Diameter",  bend.Diameter, ...

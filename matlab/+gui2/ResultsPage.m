@@ -827,6 +827,13 @@ classdef ResultsPage < gui2.Page
                 case "CloseToleranceOrInterference"
                     lines{end+1} = ['  NASA-STD-5020B 4.4.4 exemption ' ...
                         'VERIFIED - close-tolerance or interference fit.'];
+                    if isfield(bnd, 'MomentIgnored') && bnd.MomentIgnored
+                        % A supplied moment that vanishes silently is
+                        % indistinguishable from one never entered.
+                        lines{end+1} = ['  A bending moment WAS supplied ' ...
+                            'and deliberately not used - the exemption ' ...
+                            'says it need not be considered.'];
+                    end
                 case "ClearanceOrGapped"
                     % The one combination that is not a quiet default: the
                     % analyst has said bending applies and supplied nothing.
