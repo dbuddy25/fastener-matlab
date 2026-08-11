@@ -160,6 +160,14 @@ reconciliation.
 > `data.loadElementWorkbook` is a sibling of `data.loadElements`, not a
 > replacement.
 
+**Consequence for `pattern_id`.** The workbook format has no `pattern_id`
+column either, so in the GUI path the bolt pattern comes from the **Element
+Mapping** page, one column per element (step 6). That is not cosmetic: with the
+pattern blank, `engine.analyzeBulk` keys the pattern on the joint NAME, so
+several physical instances of one joint definition aggregate into a single
+oversized pattern, Eq. 84's `nf` check fails, and joint-mode slip is left
+NotEvaluated with a `Note` rather than computed wrongly.
+
 ### 3.2 `joint_name` is not required in a force file
 An earlier revision of `data.loadElements` silently skipped any row with a blank
 `joint_name` — so a real FEM export imported as **zero rows** and the Element

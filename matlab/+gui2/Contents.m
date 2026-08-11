@@ -40,6 +40,15 @@
 %                          static so the geometry is testable without a
 %                          figure; head height and hex geometry are drawing
 %                          conventions the model does not carry.
+%   gui2.ElementMappingPage
+%                        — FE element id -> defined joint (+ the bolt
+%                          pattern it belongs to). THE authority on
+%                          element -> joint: a force export carries ids and
+%                          forces, not joint names. Backed by
+%                          AppState.Mapping; the only editable uitable in
+%                          the package, so its CellEditCallback marks the
+%                          case dirty itself (Page.bindEdit reaches
+%                          ValueChangedFcn controls only).
 %   gui2.palette         — semantic color name -> RGB; the ONLY place GUI2
 %                          colors live (no literal RGB triples elsewhere).
 %   gui2.recentFiles     — the persisted Open Recent list (max 5, dead paths
@@ -58,13 +67,12 @@
 %       gui2.FactorsPage, gui2.TempLoadsPage above.
 %     - Step 3: Joint Config — see gui2.JointConfigPage above. Analyze
 %       writes AppState.Result; the Results page (step 4) renders it.
+%     - Step 4: Single Joint Results — gui2.ResultsPage.
+%     - Step 5: Defined Joints — gui2.DefinedJointsPage.
+%     - Step 6: Element Mapping — gui2.ElementMappingPage.
 %
 %   NOT BUILT YET — every remaining rail entry is a PlaceholderPage naming
 %   its step:
-%     step 3  Joint Config
-%     step 4  Single Joint Results
-%     step 5  Defined Joints
-%     step 6  Element Mapping
 %     step 7  Element Forces
 %     step 8  Bulk Analysis
 %     step 9  Materials & Hardware
@@ -78,7 +86,10 @@
 %     - Pass/fail comes from Result.Margins(i).Status. The view colors by
 %       that field and never re-thresholds (Section 6). Interaction reports
 %       R, passing iff R <= 1 — the OPPOSITE direction from MS >= 0.
-%     - 9 of the engine's 15 checks are displayed; every results view and
-%       export names the other 6 (Section 2).
+%     - ALL 15 of the engine's checks are displayed. The earlier rule
+%       (9 shown, the other 6 named in a footer) rested on a false
+%       premise — that the four Section 4.4.1 tensile modes restate
+%       Tension-Ultimate. They do not: they use Pb = PpMax + FFU*FSU*n*phi
+%       *PtL where Tension-Ultimate uses Ptu = FSU*FFU*PtL.
 %     - Programmatic repopulation NEVER marks the case dirty
 %       (GUI2_HARVEST.md A4).

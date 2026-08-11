@@ -348,13 +348,29 @@ not the library entry, because it is joint-specific.
 - Range clamping belongs in the cell-edit callback.
 - Deleting/renaming a joint must account for elements mapped to it.
 
-### Element Mapping ⚠
+### Element Mapping ✅ *(carried into `gui2.ElementMappingPage`, step 6)*
+
+Every bullet below is a named test in `tests/tGui2ElementMapping.m`.
 
 - `Import IDs from Forces` bootstraps mapping from imported forces; a blank
   joint name is not allowed, so the user picks one.
 - Mapping 200 elements must survive one bad row.
 - Summary line never lets a problem render muted.
 - Dismissing an error bar must not clear the red summary line.
+
+Two things the gui2 build changed on purpose:
+
+- **Element IDs are STRINGS, not positive integers.** `data.loadElements` and
+  `data.loadElementWorkbook` both stringify ids, so a numeric mapping could only
+  be joined to imported forces through a `str2double` that silently drops any
+  non-numeric id. Consequence to know: a comma-separated paste of *non-numeric*
+  ids ("E-1, E-2") is indistinguishable from an ID + joint-name pair and reads
+  as a pair. One id per line, or import a CSV.
+- **The table carries a third column, `Pattern ID`.** `engine.analyzeBulk` falls
+  back to the joint name as the bolt-pattern key, so without this two brackets
+  sharing a joint definition aggregate into one oversized pattern, Eq. 84's
+  `nf` check fails, and joint slip is left NotEvaluated. Nothing in the GUI
+  could set it before step 6.
 
 ### Element Forces ⚠
 

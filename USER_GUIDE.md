@@ -176,10 +176,10 @@ joint) — overwrite or extend them. Plain single-header CSVs (the ones in
 |--------|---------|
 | `element_id` | FEM element id |
 | `joint_name` | *(optional)* which joint definition (Joints sheet `Name`) applies. Blank or absent → the row is kept and the GUI's **Element Mapping** tab supplies the mapping (a real FEM force export carries no joint names). Headless runs (`runBulk`/`runWorkbook`) have no mapping step, so there it must be filled — unmapped rows get a per-row `Error` saying so |
-| `pattern_id` | *(optional)* physical joint instance — bolts sharing a `pattern_id` are one bolt pattern (used for **joint-mode slip**). Blank → uses `joint_name` |
+| `pattern_id` | *(optional)* physical joint instance — bolts sharing a `pattern_id` are one bolt pattern (used for **joint-mode slip**). Blank → uses `joint_name`, i.e. one joint name is one pattern. Also settable per element on the **Element Mapping** page, which is where it goes when the forces come from a workbook (that format has no `pattern_id` column) |
 | `load_case` | *(optional)* name/label for the load case |
 | `FX, FY, FZ` | element forces (lbf) — resolved onto the joint's axial direction into tension + shear |
-| `MX, MY, MZ` | *(optional)* moments (in-lbf) — informational only for now |
+| `MX, MY, MZ` | *(optional)* moments (in-lbf). The two transverse components resolve to a bolt bending moment that enters the NASA-STD-5020B Eq. 20/22 interaction check; torsion about the bolt axis is not modeled. Whether the moment is USED depends on the joint's shear-transfer determination (§4.4.4): a joint marked *Exempt* ignores it and says so |
 | `scale` | *(optional)* multiplier (e.g. 3σ), default 1 |
 | `reversible` | *(optional)* TRUE → tension taken as `abs(axial)` |
 

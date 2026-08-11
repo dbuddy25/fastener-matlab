@@ -111,8 +111,14 @@ classdef AppState < handle
         % Case-SCOPED — saved inside the case file (GUI2_SPEC.md Section 15).
         JointLibrary (1,:) struct = struct('Name', {}, 'Joint', {})
 
-        % Element ID -> joint name.
-        Mapping (1,:) struct = struct('ElementID', {}, 'JointName', {})
+        % Element ID -> joint name (+ the bolt pattern it belongs to), in
+        % the canonical field order emptyMapping/mappingRow build. Element
+        % Mapping is THE authority on element -> joint: a real FEM force
+        % export carries element ids and forces, not the analyst's joint
+        % naming, so data.loadElementWorkbook leaves JointName blank on
+        % purpose and this is where it gets filled in.
+        Mapping (1,:) struct = struct('ElementID', {}, 'JointName', {}, ...
+                                      'PatternId', {})
 
         % Imported element forces: Rows + Cases, in the canonical field
         % order (struct-array growth errors on any order mismatch). Real
@@ -436,13 +442,15 @@ classdef AppState < handle
         end
 
         function m = serializeMapping(obj)
-            %SERIALIZEMAPPING  -> cell of {elementId, jointName} structs.
-            n = numel(obj.Mapping);
+            %SERIALIZEMAPPING  -> cell of {elementId, jointName, patternId}.
+            rows = gui2.AppState.normalizeMapping(obj.Mapping);
+            n = numel(rows);
             m = cell(1, n);
             for i = 1:n
                 m{i} = struct( ...
-                    'elementId', obj.Mapping(i).ElementID, ...
-                    'jointName', obj.Mapping(i).JointName);
+                    'elementId', rows(i).ElementID, ...
+                    'jointName', rows(i).JointName, ...
+                    'patternId', rows(i).PatternId);
             end
         end
 
@@ -606,7 +614,7 @@ classdef AppState < handle
                 'LoadCase',     model.LoadCase(), ...
                 'Factors',      model.Factors(), ...
                 'JointLibrary', struct('Name', {}, 'Joint', {}), ...
-                'Mapping',      struct('ElementID', {}, 'JointName', {}), ...
+                'Mapping',      gui2.AppState.emptyMapping(), ...
                 'Elements',     gui2.AppState.emptyElements());
 
             % GUI default: ONE fitting factor — the four engine FF slots
@@ -645,6 +653,68 @@ classdef AppState < handle
             %   the headless path cannot drift. 20 degC isothermal is the
             %   model default.
             s = struct('NominalTempC', 20, 'HotTempC', 20, 'ColdTempC', 20);
+        end
+
+        function m = emptyMapping()
+            %EMPTYMAPPING  The empty element -> joint mapping.
+            %   CANONICAL FIELD ORDER — see mappingRow.
+            m = struct('ElementID', {}, 'JointName', {}, 'PatternId', {});
+        end
+
+        function r = mappingRow(elementId, jointName, patternId)
+            %MAPPINGROW  THE canonical Mapping row — shape and FIELD ORDER.
+            %   Every site that builds a mapping row goes through here.
+            %   MATLAB grows a struct array by field NAME AND ORDER, so a
+            %   row assembled with the fields in a different order errors
+            %   at the assignment rather than where the mistake was made
+            %   (the same reason emptyElements carries this warning).
+            %
+            %   ElementID is a STRING, not a number. data.loadElements and
+            %   data.loadElementWorkbook both stringify element ids, and a
+            %   mapping keyed numerically could not be joined to imported
+            %   forces without a str2double round trip that silently drops
+            %   any non-numeric id.
+            %
+            %   PatternId is the PHYSICAL JOINT INSTANCE and is optional.
+            %   BLANK IS MEANINGFUL, not missing: engine.analyzeBulk falls
+            %   back to the joint name as the pattern key, i.e. one joint
+            %   name = one bolt pattern. Two brackets sharing a joint
+            %   definition therefore need distinct PatternIds, or their
+            %   elements aggregate into one oversized pattern, the Eq. 84
+            %   nf check fails, and joint slip is left NotEvaluated.
+            arguments
+                elementId (1,1) string
+                jointName (1,1) string
+                patternId (1,1) string = ""
+            end
+            r = struct('ElementID', elementId, 'JointName', jointName, ...
+                'PatternId', patternId);
+        end
+
+        function m = normalizeMapping(raw)
+            %NORMALIZEMAPPING  Any Mapping-ish struct array -> canonical rows.
+            %   PatternId arrived after ElementID/JointName, and the
+            %   Mapping property validates only that it is a struct — so a
+            %   two-field literal (an old case file's parsed contents, or a
+            %   test fixture) assigns cleanly and then errors on the first
+            %   read of PatternId. Rebuilding through mappingRow means a
+            %   stale writer degrades to a blank pattern instead of
+            %   breaking the view, and the field ORDER is guaranteed
+            %   whatever order the caller used.
+            m = gui2.AppState.emptyMapping();
+            if isempty(raw)
+                return
+            end
+            hasPattern = isfield(raw, 'PatternId');
+            for i = 1:numel(raw)
+                p = "";
+                if hasPattern
+                    p = string(raw(i).PatternId);
+                end
+                m(end + 1) = gui2.AppState.mappingRow( ...
+                    string(raw(i).ElementID), ...
+                    string(raw(i).JointName), p); %#ok<AGROW>
+            end
         end
 
         function st = emptyElements()
@@ -717,8 +787,11 @@ classdef AppState < handle
         end
 
         function m = parseMapping(rawElements)
-            %PARSEMAPPING  Decoded mapping.elements -> ElementID/JointName.
-            m = struct('ElementID', {}, 'JointName', {});
+            %PARSEMAPPING  Decoded mapping.elements -> Mapping rows.
+            %   patternId is OPTIONAL on read: it arrived after the format
+            %   shipped, and a case file saved before it must still open
+            %   (with a blank pattern) rather than be rejected.
+            m = gui2.AppState.emptyMapping();
             if isempty(rawElements)
                 return
             end
@@ -733,9 +806,12 @@ classdef AppState < handle
                     error('gui2:AppState:badMappingEntry', ...
                         'Mapping row %d is malformed (needs "elementId" and "jointName").', i);
                 end
-                m(end + 1) = struct( ...
-                    'ElementID', string(e.elementId), ...
-                    'JointName', string(e.jointName)); %#ok<AGROW>
+                pid = "";
+                if isfield(e, 'patternId')
+                    pid = string(e.patternId);
+                end
+                m(end + 1) = gui2.AppState.mappingRow( ...
+                    string(e.elementId), string(e.jointName), pid); %#ok<AGROW>
             end
         end
 
