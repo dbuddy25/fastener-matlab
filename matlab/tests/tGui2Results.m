@@ -391,6 +391,28 @@ classdef tGui2Results < matlab.uitest.TestCase
     end
 
     methods (Static, Access = private)
+        function txt = bendingBlock(testCase)
+            %BENDINGBLOCK  Just the BOLT BENDING lines of the decisions panel.
+            %   SCOPED ON PURPOSE. Asserting "ASSUMED" against the whole
+            %   panel looked right and was not: the Fig. 8 gate trace
+            %   legitimately carries its own "e/D >= 1.5 ASSUMED (no
+            %   EdgeDistance set)", so a bending assertion reading the
+            %   whole panel passes on somebody else's assumption and fails
+            %   when it should not. Two unrelated things are ASSUMED on
+            %   this page and a test has to say which one it means.
+            lines = string(testCase.Page.decisionArea().Value);
+            k = find(startsWith(strtrim(lines), "BOLT BENDING"), 1);
+            if isempty(k)
+                txt = "";
+                return
+            end
+            stop = k;
+            while stop < numel(lines) && strtrim(lines(stop + 1)) ~= ""
+                stop = stop + 1;
+            end
+            txt = strjoin(lines(k:stop), newline);
+        end
+
         function s = gluedDecision()
             %GLUEDDECISION  The one string analyze puts in TWO places.
             %   engine.analyze sets the Tension-Ultimate row's Detail to
@@ -704,7 +726,7 @@ classdef tGui2Results < matlab.uitest.TestCase
     methods (Test)
         function anAssumedExemptionStillSaysAssumed(testCase)
             testCase.showSynthetic();          % NotDeclared
-            txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
+            txt = tGui2Results.bendingBlock(testCase);
 
             testCase.verifyTrue(contains(txt, "not included"));
             testCase.verifyTrue(contains(txt, "ASSUMED"));
@@ -716,7 +738,7 @@ classdef tGui2Results < matlab.uitest.TestCase
             % determination was told its own verification did not exist.
             testCase.showResult( ...
                 tGui2Results.syntheticResult("bendingVerifiedExempt"));
-            txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
+            txt = tGui2Results.bendingBlock(testCase);
 
             testCase.verifyTrue(contains(txt, "VERIFIED"));
             testCase.verifyFalse(contains(txt, "ASSUMED"), ...
@@ -725,7 +747,7 @@ classdef tGui2Results < matlab.uitest.TestCase
 
         function includedBendingReportsItsStressAndRatio(testCase)
             testCase.showResult(tGui2Results.syntheticResult("bendingIncluded"));
-            txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
+            txt = tGui2Results.bendingBlock(testCase);
 
             testCase.verifyTrue(contains(txt, "INCLUDED"));
             testCase.verifyTrue(contains(txt, "16,297"), ...
@@ -742,7 +764,7 @@ classdef tGui2Results < matlab.uitest.TestCase
             r = tGui2Results.syntheticResult("mixed");
             r.Bending = struct();
             testCase.showResult(r);
-            txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
+            txt = tGui2Results.bendingBlock(testCase);
 
             testCase.verifyTrue(contains(txt, "not reported"));
             testCase.verifyFalse(contains(txt, "ASSUMED"));
