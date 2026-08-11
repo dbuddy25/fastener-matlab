@@ -421,8 +421,10 @@ had a worse consequence than the one it avoided: `NotDeclared` was the only
 value gui2 could produce, so `ClearanceOrGapped` — the case the enum exists to
 expose — was **unreachable from this GUI**.
 
-The dropdown now exists and the default is still `NotDeclared`, so nothing
-claims a verification by accident; picking a value is a positive act by the
+The dropdown reads **Bolt bending (4.4.4)** — *Not determined* (default) /
+*Exempt — close or interference fit* / *Required — clearance or gap*, using
+§4.4.4's own framing rather than naming the shear-transfer mechanism. The
+default is still `NotDeclared`, so nothing claims a verification by accident; picking a value is a positive act by the
 analyst, which is what the original objection actually wanted. Applied loads
 gained a **Bolt bending limit MbL** field (in-lbf) alongside it — declaring
 `ClearanceOrGapped` without one leaves the interaction check NotEvaluated, and

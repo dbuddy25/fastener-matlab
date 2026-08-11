@@ -1396,7 +1396,7 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % choose() matches the ITEM a user clicks, which is now plain
             % language; the enum name rides in ItemsData.
             testCase.choose(p.shearTransferDropDown(), ...
-                'ACCOUNTED FOR - clearance or gapped');
+                'Required - clearance or gap');
 
             testCase.verifyEqual(testCase.App.State.Joint.ShearTransferCondition, ...
                 model.ShearTransferCondition.ClearanceOrGapped);
@@ -1422,8 +1422,8 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
 
             testCase.verifyEqual(string(d.Value), "NotDeclared");
             testCase.verifyTrue(contains(d.Items{ ...
-                strcmp(d.ItemsData, 'NotDeclared')}, "Not accounted for"), ...
-                'The default must read as bending being OFF.');
+                strcmp(d.ItemsData, 'NotDeclared')}, "Not determined"), ...
+                'The default must read as no determination having been made.');
         end
 
         function aBendingMomentCountsAsAnAppliedLoad(testCase)
