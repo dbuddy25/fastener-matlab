@@ -1393,10 +1393,37 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 model.ShearTransferCondition.NotDeclared, ...
                 'The default must stay NotDeclared - nothing claims a verification by accident.');
 
-            testCase.choose(p.shearTransferDropDown(), 'ClearanceOrGapped');
+            % choose() matches the ITEM a user clicks, which is now plain
+            % language; the enum name rides in ItemsData.
+            testCase.choose(p.shearTransferDropDown(), ...
+                'ACCOUNTED FOR - clearance or gapped');
 
             testCase.verifyEqual(testCase.App.State.Joint.ShearTransferCondition, ...
                 model.ShearTransferCondition.ClearanceOrGapped);
+        end
+
+        function everyBendingStateIsReachableFromTheDropdown(testCase)
+            % The bug this control was added to fix was a state the GUI
+            % could not produce. A label map that quietly missed a member
+            % would recreate it, so every enum member must appear in
+            % ItemsData and every item must carry a readable label.
+            d = testCase.Page.shearTransferDropDown();
+            members = string(enumeration('model.ShearTransferCondition'))';
+
+            testCase.verifyEqual(sort(string(d.ItemsData)), sort(members), ...
+                'Every determination must be selectable.');
+            testCase.verifyEqual(numel(d.Items), numel(d.ItemsData));
+            testCase.verifyFalse(any(strcmp(d.Items, "")), ...
+                'A blank item is a state nobody can knowingly pick.');
+        end
+
+        function theBendingControlDefaultsToOff(testCase)
+            d = testCase.Page.shearTransferDropDown();
+
+            testCase.verifyEqual(string(d.Value), "NotDeclared");
+            testCase.verifyTrue(contains(d.Items{ ...
+                strcmp(d.ItemsData, 'NotDeclared')}, "Not accounted for"), ...
+                'The default must read as bending being OFF.');
         end
 
         function aBendingMomentCountsAsAnAppliedLoad(testCase)

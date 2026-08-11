@@ -39,7 +39,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 8 | 4.4.1 | Ultimate design loads, µ = 0 in analysis | IMPLEMENTED | `engine.designLoads`, `engine.marginTensionUlt` |
 | 9 | 4.4.2 | Yield design loads | IMPLEMENTED | `engine.marginTensionYield`, Eq. 15/16/17, Eq. 18 |
 | 10 | 4.4.3 | Separation loads | IMPLEMENTED | `engine.marginSeparation`, Eq. 19 |
-| 11 | 4.4.4 | Combination of loads — **incl. bending** | IMPLEMENTED (Eq. 20/22; Eq. 21/23 plastic-bending variants omitted — no `Fbu`) | `engine.marginInteraction` + `engine/private/boltBendingStress`; `LoadCase.BoltBendingLimitMoment` |
+| 11 | 4.4.4 | Combination of loads — **incl. bending** | **PARTIAL** — ultimate interaction implemented; **yield and separation under combined loading absent** | `engine.marginInteraction` + `engine/private/boltBendingStress`; see below |
 | 12 | 4.4.5 | Preload included when rupture precedes separation | IMPLEMENTED | `separationBeforeRuptureGate`, `boltDesignLoad` |
 | 13 | 4.4.6a | Friction credited only at limit/yield | IMPLEMENTED (structurally) | µ appears only in `marginSlip`; no ultimate check calls it |
 | 14 | 4.4.6b | µ ≤ 0.20 / ≤ 0.10 absent test substantiation | OMITTED-BY-DECISION | Working practice keeps µ at 0.10–0.20 — see below |
@@ -62,7 +62,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 31 | 4.8.5 | Hardware inspection before installation | OUT-OF-SCOPE | Physical inspection |
 | 32 | 4.8.6 | Procurement/receiving/storage per NASA-STD-8739.14 | OUT-OF-SCOPE | Procurement process |
 
-**Counts** — IMPLEMENTED 10 · OMITTED-BY-DECISION 3 · ABSENT 5 · OUT-OF-SCOPE 14.
+**Counts** — IMPLEMENTED 9 · PARTIAL 1 · OMITTED-BY-DECISION 3 · ABSENT 5 · OUT-OF-SCOPE 14.
 
 ---
 
@@ -302,7 +302,35 @@ longer discards the moment `engine.resolveForces` derives from the FE moments, s
 the bulk path carries bending too. A `ClearanceOrGapped` joint with a moment now
 evaluates instead of returning NaN — the case the enum was created to expose.
 
-**What remains omitted:** Eq. 21/23, the plastic-bending variants with a separate
+**What remains — and why this row is PARTIAL, not IMPLEMENTED.** TFSR 11 is a
+*shall* and it names four load conditions:
+
+> The **limit, yield, ultimate, and separation** loads shall account for
+> interaction of the combined loading (simultaneously applied tensile, shear,
+> and bending loads) and under all design environmental conditions.
+
+5020B supplies interaction equations for the **ultimate** condition only —
+§4.4.4 says so in as many words — and that is the part now implemented. The
+other three are required but unformulated, and the tool does not do them:
+
+- **Yield under combined loading.** §4.4.2 directs the method rather than an
+  equation: *"the normal and shear components of stress should be transformed
+  into principal stresses; and a failure theory (e.g., von Mises or Tresca)
+  should be used that is compatible with the concept of tensile yield
+  strength."* `engine.marginTensionYield` is axial-only (Eq. 15/16/17).
+- **Separation under combined loading.** §4.4.3 states plainly that Eq. 19 *"is
+  applicable to systems under axial loading only. Other equations or methods
+  may be used to evaluate the margin of safety when combined loading is
+  considered."* `engine.marginSeparation` implements Eq. 19 and is therefore
+  axial-only too.
+
+Both collapse to the axial checks already implemented whenever bending is
+exempt, so this bites specifically on a `ClearanceOrGapped` joint — the one
+configuration where simultaneous shear and bending is declared to exist.
+Building either means inventing a derived convention with no worked example to
+validate against, so they are recorded here rather than guessed at.
+
+**Also omitted:** Eq. 21/23, the plastic-bending variants with a separate
 `fbu/Fbu` term. `Fbu` (allowable flexural stress) is not a field on
 `model.Material`, and 5020B states that including the bending term in Eq. 20/22
 "is considered to be conservative" — so the reachable option is also the
