@@ -372,7 +372,9 @@ Two things the gui2 build changed on purpose:
   `nf` check fails, and joint slip is left NotEvaluated. Nothing in the GUI
   could set it before step 6.
 
-### Element Forces ⚠
+### Element Forces ✅ *(carried into `gui2.ElementForcesPage`, step 7)*
+
+Every bullet below is a named test in `tests/tGui2ElementForces.m`.
 
 - Cross-validated against mapping: unmapped IDs, and IDs that can never be
   mapped, are called out distinctly.
@@ -381,6 +383,21 @@ Two things the gui2 build changed on purpose:
   icon rather than vanishing.
 - Sheets parsed with zero usable rows must not read as a clean import.
 - `": 101, 102"` ID suffix when ≤ 5 IDs, omitted otherwise.
+
+**One half-bullet is deliberately NOT carried, and it is not an oversight.**
+"IDs that can never be mapped" was a real category only while the mapping keyed
+on positive integers: a non-numeric force id was then permanently unmappable and
+worth separating from an ordinary gap. Step 6 made mapping ids **strings**, so
+every force id can be mapped and the distinction has no referent left. What
+survives is the gap in both directions, still named separately because the
+consequences differ — a mapped element with no forces produces *no result*,
+while a force element with no mapping is *skipped*.
+
+Also changed on the way across: **a force row carries no `JointName` and no
+`PatternId`.** Both used to sit on the row as well as on the mapping. The
+mapping owns them (it is the only place a user can set either — the workbook
+format has neither column), and `parseElements` ignores the two keys rather than
+rejecting a file that still carries them, since `+gui` writes them.
 
 ### Bulk Analysis ⚠
 

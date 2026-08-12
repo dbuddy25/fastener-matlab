@@ -767,13 +767,11 @@ classdef tGui2ElementMapping < matlab.uitest.TestCase
             %   from the forces, which is exactly why it could be built
             %   before Element Forces exists.
             st = gui2.AppState.emptyElements();
-            st.Cases(1) = struct('Name', "Liftoff", 'Scale', 1, ...
-                'Reversible', false);
-            F = struct('FX', 0, 'FY', 0, 'FZ', 0, 'MX', 0, 'MY', 0, 'MZ', 0);
+            st.Cases(1) = gui2.AppState.elementCase("Liftoff");
+            F = gui2.AppState.zeroForces();
             for i = 1:numel(ids)
-                st.Rows(i) = struct('ElementId', string(ids(i)), ...
-                    'LoadCaseName', "Liftoff", 'PatternId', "", ...
-                    'JointName', "", 'Forces', F);
+                st.Rows(i) = gui2.AppState.elementRow( ...
+                    string(ids(i)), "Liftoff", F);
             end
         end
 

@@ -282,7 +282,16 @@ S  = engine.summary(joint, loadCase, factors)      % -> display table
 chk = engine.boltLengthCheck(...)                  % live length adequacy
 c  = data.loadCase(file)  /  data.saveCase(caseStruct, file)
 lib = data.Library.load(path)   and its accessors
+[el, info] = data.loadElementWorkbook(file)   % force import (step 7)
+r  = engine.applyTemperatures(joint, settings) % global temps onto one joint
 ```
+
+`data.loadElementWorkbook` is on this list for the same reason the rest are:
+the GUI must not grow a parser of its own. It reads a multi-sheet workbook,
+one load case per sheet, and returns rows plus a per-sheet `info` the page
+turns into an import report. What the GUI adds around it — Merge vs Replace,
+the per-load-case Scale and Reversible, the range preview, cross-validation
+against the mapping — is all state and presentation, never parsing.
 
 Note the engine takes **typed objects** (`model.Joint`, `model.LoadCase`,
 `model.Factors`), not a config struct. Their property blocks are the

@@ -123,6 +123,9 @@ classdef AppState < handle
         % Imported element forces: Rows + Cases, in the canonical field
         % order (struct-array growth errors on any order mismatch). Real
         % default set by the constructor — see Settings above.
+        % A row is an element id, a load case and six force components.
+        % Which JOINT it is analyzed as, and which bolt PATTERN it belongs
+        % to, are the Mapping's business, not this one's.
         Elements (1,1) struct = struct()
 
         % ---- Derived / session state: NOT in the case file ---------------
@@ -467,6 +470,10 @@ classdef AppState < handle
                     'scale',      obj.Elements.Cases(i).Scale, ...
                     'reversible', logical(obj.Elements.Cases(i).Reversible));
             end
+            % A force row carries NO joint and NO pattern. Both belong to
+            % the mapping, which is the only place a user can set them —
+            % the force-workbook format has neither column. Two places
+            % answering "which joint?" is how they drift.
             n = numel(obj.Elements.Rows);
             elems = cell(1, n);
             for i = 1:n
@@ -474,8 +481,6 @@ classdef AppState < handle
                 elems{i} = struct( ...
                     'elementId', obj.Elements.Rows(i).ElementId, ...
                     'loadCase',  obj.Elements.Rows(i).LoadCaseName, ...
-                    'patternId', obj.Elements.Rows(i).PatternId, ...
-                    'jointName', obj.Elements.Rows(i).JointName, ...
                     'fx', F.FX, 'fy', F.FY, 'fz', F.FZ, ...
                     'mx', F.MX, 'my', F.MY, 'mz', F.MZ);
             end
@@ -720,13 +725,51 @@ classdef AppState < handle
         function st = emptyElements()
             %EMPTYELEMENTS  The empty element-forces state (Rows + Cases).
             %   CANONICAL FIELD ORDER — struct-array growth errors on any
-            %   order mismatch, so every mutation site must build rows in
-            %   exactly this order.
+            %   order mismatch, so every mutation site must build rows
+            %   through elementRow / elementCase rather than by hand.
+            %
+            %   A ROW CARRIES NO JOINT AND NO PATTERN. Both used to sit
+            %   here as well as on Mapping, which is how the two would
+            %   eventually disagree about which joint an element is. The
+            %   mapping owns them: it is the only place a user can set
+            %   either, since the force-workbook format has neither column.
+            %   (The flat headless CSV keeps its own joint_name and
+            %   pattern_id — runBulk has no mapping step at all.)
             st = struct( ...
                 'Rows',  struct('ElementId', {}, 'LoadCaseName', {}, ...
-                                'PatternId', {}, 'JointName', {}, ...
                                 'Forces', {}), ...
                 'Cases', struct('Name', {}, 'Scale', {}, 'Reversible', {}));
+        end
+
+        function r = elementRow(elementId, loadCaseName, forces)
+            %ELEMENTROW  THE canonical force row — shape and FIELD ORDER.
+            arguments
+                elementId    (1,1) string
+                loadCaseName (1,1) string
+                forces       (1,1) struct
+            end
+            r = struct('ElementId', elementId, ...
+                'LoadCaseName', loadCaseName, 'Forces', forces);
+        end
+
+        function c = elementCase(name, scale, reversible)
+            %ELEMENTCASE  THE canonical load-case record.
+            %   Scale and Reversible are USER INPUT and never come from the
+            %   file — the workbook format has no such columns, and a new
+            %   case starts at the defaults below.
+            arguments
+                name       (1,1) string
+                scale      (1,1) double  = 1
+                reversible (1,1) logical = false
+            end
+            c = struct('Name', name, 'Scale', scale, ...
+                'Reversible', reversible);
+        end
+
+        function F = zeroForces()
+            %ZEROFORCES  The force struct's canonical field order.
+            F = struct('FX', 0, 'FY', 0, 'FZ', 0, ...
+                       'MX', 0, 'MY', 0, 'MZ', 0);
         end
 
         function p = mergeProject(raw)
@@ -826,10 +869,9 @@ classdef AppState < handle
                 raw = rawForces.loadCases;
                 for i = 1:numel(raw)
                     if iscell(raw), e = raw{i}; else, e = raw(i); end
-                    st.Cases(end + 1) = struct( ...
-                        'Name',       string(e.name), ...
-                        'Scale',      double(e.scale), ...
-                        'Reversible', logical(e.reversible)); %#ok<AGROW>
+                    st.Cases(end + 1) = gui2.AppState.elementCase( ...
+                        string(e.name), double(e.scale), ...
+                        logical(e.reversible)); %#ok<AGROW>
                 end
             end
 
@@ -848,12 +890,12 @@ classdef AppState < handle
                 end
                 F = struct('FX', e.fx, 'FY', e.fy, 'FZ', e.fz, ...
                            'MX', e.mx, 'MY', e.my, 'MZ', e.mz);
-                st.Rows(end + 1) = struct( ...
-                    'ElementId',    string(e.elementId), ...
-                    'LoadCaseName', lc, ...
-                    'PatternId',    string(e.patternId), ...
-                    'JointName',    string(e.jointName), ...
-                    'Forces',       F); %#ok<AGROW>
+                % patternId / jointName are IGNORED if present. They used
+                % to live here, and +gui still writes them, so a file
+                % carrying them must open — but the mapping is the
+                % authority on both and this row does not get a say.
+                st.Rows(end + 1) = gui2.AppState.elementRow( ...
+                    string(e.elementId), lc, F); %#ok<AGROW>
             end
         end
     end

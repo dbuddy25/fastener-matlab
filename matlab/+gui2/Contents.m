@@ -49,6 +49,15 @@
 %                          the package, so its CellEditCallback marks the
 %                          case dirty itself (Page.bindEdit reaches
 %                          ValueChangedFcn controls only).
+%   gui2.ElementForcesPage
+%                        — imported FE forces, ONE LOAD CASE PER SHEET.
+%                          Parsing stays in data.loadElementWorkbook; the
+%                          page adds Merge vs Replace, the per-load-case
+%                          Scale / Reversible that never come from the
+%                          file, the min/max range preview that is the
+%                          units sanity check, and continuous
+%                          cross-validation against the mapping. Backed by
+%                          AppState.Elements.
 %   gui2.palette         — semantic color name -> RGB; the ONLY place GUI2
 %                          colors live (no literal RGB triples elsewhere).
 %   gui2.recentFiles     — the persisted Open Recent list (max 5, dead paths
@@ -70,10 +79,10 @@
 %     - Step 4: Single Joint Results — gui2.ResultsPage.
 %     - Step 5: Defined Joints — gui2.DefinedJointsPage.
 %     - Step 6: Element Mapping — gui2.ElementMappingPage.
+%     - Step 7: Element Forces — gui2.ElementForcesPage.
 %
 %   NOT BUILT YET — every remaining rail entry is a PlaceholderPage naming
 %   its step:
-%     step 7  Element Forces
 %     step 8  Bulk Analysis
 %     step 9  Materials & Hardware
 %     step 10 Help menu documents; delete +gui
