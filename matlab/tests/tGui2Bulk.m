@@ -459,6 +459,10 @@ classdef tGui2Bulk < matlab.uitest.TestCase
 
             testCase.press(testCase.Page.drillButton());
 
+            % Asserted FIRST: it names why the drill-down gave up, where
+            % verifyNotEmpty(Result) can only say that it did.
+            testCase.assertEqual(testCase.Page.drillReason(), "", ...
+                'The drill-down reported a reason for giving up.');
             testCase.verifyNotEmpty(testCase.App.State.Result);
             testCase.verifyEqual(testCase.App.activePageId(), "Results");
         end
@@ -479,6 +483,8 @@ classdef tGui2Bulk < matlab.uitest.TestCase
             % Joint.Name is trivially unchanged if nothing happened, and
             % this test passed that way while the drill-down was silently
             % doing nothing at all.
+            testCase.assertEqual(testCase.Page.drillReason(), "", ...
+                'The drill-down reported a reason for giving up.');
             testCase.assertNotEmpty(testCase.App.State.Result);
             testCase.verifyEqual(testCase.App.State.Joint.Name, before.Name);
         end

@@ -62,6 +62,12 @@ classdef BulkAnalysisPage < gui2.Page
         % "Cancelled — 143 of 312 analyses complete", or "".
         CancelNote (1,1) string = ""
 
+        % Why the last drill-down gave up, or "" if it worked. A button
+        % press that does nothing and says nothing is a bug report with no
+        % information in it — for the analyst and for the next test run
+        % alike.
+        DrillReason (1,1) string = ""
+
         StyleStale
         StyleFail
     end
@@ -960,6 +966,14 @@ classdef BulkAnalysisPage < gui2.Page
             obj.setStatus(sprintf('Wrote %s', written));
         end
 
+        function giveUpDrilling(obj, why)
+            %GIVEUPDRILLING  Record it, show it, and stop.
+            obj.DrillReason = string(why);
+            uialert(obj.figureHandle(), char("Cannot open that element: " + ...
+                obj.DrillReason + "."), 'Show in Single Joint Analysis');
+            obj.setStatus("Could not open that element: " + obj.DrillReason);
+        end
+
         function notes = runNotes(obj)
             %RUNNOTES  What the workbook says about the run that made it.
             T = obj.State.BulkTable;
@@ -981,43 +995,53 @@ classdef BulkAnalysisPage < gui2.Page
             %   Rebuilt from the CURRENT inputs rather than kept from the
             %   run — which is safe precisely because this is disabled
             %   while the results are stale, so the two agree.
+            %
+            %   EVERY EXIT RECORDS WHY. A button that does nothing and says
+            %   nothing is a bug report with no information in it — the
+            %   analyst gets no reason and neither does a failing test.
+            obj.DrillReason = "";
             r = obj.selectedElementRow();
             if isempty(r)
+                obj.giveUpDrilling("no row is selected on By Element");
                 return
             end
             d  = obj.ElementTable.Data;
             id = string(d{r, 1});
             lc = string(d{r, 3});
-            [elements, ~, ~] = obj.assemble();
-            k = find(string({elements.ElementId}) == id & ...
-                     string({elements.LoadCaseName}) == lc, 1);
-            if isempty(k)
-                uialert(obj.figureHandle(), ['That element is no longer in ' ...
-                    'the mapping and forces.'], 'Cannot open element');
-                return
-            end
-            e  = elements(k);
-            jl = obj.stampedLibrary();
-            if isempty(jl)
-                return
-            end
-            j = find(strcmpi(string({jl.Name}), e.JointName), 1);
-            if isempty(j)
-                uialert(obj.figureHandle(), sprintf( ...
-                    'Joint "%s" is no longer defined.', e.JointName), ...
-                    'Cannot open element');
-                return
-            end
 
-            inputs = struct('Joint', jl(j).Joint, ...
-                'LoadCase', engine.loadCaseFromForces(e.Forces, ...
-                    jl(j).Joint.BoltAxis, Name = e.LoadCaseName, ...
-                    ScaleFactor = e.ScaleFactor, Reversible = e.Reversible), ...
-                'Factors',  obj.State.Factors);
             try
+                [elements, ~, ~] = obj.assemble();
+                k = find(string({elements.ElementId}) == id & ...
+                         string({elements.LoadCaseName}) == lc, 1);
+                if isempty(k)
+                    obj.giveUpDrilling(sprintf(['element %s / load case %s ' ...
+                        'is no longer in the mapping and forces'], id, lc));
+                    return
+                end
+                e  = elements(k);
+                jl = obj.stampedLibrary();
+                if isempty(jl)
+                    obj.giveUpDrilling("the service temperatures were rejected");
+                    return
+                end
+                j = find(strcmpi(string({jl.Name}), e.JointName), 1);
+                if isempty(j)
+                    obj.giveUpDrilling(sprintf( ...
+                        'joint "%s" is no longer defined', e.JointName));
+                    return
+                end
+
+                inputs = struct('Joint', jl(j).Joint, ...
+                    'LoadCase', engine.loadCaseFromForces(e.Forces, ...
+                        jl(j).Joint.BoltAxis, Name = e.LoadCaseName, ...
+                        ScaleFactor = e.ScaleFactor, Reversible = e.Reversible), ...
+                    'Factors',  obj.State.Factors);
                 res = engine.analyze(inputs.Joint, inputs.LoadCase, inputs.Factors);
             catch err
-                uialert(obj.figureHandle(), err.message, 'Analysis failed');
+                % Wrapped WIDE on purpose: an uncaught error in a button
+                % callback prints to the Command Window and looks, from the
+                % app, exactly like the button doing nothing.
+                obj.giveUpDrilling(string(err.message));
                 return
             end
             % DELIBERATELY does not write State.Joint / State.LoadCase.
@@ -1215,6 +1239,11 @@ classdef BulkAnalysisPage < gui2.Page
 
         function tf = drillEnabled(obj)
             tf = logical(obj.DrillButton.Enable);
+        end
+
+        function why = drillReason(obj)
+            %DRILLREASON  Why the last drill-down gave up, "" if it worked.
+            why = obj.DrillReason;
         end
 
         function n = elementRowCount(obj)
