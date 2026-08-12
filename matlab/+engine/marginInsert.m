@@ -251,7 +251,17 @@ if isnan(As)
     % value is the INSERT'S INTERNAL-THREAD allowable and now has its own
     % row (engine.marginInsertInternal). Reporting it here would have put
     % an internal-thread capability under a pull-out heading.
-    r = notEval(methodArea, "Not evaluated: " + ua.Reason + ". (An insert's " + ...
+    % ua.Reason is EMPTY when a rating let the shared helper assess the
+    % mode for the system minimum; the area refusal still has to be
+    % reported here, because this row is the OTHER allowable.
+    why = ua.Reason;
+    if strlength(why) == 0
+        why = ua.AreaReason;
+    end
+    if strlength(why) == 0
+        why = "no shear engagement area could be resolved";
+    end
+    r = notEval(methodArea, "Not evaluated: " + why + ". (An insert's " + ...
         "internal-thread allowable is a separate check on its own row.)");
     return
 end

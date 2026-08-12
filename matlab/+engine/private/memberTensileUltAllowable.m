@@ -73,7 +73,7 @@ end
 
 a = struct("Mode", "", "Basis", "none", "Assessed", false, ...
     "EffUlt", NaN, "AllowUlt", NaN, "As", NaN, "AreaSrc", "", ...
-    "Rating", NaN, "RatNote", "", "Reason", "");
+    "Rating", NaN, "RatNote", "", "Reason", "", "AreaReason", "");
 
 switch joint.ThreadedMember.Type
     case model.ThreadedMemberType.Nut
@@ -184,6 +184,16 @@ switch joint.ThreadedMember.Type
         else
             [a.As, a.AreaSrc, noAreaReason] = computeInsertArea(joint);
         end
+
+        % WHY THE AREA COULD NOT BE FORMED, recorded SEPARATELY from
+        % Reason. Reason is about this MODE being unassessable, and a
+        % rating rescues the mode for the system minimum below. But the
+        % area is what engine.marginInsert's pull-out row needs, and that
+        % row is a different NASA-STD-5020B §4.4.1 allowable from the
+        % rating — so it must still be able to say why it has no answer.
+        % Without this the row printed "Not evaluated: ." with the reason
+        % silently empty.
+        a.AreaReason = noAreaReason;
 
         if isnan(a.As)
             if rating > 0
