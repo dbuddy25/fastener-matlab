@@ -155,8 +155,12 @@ classdef MarginView
                 if cols(i) == "InteractionR"
                     names{i} = 'Interaction R (<= 1)';
                 else
+                    % Capture both sides and put the space between them.
+                    % A zero-width lookaround pattern finds the boundary
+                    % but regexprep does not substitute into an empty
+                    % match, so "TensionUlt" came back unchanged.
                     names{i} = char(regexprep(char(cols(i)), ...
-                        '(?<=[a-z])(?=[A-Z])', ' '));
+                        '([a-z])([A-Z])', '$1 $2'));
                 end
             end
         end
