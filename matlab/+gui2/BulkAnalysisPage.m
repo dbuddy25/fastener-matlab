@@ -966,7 +966,7 @@ classdef BulkAnalysisPage < gui2.Page
             obj.setStatus(sprintf('Wrote %s', written));
         end
 
-        function [joint, lc] = singleJointInputs(~, joint, e, elements)
+        function [joint, loadCase] = singleJointInputs(~, joint, e, elements)
             %SINGLEJOINTINPUTS  One element's joint and load case, exactly
             %   as the batch built them.
             %
@@ -981,7 +981,7 @@ classdef BulkAnalysisPage < gui2.Page
             %
             %   model.Joint is a value class, so the SlipMode downgrade
             %   below touches this copy only; the library is untouched.
-            lc = engine.loadCaseFromForces(e.Forces, joint.BoltAxis, ...
+            loadCase = engine.loadCaseFromForces(e.Forces, joint.BoltAxis, ...
                 Name = e.LoadCaseName, ScaleFactor = e.ScaleFactor, ...
                 Reversible = e.Reversible);
             if joint.SlipMode ~= model.SlipMode.Joint
@@ -991,8 +991,8 @@ classdef BulkAnalysisPage < gui2.Page
             if nnz(mask) == joint.BoltCount
                 [PtJ, PsJ] = engine.jointPatternTotals( ...
                     elements(mask), joint.BoltAxis);
-                lc.JointTensileLimitLoad = PtJ;
-                lc.JointShearLimitLoad   = PsJ;
+                loadCase.JointTensileLimitLoad = PtJ;
+                loadCase.JointShearLimitLoad   = PsJ;
             else
                 % Same nf mismatch the batch reports: slip stays
                 % NotEvaluated rather than being computed on a pattern the
@@ -1066,8 +1066,9 @@ classdef BulkAnalysisPage < gui2.Page
                     return
                 end
 
-                [joint, lc] = obj.singleJointInputs(jl(j).Joint, e, elements);
-                inputs = struct('Joint', joint, 'LoadCase', lc, ...
+                [joint, loadCase] = obj.singleJointInputs( ...
+                    jl(j).Joint, e, elements);
+                inputs = struct('Joint', joint, 'LoadCase', loadCase, ...
                     'Factors', obj.State.Factors);
                 res = engine.analyze(inputs.Joint, inputs.LoadCase, inputs.Factors);
             catch err
