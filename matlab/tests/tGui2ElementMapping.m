@@ -515,6 +515,24 @@ classdef tGui2ElementMapping < matlab.uitest.TestCase
             testCase.verifyTrue(isvalid(testCase.Page.bulkDialog()));
         end
 
+        function closingTheAppTakesTheDialogWithIt(testCase)
+            % The dialog is a separate uifigure, and the page that owns it
+            % is a handle object rather than a child of the app window — so
+            % deleting the app does not reach it, and MATLAB runs a handle
+            % destructor whenever the collector gets round to it. Left to
+            % that, a finished test run strands its dialogs on screen. The
+            % shell deletes its pages for exactly this reason.
+            testCase.setLibrary("Bracket");
+            testCase.press(testCase.Page.bulkAddButton());
+            d = testCase.Page.bulkDialog();
+            testCase.assertTrue(isvalid(d));
+
+            delete(testCase.App);
+
+            testCase.verifyFalse(isvalid(d), ...
+                'A closed app must not leave windows standing.');
+        end
+
         function theDetectionLineSaysWhatAddWillDo(testCase)
             % The dialog must never silently guess which shape it got.
             testCase.setLibrary("Bracket");

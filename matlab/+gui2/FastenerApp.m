@@ -140,6 +140,22 @@ classdef FastenerApp < handle
                 delete(app.Listeners(isvalid(app.Listeners)));
             catch
             end
+            % Pages can own windows of their own — Element Mapping's paste
+            % dialog — and a page is a handle object, not a child of the
+            % figure, so destroying the window does not destroy the page.
+            % MATLAB would run each page's destructor whenever the
+            % collector next gets round to it, which is why a closed app
+            % could leave dialogs standing on screen. Delete them here so
+            % their windows go now rather than eventually. Individually
+            % wrapped, for the same reason the listeners are.
+            for i = 1:numel(app.Pages)
+                try
+                    if isvalid(app.Pages(i).Page)
+                        delete(app.Pages(i).Page);
+                    end
+                catch
+                end
+            end
             % The section window is a separate figure and would otherwise
             % outlive the app that feeds it, repainting from an AppState
             % nothing else references any more.
