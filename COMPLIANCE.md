@@ -195,14 +195,27 @@ mismatched thread size. Where each runs, as of today:
   Neither changed today. It still does **not** run when the picker sits on
   `Custom` (its default), and it still does **not** run anywhere in the
   bulk/headless path — `data.loadJointLibrary` never calls `nutFor`.
-- **Insert** — `Library.insertFor` now runs from three places:
-  `gui.FastenerApp.buildJoint` (Joint Config tab; unconditionally whenever the
-  member type is Insert — Insert has no separate Custom/picker toggle the way
-  Nut does, so this is not opt-out), `data.loadJointLibrary` (the bulk/CSV
-  path, per Insert row, `+data/loadJointLibrary.m:250`), and per candidate row
-  inside `engine.boltSizingSweep`, which resolves each swept size's own
+- **Insert** — `Library.insertFor` now runs from four places:
+  `gui.FastenerApp.buildJoint` (the FIRST GUI's Joint Config tab;
+  unconditionally whenever the member type is Insert — Insert has no separate
+  Custom/picker toggle the way Nut does, so this is not opt-out),
+  `gui2.JointConfigPage.stiPitchDiameterFor` (the REBUILT GUI, added
+  2026-08-12), `data.loadJointLibrary` (the bulk/CSV path, per Insert row,
+  `+data/loadJointLibrary.m:250`), and per candidate row inside
+  `engine.boltSizingSweep`, which resolves each swept size's own
   `StiPitchDiameter` whenever a `Library` accompanies the Insert template.
-  All three are reached from the GUI. The third only became so while this
+
+  > ⚠️ **The rebuilt GUI lost this and ran without it.** `+gui2` carried no
+  > `insertFor` call from the day Joint Config was rebuilt until 2026-08-12,
+  > so every insert joint built there had `StiPitchDiameter` NaN, no control
+  > existed for `RatedUltimateLoad` either, and BOTH §4.4.1 insert allowables
+  > were unreachable — the row read NotEvaluated, which an analyst reasonably
+  > read as "no Heli-Coil strength data" while `library.json` held the entry
+  > all along. A REGRESSION in the rebuild, not a gap that was always there:
+  > the first GUI resolved it correctly, so nothing wrong was ever shipped
+  > from that path. Wiring it back also re-enters the insert mode into
+  > `systemTensileAllowable`, which can lower `Ptu_allow` and flip the Fig. 8
+  > gate — so gui2 Heli-Coil margins move, and move less optimistic. The third only became so while this
   audit was being written: `boltSizingMemberArgs` built Insert's sweep
   arguments as `{'ThreadedMember', member}` with no `Library`, and
   `collectBoltSizingMemberSelection` populated `library` only for Nut, so the
