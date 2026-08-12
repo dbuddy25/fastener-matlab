@@ -960,7 +960,13 @@ classdef ElementMappingPage < gui2.Page
                           fp(2) + max(0, (fp(4) - 420) / 2), 460, 420];
 
             dg = uigridlayout(d, [6 1]);
-            dg.RowHeight   = {22, 26, 'fit', '1x', 'fit', 32};
+            % FIXED heights for the two WordWrap labels, not 'fit'. A
+            % wrapping label in a 'fit' row can chase its own height —
+            % wrapping changes the height, the height changes the layout,
+            % the layout re-wraps — and the window then sits there
+            % unresponsive with no error to show for it. Fixed rows cannot
+            % feed back.
+            dg.RowHeight   = {22, 26, 64, '1x', 34, 32};
             dg.ColumnWidth = {'1x'};
             dg.Padding     = [8 8 8 8];
             dg.RowSpacing  = 4;
@@ -1015,6 +1021,11 @@ classdef ElementMappingPage < gui2.Page
             addBtn.ButtonPushedFcn = @(~, ~) obj.onBulkAddCommit(d, ta, dd);
             gui2.ElementMappingPage.updateDetectLabel(ta, dd, det);
 
+            % The window's X must go through the same teardown as Cancel,
+            % or the tracked handle outlives the figure and the next open
+            % has a stale one to close.
+            d.CloseRequestFcn = @(~, ~) obj.closeBulkDialog();
+
             obj.BulkTextArea    = ta;
             obj.BulkDropDown    = dd;
             obj.BulkDetectLabel = det;
@@ -1024,19 +1035,31 @@ classdef ElementMappingPage < gui2.Page
         end
 
         function onBulkAddCommit(obj, dlg, ta, dd)
-            res = gui2.ElementMappingPage.parseBulkAddText( ...
-                strjoin(string(ta.Value(:))', newline));
-            if res.mode == "empty"
-                uialert(dlg, 'Nothing to add — paste some element IDs.', ...
-                    'Empty paste', 'Icon', 'info');
+            %ONBULKADDCOMMIT  Parse the paste, close, then apply.
+            %   WRAPPED, and the dialog closes on the way out either way.
+            %   An uncaught error here prints to the Command Window and
+            %   leaves the dialog standing with its buttons apparently
+            %   dead — the user sees a stuck window and no reason for it.
+            %   A stuck window is worse than a reported failure.
+            try
+                res = gui2.ElementMappingPage.parseBulkAddText( ...
+                    strjoin(string(ta.Value(:))', newline));
+                if res.mode == "empty"
+                    uialert(dlg, 'Nothing to add — paste some element IDs.', ...
+                        'Empty paste', 'Icon', 'info');
+                    return
+                end
+                if res.mode == "ids"
+                    pairIds   = res.ids;
+                    pairNames = repmat(string(dd.Value), 1, numel(res.ids));
+                else
+                    pairIds   = res.pairIds;
+                    pairNames = res.pairNames;
+                end
+            catch err
+                obj.closeBulkDialog();
+                uialert(obj.figureHandle(), err.message, 'Bulk add failed');
                 return
-            end
-            if res.mode == "ids"
-                pairIds   = res.ids;
-                pairNames = repmat(string(dd.Value), 1, numel(res.ids));
-            else
-                pairIds   = res.pairIds;
-                pairNames = res.pairNames;
             end
             obj.closeBulkDialog();
             obj.applyPairs(pairIds, pairNames, res.errs, 'Bulk add');
@@ -1526,6 +1549,19 @@ classdef ElementMappingPage < gui2.Page
 
         function updateDetectLabel(ta, dd, det)
             %UPDATEDETECTLABEL  Say what Add will do, before it runs.
+            %   Guarded: this runs on every commit of the text area, and a
+            %   detection hiccup must not take the dialog's callbacks down
+            %   with it. Add re-parses anyway and reports properly.
+            try
+                gui2.ElementMappingPage.detectInto(ta, dd, det);
+            catch
+                det.Text = 'Cannot read the paste — press Add to see why.';
+                det.FontColor = gui2.palette('statusWarn');
+                dd.Enable = 'on';
+            end
+        end
+
+        function detectInto(ta, dd, det)
             res = gui2.ElementMappingPage.parseBulkAddText( ...
                 strjoin(string(ta.Value(:))', newline));
             switch res.mode

@@ -488,6 +488,33 @@ classdef tGui2ElementMapping < matlab.uitest.TestCase
                 "Fitting", 'An existing ID is reassigned, not duplicated.');
         end
 
+        function closingTheDialogReleasesIt(testCase)
+            % A uifigure is not a child of the app window, so nothing else
+            % takes it down. Both exits — the Cancel button and the window
+            % X, which routes through the same teardown — must leave no
+            % tracked handle behind for the next open to trip over.
+            testCase.setLibrary("Bracket");
+            testCase.press(testCase.Page.bulkAddButton());
+            d = testCase.Page.bulkDialog();
+            testCase.assertNotEmpty(d);
+
+            close(d);   % exercises CloseRequestFcn, not delete()
+
+            testCase.verifyEmpty(testCase.Page.bulkDialog());
+        end
+
+        function reopeningTheDialogNeverLeavesTwo(testCase)
+            testCase.setLibrary("Bracket");
+            testCase.press(testCase.Page.bulkAddButton());
+            first = testCase.Page.bulkDialog();
+
+            testCase.press(testCase.Page.bulkAddButton());
+
+            testCase.verifyFalse(isvalid(first), ...
+                'The previous dialog must be gone, not orphaned on screen.');
+            testCase.verifyTrue(isvalid(testCase.Page.bulkDialog()));
+        end
+
         function theDetectionLineSaysWhatAddWillDo(testCase)
             % The dialog must never silently guess which shape it got.
             testCase.setLibrary("Bracket");
