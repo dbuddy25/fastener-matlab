@@ -204,6 +204,16 @@
 %                      ScaleFactor (applied before resolution); joint-level
 %                      loads stay NaN.
 %                      ✍️ Phase 3.5a — hand-derived pins (tests/tForces.m).
+%   jointPatternTotals - One bolt pattern's elements → the joint-level
+%                      limit loads NASA-STD-5020B Eq. 84 needs (PtJ, PsJ):
+%                      scaled force components vector-summed, then resolved
+%                      onto the bolt axis. Axial floored at 0 unless any
+%                      element is reversible; moments are NOT summed (Eq. 84
+%                      takes the resultant force only). Shared by
+%                      analyzeBulk's joint-slip step and the GUI's bulk
+%                      drill-down, so the view never re-derives it.
+%                      ✅ tests/tBulk.m (the DABJ Sec. 9 slip pin runs
+%                      through this path).
 %   analyzeBulk      - Bulk orchestrator: joint library (data.loadJointLibrary)
 %                      + elements (data.loadElements) + factors → one
 %                      writetable-ready results-table row per element
