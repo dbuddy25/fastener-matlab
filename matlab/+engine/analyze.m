@@ -21,7 +21,8 @@ function r = analyze(joint, loadCase, factors)
 %       Shear-tearout      engine.marginShearTearout       NASA TM-106943 Eq. 69-71 (required by 5020B §4.4.2)
 %       Bolt-thread shear  engine.marginBoltThreadShear    TM-106943 Eq. 63/64/65, pitch-diameter As = 0.75·pi·E·Le form; Pb per 5020B Eq. 8
 %       Nut strength       engine.marginNutStrength        TM-106943 Eq. 76/77 + Eq. 65, same As form, ult/yld pair; spec rating as ultimate ceiling per 5020B §4.4.1 (Nut config only)
-%       Insert internal    engine.marginInsert             Shear-engagement-area x parent shear strength (ult/yld pair, rated pull-out as ultimate ceiling) or rated pull-out alone, 5020B §4.4.1 (Insert config only)
+%       Insert internal    engine.marginInsertInternal     Allowable SPECIFIED for the procured insert (ThreadedMember.RatedUltimateLoad), ultimate only, 5020B §4.4.1 p26-27 (Insert config only)
+%       Insert external    engine.marginInsert             Pull-out from the parent: shear-engagement area x parent shear strength, ult/yld pair, 5020B §4.4.1 (Insert config only)
 %       Tapped parent      engine.marginTappedParentThread TM-106943 Eq. 79 + Eq. 65, same As form (TappedHole config only)
 %   plus the Separation-before-rupture gate (NASA-STD-5020B Fig. 8), a
 %   boolean check reported as its own Margins row (Pass = assured) and as
@@ -37,10 +38,12 @@ function r = analyze(joint, loadCase, factors)
 %   The thread-stripping
 %   pair is covered by two rows — bolt-external (bolt Fsu) and the
 %   internal side (nut, insert, or tapped parent Fsu) — the weaker side governs through
-%   the WorstMargin pick. The "Insert external-thread" row stays
-%   NotEvaluated by design: this tool carries ONE pull-out result for the
-%   whole insert (on the "Insert internal-thread" row), not the
-%   TM-106943 three-mode insert split.
+%   the WorstMargin pick. For an INSERT both of NASA-STD-5020B §4.4.1's
+%   allowables are carried: "Insert internal-thread" is the value SPECIFIED
+%   for the procured insert (the standard forbids deriving it by
+%   thread-stripping analysis, p26) and "Insert external-thread" is
+%   pull-out from the parent (area x parent Fsu). The lower governs through
+%   WorstMargin, which is §4.4.1's own rule.
 %
 %   Status thresholds (bookkeeping, not equations): MS >= 0 -> "Pass",
 %   MS < 0 -> "Fail", NaN -> "NotEvaluated". WorstMargin is the minimum MS
@@ -174,7 +177,8 @@ bh = engine.marginBearingUnderHead(joint, loadCase, factors, p); % NASA TM-10694
 % (no preload/n·phi — the members carry no load once separated).
 bt = engine.marginBoltThreadShear(joint, loadCase, factors, p);    % TM-106943 Eq. 63 (0.75·pi·E·Le pitch-diameter form) + Eq. 64/65; Pb per 5020B Eq. 8
 ns = engine.marginNutStrength(joint, loadCase, factors, p);        % TM-106943 Eq. 76/77 + Eq. 65 (same As form, ult/yld; rating ceiling per 5020B §4.4.1); Nut config only
-it = engine.marginInsert(joint, loadCase, factors, p);             % Shear-engagement-area x parent shear strength (ult/yld) or Heli-Coil rated pull-out (5020B §4.4.1); Insert config only
+ix = engine.marginInsert(joint, loadCase, factors, p);             % INSERT PULL-OUT from the parent: shear-engagement area x parent shear strength, ult/yld (5020B §4.4.1); Insert config only
+ii = engine.marginInsertInternal(joint, loadCase, factors, p);     % INSERT INTERNAL THREADS: the allowable SPECIFIED for the procured insert (5020B §4.4.1, p26); Insert config only
 tp = engine.marginTappedParentThread(joint, loadCase, factors, p); % TM-106943 Eq. 79 + Eq. 65 (same As form); TappedHole config only
 
 % ---- Warnings: bolt length, then preload (spec banner order) -------------
@@ -241,12 +245,15 @@ else
 end
 
 % ---- The full 15-check set (PRD 5.1) -------------------------------------
-% Insert "failure modes" (PRD check 9) is advertised as its two thread
-% failure modes (internal/external) — that is what brings the advertised
-% set to 15 rows. This tool carries ONE pull-out result for the whole
-% insert (area form and/or rated load, engine.marginInsert) on the
-% internal-thread row; the external-thread row is therefore NotEvaluated
-% by design (folded into the single result).
+% Insert "failure modes" (PRD check 9) is its two thread failure modes, and
+% NASA-STD-5020B §4.4.1 p27 names them explicitly: "the minimum allowed
+% tensile load capability of the insert internal threads, and the minimum
+% allowed tensile load for pullout of the insert from the parent material
+% ... The lower value should be used for strength analysis." Each has its
+% own row, and WorstMargin takes the lower — which IS the standard's rule,
+% with neither mode hidden inside the other.
+%   internal -> engine.marginInsertInternal, the SPECIFIED allowable
+%   external -> engine.marginInsert, pull-out from the parent
 margins = [ ...
     entry("Tension-Ultimate", tu.MS, tu.Method, tu.Decision), ...
     entry("Tension-Yield",    ty.MS, ty.Method, ty.Detail), ...
@@ -260,9 +267,8 @@ margins = [ ...
     entry("Shear-tearout",             to.MS, to.Method, to.Detail), ...
     entry("Bolt-thread shear",         bt.MS, bt.Method, bt.Detail), ...
     entry("Nut strength",              ns.MS, ns.Method, ns.Detail), ...
-    entry("Insert internal-thread",    it.MS, it.Method, it.Detail), ...
-    entry("Insert external-thread",    NaN, ...
-        "Folded into the Heli-Coil rated pull-out (single manufacturer rating; see the Insert internal-thread row)", ""), ...
+    entry("Insert internal-thread",    ii.MS, ii.Method, ii.Detail), ...
+    entry("Insert external-thread",    ix.MS, ix.Method, ix.Detail), ...
     entry("Tapped-hole parent-thread", tp.MS, tp.Method, tp.Detail)];
 
 % ---- Worst margin / governing check (thresholds, not equations) ----------

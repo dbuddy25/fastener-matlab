@@ -24,8 +24,14 @@
 | 9 | Shear-tearout | **TM-106943 Eq. 69–71**, required by 5020B §4.4.2 | `Fsu` × tear-out area | `FF·FS·PsL` | Edge distance unset, or the layer opted out |
 | 10 | Bolt-thread shear | **TM-106943 Eq. 63** area, **Eq. 64/65** MS | Bolt `Fsu` × `As` | `Pb` per 5020B Eq. 8 | No engagement length — absolute or `L/D` ratio — or no bolt `Fsu` |
 | 11 | Nut strength | **TM-106943 Eq. 76** area, **Eq. 77** allowable | Nut `Fsu` × `As`, always the computed `0.75·π·E·Le`, **capped by the nut's rated load** (§4.4.1) | `Pb` per 5020B Eq. 8 | Not a nut config; no area *and* no rating |
-| 12 | Insert internal-thread | **5020B §4.4.1** — shear engagement area × the **parent** material's allowable shear stress, ultimate *and* yield | Parent `Fsu`/`Fsy` × `As`, **computed** `0.75·π·D₂·(Le − 1.125·p)` from catalogue geometry, else the flat rated pull-out. A spec rating **caps ultimate** | `Pb` per 5020B Eq. 8 | Not an insert config; no catalogue geometry *and* no rating; or no insert is catalogued for the thread size |
-| 13 | Insert external-thread | — | Folded into the single insert pull-out row above | — | By design — one row carries the insert |
+| 12 | Insert internal-thread | **5020B §4.4.1 p26–27** — the allowable **specified** for the procured insert, never derived (p26: procured items expand under load, reducing engagement area) | `ThreadedMember.RatedUltimateLoad`, ultimate only | `Pb` per 5020B Eq. 8 | Not an insert config, or no allowable specified |
+| 13 | Insert external-thread | **5020B §4.4.1** — **pull-out from the parent**: shear engagement area × the parent material's allowable shear stress, ultimate *and* yield | Parent `Fsu`/`Fsy` × `As`, **computed** `0.75·π·D₂·(Le − 1.125·p)` from catalogue geometry, or a specified area. Uncapped — the other allowable is row 12 | `Pb` per 5020B Eq. 8 | Not an insert config; no catalogue geometry and no specified area; or no insert is catalogued for the thread size |
+
+> **§4.4.1 names two insert allowables and says "the lower value should be used
+> for strength analysis."** They are rows 12 and 13, and `WorstMargin` applies
+> the rule across them. Until 2026-08-12 the tool computed row 13's quantity,
+> reported it under row 12's name, and left row 13 NotEvaluated "by design" —
+> the labels were the wrong way round against the standard's own terms.
 | 14 | Tapped-hole parent-thread | **TM-106943 Eq. 79** area, **Eq. 65** MS | Parent `Fsu` × `As` | `Pb` per 5020B Eq. 8 | Not a tapped config, or no parent `Fsu` |
 | 15 | Separation-before-rupture | **5020B Fig. 8** decision tree | — (a decision, not a margin) | — | Flange stack empty, or no system allowable |
 

@@ -457,14 +457,18 @@ classdef tThreadShear < matlab.unittest.TestCase
                 BoltTensileLimitLoad=1000, BoltShearLimitLoad=0);
             fac = model.Factors();   % DABJ defaults
             p = engine.preload(j);
-            r = engine.marginInsert(j, lc, fac, p);
+            % NASA-STD-5020B Sec. 4.4.1 p27 names TWO insert allowables,
+            % and a specified value is the INTERNAL-thread one — p26
+            % forbids deriving it by thread-stripping analysis. It moved to
+            % its own row; the arithmetic (rating/Pb - 1) is unchanged.
+            r = engine.marginInsertInternal(j, lc, fac, p);
             testCase.verifyEqual(r.Pb, 2860, "AbsTol", 1e-9);
             testCase.verifyEqual(r.MS, 3.528, "AbsTol", 0.01);
-            testCase.verifySubstring(r.Method, "rated pull-out");
+            testCase.verifySubstring(r.Method, "internal-thread");
             % No rating set (default 0) -> NotEvaluated, not a crash
             j2 = j;
             j2.ThreadedMember.RatedUltimateLoad = 0;
-            r2 = engine.marginInsert(j2, lc, fac, engine.preload(j2));
+            r2 = engine.marginInsertInternal(j2, lc, fac, engine.preload(j2));
             testCase.verifyTrue(isnan(r2.MS));
         end
 
@@ -629,47 +633,60 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifyEqual(r.MS, -0.1032, "AbsTol", 1e-3);
             testCase.verifyEqual(r.Pult, 3026.7, "AbsTol", 1e-9);
             testCase.verifySubstring(r.Method, "shear engagement area");
-            testCase.verifySubstring(r.Detail, "not limiting");
-            testCase.verifyEqual(r.Rating, 12949);   % rating seen (as ceiling), not the basis
         end
 
-        function insertRatingCeilingGoverns(testCase)
-            % CEILING, governing side: a rating BELOW the computed ultimate
-            % allowable caps it (lower-of), ultimate criterion only:
-            %   ult allowable = min(0.1121*27000, 2500)
-            %                 = min(3026.7, 2500) = 2,500 lb (rating)
-            %   ult: 2500/2860 - 1 = -0.1259   <- governs (worst)
-            %   yld: 0.1121*20000/2500 - 1 = 2242.0/2500.0 - 1 = -0.1032
-            %        (NOT capped — the rating is an ultimate quantity,
-            %         see marginInsert header)
+        function theLowerOfTheTwoInsertAllowablesGoverns(testCase)
+            % NASA-STD-5020B Sec. 4.4.1 p27: "The lower value should be
+            % used for strength analysis." That is now a property of the
+            % TWO ROWS rather than of a ceiling hidden inside one of them,
+            % and WorstMargin is what applies it.
+            %   pull-out (external): 0.1121*27000 = 3026.7 lb, uncapped
+            %                        ult 3026.7/2860 - 1 = +0.0583
+            %                        yld 2242.0/2500 - 1 = -0.1032 governs
+            %   internal (specified): 2500/2860 - 1 = -0.125874  <- lower
             parent = model.Material(Name="Al 6061-T651", Ftu=42000, ...
                 Fty=36000, Fsu=27000, Fsy=20000);
             [j, lc, fac] = insertJoint(parent, 0.1121, 2500);
-            r = engine.marginInsert(j, lc, fac, engine.preload(j));
-            testCase.verifyEqual(r.Pult, 2500, "AbsTol", 1e-9);  % effective ult allowable = rating
-            testCase.verifyEqual(r.AllowYld, 2242.0, "AbsTol", 1e-9);  % yield NOT capped
-            testCase.verifyEqual(r.MS, 2500/2860 - 1, "AbsTol", 1e-12);  % -0.125874
-            testCase.verifyEqual(r.Rating, 2500);
-            testCase.verifySubstring(r.Detail, "ultimate");
-            testCase.verifySubstring(r.Detail, "GOVERNS");
+            p = engine.preload(j);
+
+            ext = engine.marginInsert(j, lc, fac, p);
+            int_ = engine.marginInsertInternal(j, lc, fac, p);
+
+            % The pull-out row is NOT capped by the internal allowable —
+            % capping it would hide which mode governs.
+            testCase.verifyEqual(ext.Pult, 3026.7, "AbsTol", 1e-9);
+            testCase.verifyEqual(ext.AllowYld, 2242.0, "AbsTol", 1e-9);
+            testCase.verifyEqual(int_.MS, 2500/2860 - 1, "AbsTol", 1e-12);
+            testCase.verifyLessThan(int_.MS, ext.MS, ...
+                'The specified allowable is the lower of the two here.');
+
+            % ...and the lower is what the joint reports.
+            res = engine.analyze(j, lc, fac);
+            testCase.verifyEqual(res.WorstMargin, int_.MS, "AbsTol", 1e-12);
+            testCase.verifyEqual(res.GoverningCheck, "Insert internal-thread");
         end
 
-        function insertFlatRatingFallbackRegression(testCase)
-            % REGRESSION GUARD: with ShearEngagementArea NaN (and parent
-            % Fsy NaN), the flat-rating path must be BIT-IDENTICAL to the
-            % pre-Fsy implementation — the exact insertUsesHelicoilRating
-            % fixture: rating 12,949 lb, Pb = 2,860 lb,
-            %   MS = 12949/2860 - 1 = +3.527622  (same expression, same
-            % floating-point operation order as the engine's rating/Pb - 1).
-            parent = model.Material(Name="Nitronic 60");   % strengths all NaN, as today
+        function aRatingIsNeverReportedAsPullOut(testCase)
+            % The pull-out row used to fall back to the rating and label it
+            % "rated pull-out" when no area resolved. That conflated
+            % NASA-STD-5020B Sec. 4.4.1's two allowables: the specified
+            % value is the INTERNAL-thread capability, and reporting it
+            % under a pull-out heading claimed the parent had been checked
+            % when it had not.
+            parent = model.Material(Name="Nitronic 60");   % strengths all NaN
             [j, lc, fac] = insertJoint(parent, NaN, 12949);
-            r = engine.marginInsert(j, lc, fac, engine.preload(j));
-            testCase.verifyEqual(r.Pb, 2860, "AbsTol", 1e-9);
-            testCase.verifyEqual(r.MS, 12949/2860 - 1, "AbsTol", 1e-12);
-            testCase.verifyEqual(r.Rating, 12949);
-            testCase.verifySubstring(r.Method, "rated pull-out");
-            % The two bases must be distinguishable from Method
-            testCase.verifyFalse(contains(r.Method, "shear engagement area"));
+            p = engine.preload(j);
+
+            ext = engine.marginInsert(j, lc, fac, p);
+            testCase.verifyTrue(isnan(ext.MS), ...
+                'No area, no pull-out answer.');
+            testCase.verifySubstring(ext.Detail, "separate check");
+
+            % The rating still produces a margin — on its own row, with the
+            % same arithmetic it always had.
+            int_ = engine.marginInsertInternal(j, lc, fac, p);
+            testCase.verifyEqual(int_.Pb, 2860, "AbsTol", 1e-9);
+            testCase.verifyEqual(int_.MS, 12949/2860 - 1, "AbsTol", 1e-12);
         end
 
         function insertAreaNaNParentNotEvaluated(testCase)
@@ -770,28 +787,21 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifyFalse(contains(r.Detail, "computed (DERIVED)"));
         end
 
-        function insertComputedAreaRatingStillCaps(testCase)
-            % The rating-as-ceiling rule applies to the COMPUTED area
-            % exactly as it does to a specified one. Same geometry as
+        function aComputedPullOutAreaIsAlsoUncapped(testCase)
+            % The pull-out row reports the parent's capacity whatever the
+            % area SOURCE — the specified allowable no longer caps it from
+            % the other failure mode. Same geometry as
             % insertComputedAreaGovernsWhenUnspecified (As = 0.124805 in^2,
-            % uncapped ultimate allowable 3,369.73 lb), now with a rating
-            % of 2,500 lb BELOW that:
-            %   ult allowable = min(3369.73, 2500) = 2,500 lb (rating GOVERNS)
-            %   ult: 2500/2860 - 1 = -0.12587   <- governs (worst)
-            %   yld: 0.124805*20000/2500 - 1 = -0.00156 (NOT capped -- the
-            %        rating is an ultimate quantity, unaffected by area source)
+            % ultimate allowable 3,369.73 lb), with a 2,500 lb rating that
+            % now lives on its own row instead of trimming this one.
             parent = model.Material(Name="Al 6061-T651", Ftu=42000, ...
                 Fty=36000, Fsu=27000, Fsy=20000);
             [j, lc, fac] = insertJointSti(parent, 0.2000, 0.3000, 2500, NaN);
             r = engine.marginInsert(j, lc, fac, engine.preload(j));
             expectedAs = 0.75 * pi * 0.2000 * (0.3000 - 1.125 * (1/32));
             testCase.verifyEqual(r.As, expectedAs, "AbsTol", 1e-9);
-            testCase.verifyEqual(r.Pult, 2500, "AbsTol", 1e-9);   % capped ultimate
-            testCase.verifyEqual(r.AllowYld, expectedAs * 20000, "AbsTol", 1e-6);   % NOT capped
-            testCase.verifyEqual(r.MS, 2500/2860 - 1, "AbsTol", 1e-9);
-            testCase.verifyEqual(r.Rating, 2500);
-            testCase.verifySubstring(r.Detail, "ultimate");
-            testCase.verifySubstring(r.Detail, "GOVERNS");
+            testCase.verifyEqual(r.Pult, expectedAs * 27000, "AbsTol", 1e-6);
+            testCase.verifyEqual(r.AllowYld, expectedAs * 20000, "AbsTol", 1e-6);
             testCase.verifySubstring(r.Detail, "computed (DERIVED)");
         end
 

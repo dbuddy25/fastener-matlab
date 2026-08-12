@@ -125,18 +125,30 @@
 %                      or stands alone (ultimate-only) when no area is
 %                      available.
 %                      ✍️ Phase 3.3 — hand-derived pins (tests/tThreadShear.m).
-%   marginInsert     - Insert pull-out (NASA-STD-5020B §4.4.1; Insert
-%                      config only): shear engagement area x PARENT
-%                      material shear strength, worst of the
-%                      ultimate/yield pair. The area is SPECIFIED
-%                      (ThreadedMember.ShearEngagementArea) when supplied,
-%                      else COMPUTED (DERIVED) from catalogue geometry
-%                      (ThreadedMember.StiPitchDiameter, TM-106943/
-%                      NASM33537 form), with the rated load as a
-%                      ceiling on the ultimate allowable (lower-of) either
-%                      way; else the MANUFACTURER rated load
-%                      (RatedUltimateLoad) alone — MS = rating/Pb - 1.
+%   marginInsert     - Insert PULL-OUT from the parent — the SECOND of
+%                      NASA-STD-5020B §4.4.1's two insert allowables
+%                      ("Insert external-thread" row; Insert config only):
+%                      shear engagement area x PARENT material shear
+%                      strength, worst of the ultimate/yield pair. The area
+%                      is SPECIFIED (ThreadedMember.ShearEngagementArea)
+%                      when supplied, else COMPUTED (DERIVED) from
+%                      catalogue geometry (ThreadedMember.StiPitchDiameter,
+%                      TM-106943/NASM33537 form). NOT capped by the
+%                      specified allowable: that is the OTHER mode and has
+%                      its own row, and §4.4.1's "lower value" is applied
+%                      by WorstMargin across the two.
 %                      ✍️ Phase 3.3 — hand-derived pins (tests/tThreadShear.m).
+%   marginInsertInternal - Insert INTERNAL-thread allowable — the FIRST of
+%                      §4.4.1's two ("Insert internal-thread" row; Insert
+%                      config only). The value SPECIFIED for the procured
+%                      insert (ThreadedMember.RatedUltimateLoad), never
+%                      derived: §4.4.1 p26 requires a procured item's
+%                      strength to come from its specification rather than
+%                      thread-stripping analysis, since such items expand
+%                      under load and lose engagement area. Ultimate only —
+%                      a spec rating is an ultimate quantity.
+%                      MS = rating/Pb - 1.
+%                      ✍️ hand-derived pins (tests/tThreadShear.m).
 %   shearYieldStrength - Material Fsy resolver: supplied value, or the von
 %                      Mises estimate Fsy = Fty/sqrt(3) with a Basis string
 %                      the margin Detail must surface (estimates never look

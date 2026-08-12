@@ -245,37 +245,14 @@ areaSrc = ua.AreaSrc;    % "specified ..." or "computed (DERIVED) ..." — see D
 % in tests/tThreadShear.m).
 % =========================================================================
 if isnan(As)
-    rating = joint.ThreadedMember.RatedUltimateLoad;   % manufacturer rated pull-out, lbf
-    if isnan(rating) || rating <= 0
-        % ua.Reason already distinguishes "no insert is catalogued for
-        % this thread size" (StiPitchDiameter NaN) from an
-        % otherwise-catalogued insert's incomplete configuration (Le/TPI
-        % missing, or the Le-1.125p guard) — see computeInsertArea.
-        r = notEval(methodRated, "Not evaluated: " + ua.Reason + ".");
-        return
-    end
-
-    % Pb: NASA-STD-5020B Eq. 8 (clamped, PpMax+FFU·FSU·n·phi·PtL) or, when
-    % the Fig. 8 gate assures separation before rupture, Eq. 6 principle
-    % (FFU·FSU·PtL, no preload/n·phi) — engine.boltDesignLoad picks the
-    % branch; d.Note says which.
-    d = engine.boltDesignLoad(joint, loadCase, factors, preload);
-    if isnan(d.Pb)
-        r = notEval(methodRated, "Not evaluated: " + d.Note + ".");
-        r.Rating = rating;
-        return
-    end
-
-    % MS = rated pull-out / Pb - 1 (TM-106943 Eq. 65 MS form on the spec rating)
-    MS = rating / d.Pb - 1;
-
-    detail = string(sprintf("rated pull-out %.0f lbf, Pb %.0f lbf", rating, d.Pb));
-    if strlength(d.Note) > 0
-        detail = detail + "; " + d.Note;
-    end
-    r = struct("MS", MS, "Method", methodRated, "Detail", detail + ".", ...
-        "Rating", rating, "Pb", d.Pb, "PbYield", NaN, ...
-        "As", NaN, "Pult", NaN, "AllowYld", NaN);
+    % NO PULL-OUT AREA, SO NO PULL-OUT ANSWER. This used to fall back to
+    % ThreadedMember.RatedUltimateLoad and report it as "rated pull-out",
+    % which conflated the two allowables NASA-STD-5020B §4.4.1 names: that
+    % value is the INSERT'S INTERNAL-THREAD allowable and now has its own
+    % row (engine.marginInsertInternal). Reporting it here would have put
+    % an internal-thread capability under a pull-out heading.
+    r = notEval(methodArea, "Not evaluated: " + ua.Reason + ". (An insert's " + ...
+        "internal-thread allowable is a separate check on its own row.)");
     return
 end
 
@@ -327,9 +304,14 @@ end
 % allowable; disposition in ua.RatNote), off THIS As regardless of whether
 % it was specified or computed. The yield criterion is NOT capped: the
 % rating is an ultimate quantity (see header).
-allowUlt = ua.EffUlt;    % EFFECTIVE ultimate pull-out allowable, lbf
+% UNCAPPED. ua.EffUlt applies min(As*Fsu, RatedUltimateLoad), which is
+% right for the SYSTEM allowable (5020B §4.4.1: "the lower value should be
+% used for strength analysis") and wrong for this row: the rating is the
+% OTHER allowable, and capping pull-out with it hides which mode governs.
+% engine.analyze now carries both modes as rows and WorstMargin takes the
+% lower — the same answer, with the reason visible.
+allowUlt = As * Fsu;     % ultimate pull-out allowable, lbf
 allowYld = As * sy.Fsy;  % yield pull-out allowable, lbf
-ratNote  = ua.RatNote;
 rating = joint.ThreadedMember.RatedUltimateLoad;   % rated pull-out, lbf (0 = unset)
 %   ultimate: MS = min(A_shear·Fsu, rating) / Pb − 1, Pb = PpMax + FFU·FSU·n·phi·PtL (5020B Eq. 8)
 MSu = allowUlt / d.Pb - 1;
@@ -348,9 +330,6 @@ end
 detail = "Governing: " + crit + " — " + areaSrc + string(sprintf( ...
     ", parent %s Fsu %.0f psi, allowables ult %.0f / yld %.0f lbf, Pb ult %.0f / yld %.0f lbf", ...
     parent.Name, Fsu, allowUlt, allowYld, d.Pb, d.PbYield)) + "; " + sy.Basis;
-if strlength(ratNote) > 0
-    detail = detail + "; " + ratNote;
-end
 if strlength(d.Note) > 0
     detail = detail + "; " + d.Note;
 end
