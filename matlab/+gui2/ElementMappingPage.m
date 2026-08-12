@@ -1716,6 +1716,16 @@ classdef ElementMappingPage < gui2.Page
             d = obj.BulkDialog;
         end
 
+        function openBulkAdd(obj)
+            %OPENBULKADD  Open the paste dialog without a button gesture.
+            %   Needed because matlab.uitest cannot reliably press a
+            %   control on the MAIN window while a second uifigure holds
+            %   focus — the press goes nowhere and the test sees a no-op
+            %   rather than an error. Anything that has to open the dialog
+            %   while one is already up drives it through here.
+            obj.onBulkAdd();
+        end
+
         function t = bulkTextArea(obj)
             t = obj.BulkTextArea;
         end

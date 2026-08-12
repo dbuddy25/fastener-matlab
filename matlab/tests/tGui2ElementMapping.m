@@ -504,11 +504,19 @@ classdef tGui2ElementMapping < matlab.uitest.TestCase
         end
 
         function reopeningTheDialogNeverLeavesTwo(testCase)
+            % The SECOND open goes through openBulkAdd rather than a press.
+            % With a dialog already up it holds focus, and matlab.uitest
+            % cannot reliably press a control on the main window from
+            % behind it — the gesture is a silent no-op, so the test would
+            % report the previous dialog "orphaned" when nothing had asked
+            % for a new one. The first open is a real press, which is what
+            % proves the button is wired.
             testCase.setLibrary("Bracket");
             testCase.press(testCase.Page.bulkAddButton());
             first = testCase.Page.bulkDialog();
+            testCase.assertTrue(isvalid(first));
 
-            testCase.press(testCase.Page.bulkAddButton());
+            testCase.Page.openBulkAdd();
 
             testCase.verifyFalse(isvalid(first), ...
                 'The previous dialog must be gone, not orphaned on screen.');

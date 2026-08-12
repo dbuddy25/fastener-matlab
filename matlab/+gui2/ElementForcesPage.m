@@ -462,9 +462,17 @@ classdef ElementForcesPage < gui2.Page
                     numel(mapIds), numel(cases)));
                 return
             end
-            if sev ~= "error"
-                sev = "warn";
+            if sev == "error"
+                return   % DATA MISMATCH leads. See below.
             end
+            % The counting header goes in front of a list of GAPS, where no
+            % single line is the headline. It must NOT go in front of a
+            % DATA MISMATCH: that line says the mapping and the force file
+            % describe different models, and pushing a generic "4 issue(s)"
+            % above it demotes the one finding that matters to item one of
+            % four. Softening the worst message is the failure mode this
+            % whole pane exists to prevent.
+            sev   = "warn";
             lines = [sprintf('Cross-check vs Element Mapping: %d issue(s):', ...
                 numel(lines)), lines];
         end
