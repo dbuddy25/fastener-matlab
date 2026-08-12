@@ -966,6 +966,41 @@ classdef BulkAnalysisPage < gui2.Page
             obj.setStatus(sprintf('Wrote %s', written));
         end
 
+        function [joint, lc] = singleJointInputs(~, joint, e, elements)
+            %SINGLEJOINTINPUTS  One element's joint and load case, exactly
+            %   as the batch built them.
+            %
+            %   THE JOINT-MODE SLIP STEP IS WHY THIS EXISTS. Eq. 84 needs
+            %   the whole bolt PATTERN's totals, and engine.analyze refuses
+            %   to run a SlipMode.Joint joint without them — so a
+            %   drill-down that handed it one element's loads threw, and
+            %   the button did nothing. Rebuilding the pattern here (and
+            %   applying the same nf check, and the same downgrade when it
+            %   fails) is what makes the drill-down show the row it was
+            %   opened from rather than a different analysis of it.
+            %
+            %   model.Joint is a value class, so the SlipMode downgrade
+            %   below touches this copy only; the library is untouched.
+            lc = engine.loadCaseFromForces(e.Forces, joint.BoltAxis, ...
+                Name = e.LoadCaseName, ScaleFactor = e.ScaleFactor, ...
+                Reversible = e.Reversible);
+            if joint.SlipMode ~= model.SlipMode.Joint
+                return
+            end
+            mask = gui2.BulkAnalysisPage.patternMask(elements, e);
+            if nnz(mask) == joint.BoltCount
+                [PtJ, PsJ] = engine.jointPatternTotals( ...
+                    elements(mask), joint.BoltAxis);
+                lc.JointTensileLimitLoad = PtJ;
+                lc.JointShearLimitLoad   = PsJ;
+            else
+                % Same nf mismatch the batch reports: slip stays
+                % NotEvaluated rather than being computed on a pattern the
+                % elements do not describe.
+                joint.SlipMode = model.SlipMode.Ignored;
+            end
+        end
+
         function giveUpDrilling(obj, why)
             %GIVEUPDRILLING  Record it, show it, and stop.
             obj.DrillReason = string(why);
@@ -1031,11 +1066,9 @@ classdef BulkAnalysisPage < gui2.Page
                     return
                 end
 
-                inputs = struct('Joint', jl(j).Joint, ...
-                    'LoadCase', engine.loadCaseFromForces(e.Forces, ...
-                        jl(j).Joint.BoltAxis, Name = e.LoadCaseName, ...
-                        ScaleFactor = e.ScaleFactor, Reversible = e.Reversible), ...
-                    'Factors',  obj.State.Factors);
+                [joint, lc] = obj.singleJointInputs(jl(j).Joint, e, elements);
+                inputs = struct('Joint', joint, 'LoadCase', lc, ...
+                    'Factors', obj.State.Factors);
                 res = engine.analyze(inputs.Joint, inputs.LoadCase, inputs.Factors);
             catch err
                 % Wrapped WIDE on purpose: an uncaught error in a button
@@ -1078,13 +1111,35 @@ classdef BulkAnalysisPage < gui2.Page
             n = numel(elements);
             keys = strings(1, n);
             for k = 1:n
-                pk = string(elements(k).PatternId);
-                if strlength(pk) == 0
-                    pk = string(elements(k).JointName);
-                end
-                keys(k) = string(elements(k).LoadCaseName) + sep + pk;
+                keys(k) = string(elements(k).LoadCaseName) + sep + ...
+                    gui2.BulkAnalysisPage.patternKey(elements(k));
             end
             [~, ~, grp] = unique(keys, 'stable');
+        end
+
+        function mask = patternMask(elements, e)
+            %PATTERNMASK  The bolt pattern one element belongs to.
+            %   analyzeBulk's own three conditions: same pattern key
+            %   (PatternId, falling back to JointName), same joint, same
+            %   load case. Written out rather than reusing sliceKeys
+            %   because that one deliberately omits the joint — it groups
+            %   for progress, where a collision costs nothing, and this
+            %   groups for a MARGIN, where it would be wrong.
+            n = numel(elements);
+            mask = false(1, n);
+            key = gui2.BulkAnalysisPage.patternKey(e);
+            for i = 1:n
+                mask(i) = gui2.BulkAnalysisPage.patternKey(elements(i)) == key ...
+                    && string(elements(i).JointName)    == string(e.JointName) ...
+                    && string(elements(i).LoadCaseName) == string(e.LoadCaseName);
+            end
+        end
+
+        function k = patternKey(e)
+            k = string(e.PatternId);
+            if strlength(k) == 0
+                k = string(e.JointName);
+            end
         end
 
         function tick(d, done, total)

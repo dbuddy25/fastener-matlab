@@ -467,6 +467,25 @@ classdef tGui2Bulk < matlab.uitest.TestCase
             testCase.verifyEqual(testCase.App.activePageId(), "Results");
         end
 
+        function drillingIntoAJointModeSlipRowStillOpens(testCase)
+            % engine.analyze REFUSES a SlipMode.Joint joint without
+            % joint-level limit loads, and analyzeBulk supplies those from
+            % the bolt pattern. A drill-down that handed it one element's
+            % loads threw, and the button did nothing at all.
+            testCase.setUpCase();
+            testCase.assertEqual(testCase.App.State.JointLibrary(1).Joint.SlipMode, ...
+                model.SlipMode.Joint, ...
+                'This test is pointless unless the fixture is in joint-slip mode.');
+            testCase.showAllRows();
+            testCase.Page.runSilently();
+            testCase.Page.selectElement(1);
+
+            testCase.press(testCase.Page.drillButton());
+
+            testCase.verifyEqual(testCase.Page.drillReason(), "");
+            testCase.verifyNotEmpty(testCase.App.State.Result);
+        end
+
         function drillingDownLeavesJointConfigAlone(testCase)
             % Writing State.Joint would silently replace whatever the
             % analyst had on Joint Config — the loss Defined Joints' Load

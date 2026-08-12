@@ -147,7 +147,7 @@ function T = analyzeBulk(jointLibrary, elements, factors)
 %   Call graph:
 %       Precedents (calls)      engine.loadCaseFromForces (per element),
 %                               engine.resolveForces (directly, in the
-%                               local groupTotals helper, for joint-mode
+%                               engine.jointPatternTotals, for joint-mode
 %                               pattern aggregation), engine.analyze
 %                               (per element).
 %       Dependents (called by)  engine.runBulk, engine.runWorkbook,
@@ -285,7 +285,8 @@ for k = 1:n
             nEl = nnz(mask);
             if nEl == joint.BoltCount
                 % The nf check passed: the pattern's totals feed Eq. 84
-                [PtJ, PsJ] = groupTotals(elements(mask), joint.BoltAxis);
+                [PtJ, PsJ] = engine.jointPatternTotals( ...
+                    elements(mask), joint.BoltAxis);
                 lc.JointTensileLimitLoad = PtJ;
                 lc.JointShearLimitLoad   = PsJ;
             else
@@ -339,40 +340,4 @@ T = [table(elementId, jointName, loadCase, axial, shear, ...
      array2table(ms, 'VariableNames', cellstr(msColumns)), ...
      table(worst, governing, errMsg, note, warn, ...
         'VariableNames', {'WorstMargin', 'GoverningCheck', 'Error', 'Note', 'Warnings'})];
-end
-
-% ---- Local helpers --------------------------------------------------------
-
-function [PtJ, PsJ] = groupTotals(group, axis)
-%GROUPTOTALS  Joint-level limit loads from one bolt pattern's element forces.
-%   Vector-sums each element's SCALED force components — by equilibrium the
-%   per-bolt CBUSH forces sum to the load crossing the joint interface —
-%   then projects the TOTAL onto the bolt axis (engine.resolveForces):
-%       PtJ  axial total (floored at 0: net compression adds clamp, no
-%            tension demand; |total| if ANY group element is Reversible)
-%       PsJ  RSS of the two transverse component sums (the resultant
-%            in-plane shear on the pattern)
-%   Moments are not summed, and that is now a narrower statement than it
-%   used to be: transverse moments DO feed a real bending term per element
-%   (LoadCase.BoltBendingLimitMoment -> the Eq. 20/22 fbu), but summing
-%   them across a PATTERN is a different quantity that 5020B Eq. 84 does
-%   not define — that equation takes the resultant force only. So bending
-%   is per-element here; a pattern total carries no moment and its
-%   interaction runs at fbu = 0. resolveForces ignores torsion throughout.
-Fsum   = struct("FX", 0, "FY", 0, "FZ", 0);
-anyRev = false;
-for g = 1:numel(group)
-    sf = group(g).ScaleFactor;
-    Fsum.FX = Fsum.FX + sf * group(g).Forces.FX;
-    Fsum.FY = Fsum.FY + sf * group(g).Forces.FY;
-    Fsum.FZ = Fsum.FZ + sf * group(g).Forces.FZ;
-    anyRev  = anyRev || group(g).Reversible;
-end
-r = engine.resolveForces(Fsum, axis);
-if anyRev
-    PtJ = abs(r.Axial);       % load may reverse: carry the total as tension
-else
-    PtJ = max(r.Axial, 0);    % net compression -> no joint tension demand
-end
-PsJ = r.Shear;
 end
