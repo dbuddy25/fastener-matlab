@@ -53,6 +53,31 @@ classdef tSourceStructure < matlab.unittest.TestCase
                         strjoin(problems, newline)));
         end
 
+        function everyGuiTestClassCanDriveAGesture(testCase)
+            %   A tGui2* file that extends matlab.unittest.TestCase instead
+            %   of matlab.uitest.TestCase looks completely normal until it
+            %   runs, and then every test in it ERRORS with "Unrecognized
+            %   method, property, or field 'press'". The file is about
+            %   driving a real app; press/choose/type are the whole point,
+            %   and they live on the uitest base class only.
+            files = tSourceStructure.sourceFiles();
+            wrong = string.empty(1, 0);
+            for i = 1:numel(files)
+                [~, name] = fileparts(files(i));
+                if ~startsWith(name, "tGui2")
+                    continue
+                end
+                txt = string(fileread(files(i)));
+                if ~contains(txt, "matlab.uitest.TestCase")
+                    wrong(end + 1) = name; %#ok<AGROW>
+                end
+            end
+            testCase.verifyEmpty(wrong, sprintf( ...
+                ['These tGui2* classes cannot drive a gesture (they need ' ...
+                 'matlab.uitest.TestCase, not matlab.unittest.TestCase): ' ...
+                 '%s'], strjoin(wrong, ", ")));
+        end
+
         function theScannerActuallyCatchesAMisNestedBlock(testCase)
             % A guard on the guard. A checker that silently matches nothing
             % would pass this suite forever while protecting nothing, which

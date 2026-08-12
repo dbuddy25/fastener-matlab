@@ -1,4 +1,4 @@
-classdef tGui2Bulk < matlab.unittest.TestCase
+classdef tGui2Bulk < matlab.uitest.TestCase
     %TGUI2BULK  Step 8 acceptance: the Bulk Analysis page.
     %
     %   Run from the matlab/ folder with:
