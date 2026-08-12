@@ -399,7 +399,9 @@ mapping owns them (it is the only place a user can set either — the workbook
 format has neither column), and `parseElements` ignores the two keys rather than
 rejecting a file that still carries them, since `+gui` writes them.
 
-### Bulk Analysis ⚠
+### Bulk Analysis ✅ *(carried into `gui2.BulkAnalysisPage`, step 8)*
+
+Every bullet below is a named test in `tests/tGui2Bulk.m`.
 
 - Margin columns are **discovered**, never hardcoded.
 - Counts are taken over the **full** result set (the run verdict), so a
@@ -408,6 +410,24 @@ rejecting a file that still carries them, since `+gui` writes them.
 - Ratio columns handled per A2 everywhere, including the envelope.
 - Cancellable; MATLAB gives cancellation free (old trap #5).
 - Export per A11, and per `GUI2_SPEC.md` §9 the display filter never narrows it.
+
+Changed on the way across:
+
+- **The formatting helpers are now a real shared module**, `gui2.MarginView`,
+  which A8 asked for and the first build only approximated. It was already
+  drifting: the old bulk tab rendered `%+.2g` and `R = %.3g (<=1)` while the
+  rebuilt Results page renders `%+.2f` and `R = %.2f (<= 1)`. Results was
+  refactored onto the module in the same change, so there is one spelling.
+- **Export goes through `report.exportResults`**, not the old
+  `gui.exportBulkWorkbook`. A `+gui2` page calling into `+gui` would block
+  step 10, which deletes that package. The conditionally-formatted workbook
+  (Setup sheet, per-tier sheets, pass/fail fills) is **deferred**, not
+  rejected — the same call the PDF report went through: ship it plain, style it
+  in a focused pass.
+- **The drill-down does not write `AppState.Joint`.** Results renders from the
+  Result and its recorded inputs, so it does not need to — and writing it would
+  silently replace whatever was on Joint Config, which is the loss Defined
+  Joints' Load asks about before doing.
 
 ### Materials & Hardware
 

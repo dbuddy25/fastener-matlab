@@ -73,10 +73,17 @@ render NotEvaluated in amber — the same honest treatment Slip gets when µ = 0
 | `Bearing` | TM-106943 Eq. 72–74, required by 5020B §4.4.2 |
 | `Shear-tearout` | TM-106943 Eq. 69–71, required by 5020B §4.4.2 |
 | `Separation-before-rupture` | 5020B Fig. 8 (a decision, not a margin) |
+| `Bearing-under-head` | TM-106943 Eq. 74/75, required by 5020B §4.4.2 |
+| `Bolt-thread shear` | TM-106943 Eq. 63 (the bolt's own external threads) |
+| `Nut strength` | 5020B §4.4.1, thread shear per TM-106943 |
+| `Insert internal-thread` | 5020B §4.4.1, thread shear per TM-106943 |
+| `Insert external-thread` | 5020B §4.4.1, thread shear per TM-106943 |
+| `Tapped-hole parent-thread` | 5020B §4.4.1, thread shear per TM-106943 |
 
-**Computed but not displayed (6):** `Bearing-under-head`,
-`Bolt-thread shear`, `Nut strength`, `Insert internal-thread`,
-`Insert external-thread`, `Tapped-hole parent-thread`.
+**Nothing is computed and hidden.** The last four are the §4.4.1
+threaded-member modes: only one applies to a given joint, so the other three
+come back NotEvaluated and render amber — which is the honest outcome, not a
+gap.
 
 ### Two rules that make the scope honest
 
@@ -103,15 +110,18 @@ Every verdict is **scope-qualified, never unqualified**.
 Three consequences:
 
 - **No worst-margin / governing-check headline.** `engine.analyze` computes
-  `WorstMargin` and `GoverningCheck` across all 15 rows (`analyze.m:269–277`),
-  so either could name a check with no row in the table. Neither is displayed.
-  The nine colored rows make the problems obvious on their own.
+  `WorstMargin` and `GoverningCheck` across all 15 rows (`analyze.m:269–277`).
+  Neither is displayed. The coloured rows make the problems obvious on their
+  own, and a single headline number invites reading one figure instead of the
+  table. *(The original reason — that either could name a check with no row —
+  expired when all 15 became rows. The rule stands on the weaker ground above;
+  revisit it deliberately if ever, not by drift.)*
   **Never recompute a minimum over the displayed subset** — that is the view
   re-deriving a number, and it can overstate the margin.
-- **Exports carry the same 9**, plus the scope statement naming the omitted six
-  prominently enough that a reviewer cannot mistake the file for a complete
-  5020B assessment. The omitted set includes the §4.4.1 checks that *govern*
-  tension.
+- **Exports carry all 15**, plus the scope statement. Nothing is omitted from a
+  file any more, so what the statement must say is what the TOOL does not do:
+  yield and separation under combined loading (TFSR 11) are required by 5020B
+  and not implemented, so no export is a complete 5020B assessment.
 - **Warnings are never scope-filtered** — and nothing needs filtering.
   `Result.Warnings` rows are not tied to margin checks at all (`analyze.m:184`:
   *"they never [have] a Margins row of their own"*); the only sources are
@@ -569,20 +579,33 @@ extreme corner is 50 × ~500 ≈ 25,000. Tiers 1 and 2 need nothing.
   painting.
 - No pagination machinery.
 
-**Roll-up column.** `engine.analyzeBulk` emits `WorstMargin` and
-`GoverningCheck` columns (`analyzeBulk.m:341`); both span all 15 checks, so
-**neither is displayed** (§2). In their place, a **scoped pass count** —
-`7/9 pass` — which counts `Status` fields the engine already set rather than
-re-deriving a margin. Without some roll-up, "which joints are in trouble" means
-scanning hundreds of rows across nine colored columns.
+**Roll-up.** `engine.analyzeBulk` emits `WorstMargin` and `GoverningCheck`
+columns; neither is displayed (§2). In their place, a **split pass count** over
+the whole run — `5020B: 12 PASS, 1 FAIL | Supplemental: 13 PASS, 0 FAIL`. The
+split is compliance communication: a bearing failure must not read as
+NASA-STD-5020B non-compliance, and a 5020B failure must not hide among
+supplemental ones. Counted through the ratio-aware helpers, so a failing
+interaction (`R > 1`) fails the 5020B count even though it never governs
+`WorstMargin`.
+
+**Counts are taken over the FULL result set**, never the filtered view. The
+verdict is a statement about the run; the filters are a statement about the
+screen. A partial (cancelled) run that is otherwise all-pass renders **amber**,
+never green.
+
+**Column groups are a WIDTH concession, not a scope one.** Core = the checks
+5020B gives equations for; supplemental = the ones it defers to TM-106943.
+"Show Supplemental" changes which columns fit on screen and nothing else —
+the counts include both groups either way, and so does the export.
 
 **The row filter must never reach the export.** Tier 3's failures-only default
-is a *view*. Export writes every row of the 9-column scope — an analyst who
-filters to failures and exports still gets all of them. Row scope and display
-scope are separate concerns; conflating them loses data silently.
+is a *view*. Export writes every row and every column — an analyst who filters
+to failures and exports still gets all of them. Row scope and display scope are
+separate concerns; conflating them loses data silently. The MS display cap is
+the same kind of concession and is likewise absent from the file.
 
-**Export column scope is the displayed 9** (§2), with the scope statement in
-the workbook and the PDF.
+**Export carries all 15 checks**, with the scope statement (§2) in the workbook
+and the PDF: what is missing is TFSR 11, not a subset of columns.
 
 ---
 

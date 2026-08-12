@@ -88,8 +88,11 @@ classdef ResultsPage < gui2.Page
         % honest outcome and the table already handles it: Slip does the
         % same whenever mu = 0.
 
-        % Above this, a capped margin renders ">+5". Display only.
-        CapThreshold = 5
+        % (The ">+5" display cap moved to gui2.MarginView with the
+        % formatting it belongs to. NOT aliased back here: a Constant
+        % initialised from another class's Constant is evaluated once at
+        % class load and then silently keeps a stale copy — the same trap
+        % that shipped a wrong version string on a PDF.)
 
         % The readout rows: field name on Result.Preload, the gloss, and the
         % citation + written equation. Columns 2 and 3 become the tooltip, so
@@ -1107,24 +1110,18 @@ classdef ResultsPage < gui2.Page
             %   Interaction is the exception and stays one: it reports a
             %   RATIO on the opposite scale, so its criterion is rendered
             %   with it and can never be read as a margin.
+            %
+            %   The rendering itself lives in gui2.MarginView, shared with
+            %   the bulk grids so the same number cannot acquire two
+            %   spellings in one application (GUI2_HARVEST.md A8). What
+            %   stays here is picking WHICH of the two a row needs, which
+            %   is a question about Result.Margins fields and belongs to
+            %   this page.
             if m.Name == "Interaction"
-                if isnan(m.R)
-                    s = char(8212);
-                else
-                    s = sprintf('R = %.2f (<= 1)', m.R);
-                end
+                s = gui2.MarginView.rText(m.R);
                 return
             end
-            if isnan(m.MS)
-                % A1: an em dash, never a blank and never a zero.
-                s = char(8212);
-            elseif isinf(m.MS)
-                s = '+inf';
-            elseif capOn && m.MS > gui2.ResultsPage.CapThreshold
-                s = '>+5';
-            else
-                s = sprintf('%+.2f', m.MS);
-            end
+            s = gui2.MarginView.msText(m.MS, capOn);
         end
 
         function s = readoutValue(src, name)

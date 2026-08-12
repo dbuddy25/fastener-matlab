@@ -58,6 +58,19 @@
 %                          units sanity check, and continuous
 %                          cross-validation against the mapping. Backed by
 %                          AppState.Elements.
+%   gui2.BulkAnalysisPage
+%                        — run every mapped element against every imported
+%                          load case and read it in three tiers (Joint
+%                          Summary / By Load Case / By Element). One engine
+%                          call; everything else is display. Owns the
+%                          workflow's only hard gate, which names the page
+%                          that fixes each problem. Backed by
+%                          AppState.BulkTable.
+%   gui2.MarginView      — how a margin is RENDERED and REDUCED, shared by
+%                          Results and Bulk so the two cannot drift (A8).
+%                          Holds the ratio/margin distinction: Interaction
+%                          passes iff R <= 1, so its worst case across load
+%                          cases is the MAXIMUM, not the minimum.
 %   gui2.palette         — semantic color name -> RGB; the ONLY place GUI2
 %                          colors live (no literal RGB triples elsewhere).
 %   gui2.recentFiles     — the persisted Open Recent list (max 5, dead paths
@@ -80,10 +93,11 @@
 %     - Step 5: Defined Joints — gui2.DefinedJointsPage.
 %     - Step 6: Element Mapping — gui2.ElementMappingPage.
 %     - Step 7: Element Forces — gui2.ElementForcesPage.
+%     - Step 8: Bulk Analysis — gui2.BulkAnalysisPage. The bulk workflow
+%       now runs end to end.
 %
 %   NOT BUILT YET — every remaining rail entry is a PlaceholderPage naming
 %   its step:
-%     step 8  Bulk Analysis
 %     step 9  Materials & Hardware
 %     step 10 Help menu documents; delete +gui
 %

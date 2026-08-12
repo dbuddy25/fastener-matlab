@@ -49,6 +49,15 @@ function v = toolVersion()
 %            bending, needs Fbu) stay out. Bearing-under-head and
 %            bolt-thread shear became displayed rows in this line too, so
 %            eleven of the fifteen checks are now shown.
+%     0.4.0  The BULK path, end to end in the GUI: map FE elements to
+%            defined joints, import a force workbook (one load case per
+%            sheet), run every element against every load case, read the
+%            answer in three tiers, and export the complete result set.
+%            All fifteen checks are displayed and exported by this line —
+%            nothing is computed and hidden. Still NOT a complete
+%            NASA-STD-5020B assessment: yield and separation under
+%            combined loading (TFSR 11) are required and unimplemented,
+%            and every export says so.
 %
 %   THIS IS NOT THE CASE-FILE FORMAT VERSION, and the two must never be
 %   tied together. gui2.AppState.CaseFormat
@@ -60,5 +69,5 @@ function v = toolVersion()
 %   Consumers: fastenerTool, gui.FastenerApp, gui2.AppState,
 %   report.singleJointReport, report.exportResults.
 
-v = "0.3.0";
+v = "0.4.0";
 end
