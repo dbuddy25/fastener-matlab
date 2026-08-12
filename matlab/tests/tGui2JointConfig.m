@@ -280,6 +280,80 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 "Parent (host) material");
         end
 
+        function anInsertResolvesItsStiGeometryFromTheCatalogue(testCase)
+            % THE reason insert pull-out read as "no data" on every GUI
+            % analysis: the STI lookup lived only in data.loadJointLibrary,
+            % so a joint built here carried a NaN STI diameter,
+            % engine.marginInsert had no area to work from, and the check
+            % came back NotEvaluated while library.json held the entry all
+            % along. 0.2825 in is NASM33537-2500-20's class-3B pitch
+            % diameter minimum.
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1352 1/4-20');
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+
+            tm = testCase.App.State.Joint.ThreadedMember;
+
+            testCase.verifyEqual(tm.StiPitchDiameter, 0.2825, 'AbsTol', 1e-6);
+        end
+
+        function aNonInsertMemberCarriesNoStiGeometry(testCase)
+            % Cleared with the type, like the engagement properties: an STI
+            % diameter left behind by a former Insert would be read as this
+            % member's geometry (A9).
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1352 1/4-20');
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.assertFalse(isnan( ...
+                testCase.App.State.Joint.ThreadedMember.StiPitchDiameter));
+
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+
+            testCase.verifyTrue(isnan( ...
+                testCase.App.State.Joint.ThreadedMember.StiPitchDiameter));
+        end
+
+        function theMemberRatedLoadReachesTheModel(testCase)
+            % 5020B Sec. 4.4.1 caps the computed allowable at the load
+            % rating, and until now that rating was reachable from the bulk
+            % CSV and from nowhere in the app.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.memberRatedField(), '1350');
+
+            testCase.verifyEqual( ...
+                testCase.App.State.Joint.ThreadedMember.RatedUltimateLoad, ...
+                1350);
+        end
+
+        function aBlankRatedLoadMeansNoneClaimedNotUnknown(testCase)
+            % RatedUltimateLoad is mustBeNonnegative with a 0 default, and 0
+            % is how the engine spells "no rating" — so blank marshals to 0,
+            % not to the NaN the other optional numbers use.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.memberRatedField(), '');
+
+            testCase.verifyEqual( ...
+                testCase.App.State.Joint.ThreadedMember.RatedUltimateLoad, 0);
+        end
+
+        function theRatedLoadIsNamedForTheMemberInFront(testCase)
+            % One property, two meanings. The analyst should not have to
+            % know that.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.verifySubstring(string(p.memberRatedLabel().Text), ...
+                "pull-out");
+
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifySubstring(string(p.memberRatedLabel().Text), "Nut");
+
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyEqual(char(p.memberRatedField().Enable), 'off', ...
+                'A tapped hole has no manufacturer and so no rating.');
+        end
+
         function engagementControlsGreyOutByType(testCase)
             % Disabled, never hidden and never read-only (A5). Enable reads
             % back as OnOffSwitchState, so compare char().

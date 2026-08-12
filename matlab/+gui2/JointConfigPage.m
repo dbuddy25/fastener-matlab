@@ -115,6 +115,8 @@ classdef JointConfigPage < gui2.Page
         EngagementRatioField
         EngagementRatioLabel
         EngagementLengthField
+        MemberRatedField
+        MemberRatedLabel
         EngagementLengthLabel
 
         NutSpecDropDown
@@ -241,6 +243,7 @@ classdef JointConfigPage < gui2.Page
             % holds its own property, so a case carrying both keeps both.
             obj.EngagementRatioField.Value  = obj.fmtOptional(m.EngagementRatio);
             obj.EngagementLengthField.Value = obj.fmtOptional(m.EngagementLength);
+            obj.MemberRatedField.Value      = obj.fmtOptional(m.RatedUltimateLoad);
             obj.syncMemberType();
             obj.syncJointLoadVisibility();
             obj.updateBoltLengthLabel();
@@ -563,10 +566,10 @@ classdef JointConfigPage < gui2.Page
         function buildMemberGroup(obj, parent, row)
             panel = obj.collapsibleGroup(parent, row, "Threaded member", false);
 
-            b = uigridlayout(panel, [5 3]);
+            b = uigridlayout(panel, [6 3]);
             b.ColumnWidth = {gui2.JointConfigPage.LabelW, ...
                              gui2.JointConfigPage.ValueW, '1x'};
-            b.RowHeight   = repmat({'fit'}, 1, 5);
+            b.RowHeight   = repmat({'fit'}, 1, 6);
             b.RowSpacing  = 4;
             b.Padding     = [6 6 6 6];
 
@@ -623,6 +626,25 @@ classdef JointConfigPage < gui2.Page
                      'tapped-hole engagement depth. Nut and Tapped Hole ' ...
                      'only. Blank leaves the thread checks not evaluated.']);
             obj.bindEdit(obj.EngagementLengthField, @(~, ~) obj.onEngagementEdited());
+
+            % The threaded member's OWN rated load — an insert's rated
+            % pull-out or a nut's spec-rated ultimate. It was reachable
+            % from the bulk CSV (HelicoilRatedLoad) and from nowhere in the
+            % app, so the ceiling NASA-STD-5020B Sec. 4.4.1 puts on the
+            % computed allowable ("limited to the load rating") could not
+            % be applied to a joint built here at all. The label follows
+            % the member type, because the same property means two
+            % different things and an analyst should never have to know
+            % that.
+            [obj.MemberRatedField, obj.MemberRatedLabel] = ...
+                obj.addLabelledText(b, 6, 'Rated pull-out (lbf)', ...
+                    ['Manufacturer-rated load for the threaded member: an ' ...
+                     'insert''s rated pull-out, or a nut''s spec-rated ' ...
+                     'ultimate. Optional - it acts as a CEILING on the ' ...
+                     'computed allowable (5020B Sec. 4.4.1, "limited to ' ...
+                     'the load rating"), never as a substitute for it. ' ...
+                     'Blank or 0 means no rating is claimed.']);
+            obj.bindEdit(obj.MemberRatedField, @(~, ~) obj.commitJoint());
         end
 
         function [c, lb] = addLabelledText(obj, g, row, labelText, tip)
@@ -1134,7 +1156,9 @@ classdef JointConfigPage < gui2.Page
             joint.ShearTransferCondition = gui2.JointConfigPage.enumFromLabel( ...
                 'model.ShearTransferCondition', obj.ShearTransferDropDown.Value);
             joint.PreloadSpec    = obj.buildPreloadSpec();
-            joint.ThreadedMember = obj.buildThreadedMember();
+            % The bolt goes in FIRST (line above): an insert's STI geometry
+            % is resolved from the bolt's own thread size.
+            joint.ThreadedMember = obj.buildThreadedMember(joint.Bolt);
             joint.HeadWasher     = obj.buildWasher(obj.HeadWasher);
             joint.NutWasher      = obj.buildWasher(obj.NutWasher);
         end
@@ -1210,20 +1234,77 @@ classdef JointConfigPage < gui2.Page
             g.Present.Value  = (w.Thickness > 0) || ~isnan(w.OuterDiameter);
         end
 
-        function m = buildThreadedMember(obj)
+        function m = buildThreadedMember(obj, bolt)
             %BUILDTHREADEDMEMBER  The type decides which engagement property
             %   is marshalled; the other stays NaN, so a number sitting in
             %   the greyed control can never reach the engine as the wrong
             %   quantity.
             m = obj.State.Joint.ThreadedMember;
-            m.Type     = obj.selectedMemberType();
-            m.Material = obj.lookupMaterial(obj.MemberMaterialDropDown);
+            m.Type              = obj.selectedMemberType();
+            m.Material          = obj.lookupMaterial(obj.MemberMaterialDropDown);
+            m.RatedUltimateLoad = obj.parseRating(obj.MemberRatedField);
             if m.Type == model.ThreadedMemberType.Insert
                 m.EngagementRatio  = obj.parseOptional(obj.EngagementRatioField);
                 m.EngagementLength = NaN;
+                m.StiPitchDiameter = obj.stiPitchDiameterFor(bolt);
             else
                 m.EngagementLength = obj.parseOptional(obj.EngagementLengthField);
                 m.EngagementRatio  = NaN;
+                % Cleared with the type, like the engagement properties: an
+                % STI diameter left behind by a former Insert would be read
+                % as this member's geometry (A9).
+                m.StiPitchDiameter = NaN;
+            end
+        end
+
+        function d = stiPitchDiameterFor(obj, bolt)
+            %STIPITCHDIAMETERFOR  The insert's STI tapped-hole pitch diameter.
+            %   CATALOGUE-DERIVED, never analyst-typed: resolved from the
+            %   bolt's own thread size through data.Library.insertFor,
+            %   exactly as data.loadJointLibrary does for a bulk row.
+            %
+            %   IT HAD TO BE DONE HERE TOO. The lookup lived only in the
+            %   headless loader, so an insert joint built in the app carried
+            %   a NaN STI diameter, engine.marginInsert had no area to work
+            %   from, and insert pull-out came back NotEvaluated on every
+            %   single GUI analysis — the check reading as "no data" when
+            %   the catalogue had the entry all along. Same shape as the
+            %   service temperatures (engine.applyTemperatures): a mapping
+            %   that existed on one path only.
+            %
+            %   NaN when the catalogue has no entry for the size (#0-80,
+            %   #5-44 — no helical insert is manufactured for them), which
+            %   is the model's "unknown" sentinel and what marginInsert
+            %   reports distinctly. NEVER falls back to the bolt's own pitch
+            %   diameter: that is a smaller circle and would overstate the
+            %   parent's shear area.
+            d = NaN;
+            if isempty(obj.State.Library) || ~obj.State.LibraryOK
+                return
+            end
+            if isnan(bolt.NominalDiameter) || isnan(bolt.ThreadsPerInch)
+                return
+            end
+            try
+                ins = obj.State.Library.insertFor( ...
+                    bolt.NominalDiameter, bolt.ThreadsPerInch);
+            catch
+                return   % a library problem must not break marshalling
+            end
+            if ~isempty(ins)
+                d = ins.StiPitchDiameterMin;
+            end
+        end
+
+        function v = parseRating(obj, field)
+            %PARSERATING  A rated load: blank means "none claimed", not NaN.
+            %   ThreadedMember.RatedUltimateLoad is mustBeNonnegative with a
+            %   0 default, and 0 is how the engine spells "no rating", so a
+            %   blank field must marshal to 0 rather than to the NaN the
+            %   other optional numbers use.
+            v = obj.parseOptional(field);
+            if isnan(v)
+                v = 0;
             end
         end
 
@@ -1869,8 +1950,24 @@ classdef JointConfigPage < gui2.Page
                 obj.MemberMaterialLabel.Text = 'Parent (host) material';
             end
 
+            % The rated load is ONE property meaning two different things.
+            % Naming it for the member in front of the analyst is cheaper
+            % than expecting them to know that.
+            switch t
+                case model.ThreadedMemberType.Nut
+                    obj.MemberRatedLabel.Text = 'Nut rated ultimate (lbf)';
+                case model.ThreadedMemberType.Insert
+                    obj.MemberRatedLabel.Text = 'Rated pull-out (lbf)';
+                otherwise
+                    obj.MemberRatedLabel.Text = 'Rated load (lbf)';
+            end
             isInsert = (t == model.ThreadedMemberType.Insert);
             states   = {'off', 'on'};
+
+            % A tapped hole has no manufacturer and so no rating to claim.
+            ratedOn = (t ~= model.ThreadedMemberType.TappedHole);
+            obj.MemberRatedField.Enable    = states{ratedOn + 1};
+            obj.MemberRatedLabel.FontColor = obj.enabledColor(ratedOn);
 
             % SOLE OWNER of both engagement controls' Enable, and of the
             % member material's. A resolved nut family locks the inches
@@ -2657,6 +2754,14 @@ classdef JointConfigPage < gui2.Page
 
         function l = memberMaterialLabel(obj)
             l = obj.MemberMaterialLabel;
+        end
+
+        function f = memberRatedField(obj)
+            f = obj.MemberRatedField;
+        end
+
+        function l = memberRatedLabel(obj)
+            l = obj.MemberRatedLabel;
         end
 
         function f = engagementRatioField(obj)
