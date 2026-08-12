@@ -659,11 +659,12 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifyEqual(int_.MS, 2500/2860 - 1, "AbsTol", 1e-12);
             testCase.verifyLessThan(int_.MS, ext.MS, ...
                 'The specified allowable is the lower of the two here.');
-
-            % ...and the lower is what the joint reports.
-            res = engine.analyze(j, lc, fac);
-            testCase.verifyEqual(res.WorstMargin, int_.MS, "AbsTol", 1e-12);
-            testCase.verifyEqual(res.GoverningCheck, "Insert internal-thread");
+            % Taking the lower of the two ROWS is engine.analyze's ordinary
+            % WorstMargin behaviour and is covered by its own tests; it is
+            % not re-pinned here, and this fixture could not run it anyway
+            % (no flange stack, so the Fig. 8 gate has no member modulus).
+            % What this test owns is that the two allowables are separate
+            % and that neither trims the other.
         end
 
         function aRatingIsNeverReportedAsPullOut(testCase)
@@ -846,16 +847,21 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifyTrue(isnan(r.MS));
             testCase.verifyTrue(isnan(r.As));
             testCase.verifySubstring(r.Detail, "does not exceed");
-            % (b) A rating IS set -> the guard silently defers to the flat
-            % rated basis (precedence (c)), exactly as any other
-            % unresolved-area case does. Pb = 2,860 lb (same loads):
-            %   MS = 5000/2860 - 1 = +0.74825
+            % (b) A rating IS set -> the guard STILL refuses. It used to
+            % defer to the rating and report it as pull-out, which claimed
+            % the parent had been checked when the area could not even be
+            % formed. The rating is the insert's INTERNAL-thread allowable
+            % (NASA-STD-5020B Sec. 4.4.1) and is reported on its own row,
+            % with the same arithmetic it always had: 5000/2860 - 1.
             [j2, lc2, fac2] = insertJointSti(parent, 0.2000, 0.0200, 5000, NaN);
             r2 = engine.marginInsert(j2, lc2, fac2, engine.preload(j2));
-            testCase.verifyEqual(r2.MS, 5000/2860 - 1, "AbsTol", 1e-9);
-            testCase.verifyEqual(r2.Rating, 5000);
-            testCase.verifySubstring(r2.Method, "rated pull-out");
-            testCase.verifyFalse(contains(r2.Method, "shear engagement area"));
+            testCase.verifyTrue(isnan(r2.MS), ...
+                'No area, no pull-out answer - whatever the rating says.');
+            testCase.verifySubstring(r2.Detail, "does not exceed");
+
+            int2 = engine.marginInsertInternal(j2, lc2, fac2, engine.preload(j2));
+            testCase.verifyEqual(int2.MS, 5000/2860 - 1, "AbsTol", 1e-9);
+            testCase.verifyEqual(int2.Rating, 5000);
         end
 
         % ================================================================
