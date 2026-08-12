@@ -450,6 +450,13 @@ classdef tGui2Bulk < matlab.uitest.TestCase
             testCase.Page.runSilently();
             testCase.Page.selectElement(1);
 
+            % Asserted before the press so a failure says WHICH
+            % precondition broke rather than only that nothing happened.
+            testCase.assertEqual(testCase.Page.elementRowCount(), 1, ...
+                'The By Element tier must have the run''s row to select.');
+            testCase.assertTrue(testCase.Page.drillEnabled(), ...
+                'Fresh results plus a selected row must enable the drill-down.');
+
             testCase.press(testCase.Page.drillButton());
 
             testCase.verifyNotEmpty(testCase.App.State.Result);
@@ -468,6 +475,11 @@ classdef tGui2Bulk < matlab.uitest.TestCase
 
             testCase.press(testCase.Page.drillButton());
 
+            % The drill-down must have RUN for this to mean anything —
+            % Joint.Name is trivially unchanged if nothing happened, and
+            % this test passed that way while the drill-down was silently
+            % doing nothing at all.
+            testCase.assertNotEmpty(testCase.App.State.Result);
             testCase.verifyEqual(testCase.App.State.Joint.Name, before.Name);
         end
     end

@@ -57,6 +57,7 @@ classdef BulkAnalysisPage < gui2.Page
         CaseDropDown        % tier 2
         CaseTable           % tier 2
         ElementTable        % tier 3
+        ElementTab          % tier 3's tab, so it can be brought to front
 
         % "Cancelled — 143 of 312 analyses complete", or "".
         CancelNote (1,1) string = ""
@@ -242,6 +243,7 @@ classdef BulkAnalysisPage < gui2.Page
             obj.CaseTable.SelectionType = 'row';
 
             t3 = uitab(obj.TierTabs, 'Title', 'By Element');
+            obj.ElementTab   = t3;
             obj.ElementTable = gui2.BulkAnalysisPage.fillTable(t3);
             obj.ElementTable.SelectionChangedFcn = @(~, ~) obj.renderEnables();
             obj.ElementTable.Tooltip = ['One row per element and load case. ' ...
@@ -1201,8 +1203,22 @@ classdef BulkAnalysisPage < gui2.Page
         end
 
         function selectElement(obj, row)
+            %SELECTELEMENT  Select a By Element row, as a user would.
+            %   Brings that tier to the front FIRST. A user cannot select a
+            %   row on a tab they are not looking at, and a control on an
+            %   unselected tab is not in a visible hierarchy — which is
+            %   also what matlab.uitest refuses to drive.
+            obj.TierTabs.SelectedTab = obj.ElementTab;
             obj.ElementTable.Selection = row;
             obj.renderEnables();
+        end
+
+        function tf = drillEnabled(obj)
+            tf = logical(obj.DrillButton.Enable);
+        end
+
+        function n = elementRowCount(obj)
+            n = size(obj.ElementTable.Data, 1);
         end
     end
 
