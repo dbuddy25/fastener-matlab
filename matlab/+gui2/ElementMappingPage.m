@@ -898,17 +898,17 @@ classdef ElementMappingPage < gui2.Page
 
         function rowsIdx = selectedRows(obj)
             %SELECTEDROWS  Row indices behind the table's Selection.
-            %   Cell selection gives Nx2 [row col] pairs; a row-selection
-            %   table gives a plain vector. Handle both rather than pin a
-            %   SelectionType the table might not keep.
-            sel = obj.Table.Selection;
-            if isempty(sel)
-                rowsIdx = [];
-            elseif size(sel, 2) >= 2
-                rowsIdx = unique(sel(:, 1));
-            else
-                rowsIdx = unique(sel(:));
-            end
+            %   buildTable pins SelectionType = 'row', so Selection is a
+            %   list of row indices and nothing else. Read it as one.
+            %
+            %   THIS USED TO GUESS THE SHAPE — treating an Nx2 Selection as
+            %   cell selection and taking column 1 — which was wrong in the
+            %   exact case the page exists for: selecting rows 1 and 3
+            %   gives [1 3], a 1x2, which the guess read as the single cell
+            %   (row 1, column 3). Assign then wrote one row and silently
+            %   skipped the other. Defensiveness against a shape the table
+            %   cannot produce cost the feature its main use.
+            rowsIdx = unique(obj.Table.Selection(:));
         end
     end
 
