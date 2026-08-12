@@ -321,7 +321,11 @@ end
 % engine.analyze now carries both modes as rows and WorstMargin takes the
 % lower — the same answer, with the reason visible.
 allowUlt = As * Fsu;     % ultimate pull-out allowable, lbf
-allowYld = As * sy.Fsy;  % yield pull-out allowable, lbf
+% Yield through memberTensileYldAllowable, SHARED with
+% engine.systemTensileYieldAllowable so this row and the system yield
+% minimum can never disagree — the arrangement the ultimate side already has.
+ya       = memberTensileYldAllowable(joint);
+allowYld = ya.AllowYld;  % yield pull-out allowable, lbf  (= As * sy.Fsy)
 rating = joint.ThreadedMember.RatedUltimateLoad;   % rated pull-out, lbf (0 = unset)
 %   ultimate: MS = min(A_shear·Fsu, rating) / Pb − 1, Pb = PpMax + FFU·FSU·n·phi·PtL (5020B Eq. 8)
 MSu = allowUlt / d.Pb - 1;

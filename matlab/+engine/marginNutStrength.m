@@ -261,8 +261,13 @@ end
 % computed in memberTensileUltAllowable as ua.AllowUlt, shared with the
 % system allowable)
 % Eq. 77 form with the shear YIELD strength — Pyld = Fsy·As (the yield
-% counterpart; Fsy per engine.shearYieldStrength, basis surfaced in Detail)
-allowYld = sy.Fsy * As;   % yield allowable, lbf
+% counterpart; Fsy per engine.shearYieldStrength, basis surfaced in Detail).
+% Through memberTensileYldAllowable, SHARED with
+% engine.systemTensileYieldAllowable so this row and the system yield
+% minimum can never disagree about the number — the same arrangement the
+% ultimate side already has via memberTensileUltAllowable.
+ya       = memberTensileYldAllowable(joint);
+allowYld = ya.AllowYld;   % yield allowable, lbf  (= sy.Fsy * As)
 
 % NASA-STD-5020B §4.4.1 — the nut is "limited to the load rating of the
 % nut": the spec rating CAPS the computed ultimate allowable (lower-of;
