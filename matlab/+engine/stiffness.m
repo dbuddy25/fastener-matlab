@@ -70,6 +70,16 @@ function s = stiffness(joint)
 %             thickness-weighted harmonic mean Ebar = tFit / sum(t_i/E_i)
 %             over the flange stack (NASA TM-106943 Eq. 34); equals a
 %             single E exactly for a uniform stack
+%       Lbolt washer-INCLUSIVE clamped length kb was built over, in
+%             (= sum(FlangeStack.Thickness) + head/nut washer thickness).
+%             Returned so a caller needing "the span the bolt stretches
+%             over" takes it from here rather than re-deriving it — the
+%             thermal preload term (TM-106943 Eq. 10) needs exactly this
+%             span and used to recompute a washer-EXCLUSIVE one, which is
+%             the defect fixed 2026-08-13. Note Lc (below) is a DIFFERENT
+%             and legitimately shorter span: washers are rigid in the
+%             frustum, so they add bolt length without adding member
+%             compliance.
 %       Lc    frustum length actually used for kc, in (traceability —
 %             tFit for a nut joint, tFit + D/2 for a threaded-in joint)
 %       Method  string: the governing frustum forms used, incl. the
@@ -328,5 +338,6 @@ s = struct( ...
     "Dc",     Dc, ...
     "Ec",     Ec, ...
     "Lc",     L, ...
+    "Lbolt",  Lbolt, ...
     "Method", method);
 end

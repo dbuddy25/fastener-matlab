@@ -378,12 +378,32 @@ classdef tStiffness < matlab.unittest.TestCase
             % frustum-coefficient fix) and Kc = 4.7352e6 lbf/in (pi*tan(30
             % deg) exact coefficient, NOT the book's own rounded 1.81 — see
             % engine.stiffness), so kSeries = 2.3892e6*4.7352e6/7.1244e6 =
-            % 1.5880e6 lbf/in. With L (grip) = 0.80 in, a hot-only
-            % excursion ΔT = +50 °C, and the fixture CTEs αj = 2.32e-5
-            % (aluminum members) and αb = 1.69e-5 (A-286) 1/°C:
-            %   Pth = 1.5880e6 · 0.80 · 50 · (2.32e-5 − 1.69e-5) = 400.2 lbf
+            % 1.5880e6 lbf/in.
+            %
+            % REBASELINED 2026-08-13. L is now the WASHER-INCLUSIVE clamped
+            % length kb spans (engine.stiffness's Lbolt), and the washers
+            % are in the member CTE sum with their own material — TM-106943
+            % Eq. 10 carries ONE L, shared by its Eq. 6 bolt term and Eq. 7
+            % joint term, so the span the bolt stretches over is the span
+            % the members expand over. This test read 400.2 lbf on
+            % L = grip = 0.80 with the washers thermally absent.
+            %
+            % Ex 8-b washers: 0.078 + 0.062 = 0.140 in, so L = 0.94 in.
+            % They are given a STEEL material here (CTE 1.17e-5, the
+            % library's "Steel" entry) — the fixture itself supplies no
+            % washer material, and steel is what a washer actually is.
+            %   alpha_j = (2.32e-5·0.80 + 1.17e-5·0.140)/0.94 = 2.14872e-5
+            %   Pth = 1.5880e6 · 0.94 · 50 · (2.14872e-5 − 1.69e-5)
+            %       = 342.4 lbf
             % Hot-only with αj > αb means the excursion only ADDS preload:
-            % the max side gains 400.2 lbf and the min side loses nothing.
+            % the max side gains 342.4 lbf and the min side loses nothing.
+            %
+            % NOTE THE DIRECTION. A steel washer expands LESS than the
+            % A-286 bolt (1.17e-5 vs 1.69e-5), so counting it REDUCES the
+            % CTE mismatch: the old number was 17% too high. Ignoring
+            % washers was arithmetically identical to assuming every washer
+            % shares the BOLT's CTE — see
+            % washersOfBoltMaterialReproduceTheOldThermalNumber below.
             c = validation.dabjExample8b();
             j = c.Joint;
             j.PreloadSpec = model.PreloadSpec( ...
@@ -391,17 +411,79 @@ classdef tStiffness < matlab.unittest.TestCase
                 NominalPreload     = 2000, ...
                 Uncertainty        = 0.25, ...
                 RelaxationFraction = 0.05);   % ThermalRate stays 0 -> stiffness path
+            steel = model.Material(Name="Steel", CTE=1.17e-5);
+            j.HeadWasher.Material = steel;
+            j.NutWasher.Material  = steel;
             j.ReferenceTemperature = 20;
             j.MinTemperature       = 20;      % no cold excursion
             j.MaxTemperature       = 70;      % ΔT_hot = +50 °C
             p = engine.preload(j);
-            testCase.verifyEqual(p.ThermalDelta, 400.2, "AbsTol", 1.0);
+            testCase.verifyEqual(p.ThermalDelta, 342.4, "AbsTol", 1.0);
             % Max side: PpiMax = 1.25*2000 = 2500, plus the thermal gain
             testCase.verifyEqual(p.PpMax, 2500 + p.ThermalDelta, "AbsTol", 1e-9);
             % Min side: PpiMin = 0.75*2000 = 1500; NO thermal decrement
             % (hot-only, members grow more than the bolt), so
             % PpMin = 0.95*1500 = 1425 exactly.
             testCase.verifyEqual(p.PpMin, 1425, "AbsTol", 1e-9);
+        end
+
+        function washersOfBoltMaterialReproduceTheOldThermalNumber(testCase)
+            % WHAT THE OLD CODE WAS ACTUALLY ASSUMING. Dropping the washers
+            % from the CTE sum while kb spanned them is algebraically
+            % identical to giving every washer the BOLT's CTE:
+            %   k·L·dT·[(sum(a_i t_i) + a_b·tW)/L − a_b]
+            %     = k·dT·[sum(a_i t_i) − a_b·tFit]        (L = tFit + tW)
+            % which is the old expression exactly. So set both washers to
+            % the fixture's own bolt material and the pin must land back on
+            % the historical 400.2 lbf — proving the change is targeted at
+            % the CTE difference and introduces no spurious shift.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.PreloadSpec = model.PreloadSpec( ...
+                Method             = model.PreloadMethod.DirectPreload, ...
+                NominalPreload     = 2000, ...
+                Uncertainty        = 0.25, ...
+                RelaxationFraction = 0.05);
+            j.HeadWasher.Material  = j.BoltMaterial;   % alpha_w == alpha_b
+            j.NutWasher.Material   = j.BoltMaterial;
+            j.ReferenceTemperature = 20;
+            j.MinTemperature       = 20;
+            j.MaxTemperature       = 70;
+
+            p = engine.preload(j);
+
+            testCase.verifyEqual(p.ThermalDelta, 400.2, "AbsTol", 1.0, ...
+                'Washers sharing the bolt CTE must reproduce the old value.');
+        end
+
+        function aMissingWasherCTERefusesRatherThanSilentlyZeroing(testCase)
+            % THE SILENT FAILURE THIS REPLACED. A NaN CTE used to flow
+            % straight through: alpha_j went NaN, Pth went NaN, and
+            % max([NaN NaN 0]) is 0 in MATLAB — so the thermal term
+            % vanished with no warning and TFSR 5 went quietly unmet on a
+            % joint the analyst believed was covered.
+            %
+            % The Ex 8-b fixture supplies washer THICKNESSES but no washer
+            % MATERIAL, so it is exactly the case: a real 0.140 in of
+            % clamped stack with no coefficient.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.PreloadSpec = model.PreloadSpec( ...
+                Method         = model.PreloadMethod.DirectPreload, ...
+                NominalPreload = 2000, ...
+                Uncertainty    = 0.25);
+            j.ReferenceTemperature = 20;
+            j.MinTemperature       = 20;
+            j.MaxTemperature       = 70;      % an excursion exists
+
+            testCase.verifyError(@() engine.preload(j), ...
+                "engine:preload:missingCTE");
+
+            % No excursion -> no thermal term -> no CTE needed, so the same
+            % under-specified joint must still run. The guard has to sit
+            % behind the excursion check, not in front of it.
+            j.MaxTemperature = 20;
+            testCase.verifyWarningFree(@() engine.preload(j));
         end
 
         function tensionRuptureBranch(testCase)

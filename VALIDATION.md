@@ -109,7 +109,8 @@ This is a **living document** — every new check adds a row.
 | Torque control (nominal + tolerance, c-factor) | 5020B Eq. 3/4/5/24 | DABJ §9 | PpiMax 10889, PpiMin 7000 | ✅ | tDabjCase |
 | Operating preload assembly | 5020B Eq. 1/2 | DABJ §9 | PpMax 11069, PpMin 6470 | ✅ | tDabjCase |
 | Thermal — rate override | (supplied rate) | DABJ §9 | ΔP 180.25 | ✅ | tDabjCase |
-| Thermal — from stiffness | TM-106943 Eq. 10 | hand-calc | 400.2 (8-b geom, ΔT +50) | ✍️ | tStiffness |
+| Thermal — from stiffness | TM-106943 Eq. 10, `L` = washer-INCLUSIVE clamped length, washers in the member CTE sum | hand-calc | 342.4 (8-b geom, ΔT +50, steel washers 1.17e-5) | ✍️ | tStiffness |
+| Thermal — washers matching the bolt CTE | TM-106943 Eq. 10 | hand-calc | 400.2 — reproduces the pre-2026-08-13 value exactly, proving the correction is confined to the washer/bolt CTE difference | ✍️ | tStiffness |
 | Direct-preload mode | 5020B Eq. 3/4 (c=1) | — | — | ⏳ (no fixture) | — |
 | Separation-critical min (Eq. 4) | 5020B Eq. 4 | — | — | ⏳ (no fixture) | — |
 
@@ -223,6 +224,32 @@ This is a **living document** — every new check adds a row.
   screen is not exposed in gui2, so it gates nothing today); recorded in
   that function's header and in `TOOL_DIFFERENCES.md`. Hand-derived pin:
   VALIDATION row 2s, `tSystemAllowable/memberGovernedYieldRuptureBranchHandDerived`.
+
+- **Thermal preload ignored washers while the bolt stiffness spanned them: CORRECTED.**
+  TM-106943 Eq. 10 carries ONE `L`, shared between its Eq. 6 bolt term
+  (`δ_b = P_th/K_b + α_b·L·ΔT`) and its Eq. 7 joint term — verified against the
+  printed derivation on p5. `engine.preload` used `Joint.GripLength` (the flange
+  stack alone) while `kb` was built over grip + washers, and the member CTE
+  average excluded washer materials entirely.
+
+  **The error is exactly `(α_washer − α_bolt)·t_washer`** — not a flat
+  span-ratio, and it **vanishes when washers share the bolt's material**.
+  Dropping them was arithmetically identical to assuming every washer has the
+  bolt's CTE. On the Ex 8-b geometry with steel washers (1.17e-5) under an A-286
+  bolt (1.69e-5) the old form ran **17% high** — conservative in that direction,
+  but unconservative whenever `α_washer > α_bolt`. `L` now comes from
+  `engine.stiffness`'s new `Lbolt` return, so the two can never disagree about
+  the span, and washers join the thickness-weighted CTE sum with their own
+  material.
+
+  **A missing CTE now refuses instead of silently zeroing.** `max([NaN NaN 0])`
+  is `0` in MATLAB, so a material without a coefficient used to make the whole
+  thermal term disappear with no warning — TFSR 5 quietly unmet on a joint the
+  analyst believed was covered. `engine.preload` now errors
+  (`engine:preload:missingCTE`) naming what to fix; `engine.analyzeBulk` catches
+  per row, so one under-specified joint cannot take down a bulk run. The guard
+  sits BEHIND the excursion check, so a joint with no temperature range still
+  runs without needing coefficients at all.
 
 - **Bolt thread-shear area was ~29% unconservative: CORRECTED.**
   `engine.marginBoltThreadShear` computed `As = 0.75·π·E·Le` — TM-106943

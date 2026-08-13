@@ -27,9 +27,22 @@ function p = preload(joint)
 %     DirectPreload — nominal preload specified directly:
 %         PpiMax = (1 + Γ)·Pnom,   PpiMin = (1 - Γ)·Pnom
 %
+%   WASHERS ARE IN THE THERMAL SUM (corrected 2026-08-13). They are rigid
+%   in the FRUSTUM — kc legitimately spans the flange stack alone — but they
+%   are not thermally absent: they sit in the clamped stack, carry the clamp
+%   load, and expand with their own CTE. Dropping them while kb spanned them
+%   was arithmetically identical to assuming every washer shares the BOLT's
+%   CTE, so the error is exactly (α_washer − α_bolt)·t_washer and VANISHES
+%   when they match. On a steel washer (1.17e-5) under an A-286 bolt
+%   (1.69e-5) the old form ran ~17% HIGH on the Ex 8-b geometry —
+%   conservative there, but unconservative whenever α_washer > α_bolt.
+%
 %   Thermal: preload change from CTE mismatch per NASA TM-106943 (Chambers)
 %   Eq. 10 — P_th = (Kb·Kc)/(Kb+Kc)·L·ΔT·(αj − αb) — with the stiffnesses
-%   from engine.stiffness, L = GripLength, αj the thickness-weighted flange
+%   from engine.stiffness, L = engine.stiffness's Lbolt (the WASHER-INCLUSIVE
+%   clamped length kb spans — Eq. 10 carries ONE L, shared by its Eq. 6 bolt
+%   term and Eq. 7 joint term, so the span the bolt stretches over is the
+%   span the members expand over), αj the thickness-weighted member
 %   CTE, and αb the bolt CTE. Both temperature excursions are evaluated:
 %   the worst preload GAIN goes on the max side (P_thermal_max) and the
 %   worst preload LOSS on the min side (P_thermal_min); each is floored at
@@ -129,12 +142,41 @@ else
         % ThermalRate override.
         s = engine.stiffness(joint);
         kSeries = s.Kb * s.Kc / (s.Kb + s.Kc);   % bolt+members in series, lbf/in
-        % Thickness-weighted flange CTE (joint members), 1/°C
-        t      = [joint.FlangeStack.Thickness];
-        cte    = arrayfun(@(fl) fl.Material.CTE, joint.FlangeStack);
-        alphaJ = sum(t .* cte) / sum(t);
+
+        % THE SPAN COMES FROM engine.stiffness, NOT FROM GripLength.
+        % TM-106943 Eq. 10 carries ONE L, shared by the bolt term and the
+        % joint term — its Eq. 6/7 are
+        %     delta_b = Pth/Kb + alpha_b·L·dT
+        %     delta_j = -Pth/Kj + alpha_j·L·dT
+        % equated to give Eq. 10. So L must be the span the bolt actually
+        % stretches over, which is the WASHER-INCLUSIVE clamped length kb
+        % was built over. This used to read joint.GripLength (the flange
+        % stack ALONE) while kb spanned grip + washers — see the header's
+        % washer note for what that cost.
+        L = s.Lbolt;                             % washer-inclusive clamped length, in
+
+        % Thickness-weighted member CTE over that SAME span: flange layers
+        % AND washers. A washer is rigid in the frustum (it adds no member
+        % compliance, so Kc legitimately spans the flanges only) but it is
+        % NOT thermally absent — it sits in the clamped stack, carries the
+        % clamp load, and expands with its own CTE.
+        tMem   = [joint.FlangeStack.Thickness];
+        cteMem = arrayfun(@(fl) fl.Material.CTE, joint.FlangeStack);
+        for w = [joint.HeadWasher, joint.NutWasher]
+            if w.Thickness > 0
+                tMem(end+1)   = w.Thickness;   %#ok<AGROW>
+                cteMem(end+1) = w.Material.CTE; %#ok<AGROW>
+            end
+        end
         alphaB = joint.BoltMaterial.CTE;         % bolt CTE, 1/°C
-        L      = joint.GripLength;               % clamped-stack length, in
+
+        % NO SILENT ZERO. A missing CTE used to sail straight through:
+        % alphaJ went NaN, Pth went NaN, and max([NaN NaN 0]) is 0 in
+        % MATLAB — so the thermal term vanished with no warning and TFSR 5
+        % went quietly unmet. Refuse instead, naming what to fix.
+        requireCTE(joint, tMem, cteMem, alphaB);
+
+        alphaJ = sum(tMem .* cteMem) / sum(tMem);
         % NASA TM-106943 (Chambers) Eq. 10 — Pth = (Kb·Kc/(Kb+Kc))·L·ΔT·(αj − αb)
         PthHot  = kSeries * L * dThot  * (alphaJ - alphaB);  % lbf
         PthCold = kSeries * L * dTcold * (alphaJ - alphaB);  % lbf
@@ -158,4 +200,42 @@ p = struct( ...
     "ThermalDelta", ThermalDelta, ...
     "PpMax",        PpMax, ...
     "PpMin",        PpMin);
+end
+
+% ---- Local helpers --------------------------------------------------------
+function requireCTE(joint, tMem, cteMem, alphaB)
+%REQUIRECTE  Refuse a thermal calculation that is missing a coefficient.
+%   NASA-STD-5020B Table 1 (p22) defines P_dt as the change of preload with
+%   temperature, and TFSR 5 (§4.3.1, p21) REQUIRES max/min preload to
+%   account for "the effects of maximum and minimum expected temperatures".
+%   A CTE-mismatch term computed with a missing coefficient is not a
+%   conservative approximation of that requirement — it silently drops the
+%   term, so the joint reports as if no thermal excursion existed.
+%
+%   Errors rather than returning a NotEvaluated marker because engine.preload
+%   returns PpMax/PpMin, which every downstream margin consumes as a number;
+%   there is no "not evaluated" preload for them to propagate. This mirrors
+%   the engine.stiffness errors that already propagate out of this same
+%   branch. engine.analyzeBulk catches per row and reports it in the Error
+%   column, so one under-specified joint never takes down a bulk run.
+missing = strings(1, 0);
+if isnan(alphaB)
+    missing(end+1) = "bolt material """ + joint.BoltMaterial.Name + """";
+end
+for k = 1:numel(cteMem)
+    if isnan(cteMem(k))
+        missing(end+1) = string(sprintf("a clamped member of %.4g in thickness", tMem(k))); %#ok<AGROW>
+    end
+end
+if isempty(missing)
+    return
+end
+error("engine:preload:missingCTE", ...
+    "Thermal preload (NASA TM-106943 Eq. 10, required by NASA-STD-5020B " + ...
+    "TFSR 5) needs a coefficient of thermal expansion for every part in " + ...
+    "the clamped stack, and these have none: %s. Add a CTE to the " + ...
+    "material in the hardware library, or set PreloadSpec.ThermalRate to " + ...
+    "supply the preload change directly. Washers count: they sit in the " + ...
+    "clamped stack and expand even though the frustum model treats them " + ...
+    "as rigid.", strjoin(missing, "; "));
 end
