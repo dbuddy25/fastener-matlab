@@ -457,15 +457,29 @@ added to `Rt` **inside** the tension bracket:
 term in Eq. 20/22 "is considered to be conservative" — the reachable option is
 the conservative one.
 
-**A supplied moment is honoured or ignored by determination.** Bulk resolves a
-bending moment from the FE moments for *every* element, so what happens to it
-depends on `Joint.ShearTransferCondition`: `ClearanceOrGapped` and `NotDeclared`
-use it (the latter conservatively — nobody assessed the joint and the model
-reports a moment), while `CloseToleranceOrInterference` **ignores** it and
-records that it did. Using a moment on a joint the analyst declared exempt would
-override a recorded engineering determination, and FE moments on a stiff
-connection are frequently an artefact of the idealisation rather than real bolt
-bending — which is precisely what "exempt" is for.
+**A supplied moment is ALWAYS used — corrected 2026-08-13.** This section
+previously read *"`CloseToleranceOrInterference` **ignores** it and records that
+it did"*, on the argument that using a moment on a joint the analyst declared
+exempt would override a recorded engineering determination. That over-applied
+§4.4.4. The exemption is scoped, in the standard's own words (p33), to bending
+*"caused by the **shear loading**"* — a supplied moment may come from prying,
+eccentric tension or flange rotation, none of which it covers — and the very
+next paragraph is unqualified: *"along with **any applicable bending**, analysis
+should account for interaction of the combined loading."* "Typically there is no
+need to **account for**" excuses you from deriving a shear-induced moment you do
+not have; it is not licence to discard one you were handed. §4.4.4 also calls
+including the term conservative, so using it is never wrong.
+
+`Joint.ShearTransferCondition` therefore now selects **the wording, not the
+arithmetic** — it controls only what happens when NO moment is supplied:
+`CloseToleranceOrInterference` reads VERIFIED, `NotDeclared` reads ASSUMED, and
+`ClearanceOrGapped` reports NotEvaluated because the analyst has said bending
+matters and supplied nothing to compute it from.
+
+The old rationale — bulk resolves a moment from the FE moments for *every*
+element, and FE moments on a stiff connection are frequently an idealisation
+artefact — is a real engineering concern. It argues for the **analyst** not
+supplying the moment, not for the tool discarding it on their behalf.
 
 **Derived convention: which section.** 5020B defines `fbu` as linear-elastic but
 never says which diameter. The section follows the **shear plane** — body for

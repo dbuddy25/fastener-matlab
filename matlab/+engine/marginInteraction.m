@@ -88,15 +88,17 @@ function r = marginInteraction(joint, designLoads)
 %   is now computed (see BENDING above), and joint.ShearTransferCondition
 %   (model.ShearTransferCondition) turns the exemption from a silent,
 %   unconditional assumption into an explicit, recorded determination:
-%       NotDeclared                  — default. R computed exactly as the
-%                                      fbu=0 form above; Method/Detail say
+%   THE DETERMINATION CONTROLS ONLY THE NO-MOMENT CASE. A supplied
+%   LoadCase.BoltBendingLimitMoment is used on every determination,
+%   because §4.4.4's exemption covers only bending "caused by the shear
+%   loading" and a supplied moment may come from anywhere. With no moment:
+%       NotDeclared                  — default. fbu = 0; Method/Detail say
 %                                      the §4.4.4 exemption is ASSUMED, not
 %                                      verified, and name the property.
 %       CloseToleranceOrInterference — analyst has confirmed §4.4.4's
-%                                      exemption condition holds. R
-%                                      computed identically to NotDeclared
-%                                      (same numeric result); Method/Detail
-%                                      say the exemption is VERIFIED.
+%                                      exemption condition holds. Same
+%                                      numeric result as NotDeclared;
+%                                      Method/Detail say VERIFIED.
 %       ClearanceOrGapped            — analyst has confirmed §4.4.4's
 %                                      exemption does NOT apply, so bending
 %                                      MUST be accounted for. With a moment
@@ -116,14 +118,13 @@ function r = marginInteraction(joint, designLoads)
 %                       and the model reports a moment; dropping it
 %                       silently is the quiet non-conservatism this enum
 %                       exists to prevent.
-%       CloseTolerance— IGNORED, and said so. The analyst has stated
-%                       §4.4.4 does not require bending here. FE moments
-%                       on a stiff connection are frequently an artefact
-%                       of the idealisation rather than real bolt
-%                       bending, and "exempt" is how that is recorded —
-%                       using it anyway would make the determination a
-%                       label rather than a setting. Bending.MomentIgnored
-%                       flags it and the Detail names the value dropped.
+%       CloseTolerance— USED. §4.4.4's exemption is scoped to bending
+%                       "caused by the shear loading" (p33); a supplied
+%                       moment may come from prying, eccentric tension or
+%                       flange rotation, none of which it covers. This
+%                       branch DROPPED the moment until the 2026-08-13
+%                       audit; see the "A SUPPLIED MOMENT IS ALWAYS USED"
+%                       note below the Rb computation for the full reading.
 %       ClearanceOrGapped — USED. That is the point of the declaration.
 %
 %   SECONDARY, INFORMATIONAL field "a": the load-scale factor solving
@@ -236,26 +237,40 @@ else
 end
 bend = boltBendingStress(joint, Mbu);
 
-% DOES THE DETERMINATION LET US USE THE MOMENT?
-%   Exempt        — the analyst has stated §4.4.4 does not require bending
-%                   here. A moment may still arrive (a bulk run resolves
-%                   one from the FE moments for EVERY element, whatever
-%                   the joint is), and it is deliberately NOT used: FE
-%                   moments on a stiff connection are frequently an
-%                   artefact of the idealisation rather than real bolt
-%                   bending, and "exempt" is exactly how an analyst says
-%                   so. Including it anyway would make the determination a
-%                   label rather than a setting.
-%   Required      — use it (that is the whole point of the declaration).
-%   Not determined — USE IT, conservatively. Nobody has assessed the
-%                   joint and the model is reporting a moment; silently
-%                   dropping it there is precisely the quiet
-%                   non-conservatism ShearTransferCondition exists to
-%                   prevent. It is included and the Detail says it was
-%                   included because nothing said otherwise.
-exempt     = joint.ShearTransferCondition == ...
-             model.ShearTransferCondition.CloseToleranceOrInterference;
-useBending = bend.HasMoment && ~exempt;
+% A SUPPLIED MOMENT IS ALWAYS USED, on every determination.
+%
+% This used to drop the moment on a CloseToleranceOrInterference joint,
+% and that over-applied §4.4.4's exemption. Read the sentence again
+% (p33, emphasis added): "if interference or close tolerance fits are
+% used, then typically there is no need to account for bolt bending
+% CAUSED BY THE SHEAR LOADING." The exemption is scoped to
+% shear-INDUCED bending. Prying, eccentric tension, flange rotation —
+% none of that is covered, and the very next paragraph is unqualified:
+% "For fasteners under simultaneously applied tensile and shear loads,
+% ALONG WITH ANY APPLICABLE BENDING, analysis should account for
+% interaction of the combined loading."
+%
+% "Typically there is no need to ACCOUNT FOR" excuses you from going and
+% deriving a shear-induced moment you do not have. It is not licence to
+% discard one you were handed. And §4.4.4 says including the term "is
+% considered to be conservative", so using a supplied moment is never
+% wrong — only ever more conservative.
+%
+% The old rationale — a bulk run resolves a moment for EVERY element, and
+% FE moments on a stiff connection are often an idealisation artefact —
+% is a real engineering concern, but it argues for the ANALYST not
+% supplying the moment, not for the tool discarding it on their behalf.
+% Found by the 2026-08-13 equation audit.
+%
+% So the determination now controls exactly one thing: what happens when
+% NO moment is supplied. Then all three read fbu = 0 and differ only in
+% how honestly they say why —
+%   CloseToleranceOrInterference  exemption VERIFIED
+%   NotDeclared                   exemption ASSUMED, not confirmed
+%   ClearanceOrGapped             NotEvaluated (the analyst has said
+%                                 bending matters and given nothing to
+%                                 compute it from)
+useBending = bend.HasMoment;
 
 % A ClearanceOrGapped joint is one the analyst has declared §4.4.4's
 % exemption does NOT cover, so bending has to be accounted for. It now can
@@ -459,16 +474,15 @@ if useBending
 else
     switch joint.ShearTransferCondition
         case model.ShearTransferCondition.CloseToleranceOrInterference
-            bendingNote = "§4.4.4 bolt-bending exemption VERIFIED (fbu = 0; " + ...
-                "Joint.ShearTransferCondition = CloseToleranceOrInterference)";
-            if bend.HasMoment
-                % Say it out loud. A supplied moment that vanishes without
-                % comment is indistinguishable from one that was never read.
-                bendingNote = bendingNote + string(sprintf( ...
-                    " -- a bending moment WAS supplied (Mbu = %.4g in-lbf) and " + ...
-                    "deliberately not used, because the exemption is recorded " + ...
-                    "as verified", Mbu));
-            end
+            % No moment was supplied — if one had been, useBending would
+            % have taken the branch above. §4.4.4's exemption covers only
+            % bending CAUSED BY THE SHEAR LOADING, so it justifies not
+            % deriving one here; it never justified discarding one.
+            bendingNote = "§4.4.4 bolt-bending exemption VERIFIED (fbu = 0, no " + ...
+                "moment supplied; Joint.ShearTransferCondition = " + ...
+                "CloseToleranceOrInterference). The exemption covers bending " + ...
+                "caused by the SHEAR loading; a moment from any other source " + ...
+                "would still be included if one were supplied";
             methodLabel = methodLabel + " -- §4.4.4 bending VERIFIED exempt";
         otherwise   % NotDeclared (the default)
             bendingNote = "§4.4.4 bolt-bending exemption ASSUMED, not confirmed " + ...
@@ -517,7 +531,6 @@ function o = bendingOut(bend, Rb, condition, included)
 %   that will eventually parse it wrong.
 o = struct( ...
     "Included",  included, ...
-    "MomentIgnored", bend.HasMoment && ~included, ...
     "Fbu",       bend.Value, ...
     "Rb",        Rb, ...
     "Diameter",  bend.Diameter, ...

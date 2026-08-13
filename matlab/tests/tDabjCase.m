@@ -756,13 +756,20 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifySubstring(r.Method, "Eq. 20");
         end
 
-        function anExemptJointIgnoresASuppliedMoment(testCase)
-            % A bulk run resolves a bending moment from the FE moments for
-            % EVERY element, whatever the joint is. On a joint the analyst
-            % has declared exempt, using it would override a recorded
-            % engineering determination - and FE moments on a stiff
-            % connection are often an artefact of the idealisation rather
-            % than real bolt bending, which is exactly what "exempt" says.
+        function anExemptJointStillUsesASuppliedMoment(testCase)
+            % REVERSED 2026-08-13 by the equation audit. This test used to
+            % assert the opposite -- that an exempt joint DROPS a supplied
+            % moment -- and the behaviour it pinned over-applied §4.4.4.
+            %
+            % p33, with the clause that decides it: "if interference or
+            % close tolerance fits are used, then typically there is no
+            % need to account for bolt bending CAUSED BY THE SHEAR
+            % LOADING." The exemption is scoped to shear-induced bending.
+            % A supplied moment may come from prying, eccentric tension or
+            % flange rotation, and the next paragraph is unqualified:
+            % "along with ANY APPLICABLE BENDING, analysis should account
+            % for interaction of the combined loading." §4.4.4 also calls
+            % including the term conservative, so using it is never wrong.
             [j, d] = tDabjCase.bendingFixture(0.500, 0.400, ...
                 model.ShearPlaneCondition.BodyInShear, 200);
             j.ShearTransferCondition = ...
@@ -770,18 +777,36 @@ classdef tDabjCase < matlab.unittest.TestCase
 
             r = engine.marginInteraction(j, d);
 
-            testCase.verifyFalse(r.Bending.Included);
-            testCase.verifyEqual(r.Bending.Rb, 0, ...
-                'An exempt joint must compute exactly as it would with no moment.');
-            testCase.verifyTrue(r.Bending.MomentIgnored, ...
-                'And it must RECORD that a moment was dropped, not just drop it.');
-            testCase.verifySubstring(r.Detail, "deliberately not used");
+            testCase.verifyTrue(r.Bending.Included, ...
+                'The exemption covers shear-induced bending, not a moment handed to us.');
+            testCase.verifyGreaterThan(r.Bending.Rb, 0);
+            testCase.verifySubstring(r.Method, "INCLUDED");
         end
 
-        function anExemptJointMatchesTheNoMomentResultExactly(testCase)
-            % The consequence stated as a number: exempt-with-moment and
-            % exempt-without must be the same R, or "exempt" would quietly
-            % mean "slightly conservative".
+        function anExemptJointWithNoMomentStillReadsVerifiedExempt(testCase)
+            % The determination now controls exactly ONE thing: what
+            % happens when no moment is supplied. Then it is fbu = 0 and
+            % the wording is VERIFIED rather than ASSUMED -- which is the
+            % whole remaining job of the declaration, and worth pinning so
+            % the reversal above did not quietly make it inert.
+            [j, d] = tDabjCase.bendingFixture(0.500, 0.400, ...
+                model.ShearPlaneCondition.BodyInShear, NaN);
+            j.ShearTransferCondition = ...
+                model.ShearTransferCondition.CloseToleranceOrInterference;
+
+            r = engine.marginInteraction(j, d);
+
+            testCase.verifyFalse(r.Bending.Included);
+            testCase.verifyEqual(r.Bending.Rb, 0);
+            testCase.verifySubstring(r.Detail, "VERIFIED");
+        end
+
+        function anExemptJointWithAMomentDiffersFromOneWithout(testCase)
+            % The consequence as a number, and the exact inverse of what
+            % this file asserted before the audit: exempt-with-moment must
+            % now give a HIGHER R than exempt-without, because the bending
+            % ratio is added inside the tension bracket. If these were
+            % equal again, the moment would be being dropped somewhere.
             [jm, dm] = tDabjCase.bendingFixture(0.500, 0.400, ...
                 model.ShearPlaneCondition.BodyInShear, 200);
             [jn, dn] = tDabjCase.bendingFixture(0.500, 0.400, ...
@@ -790,8 +815,8 @@ classdef tDabjCase < matlab.unittest.TestCase
             jm.ShearTransferCondition = exemptCond;
             jn.ShearTransferCondition = exemptCond;
 
-            testCase.verifyEqual(engine.marginInteraction(jm, dm).R, ...
-                engine.marginInteraction(jn, dn).R, "AbsTol", 1e-12);
+            testCase.verifyGreaterThan(engine.marginInteraction(jm, dm).R, ...
+                engine.marginInteraction(jn, dn).R);
         end
 
         function anUndeterminedJointUsesTheMomentAndSaysWhy(testCase)
@@ -806,7 +831,6 @@ classdef tDabjCase < matlab.unittest.TestCase
             r = engine.marginInteraction(j, d);
 
             testCase.verifyTrue(r.Bending.Included);
-            testCase.verifyFalse(r.Bending.MomentIgnored);
         end
 
         function aMomentWithNoFtuIsNotEvaluatedRatherThanThrown(testCase)

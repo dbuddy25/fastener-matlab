@@ -17,22 +17,30 @@ classdef ShearTransferCondition
     %                                  exemption condition applies (interference
     %                                  or close-tolerance fit, no shear
     %                                  transferred across a gap or spacer).
-    %                                  engine.marginInteraction computes exactly
-    %                                  as NotDeclared, but reports the exemption
-    %                                  as VERIFIED.
+    %                                  Same numeric result as NotDeclared,
+    %                                  reported as VERIFIED.
     %   ClearanceOrGapped            — the analyst has confirmed §4.4.4's
     %                                  exemption does NOT apply (clearance fit,
     %                                  or shear transferred across a gap or
-    %                                  non-load-carrying spacer). Bolt bending
-    %                                  is not implemented (no fbu term anywhere
-    %                                  in this tool — see TOOL_DIFFERENCES.md
-    %                                  §7.4), so engine.marginInteraction
-    %                                  cannot evaluate the criterion
-    %                                  conservatively for this configuration
-    %                                  and reports NotEvaluated instead.
-    %   This enum does not compute bending stress (no M*c/I anywhere) — it
-    %   only turns the §4.4.4 exemption from a silent global assumption into
-    %   an explicit, per-joint, recorded determination.
+    %                                  non-load-carrying spacer). With a moment
+    %                                  supplied the criterion evaluates with
+    %                                  bending in it; with none it reports
+    %                                  NotEvaluated, because the analyst has
+    %                                  said bending matters and given nothing
+    %                                  to compute it from.
+    %
+    %   ⚠️ THIS SELECTS THE WORDING, NOT WHETHER A MOMENT IS USED. A supplied
+    %   LoadCase.BoltBendingLimitMoment is included on EVERY value above.
+    %   §4.4.4's exemption is scoped to bending "caused by the shear loading"
+    %   (p33), so it justifies not DERIVING a shear-induced moment — it never
+    %   justified discarding one the analyst handed over, which may come from
+    %   prying, eccentric tension or flange rotation. CloseTolerance dropped
+    %   a supplied moment until the 2026-08-13 equation audit.
+    %
+    %   Two things this doc claimed that were already false when written:
+    %   bolt bending IS implemented (engine.private.boltBendingStress, since
+    %   Phase 3.9 — there is an M*c/I, fbu = 32*Mbu/(pi*d^3)), and
+    %   ClearanceOrGapped is not an unconditional NotEvaluated.
     enumeration
         NotDeclared
         CloseToleranceOrInterference
