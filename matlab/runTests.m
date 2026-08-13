@@ -31,6 +31,17 @@ function results = runTests(scope)
 %   runTests("jointconfig"), runTests("JointConfig") and
 %   runTests("tGui2JointConfig") all select the same file.
 %
+%   LIVE PROGRESS, one counted line per test (testing.ProgressCounter):
+%
+%       142/770  18%  el 1:47  eta 8:12   tGui2Bulk/theRunButtonGates
+%
+%   The framework's default output is a row of identical dots, which says
+%   the run is alive but not how far along it is — and the full suite takes
+%   ~12 minutes on the machine that runs it, so there was no way to tell a
+%   slow run from a hung one without waiting it out. Failures are marked on
+%   their own line as well as in the block below, so a doomed run can be
+%   stopped at 90 seconds instead of at 12 minutes.
+%
 %   FAILURES ARE REPEATED, CONDENSED, AT THE VERY BOTTOM. MATLAB's own
 %   Failure Summary names the tests and says "Failed by verification",
 %   which is not the same as saying what went wrong; the diagnostic that
@@ -76,7 +87,7 @@ end
 fprintf("runTests(""%s""): %d of %d files\n", scope, numel(pick), numel(names));
 
 t0      = tic;
-results = runtests(cellstr(fullfile(testDir, pick)));
+results = runSuite(cellstr(fullfile(testDir, pick)));
 elapsed = toc(t0);
 
 fprintf("\n%s: %d passed, %d failed, %d incomplete  (%.0f s)\n", ...
@@ -90,6 +101,45 @@ if ~strcmpi(scope, "all")
 end
 
 printFailureDetail(results);
+end
+
+% ---- The runner -------------------------------------------------------------
+function results = runSuite(files)
+%RUNSUITE  Run the suite with a live n-of-N progress counter.
+%   Builds the runner by hand rather than calling runtests() so
+%   testing.ProgressCounter can be attached — runtests() takes no custom
+%   plugins. Two plugins, deliberately:
+%       DiagnosticsRecordingPlugin  populates TestResult.Details.DiagnosticRecord,
+%                                   which printFailureDetail below reads. Without
+%                                   it every failure reports "(no diagnostic
+%                                   recorded)".
+%       testing.ProgressCounter     the counted progress line.
+%   No text-output plugin, so the framework's row of dots and its own
+%   "Totals:" block do not double up with ours. This function's summary and
+%   failure block replace them.
+%
+%   FALLS BACK LOUDLY. If any of this throws — an API change, a missing
+%   package on the path — the run still happens through plain runtests()
+%   and says on stderr that it did. A silent fallback would hide a broken
+%   progress counter behind a green suite, which is the failure mode this
+%   file exists to prevent.
+try
+    % Plain [] rather than TestSuite.empty: TestSuite is abstract, and
+    % concatenating onto [] is the form that cannot surprise us.
+    suite = [];
+    for k = 1:numel(files)
+        suite = [suite, matlab.unittest.TestSuite.fromFile(files{k})]; %#ok<AGROW>
+    end
+    runner = matlab.unittest.TestRunner.withNoPlugins();
+    runner.addPlugin(matlab.unittest.plugins.DiagnosticsRecordingPlugin);
+    runner.addPlugin(testing.ProgressCounter);
+    results = runner.run(suite);
+catch err
+    fprintf(2, ['\nProgress runner unavailable (%s) — falling back to ' ...
+                'runtests(). Counts and failure detail are unaffected; ' ...
+                'only the live n-of-N line is missing.\n'], err.message);
+    results = runtests(files);
+end
 end
 
 % ---- Failure detail, LAST ---------------------------------------------------
