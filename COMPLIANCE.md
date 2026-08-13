@@ -359,6 +359,31 @@ than a shortfall against how this work is actually done — **and it stays
 PARTIAL**, because TFSR 11 is a *shall* naming four load conditions and the tool
 answers one. Nobody else doing it is not the same as it being done.
 
+**DECISION 2026-08-13 (Dan): leave it as it stands, revisit in a later
+version.** Not a deferral by drift — a scoped call, made with the cross-check
+above in hand. The reasoning, so it does not have to be rebuilt:
+
+- The population it changes is narrow: it needs a joint that is
+  `ClearanceOrGapped` (or otherwise carries real simultaneous shear), a shear
+  fraction large enough to matter — von Mises is `sqrt(sigma^2 + 3*tau^2)`, so
+  `tau/sigma = 0.2` is a 6% penalty and `0.5` is 32% — *and* yield or
+  separation to be the governing margin. Most joints fail that conjunction.
+- Closing it means inventing a derived convention with nothing to validate it
+  against. `CLAUDE.md` allows a margin to be validated only against a published
+  worked example or an independent hand calculation, and neither exists for
+  these two. A guessed convention is worse than a declared gap.
+- **The gap is disclosed everywhere it could mislead** and that must stay true:
+  `gui2.ResultsPage` and `gui2.BulkAnalysisPage` both print that yield and
+  separation under combined loading are required and not implemented, and the
+  scope statement rides into every export via `report.exportResults`. If those
+  strings are ever removed, this decision is void.
+
+**What is NOT in the gap, since "leave TFSR 11 alone" reads broader than it
+is:** the ULTIMATE interaction of tension, shear and bending — Eq. 20-23,
+including the `fbu` term and the §4.4.4 exemption determination — is
+implemented and validated. The tool does combine loads. It combines them for
+the one condition 5020B supplies an equation for.
+
 **Also omitted:** Eq. 21/23, the plastic-bending variants with a separate
 `fbu/Fbu` term. `Fbu` (allowable flexural stress) is not a field on
 `model.Material`, and 5020B states that including the bending term in Eq. 20/22
