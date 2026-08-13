@@ -343,6 +343,22 @@ configuration where simultaneous shear and bending is declared to exist.
 Building either means inventing a derived convention with no worked example to
 validate against, so they are recorded here rather than guessed at.
 
+**Cross-checked 2026-08-13 against the legacy spreadsheet tool — the same gap,
+independently.** Its separation margin compares the separation design load
+`Psep` against `Pp-min` and nothing else: no shear term, no moment term. That is
+NASA-STD-5020B Eq. 19, axial-only, exactly what `engine.marginSeparation` does.
+
+**What this does and does not establish.** It carries NO numerical authority —
+another implementation is never a source of truth here (`CLAUDE.md`), and two
+tools agreeing proves only that they made the same choice. What it does settle
+is a scoping question the standard itself raises: §4.4.3 says Eq. 19 "is
+applicable to systems under axial loading only" and invites "other equations or
+methods," without supplying any. The unformulated part appears to go
+unimplemented in practice, not just here. So the PARTIAL status is honest rather
+than a shortfall against how this work is actually done — **and it stays
+PARTIAL**, because TFSR 11 is a *shall* naming four load conditions and the tool
+answers one. Nobody else doing it is not the same as it being done.
+
 **Also omitted:** Eq. 21/23, the plastic-bending variants with a separate
 `fbu/Fbu` term. `Fbu` (allowable flexural stress) is not a field on
 `model.Material`, and 5020B states that including the bending term in Eq. 20/22
@@ -412,6 +428,13 @@ separation credibly causes a catastrophic or critical hazard — which is a
 program judgment a tool cannot make. The floors that follow from it (≥ 1.2
 critical, ≥ 1.0 otherwise) could be enforced once the hazard class is known,
 but hazard class is not modelled.
+
+*Cross-checked 2026-08-13 against the legacy spreadsheet tool: no decision tree
+and no conditional logic there either — `FSSep` is a value, same as here.* So
+this is not a capability the new tool dropped. It carries no authority on the
+NUMBER (see the note on cross-checks under TFSR 11), but "is the tree encoded
+anywhere in practice" is a question about tooling, not about the standard, and
+the answer is no.
 
 ---
 
