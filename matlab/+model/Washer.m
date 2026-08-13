@@ -14,8 +14,8 @@ classdef Washer
     %   Eq. 10 (see that function; before 2026-08-13 washers were thermally
     %   absent, which was arithmetically identical to giving every washer
     %   the BOLT's CTE). A washer with Thickness > 0 whose Material carries
-    %   no CTE makes the thermal calculation REFUSE rather than silently
-    %   drop the term. InnerDiameter is still carried for completeness only
+    %   no CTE makes the thermal calculation REFUSE rather than reading
+    %   the absence as zero expansion. InnerDiameter is still carried for completeness only
     %   (library / template round-tripping).
     %
     %   w = model.Washer(Thickness=0.078, OuterDiameter=0.687);

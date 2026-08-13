@@ -242,10 +242,15 @@ This is a **living document** — every new check adds a row.
   the span, and washers join the thickness-weighted CTE sum with their own
   material.
 
-  **A missing CTE now refuses instead of silently zeroing.** `max([NaN NaN 0])`
-  is `0` in MATLAB, so a material without a coefficient used to make the whole
-  thermal term disappear with no warning — TFSR 5 quietly unmet on a joint the
-  analyst believed was covered. `engine.preload` now errors
+  **A missing CTE now refuses instead of being read as zero.**
+  `model.Material.CTE` defaulted to **0**, so a material with no coefficient was
+  read as "does not expand" — a physical claim, not an absence — and the thermal
+  term produced a confident number from data nobody had supplied. `library.json`'s
+  own `Rigid` entry documented a guard against exactly this ("cte is unset, so the
+  thermal-preload path (TFSR 5) cannot run for this entry") that did not exist.
+  The default is now `NaN`, matching every other optional number in `+model`, so
+  the absence is detectable; without the new check that NaN would reach `P_th` and
+  vanish anyway, since `max([NaN NaN 0])` is `0` in MATLAB. `engine.preload` now errors
   (`engine:preload:missingCTE`) naming what to fix; `engine.analyzeBulk` catches
   per row, so one under-specified joint cannot take down a bulk run. The guard
   sits BEHIND the excursion check, so a joint with no temperature range still

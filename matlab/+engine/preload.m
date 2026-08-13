@@ -170,10 +170,17 @@ else
         end
         alphaB = joint.BoltMaterial.CTE;         % bolt CTE, 1/°C
 
-        % NO SILENT ZERO. A missing CTE used to sail straight through:
-        % alphaJ went NaN, Pth went NaN, and max([NaN NaN 0]) is 0 in
-        % MATLAB — so the thermal term vanished with no warning and TFSR 5
-        % went quietly unmet. Refuse instead, naming what to fix.
+        % NO CONFIDENT NUMBER FROM AN INPUT NOBODY SUPPLIED. Two failure
+        % routes, both now closed. Until 2026-08-13 model.Material.CTE
+        % DEFAULTED TO ZERO, so an unspecified material was read as "does
+        % not expand" — a physical claim, not an absence — and this term
+        % produced a confident number from data that was never given.
+        % (library.json's Rigid entry even documented a guard against
+        % that, which did not exist.) CTE now defaults to NaN so the
+        % absence is detectable; without the check below that NaN would
+        % reach Pth and then vanish anyway, because max([NaN NaN 0]) is 0
+        % in MATLAB — the same silent failure by a quieter route. Refuse
+        % instead, naming what to fix.
         requireCTE(joint, tMem, cteMem, alphaB);
 
         alphaJ = sum(tMem .* cteMem) / sum(tMem);
@@ -209,8 +216,11 @@ function requireCTE(joint, tMem, cteMem, alphaB)
 %   temperature, and TFSR 5 (§4.3.1, p21) REQUIRES max/min preload to
 %   account for "the effects of maximum and minimum expected temperatures".
 %   A CTE-mismatch term computed with a missing coefficient is not a
-%   conservative approximation of that requirement — it silently drops the
-%   term, so the joint reports as if no thermal excursion existed.
+%   conservative approximation of that requirement. It is not even
+%   conservative in a known direction: an absent coefficient read as zero
+%   understates the mismatch when the real material expands more than the
+%   bolt and OVERSTATES it when less, and the analyst has no way to tell
+%   which from the reported margin.
 %
 %   Errors rather than returning a NotEvaluated marker because engine.preload
 %   returns PpMax/PpMin, which every downstream margin consumes as a number;

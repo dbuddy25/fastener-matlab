@@ -457,11 +457,14 @@ classdef tStiffness < matlab.unittest.TestCase
         end
 
         function aMissingWasherCTERefusesRatherThanSilentlyZeroing(testCase)
-            % THE SILENT FAILURE THIS REPLACED. A NaN CTE used to flow
-            % straight through: alpha_j went NaN, Pth went NaN, and
-            % max([NaN NaN 0]) is 0 in MATLAB — so the thermal term
-            % vanished with no warning and TFSR 5 went quietly unmet on a
-            % joint the analyst believed was covered.
+            % THE SILENT FAILURE THIS REPLACED. model.Material.CTE used to
+            % default to ZERO, so a material with no coefficient was read
+            % as "does not expand" — a physical claim, not an absence —
+            % and the thermal term produced a confident number from data
+            % nobody had supplied. CTE now defaults to NaN so the absence
+            % is detectable, and this guard refuses rather than letting
+            % the NaN reach Pth, where max([NaN NaN 0]) = 0 would make the
+            % term vanish instead. TFSR 5 fails loudly either way now.
             %
             % The Ex 8-b fixture supplies washer THICKNESSES but no washer
             % MATERIAL, so it is exactly the case: a real 0.140 in of
