@@ -1,22 +1,28 @@
 classdef ProgressCounter < matlab.unittest.plugins.TestRunnerPlugin
-    %PROGRESSCOUNTER  Live "n of N" progress while the suite runs.
-    %   Replaces the framework's row of dots with one counted line per test:
+    %PROGRESSCOUNTER  Live filling progress bar while the suite runs.
+    %   Replaces the framework's row of dots with one bar line per test:
     %
-    %       142/770  18%  el 1:47  eta 8:12   tGui2Bulk/theRunButtonGates
-    %       143/770  19%  el 1:48  eta 8:09   tGui2Bulk/aCancelledRunKeeps  ** FAILED
+    %    142/770 ████████▌░░░░░░░░░░░░░░░░░░░  18%  1:47  tGui2Bulk/theRunBu
+    %    143/770 ████████▋░░░░░░░░░░░░░░░░░░░  19%  1:48  tGui2Bulk/aCancell  ** FAILED
     %
     %   WHY. The full suite takes ~12 minutes on the machine that runs it,
     %   which is not the machine it is written on. A row of identical dots
     %   says the run is alive but not how far along it is, so there was no
     %   way to tell a slow run from a hung one without waiting it out —
     %   which is exactly the guess that was made, wrongly, on 2026-08-13.
-    %   The percentage and the ETA are the whole point; the test name is
-    %   there so a stall has a place to point at.
     %
-    %   ETA is elapsed/done x remaining — a flat average, deliberately. The
-    %   nine tGui2* files each build a real uifigure per test method and run
-    %   far slower than the engine files, so the estimate drifts as the mix
-    %   changes. It is a progress indicator, not a promise.
+    %   EIGHTHS, NOT WHOLE CELLS. At 28 cells a whole-cell bar advances
+    %   once every ~28 tests, so most lines would look identical to the one
+    %   above them — the dots problem again, with wider dots. The bar is
+    %   drawn to 1/8 of a cell using U+2588 and its partial-block siblings
+    %   (▏▎▍▌▋▊▉), giving 224 distinct states across the run. At 770 tests
+    %   that is roughly one visible step every 3-4 tests, so consecutive
+    %   lines differ and the thing actually reads as filling.
+    %
+    %   The glyphs are U+2588 / U+2591 and U+258F..U+2589, all present in
+    %   Consolas and the other default MATLAB console fonts. If a font ever
+    %   lacks them the bar degrades to boxes — cosmetic only; the count and
+    %   percentage beside it carry the same information.
     %
     %   FAILURES ARE MARKED INLINE as well as in the end-of-run block that
     %   runTests prints. Seeing "** FAILED" at test 143 of 770 means you can
@@ -36,8 +42,9 @@ classdef ProgressCounter < matlab.unittest.plugins.TestRunnerPlugin
     properties (Access = private)
         Total   (1,1) double = 0     % test count for the whole run
         Done    (1,1) double = 0     % finalized so far
-        Clock                        % tic handle for elapsed/ETA
-        NameWidth (1,1) double = 52  % truncation width for the test name
+        Clock                        % tic handle for elapsed
+        BarWidth  (1,1) double = 28  % bar cells (x8 sub-steps = 224 states)
+        NameWidth (1,1) double = 34  % truncation width for the test name
     end
 
     methods (Access = protected)
@@ -57,18 +64,9 @@ classdef ProgressCounter < matlab.unittest.plugins.TestRunnerPlugin
 
             elapsed = toc(plugin.Clock);
             if plugin.Total > 0
-                pct = 100 * plugin.Done / plugin.Total;
+                frac = plugin.Done / plugin.Total;
             else
-                pct = 0;
-            end
-            % Flat-average ETA. Guard the first result, where elapsed/done
-            % is noise, and the last, where remaining is zero.
-            remaining = plugin.Total - plugin.Done;
-            if plugin.Done > 0 && remaining > 0
-                eta = testing.ProgressCounter.clockText( ...
-                    elapsed / plugin.Done * remaining);
-            else
-                eta = "  -  ";
+                frac = 0;
             end
 
             mark = "";
@@ -78,9 +76,11 @@ classdef ProgressCounter < matlab.unittest.plugins.TestRunnerPlugin
                 mark = "  ** INCOMPLETE";
             end
 
-            fprintf("%4d/%-4d %3.0f%%  el %s  eta %s   %s%s\n", ...
-                plugin.Done, plugin.Total, pct, ...
-                testing.ProgressCounter.clockText(elapsed), eta, ...
+            fprintf("%4d/%-4d %s %3.0f%%  %5s  %s%s\n", ...
+                plugin.Done, plugin.Total, ...
+                testing.ProgressCounter.barText(frac, plugin.BarWidth), ...
+                floor(100 * frac), ...   % floor: 100% only on the last test
+                testing.ProgressCounter.clockText(elapsed), ...
                 testing.ProgressCounter.shorten(r.Name, plugin.NameWidth), ...
                 mark);
 
@@ -90,6 +90,39 @@ classdef ProgressCounter < matlab.unittest.plugins.TestRunnerPlugin
     end
 
     methods (Static, Access = private)
+        function s = barText(frac, cells)
+            %BARTEXT  A proportional bar drawn to 1/8 of a cell.
+            %   frac in [0,1]; cells is the bar width in characters.
+            %
+            %   Each cell holds 8 sub-steps, so the fill in sub-steps is
+            %   floor(frac*cells*8). Computing it ONCE, on the total,
+            %   rather than separately on the whole and partial parts, is
+            %   what keeps the bar monotonic: split rounding can make a
+            %   later test draw a shorter bar than an earlier one.
+            %
+            %   FLOOR, NOT ROUND, so a completely full bar means FINISHED.
+            %   With round(), test 769 of 770 already filled every cell —
+            %   the one moment the bar most needs to be honest is the one
+            %   where you are deciding whether it is safe to walk away.
+            frac  = min(max(frac, 0), 1);
+            eighths = floor(frac * cells * 8);
+            full    = floor(eighths / 8);
+            part    = eighths - full * 8;        % 0..7
+
+            % U+258F..U+2589 are 1/8..7/8 blocks; index 0 means the cell is
+            % empty, so it takes the same glyph as the unfilled remainder.
+            partials = [char(9617), char(9615), char(9614), char(9613), ...
+                        char(9612), char(9611), char(9610), char(9609)];
+
+            if full >= cells
+                s = string(repmat(char(9608), 1, cells));
+                return
+            end
+            s = string([repmat(char(9608), 1, full), ...
+                        partials(part + 1), ...
+                        repmat(char(9617), 1, cells - full - 1)]);
+        end
+
         function s = clockText(seconds)
             %CLOCKTEXT  Seconds as m:ss (h:mm:ss past an hour).
             seconds = max(0, round(seconds));

@@ -31,16 +31,19 @@ function results = runTests(scope)
 %   runTests("jointconfig"), runTests("JointConfig") and
 %   runTests("tGui2JointConfig") all select the same file.
 %
-%   LIVE PROGRESS, one counted line per test (testing.ProgressCounter):
+%   LIVE PROGRESS BAR, one line per test (testing.ProgressCounter):
 %
-%       142/770  18%  el 1:47  eta 8:12   tGui2Bulk/theRunButtonGates
+%     143/770 █████▏░░░░░░░░░░░░░░░░░░░░░░  18%  2:17  tGui2Bulk/theRunBu
 %
 %   The framework's default output is a row of identical dots, which says
 %   the run is alive but not how far along it is — and the full suite takes
 %   ~12 minutes on the machine that runs it, so there was no way to tell a
-%   slow run from a hung one without waiting it out. Failures are marked on
-%   their own line as well as in the block below, so a doomed run can be
-%   stopped at 90 seconds instead of at 12 minutes.
+%   slow run from a hung one without waiting it out. The bar is drawn to
+%   1/8 of a cell so consecutive lines actually differ (225 distinct states
+%   over 770 tests, about one step every 3 tests); a completely full bar
+%   means finished, never "nearly". Failures are marked on their own line
+%   as well as in the block below, so a doomed run can be stopped at 90
+%   seconds instead of at 12 minutes.
 %
 %   FAILURES ARE REPEATED, CONDENSED, AT THE VERY BOTTOM. MATLAB's own
 %   Failure Summary names the tests and says "Failed by verification",
