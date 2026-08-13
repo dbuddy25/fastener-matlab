@@ -87,12 +87,15 @@ function jl = loadJointLibrary(file, lib, sheet)
 %                               analyst's actual "×D" intent rather than a
 %                               baked-in inch value)
 %       HelicoilRatedLoad    -> (Insert) ThreadedMember.RatedUltimateLoad,
-%                               lbf (blank -> 0, the model default; a
-%                               manufacturer rated pull-out, which acts as a
-%                               ceiling on the ultimate criterion above the
-%                               catalogue-derived area form in
-%                               engine.marginInsert -- see StiPitchDiameter
-%                               below)
+%                               lbf (blank -> 0, the model default). The
+%                               insert's own INTERNAL-THREAD allowable from
+%                               its specification, consumed by
+%                               engine.marginInsertInternal. NOT a pull-out
+%                               rating and NOT a ceiling: pull-out from the
+%                               parent is computed separately and uncapped
+%                               (engine.marginInsert -- see StiPitchDiameter
+%                               below), so the lower of the two governs
+%                               across rows.
 %       (No HelicoilShearArea column: ThreadedMember.ShearEngagementArea is
 %       not analyst-facing -- NASA-STD-5020B Section 4.4.1 wants a
 %       SPECIFIED insert catalogue geometry, not a typed area. engine.

@@ -162,9 +162,10 @@ function r = marginInsert(joint, loadCase, factors, preload)
 %       Method    string: basis + citation (distinguishes the two bases)
 %       Detail    string: governing criterion + numbers + Fsy basis (or the
 %                 not-evaluated reason)
-%       Rating    rated pull-out load participating in the check, lbf (the
-%                 supplied value whenever it is set — as the flat basis or
-%                 the ceiling on the area form; NaN when none is set or
+%       Rating    ThreadedMember.RatedUltimateLoad, echoed for traceability
+%                 ONLY — it does not participate in this check. It is the
+%                 insert's INTERNAL-THREAD allowable (marginInsertInternal),
+%                 a different failure mode; NaN when none is set or
 %                 nothing evaluated)
 %       Pb        ULTIMATE design bolt load, lbf (NaN if not computable)
 %       PbYield   YIELD design bolt load (FFY·FSY pair), lbf (NaN unless
@@ -219,8 +220,8 @@ arguments
     preload  (1,1) struct
 end
 
-methodRated = "Heli-Coil rated pull-out (manufacturer spec value) per NASA-STD-5020B §4.4.1 (spec-rated insert); Pb per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, Pb = FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
-methodArea  = "Insert pull-out = shear engagement area x parent-material allowable shear stress. ULTIMATE (Fsu vs Pb with FFU·FSU) per NASA-STD-5020B §4.4.1, which defines pull-out against the parent's allowable ULTIMATE shear stress. The YIELD counterpart (Fsy vs PbYield with FFY·FSY) is this tool's own CRITERION, not a §4.4.1 formula -- §4.4.2 requires yield design loads but prints no pull-out equation, so the same area form is evaluated against the parent's shear yield strength; no equation number is claimed for the CRITERION, though the Fsy inside it is NASA-STD-5020B Eq. 63 (p66, Appendix A.8), Fsy = Fty/sqrt(3), per §4.4.2 p31's direction to use a failure theory. Area is SPECIFIED (ThreadedMember.ShearEngagementArea) when supplied, else COMPUTED (DERIVED, no equation number, DEVELOPMENT_PLAN.md §2.3) from catalogue geometry As = 0.75·pi·D2·(Le-1.125·p) -- the 0.75·pi·E·Le pitch-diameter form (NASA TM-106943 Eq. 78/79 give a 5/8-coefficient area; the 0.75 coefficient is this tool's own convention, as in marginNutStrength/marginTappedParentThread) with D2 = ThreadedMember.StiPitchDiameter (NASM33537 Rev 4 Table IV STI pitch diameter) and the -1.125·p install-offset term derived from NASM33537 §11.1 (see Detail for the source actually used); rated pull-out as an ultimate ceiling when set (lower-of); Pb/PbYield per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
+methodRated = "Insert pull-out from the parent per NASA-STD-5020B §4.4.1 — NOT EVALUATED without a shear engagement area. There is no flat-rated fallback: ThreadedMember.RatedUltimateLoad is the insert INTERNAL-THREAD allowable (engine.marginInsertInternal), a different failure mode, and reporting it here would put an internal-thread capability under a pull-out heading. Pb per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, Pb = FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
+methodArea  = "Insert pull-out = shear engagement area x parent-material allowable shear stress. ULTIMATE (Fsu vs Pb with FFU·FSU) per NASA-STD-5020B §4.4.1, which defines pull-out against the parent's allowable ULTIMATE shear stress. The YIELD counterpart (Fsy vs PbYield with FFY·FSY) is this tool's own CRITERION, not a §4.4.1 formula -- §4.4.2 requires yield design loads but prints no pull-out equation, so the same area form is evaluated against the parent's shear yield strength; no equation number is claimed for the CRITERION, though the Fsy inside it is NASA-STD-5020B Eq. 63 (p66, Appendix A.8), Fsy = Fty/sqrt(3), per §4.4.2 p31's direction to use a failure theory. Area is SPECIFIED (ThreadedMember.ShearEngagementArea) when supplied, else COMPUTED (DERIVED, no equation number, DEVELOPMENT_PLAN.md §2.3) from catalogue geometry As = 0.75·pi·D2·(Le-1.125·p) -- the 0.75·pi·E·Le pitch-diameter form (NASA TM-106943 Eq. 78/79 give a 5/8-coefficient area; the 0.75 coefficient is this tool's own convention, as in marginNutStrength/marginTappedParentThread) with D2 = ThreadedMember.StiPitchDiameter (NASM33537 Rev 4 Table IV STI pitch diameter) and the -1.125·p install-offset term derived from NASM33537 §11.1 (see Detail for the source actually used). UNCAPPED: ThreadedMember.RatedUltimateLoad is the insert INTERNAL-THREAD allowable and is checked on its own row, so §4.4.1's rule that the lower value should be used is applied ACROSS the two rows by analyze()'s worst-margin pick rather than hidden inside this one. SCOPE LIMIT (§4.4.1 p27): ''Such an allowable pull-out load applies when the insert is installed in a solid, homogenous material. For inserts installed in nonhomogeneous or nonmetallic materials or in sandwich panels, allowable pull-out loads should be derived from test.'' This computed form therefore ASSUMES a solid homogeneous parent; the tool models no panel construction and cannot detect otherwise. Pb/PbYield per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
 
 if joint.ThreadedMember.Type ~= model.ThreadedMemberType.Insert
     r = notEval(methodRated, ...
@@ -327,8 +328,12 @@ allowUlt = As * Fsu;     % ultimate pull-out allowable, lbf
 % minimum can never disagree — the arrangement the ultimate side already has.
 ya       = memberTensileYldAllowable(joint);
 allowYld = ya.AllowYld;  % yield pull-out allowable, lbf  (= As * sy.Fsy)
-rating = joint.ThreadedMember.RatedUltimateLoad;   % rated pull-out, lbf (0 = unset)
-%   ultimate: MS = min(A_shear·Fsu, rating) / Pb − 1, Pb = PpMax + FFU·FSU·n·phi·PtL (5020B Eq. 8)
+% Echoed into the returned struct for traceability only — this row is
+% UNCAPPED (see the header). The value is the insert's internal-thread
+% allowable, checked by engine.marginInsertInternal.
+rating = joint.ThreadedMember.RatedUltimateLoad;   % internal-thread allowable, lbf (0 = unset)
+%   ultimate: MS = A_shear·Fsu / Pb − 1, Pb = PpMax + FFU·FSU·n·phi·PtL (5020B Eq. 8)
+%             UNCAPPED — the rating is the OTHER §4.4.1 allowable, on its own row.
 MSu = allowUlt / d.Pb - 1;
 %   yield:    MS = A_shear·Fsy / PbYield − 1, PbYield = PpMax + FFY·FSY·n·phi·PtL (5020B Eq. 8 form, yield factors)
 MSy = allowYld / d.PbYield - 1;

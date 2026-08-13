@@ -64,6 +64,36 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 
 **Counts** — IMPLEMENTED 9 · PARTIAL 1 · OMITTED-BY-DECISION 3 · ABSENT 5 · OUT-OF-SCOPE 14.
 
+> **Insert pull-out assumes a SOLID HOMOGENEOUS parent — stated, not guarded.**
+> §4.4.1 p27, immediately after describing the area × parent-`Fsu` form:
+> *"Such an allowable pull-out load applies when the insert is installed in a
+> **solid, homogenous material**. For inserts installed in nonhomogeneous or
+> nonmetallic materials or in sandwich panels, allowable pull-out loads should be
+> **derived from test**."* The tool models no panel construction — a sandwich core
+> or a composite parent is not representable as a `model.Material` — so it cannot
+> detect the condition and does not pretend to. The limit is now carried in
+> `engine.marginInsert`'s `Method` string, which reaches the Results grid, the PDF
+> and every export, so the assumption travels with the number instead of living
+> only in the standard.
+>
+> **The gap this leaves, named:** there is no field for a test-derived pull-out
+> load. `ThreadedMember.RatedUltimateLoad` is *not* it — that is the insert's
+> internal-thread allowable (see below) — and `ShearEngagementArea` supplies an
+> area, not a load. An analyst with test data for a sandwich-panel insert
+> currently has nowhere to put it. Closing that means a new model field plus
+> template, parser and GUI surface; recorded here rather than half-built.
+>
+> **Related correction, same date.** Three places still described
+> `ThreadedMember.RatedUltimateLoad` as the insert's *pull-out* rating acting as a
+> *ceiling* on `engine.marginInsert` — `model.ThreadedMember`'s header, the
+> workbook Fields dictionary an analyst reads while filling in data, and
+> `data.loadJointLibrary`'s column map. That stopped being true at `7f78ade`, when
+> §4.4.1's two insert allowables were put on their correct rows: the rating is the
+> INTERNAL-THREAD allowable (`engine.marginInsertInternal`), pull-out is computed
+> from the parent and is deliberately uncapped, and *"the lower value should be
+> used"* is applied ACROSS the two rows by `WorstMargin`. The docs were instructing
+> people to enter one physical quantity into a field that consumes another.
+
 > **`Ptu-allow` / `Pty-allow` — which quantity, where. RULED 2026-08-13.**
 > 5020B uses these symbols at four sites and its *where-clauses* are inconsistent,
 > so the question was adjudicated against the whole document rather than site by

@@ -2,10 +2,26 @@ classdef ThreadedMember
     %THREADEDMEMBER  What the bolt threads into (nut, insert, or tapped hole).
     %   For a Nut and an Insert alike, Material + the thread-shear area drive
     %   an ultimate/yield pair (engine.marginNutStrength /
-    %   engine.marginInsert), and RatedUltimateLoad acts as a CEILING on the
-    %   ultimate criterion — the lower of computed and rated governs. It does
-    %   NOT bound the yield criterion: a rated ULTIMATE capacity says nothing
-    %   about the onset of yielding.
+    %   engine.marginInsert). It does NOT bound the yield criterion: a rated
+    %   ULTIMATE capacity says nothing about the onset of yielding.
+    %
+    %   ⚠️ RatedUltimateLoad MEANS DIFFERENT THINGS BY MEMBER TYPE, and this
+    %   header described only the pre-7f78ade meaning until 2026-08-13:
+    %
+    %     Nut         a CEILING on the computed ultimate allowable — the
+    %                 lower of computed and rated governs (§4.4.1 p27,
+    %                 "Nuts should be limited to the load rating of the
+    %                 nut"). engine.marginNutStrength.
+    %     Insert      the INSERT'S OWN INTERNAL-THREAD allowable, the first
+    %                 of the two allowables §4.4.1 p27 names, consumed by
+    %                 engine.marginInsertInternal as a specified value.
+    %                 It is NOT a pull-out rating and NOT a ceiling:
+    %                 engine.marginInsert computes pull-out from the parent
+    %                 and is deliberately UNCAPPED, so "the lower value
+    %                 should be used" is applied ACROSS the two rows by
+    %                 analyze()'s worst-margin pick rather than hidden
+    %                 inside one of them.
+    %     TappedHole  unused; may stay 0.
     %
     %   A ceiling, not an alternative: NASA-STD-5020B §4.4.1 say a
     %   nut is "limited to the load rating of the nut" and that for inserts
@@ -58,7 +74,7 @@ classdef ThreadedMember
     properties
         Type              (1,1) model.ThreadedMemberType = model.ThreadedMemberType.Nut
         Material          (1,1) model.Material = model.Material()   % nut/insert/parent material
-        RatedUltimateLoad (1,1) double {mustBeNonnegative} = 0      % spec-rated Pult (nut) / rated pull-out (insert), lbf
+        RatedUltimateLoad (1,1) double {mustBeNonnegative} = 0      % nut: ceiling on computed Pult; insert: internal-thread allowable (NOT pull-out), lbf
         % ShearEngagementArea — insert minimum shear engagement area, in^2,
         % tabulated by the insert manufacturer per (fastener size, thread
         % engagement L/D). The Heli-Coil table presents it as the GRADIENT of

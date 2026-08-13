@@ -160,9 +160,11 @@ bh = engine.marginBearingUnderHead(joint, loadCase, factors, p); % NASA TM-10694
 % WorstMargin pick. The bolt, nut and tapped-parent checks use the
 % pitch-diameter area form As = 0.75·pi·E·Le (E = pitch dia, Le =
 % engagement); the INSERT
-% check does not — it takes a supplied shear engagement area or the
-% manufacturer's rated pull-out, because an insert's engagement geometry
-% is not derivable from the bolt's thread alone. The nut
+% check does not — it takes a supplied shear engagement area, or derives
+% one from the insert catalogue's STI pitch diameter, because an insert's
+% engagement geometry is not derivable from the bolt's thread alone. It
+% does NOT fall back to the manufacturer's rating: that value is the
+% insert's INTERNAL-THREAD allowable and has its own row. The nut
 % and insert checks carry an ultimate/yield pair; a spec-rated ultimate
 % load, when set, CAPS the computed ultimate allowable (lower-of) or
 % stands alone when no area is available. These four rows are a

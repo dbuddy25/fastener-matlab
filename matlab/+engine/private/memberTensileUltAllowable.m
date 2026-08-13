@@ -38,7 +38,7 @@ function a = memberTensileUltAllowable(joint)
 %         (parent-material allowable shear stress), with the rated
 %         pull-out as a lower-of ceiling.
 %       rated basis (no area available by either source) —
-%         EffUlt = RatedUltimateLoad (the manufacturer rated pull-out,
+%         EffUlt = RatedUltimateLoad (the insert's rated INTERNAL-THREAD allowable,
 %         §4.4.1).
 %
 %     TappedHole:
@@ -156,7 +156,7 @@ switch joint.ThreadedMember.Type
 
     case model.ThreadedMemberType.Insert
         a.Mode = "insert pull-out";
-        rating = joint.ThreadedMember.RatedUltimateLoad;   % rated pull-out, lbf (0 = unset)
+        rating = joint.ThreadedMember.RatedUltimateLoad;   % insert INTERNAL-THREAD allowable, lbf (0 = unset)
         if rating > 0
             a.Rating = rating;
         end
@@ -197,16 +197,16 @@ switch joint.ThreadedMember.Type
 
         if isnan(a.As)
             if rating > 0
-                % NASA-STD-5020B §4.4.1 — manufacturer rated pull-out
+                % NASA-STD-5020B §4.4.1 — the insert's rated INTERNAL-THREAD allowable
                 % (spec-rated insert): EffUlt = RatedUltimateLoad
                 a.Basis    = "rated";
                 a.EffUlt   = rating;
                 a.Assessed = true;
             elseif strlength(noAreaReason) > 0
-                a.Reason = noAreaReason + "; and no manufacturer rated pull-out load (ThreadedMember.RatedUltimateLoad)";
+                a.Reason = noAreaReason + "; and no rated insert internal-thread allowable (ThreadedMember.RatedUltimateLoad)";
             else
                 a.Reason = "no shear engagement area (ThreadedMember.ShearEngagementArea) " + ...
-                    "and no manufacturer rated pull-out load (ThreadedMember.RatedUltimateLoad)";
+                    "and no rated insert internal-thread allowable (ThreadedMember.RatedUltimateLoad)";
             end
             return
         end
@@ -215,7 +215,7 @@ switch joint.ThreadedMember.Type
         Fsu = joint.ThreadedMember.Material.Fsu;   % PARENT ultimate shear strength, psi
         if isnan(Fsu)
             a.Reason = "a shear engagement area is available (" + a.AreaSrc + ") but the parent " + ...
-                "ThreadedMember.Material.Fsu is NaN — the rated pull-out, if any, only " + ...
+                "ThreadedMember.Material.Fsu is NaN — the rated internal-thread allowable, if any, only " + ...
                 "CAPS the computed allowable (lower-of) and cannot stand in for it";
             return
         end
@@ -228,12 +228,12 @@ switch joint.ThreadedMember.Type
             if rating < a.AllowUlt
                 a.EffUlt  = rating;
                 a.RatNote = string(sprintf( ...
-                    "rated pull-out %.0f lbf GOVERNS the ultimate allowable (caps computed %.0f lbf, lower-of per 5020B)", ...
+                    "rated internal-thread allowable %.0f lbf GOVERNS (caps computed pull-out %.0f lbf, the lower-of §4.4.1 asks for across the two insert allowables)", ...
                     rating, a.AllowUlt));
             else
                 a.EffUlt  = a.AllowUlt;
                 a.RatNote = string(sprintf( ...
-                    "rated pull-out %.0f lbf not limiting (computed allowable %.0f lbf is lower)", ...
+                    "rated internal-thread allowable %.0f lbf not limiting (computed pull-out %.0f lbf is lower)", ...
                     rating, a.EffUlt));
             end
         else

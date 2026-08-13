@@ -189,7 +189,7 @@ C = [C; {
 "HelicoilParentName"  "Helicoil Parent Name"        "Insert config only: name/label of the part the insert is installed in (cosmetic)."                                                         "—"          "optional"
 "HelicoilParentMaterial" "Helicoil Parent Material" "Insert config only: parent (host) material — library key (parent-thread shear allowable)."                                                 "—"          "Lists!Materials"
 "HelicoilLengthRatio" "Helicoil Length (×D)"        "Insert config only: insert engagement length as a multiple of the bolt nominal diameter (1.5 = 1.5D)."                                     "×D"         "e.g. 1, 1.5, 2"
-"HelicoilRatedLoad"   "Helicoil Rated Load (lbf)"   "Insert config only: manufacturer-rated pull-out load. Acts as a ceiling on the ultimate criterion above the NASA-STD-5020B §4.4.1 parent-material area form (engine.marginInsert), which is always computed from the insert catalogue (StiPitchDiameter) rather than analyst-typed." "lbf" "blank → 0"
+"HelicoilRatedLoad"   "Helicoil Rated Load (lbf)"   "Insert config only: the insert's own INTERNAL-THREAD allowable tensile load, from the insert or procurement specification — the first of the two allowables NASA-STD-5020B §4.4.1 names, which §4.4.1 (p26) requires to come from the spec rather than from thread-stripping analysis. It is NOT a pull-out rating: pull-out from the parent is computed separately (engine.marginInsert) and is not capped by this value, so the lower of the two governs across rows. Blank leaves the insert internal-thread check NotEvaluated." "lbf" "blank → not evaluated"
 "NutFactor"           "Nut Factor (K)"              "Torque-to-preload nut factor K (T = K·D·P), NASA-STD-5020B Eq. 24."                                                                        "—"          "blank → 0.2"
 "Uncertainty"         "Preload Uncertainty (Γ)"     "Preload uncertainty Γ (± fraction) in the min/max preload equations (NASA-STD-5020B Eq. 3/4/5)."                                           "frac"       "blank → 0.25"
 "PreloadLoss"         "Preload Loss (frac)"         "Relaxation/embedment preload loss as a fraction of nominal preload."                                                                       "frac"       "blank → 0.05"
@@ -314,9 +314,10 @@ function s = insertExampleRow()
 %   this row's own Bolt thread size — see data.loadJointLibrary); no
 %   column exists for it, and ThreadedMember.ShearEngagementArea likewise
 %   has no column: engine.marginInsert derives the NASA-STD-5020B Section
-%   4.4.1 parent-material area itself from StiPitchDiameter, with the
-%   rated load acting as a ceiling on the ultimate criterion only -- so
-%   this row exercises the full insert pull-out check end to end, unlike
+%   4.4.1 parent-material area itself from StiPitchDiameter. The rated
+%   load does NOT cap it -- that value is the insert's internal-thread
+%   allowable and is checked on its own row -- so this row exercises the
+%   full insert pull-out check end to end, unlike
 %   sampleNutJointRow's insert-adjacent fields.
 s = struct();
 s.Name = "Example insert joint";
