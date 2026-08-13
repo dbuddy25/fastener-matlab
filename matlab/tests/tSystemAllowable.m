@@ -446,7 +446,11 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             fac = model.Factors();
             tp  = engine.marginTappedParentThread(j, lc, fac, engine.preload(j));
             testCase.verifyFalse(isnan(tp.MS));            % ultimate: evaluated
-            testCase.verifyTrue(isnan(tp.AllowYld));       % yield: no row
+            % The row carries no yield FIELD at all — not a NaN one. That is
+            % the stronger statement and the one that would actually break
+            % if someone added a yield criterion to this row without
+            % revisiting DABJ Example 6-a's pin.
+            testCase.verifyFalse(isfield(tp, "AllowYld"));
         end
 
         function ratedOnlyMemberYieldUnassessedFlagged(testCase)
