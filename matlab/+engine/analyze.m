@@ -19,7 +19,7 @@ function r = analyze(joint, loadCase, factors)
 %       Bearing            engine.marginBearing            NASA TM-106943 Eq. 72-74 (required by 5020B §4.4.2)
 %       Bearing-under-head engine.marginBearingUnderHead   NASA TM-106943 Eq. 74/75 + 5020B Eq. 8 (Pb)
 %       Shear-tearout      engine.marginShearTearout       NASA TM-106943 Eq. 69-71 (required by 5020B §4.4.2)
-%       Bolt-thread shear  engine.marginBoltThreadShear    TM-106943 Eq. 63/64/65, pitch-diameter As = 0.75·pi·E·Le form; Pb per 5020B Eq. 8
+%       Bolt-thread shear  engine.marginBoltThreadShear    TM-106943 Eq. 63/64/65 as printed, As = 5·pi·Le·D_minor,int/8; Pb per 5020B Eq. 8
 %       Nut strength       engine.marginNutStrength        TM-106943 Eq. 76/77 + Eq. 65, same As form, ult/yld pair; spec rating as ultimate ceiling per 5020B §4.4.1 (Nut config only)
 %       Insert internal    engine.marginInsertInternal     Allowable SPECIFIED for the procured insert (ThreadedMember.RatedUltimateLoad), ultimate only, 5020B §4.4.1 p26-27 (Insert config only)
 %       Insert external    engine.marginInsert             Pull-out from the parent: shear-engagement area x parent shear strength, ult/yld pair, 5020B §4.4.1 (Insert config only)
@@ -175,7 +175,7 @@ bh = engine.marginBearingUnderHead(joint, loadCase, factors, p); % NASA TM-10694
 % the preload-included Pb = PpMax+FF·FS·n·phi·PtL only while the gate is
 % NOT assured; once separation before rupture is assured, Pb = FF·FS·PtL
 % (no preload/n·phi — the members carry no load once separated).
-bt = engine.marginBoltThreadShear(joint, loadCase, factors, p);    % TM-106943 Eq. 63 (0.75·pi·E·Le pitch-diameter form) + Eq. 64/65; Pb per 5020B Eq. 8
+bt = engine.marginBoltThreadShear(joint, loadCase, factors, p);    % TM-106943 Eq. 63 as printed (5·pi·Le·D_minor,int/8) + Eq. 64/65; Pb per 5020B Eq. 8
 ns = engine.marginNutStrength(joint, loadCase, factors, p);        % TM-106943 Eq. 76/77 + Eq. 65 (same As form, ult/yld; rating ceiling per 5020B §4.4.1); Nut config only
 ix = engine.marginInsert(joint, loadCase, factors, p);             % INSERT PULL-OUT from the parent: shear-engagement area x parent shear strength, ult/yld (5020B §4.4.1); Insert config only
 ii = engine.marginInsertInternal(joint, loadCase, factors, p);     % INSERT INTERNAL THREADS: the allowable SPECIFIED for the procured insert (5020B §4.4.1, p26); Insert config only

@@ -10,21 +10,59 @@ function r = marginBoltThreadShear(joint, loadCase, factors, preload)
 %   engine.preload. Loads in lbf, lengths in inches, strengths in psi
 %   (see UNITS.md).
 %
-%   AREA FORM (deliberate): the thread-shear area is the pitch-diameter
-%   form
-%       As = 0.75·pi·E·Le
-%   with E = thread pitch diameter (joint.Bolt.PitchDiameter) and
+%   AREA FORM — NASA TM-106943 (Chambers) Eq. 63 AS PRINTED:
+%
+%       As = 5·pi·Le·D_minor,int / 8
+%
+%   TM-106943 p18: "The thread shear area of the bolt is the cylindrical
+%   area formed by the MINOR DIAMETER OF THE MATING INTERNAL THREADS and
+%   the length of thread engagement (ref. 8)."
+%
+%   D_minor,int is the BASIC minor diameter of the mating INTERNAL thread —
+%   the hole the bolt's threads must shear across — computed per ASME B1.1
+%   UN thread geometry from the nominal diameter and pitch:
+%
+%       D_minor,int = D - 2·(5/8)·H = D - 1.08253·p,   H = 0.86602540·p
+%
+%   Basic is also the MINIMUM for an internal thread (the minor diameter
+%   carries a plus tolerance from basic), so this is the conservative pick
+%   of the tolerance band, and it is computed rather than catalogued for
+%   the same reason Bolt.MinorDiameter is (see +data/library.json's bolt
+%   `source` note). NOTE it is NOT joint.Bolt.MinorDiameter: that is the
+%   BOLT's own minor (D - 1.299·p, the external thread root), a smaller
+%   cylinder that is not the surface Eq. 63 describes.
+%
 %   Le = engagement length, resolved by the private helper
 %   resolveEngagementLength: joint.ThreadedMember.EngagementRatio x
 %   Bolt.NominalDiameter when the ratio is set (OVERRIDING EngagementLength
 %   — Detail says which), else the unchanged joint.ThreadedMember.
-%   EngagementLength. This is NASA TM-106943 (Chambers) Eq. 63's external-thread shear area
-%   with a 3/4 coefficient and pitch-diameter substitution (TM's
-%   printed Eq. 63 uses 5/8·pi·d_minor,int·Le; the 3/4·pi coefficient is
-%   TM Eq. 76's internal-thread form). This tool deliberately applies the
-%   SAME 0.75·pi·E·Le form to BOTH sides of the engagement, so the
-%   bolt-external and internal-thread rows are compared on one consistent
-%   area basis. NASA-STD-5020B prints no thread-shear-area equation.
+%   EngagementLength.
+%
+%   ⚠️ THIS ROW USED TO BE ~29% UNCONSERVATIVE, and the reason is worth
+%   keeping. It computed As = 0.75·pi·E·Le on the PITCH diameter — TM
+%   Eq. 76's INTERNAL-thread coefficient and a larger diameter — and
+%   justified it as applying "the SAME form to BOTH sides of the
+%   engagement, so the bolt-external and internal-thread rows are compared
+%   on one consistent area basis."
+%
+%   That rationale does not survive: the substitution runs in OPPOSITE
+%   directions on the two sides. On the internal side, Eq. 76 wants 3/4 on
+%   the MAJOR diameter of the mating external thread, so using the pitch
+%   diameter is CONSERVATIVE. On this, the external side, Eq. 63 wants 5/8
+%   on the MINOR diameter of the mating internal thread, so 3/4 on the
+%   pitch diameter was UNCONSERVATIVE — by ×(0.75/0.625)·(E/D_minor,int)
+%   = ×1.27 on a 3/8-24 (and still ~18% high against the exact
+%   FED-STD-H28 external-thread form). The "consistency" was cosmetic
+%   while the bias was real, and it made analyze()'s worst-margin pick
+%   systematically under-report bolt thread shear as the governing mode.
+%   Found by the 2026-08-13 equation audit; corrected here to the printed
+%   equation. The internal side is unchanged and stays on Eq. 76 — see
+%   memberTensileUltAllowable.
+%
+%   NASA-STD-5020B prints no thread-shear-area equation of its own (full
+%   Eq. 1-87 inventory; Eq. 12/13 are the fastener CROSS-SECTION shear
+%   allowable, a different failure mode), so citing the supplement here is
+%   legitimate per CLAUDE.md's document-hierarchy rule.
 %   Then, per TM-106943 Eq. 64/65:
 %       Pult = Fsu·As            (Eq. 64)
 %       MS   = Pult/Pb - 1       (Eq. 65)
@@ -50,7 +88,7 @@ function r = marginBoltThreadShear(joint, loadCase, factors, preload)
 %       MS      margin of safety (NaN = not evaluated)
 %       Method  string: governing equation citation
 %       Detail  string: the numbers used (or the not-evaluated reason)
-%       As      thread-shear area 0.75·pi·E·Le, in^2 (NaN if inputs missing)
+%       As      thread-shear area 5·pi·Le·D_minor,int/8, in^2 (NaN if missing)
 %       Pult    thread-shear allowable Fsu·As, lbf (NaN if inputs missing)
 %       Pb      design bolt load, lbf (NaN if not computable)
 %
@@ -77,23 +115,30 @@ arguments
     preload  (1,1) struct
 end
 
-method = "TM-106943 Eq. 63 (bolt thread shear) via the As = 0.75·pi·E·Le pitch-diameter form + Eq. 64/65 MS; Pb per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, Pb = FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
+method = "TM-106943 Eq. 63 (bolt thread shear) AS PRINTED — As = 5·pi·Le·D_minor,int/8 on the minor diameter of the mating INTERNAL thread (basic, per ASME B1.1: D_minor,int = D - 1.08253·p) + Eq. 64/65 MS; Pb per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, Pb = FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
 
-E   = joint.Bolt.PitchDiameter;               % thread pitch diameter, in
+D   = joint.Bolt.NominalDiameter;             % nominal thread diameter, in
+tpi = joint.Bolt.ThreadsPerInch;              % threads per inch
 % Le: ratio-or-absolute, single resolution — see resolveEngagementLength
 % (EngagementRatio, when set, OVERRIDES EngagementLength; Note says which).
 rle = resolveEngagementLength(joint);
 Le  = rle.Le;                                 % thread engagement, in
 Fsu = joint.BoltMaterial.Fsu;                 % bolt-material ultimate shear strength, psi
-if isnan(E) || isnan(Le) || isnan(Fsu)
+if isnan(D) || isnan(tpi) || tpi <= 0 || isnan(Le) || isnan(Fsu)
     r = struct("MS", NaN, "Method", method, ...
-        "Detail", "Not evaluated: needs Bolt.PitchDiameter, ThreadedMember.EngagementLength or EngagementRatio x Bolt.NominalDiameter, and BoltMaterial.Fsu (one or more NaN).", ...
+        "Detail", "Not evaluated: needs Bolt.NominalDiameter, Bolt.ThreadsPerInch, ThreadedMember.EngagementLength or EngagementRatio x Bolt.NominalDiameter, and BoltMaterial.Fsu (one or more NaN or non-positive).", ...
         "As", NaN, "Pult", NaN, "Pb", NaN);
     return
 end
 
-% TM-106943 Eq. 63, pitch-diameter form — As = 0.75·pi·E·Le
-As = 0.75 * pi * E * Le;                      % external-thread shear area, in^2
+p = 1 / tpi;                                  % thread pitch, in
+% ASME B1.1 UN thread geometry — D_minor,int = D - 2·(5/8)·H with
+% H = 0.86602540·p, i.e. D_minor,int = D - 1.08253·p. The BASIC (= minimum)
+% minor diameter of the mating INTERNAL thread; see the header for why this
+% is not Bolt.MinorDiameter.
+Dminor = D - 1.08253 * p;                     % internal-thread minor dia, in
+% TM-106943 Eq. 63 — As = 5·pi·Le·D_minor,int / 8
+As = (5/8) * pi * Le * Dminor;                % external-thread shear area, in^2
 % TM-106943 Eq. 64 — Pult = Fsu·As
 Pult = Fsu * As;                              % thread-shear allowable, lbf
 
@@ -112,8 +157,9 @@ end
 % TM-106943 Eq. 65 — MS = Pult/Pb - 1
 MS = Pult / d.Pb - 1;
 
-detail = string(sprintf("E %.4f in, As %.4f in^2, Pult %.0f lbf, Pb %.0f lbf; %s", ...
-    E, As, Pult, d.Pb, rle.Note));
+detail = string(sprintf( ...
+    "D_minor,int %.4f in (= D %.4f - 1.08253·p, p %.5f in), As %.4f in^2, Pult %.0f lbf, Pb %.0f lbf; %s", ...
+    Dminor, D, p, As, Pult, d.Pb, rle.Note));
 if strlength(d.Note) > 0
     detail = detail + "; " + d.Note;
 end

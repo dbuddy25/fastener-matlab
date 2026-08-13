@@ -84,7 +84,7 @@ This is a **living document** — every new check adds a row.
 | 5 | Bearing | TM-106943 Eq. 72–74 (req. 5020B §4.4.2) | 3/8 bolt, 0.320-in Al fitting | DABJ Ex 5-b (allowable only) + hand-calc MS | Pbr 14,760 (book ~14,800); MS +3.584 | ✅ allowable / ✍️ MS | tBearing |
 | 6 | Bearing — under-head | TM-106943 Eq. 75 + Eq. 74 MS; Pb per 5020B Eq. 8, gated on Fig. 8 separation-before-rupture (same gate as row 7-9's Pb) | Ex 8-b geometry, head side; gate ASSURED -> Pb = PtL (no preload/n·phi) | hand-calc | +5.185 (Pb 3,000) | ✍️ | tBearing |
 | 6c| Bearing — under-head (clamped branch) | TM-106943 Eq. 75 + Eq. 74 MS; Pb per 5020B Eq. 8; MS denom = PpMax + FF·FS·n·phi·PtL (5020B §4.4.5 — no FS on preload) | Ex 8-b geometry, head side, φ = 0.3354; gate NOT assured (preload raised) -> Pb = PpMax + n·phi·PtL = 15,503.1 (informational); MS denom(ult) 15,809.991 / MS denom(yield) 15,628.875 | hand-calc | +0.485 (yield governs; ult +0.890) | ✍️ | tBearing |
-| 7 | Bolt-thread shear (pull-out) | TM-106943 Eq. 63–65 basis, As = 0.75·π·E·Le; Pb per 5020B Eq. 8 | Ex 8-b Nut joint; Fig. 8 gate ASSURED — separated Pb (no φ term) | hand-calc | +5.046 (Pult 29,202.5, Pb 4,830) | ✍️ | tThreadShear |
+| 7 | Bolt-thread shear (pull-out) | TM-106943 **Eq. 63 as printed**, As = 5·π·Le·D_minor,int/8 with D_minor,int = D − 1.08253·p (ASME B1.1 basic); Eq. 64/65 MS; Pb per 5020B Eq. 8 | Ex 8-b Nut joint; Fig. 8 gate ASSURED — separated Pb (no φ term) | hand-calc | +3.778 (As 0.242905, Pult 23,076, Pb 4,830) | ✍️ | tThreadShear |
 | 8 | Nut strength | TM-106943 Eq. 76/77 + Eq. 65 basis, As form (nut Fsu) | Ex 8-b Nut joint, soft nut Fsu 60 ksi; Fig. 8 gate ASSURED — separated Pb (no φ term) | hand-calc | +2.819 (Pult 18,443.7, Pb 4,830) | ✍️ | tThreadShear |
 | 9 | Insert — internal/external thread (rated fallback / ultimate ceiling) | Heli-Coil rated pull-out (5020B §4.4.1, spec value); external row folded into the single rating; also caps row 9a's ultimate allowable when set (lower-of) | Insert config, no shear-engagement area resolves, φ = 1 assumed | hand-calc (rating is an ILLUSTRATIVE input, not Heli-Coil-anchored — see Thread-shear method note) | +3.528 (rating 12,949, Pb 2,860) | ✍️ | tThreadShear |
 | 9a| Insert — shear-engagement area (computed, catalogue geometry) | 5020B §4.4.1 (area x parent Fsu/Fsy); TM-106943 Eq. 78/79 basis, As = 0.75·π·D2·(Le−1.125·p) — the −1.125·p term is a DERIVED CONVENTION (NASM33537 §11.1 install-offset midpoint), no equation number; Pb per 5020B Eq. 8 | Insert config, StiPitchDiameter + Le resolve (ShearEngagementArea NaN — it is an API/test seam, not analyst input), φ = 1 assumed | hand-calc arithmetic + external mfr pull-out data bound (135-pt digitized Heli-Coil TB 68-2 check — see note above; not reproducible from this repo alone) | −0.00156 (yield governs; As 0.124805 in², Pult 3,369.73, Pb 2,860 / PbYield 2,500) | ✍️ | tThreadShear |
@@ -223,6 +223,33 @@ This is a **living document** — every new check adds a row.
   screen is not exposed in gui2, so it gates nothing today); recorded in
   that function's header and in `TOOL_DIFFERENCES.md`. Hand-derived pin:
   VALIDATION row 2s, `tSystemAllowable/memberGovernedYieldRuptureBranchHandDerived`.
+
+- **Bolt thread-shear area was ~29% unconservative: CORRECTED.**
+  `engine.marginBoltThreadShear` computed `As = 0.75·π·E·Le` — TM-106943
+  **Eq. 76's INTERNAL-thread** coefficient applied to the **pitch** diameter —
+  while citing Eq. 63, which prints `As = 5·π·Le·D_minor,int/8` on the **minor
+  diameter of the mating internal thread** (TM-106943 p18, verified against the
+  page). Coefficient ×1.200 and diameter ×1.073 compound to **×1.27 on a
+  3/8-24**, and the area was still ~18% high against the exact FED-STD-H28
+  external-thread form.
+
+  **The deviation was declared but its rationale did not hold.** The header
+  justified it as applying "the SAME form to BOTH sides of the engagement… one
+  consistent area basis." But the substitution runs in **opposite directions**:
+  on the internal side Eq. 76 wants 3/4 on the *major* diameter, so pitch
+  diameter is conservative; on the external side Eq. 63 wants 5/8 on the *minor*
+  diameter, so 3/4 on pitch was unconservative. The consistency was cosmetic
+  while the bias was real — and it made `analyze()`'s worst-margin pick
+  systematically under-report bolt thread shear as the governing mode. Nothing
+  in the header stated the direction.
+
+  Now Eq. 63 as printed, with `D_minor,int` computed per ASME B1.1
+  (`D − 1.08253·p`; basic is also the minimum for an internal thread, so it is
+  the conservative end of the tolerance band). **The internal side is
+  untouched** and stays on Eq. 76. Row 7's pin moved +5.046 → **+3.778** — a
+  deliberate rebaseline of a hand-calc pin, not an answer key; DABJ §9 is
+  unaffected (its Nut fixture has no `EngagementLength`, so every thread row is
+  NotEvaluated there). Found by the 2026-08-13 equation audit.
 
 - **Bolt Sizing tension-ultimate: bolt-only defect CLOSED.** `engine.boltSizingSweep`
   used to compute `MS_TensionUlt` from the bolt-only `Ptu_allow = At*Ftu`

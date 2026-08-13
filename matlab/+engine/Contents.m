@@ -126,9 +126,13 @@
 %                      ✍️ Phase 3.3 — exercised through the thread checks
 %                      (tests/tThreadShear.m).
 %   marginBoltThreadShear - Bolt external-thread shear over the engagement,
-%                      the pitch-diameter area form As = 0.75·pi·E·Le (E = pitch
-%                      dia, Le = engagement; TM-106943 Eq. 63 basis) with
-%                      Pult = Fsu·As, MS = Pult/Pb - 1 (Eq. 64/65).
+%                      TM-106943 Eq. 63 AS PRINTED: As = 5·pi·Le·D_minor,int/8
+%                      on the minor diameter of the mating INTERNAL thread
+%                      (D_minor,int = D - 1.08253·p, ASME B1.1 basic), with
+%                      Pult = Fsu·As, MS = Pult/Pb - 1 (Eq. 64/65). It used
+%                      the 0.75·pi·E·Le pitch-diameter form until 2026-08-13,
+%                      which was ~29% UNCONSERVATIVE against the equation it
+%                      cited — see the function header.
 %                      ✍️ Phase 3.3 — hand-derived pin (tests/tThreadShear.m).
 %   marginNutStrength - Nut internal-thread shear (Nut config only), the
 %                      0.75·pi·E·Le area (always computed; a

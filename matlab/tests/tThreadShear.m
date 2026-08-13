@@ -117,8 +117,23 @@ classdef tThreadShear < matlab.unittest.TestCase
             % Direct preload 2,000 lb, Gamma = 0.25, no thermal
             % -> PpMax = 2,500 lb; PtL = 3,000 lb; n = 0.5 (fixture);
             % DABJ default factors FFU = 1.15, FSU = 1.4:
-            %   As   = 0.75*pi*0.3479*0.375 = 0.30740 in^2
-            %   Pult = 95000*0.30740 = 29,202.5 lb          (bolt Fsu)
+            % REBASELINED 2026-08-13 by the equation audit. This pin used
+            % to read As = 0.75*pi*E*Le = 0.30740, Pult 29,202.5, MS
+            % +5.046 -- TM Eq. 76's INTERNAL-thread coefficient on the
+            % PITCH diameter, which is ~27% larger than the equation the
+            % row cites and therefore UNCONSERVATIVE. TM-106943 p18 prints
+            % Eq. 63 on the minor diameter of the mating INTERNAL thread:
+            %   p          = 1/24                      = 0.0416667 in
+            %   D_min,int  = 0.375 - 1.08253*0.0416667 = 0.329895 in
+            %                (ASME B1.1 basic = minimum internal minor)
+            %   As   = (5/8)*pi*0.375*0.329895         = 0.242905 in^2
+            %   Pult = 95000*0.242905 = 23,076.0 lb         (bolt Fsu)
+            % A hand-calc pin, not a published answer key (VALIDATION.md
+            % row 7 is marked hand-derived), so rebaselining is legitimate
+            % -- but it MOVES A SHIPPED MARGIN, deliberately, toward the
+            % printed equation. The NUT side below is untouched: it stays
+            % on Eq. 76's 0.75*pi*E*Le, where the pitch-diameter
+            % substitution is conservative.
             %
             % Fig. 8 GATE (NASA-STD-5020B, engine.boltDesignLoad via
             % separationBeforeRuptureGate): this Example 8-b fixture has a
@@ -136,7 +151,7 @@ classdef tThreadShear < matlab.unittest.TestCase
             %   -> gate ASSURED, so Pb takes the SEPARATED form (no
             %      preload, no n*phi):
             %   Pb = FFU*FSU*PtL = 1.15*1.4*3000 = 4,830 lb
-            %   MS = 29202.5/4830 - 1 = +5.046
+            %   MS = 23076.0/4830 - 1 = +3.778
             c = validation.dabjExample8b();
             j = c.Joint;
             j.Bolt.PitchDiameter = 0.3479;
@@ -151,12 +166,18 @@ classdef tThreadShear < matlab.unittest.TestCase
             p = engine.preload(j);
             testCase.verifyEqual(p.PpMax, 2500, "AbsTol", 1e-9);
             r = engine.marginBoltThreadShear(j, lc, fac, p);
-            testCase.verifyEqual(r.As,   0.30740,  "AbsTol", 1e-4);
-            testCase.verifyEqual(r.Pult, 29202.5,  "RelTol", 0.001);
+            testCase.verifyEqual(r.As,   0.242905, "AbsTol", 1e-5);
+            testCase.verifyEqual(r.Pult, 23076.0,  "RelTol", 0.001);
             testCase.verifyEqual(r.Pb,   4830,     "AbsTol", 1e-9);
-            testCase.verifyEqual(r.MS,   5.046,    "AbsTol", 0.01);
+            testCase.verifyEqual(r.MS,   3.778,    "AbsTol", 0.01);
             testCase.verifySubstring(r.Method, "Eq. 63");
-            testCase.verifySubstring(r.Method, "0.75");
+            testCase.verifySubstring(r.Method, "D_minor,int");
+            % The area must be the EQUATION'S, not the internal-thread
+            % form this row used to borrow. Guard the direction explicitly
+            % so a future "consistency" refactor cannot silently reinflate
+            % it: the pitch-diameter form is ~27% larger here.
+            testCase.verifyLessThan(r.As, 0.75 * pi * 0.3479 * 0.375, ...
+                'Eq. 63 area must stay below the internal-thread form.');
             % Missing engagement length -> NotEvaluated, not a crash
             j2 = j;
             j2.ThreadedMember.EngagementLength = NaN;
