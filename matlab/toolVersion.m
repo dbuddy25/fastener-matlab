@@ -58,6 +58,29 @@ function v = toolVersion()
 %            NASA-STD-5020B assessment: yield and separation under
 %            combined loading (TFSR 11) are required and unimplemented,
 %            and every export says so.
+%     0.5.0  THE THREADED-INSERT PATH, corrected and reachable. Two
+%            NASA-STD-5020B readings landed here, and BOTH MOVE NUMBERS an
+%            analyst may already have reported — read this entry before
+%            comparing a 0.5.0 report against an earlier one.
+%            (a) §4.4.1 names TWO insert allowables and the tool had them
+%            BACKWARDS: it computed pull-out from the parent and printed it
+%            under "Insert internal-thread", while the internal-thread row
+%            — which p26 requires to come from the item's SPECIFIED
+%            strength, not thread-stripping analysis — was never evaluated.
+%            The rows are now the right way round, the pull-out row is no
+%            longer capped by the rating (the rating is the OTHER
+%            allowable), and "the lower value should be used" is applied
+%            across the two rather than hidden inside one. gui2 also could
+%            not reach either check until this line — it never resolved the
+%            insert catalogue — so Heli-Coil joints read differently, and
+%            less optimistically, from here on.
+%            (b) §4.4.2's Pty-allow is the fastening SYSTEM's, not the
+%            bolt's. Eq. 15 and Eq. 17 now take the minimum over the bolt
+%            and the internally threaded part. Magnitudes and attribution
+%            move; the SIGN never did, so no earlier report ever showed a
+%            Pass the standard calls a Fail.
+%            TFSR 11's yield and separation under combined loading remain
+%            required and unimplemented, and every export still says so.
 %
 %   THIS IS NOT THE CASE-FILE FORMAT VERSION, and the two must never be
 %   tied together. gui2.AppState.CaseFormat
@@ -69,5 +92,5 @@ function v = toolVersion()
 %   Consumers: fastenerTool, gui.FastenerApp, gui2.AppState,
 %   report.singleJointReport, report.exportResults.
 
-v = "0.4.0";
+v = "0.5.0";
 end
