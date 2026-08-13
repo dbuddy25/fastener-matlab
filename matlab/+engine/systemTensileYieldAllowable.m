@@ -113,8 +113,9 @@ ya = memberTensileYldAllowable(joint);
 if ya.Assessed
     note = ya.AreaSrc + string(sprintf(", yield allowable %.0f lbf", ya.AllowYld));
     if strlength(ya.FsyBasis) > 0
-        % The von Mises fallback NASA-STD-5020B §4.4.2 p30 sanctions must
-        % stay visible: a derived Fsy is never allowed to pass as test data.
+        % The von Mises fallback must stay visible: a derived Fsy is never
+        % allowed to pass as test data. §4.4.2 p31 sanctions deriving it;
+        % NASA-STD-5020B Eq. 63 (p66, A.8) prints Fsy = Fty/sqrt(3).
         note = note + " (" + ya.FsyBasis + ")";
     end
     modes(end+1) = modeEntry(ya.Mode, ya.AllowYld, true, note);

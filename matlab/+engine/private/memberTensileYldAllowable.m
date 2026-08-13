@@ -18,15 +18,33 @@ function a = memberTensileYldAllowable(joint)
 %   which area source governed — the same extraction, for the same reason, as
 %   engine.applyTemperatures and engine.jointPatternTotals.
 %
-%   NO EQUATION NUMBER IS CLAIMED. NASA-STD-5020B §4.4.2 requires yield design
-%   loads but prints no thread-shear yield equation; the area form is the
-%   ultimate one evaluated against the member's shear yield strength. §4.4.2
-%   (p30) does sanction getting there: "Because shear yield strength is not a
+%   WHICH HALF HAS AN EQUATION NUMBER, AND WHICH DOES NOT. This header used
+%   to say flatly "NO EQUATION NUMBER IS CLAIMED", which was half wrong and
+%   was corrected by the 2026-08-13 equation audit:
+%
+%     - The AREA form genuinely has none. NASA-STD-5020B §4.4.2 requires
+%       yield design loads but prints no thread-shear yield equation, and
+%       5020B prints no thread-shear-AREA equation anywhere (verified
+%       against the full Eq. 1-87 inventory; Eq. 12/13 are the fastener
+%       cross-section shear allowable, a different failure mode). The area
+%       here is the ULTIMATE one (memberTensileUltAllowable, TM-106943
+%       Eq. 76/79) evaluated against shear yield instead of shear ultimate.
+%       That substitution is this tool's own criterion — no number claimed.
+%
+%     - The Fsy DOES have one: NASA-STD-5020B Eq. 63 (p66, Appendix A.8),
+%       Fsy = Fty/sqrt(3), which the standard derives from Eq. 61 + Eq. 62.
+%       engine.shearYieldStrength cites it; do not restate it as
+%       unnumbered.
+%
+%   The authority to derive Fsy at all is §4.4.2, p31 (NOT p30 — the page
+%   this header used to give): "Because shear yield strength is not a
 %   standard material property, when evaluating the margin of safety under
-%   yield design loads ... a failure theory (e.g., von Mises or Tresca) should
-%   be used that is compatible with the concept of tensile yield strength" —
-%   which is exactly engine.shearYieldStrength's Fty/sqrt(3), and its Basis
-%   string must stay visible in whatever Detail the caller writes.
+%   yield design loads and performing combined loads analysis, the normal
+%   and shear components of stress should be transformed into principal
+%   stresses; and a failure theory (e.g., von Mises or Tresca) should be
+%   used that is compatible with the concept of tensile yield strength."
+%   engine.shearYieldStrength's Basis string must stay visible in whatever
+%   Detail the caller writes, so a derived Fsy never passes as test data.
 %
 %   THREE RULES, each mirroring a convention the rows already follow:
 %
@@ -53,7 +71,7 @@ function a = memberTensileYldAllowable(joint)
 %       configuration the parent IS the internally threaded part, and there is
 %       no reading in which it is an element at ultimate and not at yield. The
 %       obstacle that caused the deferral — shear yield not being a standard
-%       property — is the one p30 answers. So the system minimum assesses it,
+%       property — is the one p31 answers. So the system minimum assesses it,
 %       with the same area form and the same von Mises fallback the insert
 %       already uses.
 %

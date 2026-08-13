@@ -58,7 +58,7 @@ function r = marginNutStrength(joint, loadCase, factors, preload)
 %                     PbYield = PpMax + FFY·FSY·n·phi·PtL
 %       both in the TM-106943 Eq. 65 MS form (MS = allowable/load − 1),
 %       with Fsu/Fsy of joint.ThreadedMember.Material (the NUT material).
-%       A NaN Fsy is estimated as Fty/sqrt(3) (von Mises) via
+%       A NaN Fsy is estimated as Fty/sqrt(3) (NASA-STD-5020B Eq. 63) via
 %       engine.shearYieldStrength — the estimate is ALWAYS flagged in
 %       Detail so a constitutive assumption never masquerades as test data.
 %

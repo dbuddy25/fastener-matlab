@@ -55,12 +55,18 @@ function r = marginTappedParentThread(joint, loadCase, factors, preload)
 %       threaded part such as a nut or an insert, and the clamped parts".
 %       "Such as" is illustrative, and in a tapped configuration the parent
 %       IS the internally threaded part — so a yield criterion DOES belong.
-%     - p30 removes the obstacle that caused the deferral in the first
+%     - p31 removes the obstacle that caused the deferral in the first
 %       place: "Because shear yield strength is not a standard material
 %       property, when evaluating the margin of safety under yield design
-%       loads ... a failure theory (e.g., von Mises or Tresca) should be
-%       used that is compatible with the concept of tensile yield
-%       strength" — exactly engine.shearYieldStrength's Fty/sqrt(3).
+%       loads and performing combined loads analysis, the normal and shear
+%       components of stress should be transformed into principal
+%       stresses; and a failure theory (e.g., von Mises or Tresca) should
+%       be used that is compatible with the concept of tensile yield
+%       strength." And the standard does not stop at sanctioning it —
+%       NASA-STD-5020B Eq. 63 (p66, Appendix A.8) PRINTS the result,
+%       Fsy = Fty/sqrt(3), which is exactly engine.shearYieldStrength's
+%       estimate. (This header cited "p30" until the 2026-08-13 equation
+%       audit; the passage is on p31.)
 %   So the tapped-hole yield mode IS assessed, as As*Fsy_parent, but in
 %   engine.systemTensileYieldAllowable's minimum (via
 %   memberTensileYldAllowable) — which is where §4.4.2's Pty_allow is

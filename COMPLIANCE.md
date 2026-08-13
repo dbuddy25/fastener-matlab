@@ -64,6 +64,19 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 
 **Counts** — IMPLEMENTED 9 · PARTIAL 1 · OMITTED-BY-DECISION 3 · ABSENT 5 · OUT-OF-SCOPE 14.
 
+> **Shear yield strength — citation corrected 2026-08-13.** `engine.shearYieldStrength`
+> derives `Fsy = Fty/√3` when a material carries no measured `Fsy`. It cited only
+> "the von Mises criterion" as prose, and three call sites stated that no equation
+> number was claimed. **NASA-STD-5020B prints it as Eq. 63** (p66, Appendix A.8),
+> derived there from Eq. 61 and Eq. 62 — so under this project's own hierarchy rule
+> ("where 5020B provides the equation, cite 5020B") the tool was citing prose while
+> the standard printed the equation. Now cited everywhere, and pinned by
+> `tSystemAllowable/derivedFsyFlagSurvivesIntoSystemNote`. Two riders: the §4.4.2
+> passage that *authorises* deriving `Fsy` is on **p31**, not p30 as several headers
+> said; and 5020B offers **Tresca equally**, which would give `Fty/2` (~13% lower,
+> more conservative) — the tool takes von Mises because that is the branch 5020B
+> itself derives and prints, and the choice is now recorded rather than implicit.
+
 ---
 
 ## Inputs the analyst is trusted to substantiate

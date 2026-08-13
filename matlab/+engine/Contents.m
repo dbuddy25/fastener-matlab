@@ -169,7 +169,8 @@
 %                      MS = rating/Pb - 1.
 %                      ✍️ hand-derived pins (tests/tThreadShear.m).
 %   shearYieldStrength - Material Fsy resolver: supplied value, or the von
-%                      Mises estimate Fsy = Fty/sqrt(3) with a Basis string
+%                      Mises estimate Fsy = Fty/sqrt(3) (NASA-STD-5020B
+%                      Eq. 63, p66 A.8) with a Basis string
 %                      the margin Detail must surface (estimates never look
 %                      like test data).
 %                      ✍️ Hand-derived pins (tests/tThreadShear.m).

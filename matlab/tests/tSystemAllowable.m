@@ -392,8 +392,8 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             % interface insertGovernsSystem checks at ultimate. #10-32
             % Heli-Coil fixture: shear engagement area 0.1121 in^2, parent
             % Al 6061-T651 with Fty = 36,000 psi and NO Fsy, so Fsy comes
-            % from the von Mises estimate NASA-STD-5020B §4.4.2 p30
-            % sanctions; bolt rated ultimate 15,200 lbf. HAND-DERIVED:
+            % from the von Mises estimate NASA-STD-5020B §4.4.2 p31
+            % sanctions and Eq. 63 prints; bolt rated ultimate 15,200 lbf. HAND-DERIVED:
             %   Fsy    = 36,000/sqrt(3)                 = 20,784.61 psi
             %   insert = 0.1121 * 20,784.61             = 2,329.95 lbf
             %   bolt yield (Eq. 18)                     = 11,400 lbf
@@ -508,8 +508,9 @@ classdef tSystemAllowable < matlab.unittest.TestCase
 
         function derivedFsyFlagSurvivesIntoSystemNote(testCase)
             % A DERIVED Fsy must never pass as test data. engine.shearYieldStrength
-            % flags the von Mises estimate NASA-STD-5020B §4.4.2 p30
-            % sanctions, and that flag has to survive two hops — through
+            % flags the von Mises estimate — NASA-STD-5020B §4.4.2 p31
+            % directs a failure theory and Eq. 63 (p66, A.8) prints the
+            % result — and that flag has to survive two hops — through
             % memberTensileYldAllowable into the system Note, and from
             % there into the Tension-Yield row's Detail — or an analyst
             % reads an estimated allowable as a measured one.
@@ -517,6 +518,11 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             s = engine.systemTensileYieldAllowable(j);
             testCase.verifySubstring(s.Note, "von Mises");
             testCase.verifySubstring(s.Note, "Fty/sqrt(3)");
+            % The EQUATION NUMBER must travel too. 5020B prints this as
+            % Eq. 63 (p66, Appendix A.8); the engine used to cite prose and
+            % state that no equation number was claimed, which is the
+            % document-hierarchy violation the 2026-08-13 audit found.
+            testCase.verifySubstring(s.Note, "NASA-STD-5020B Eq. 63");
 
             lc  = model.LoadCase(Name="derived Fsy trace", ...
                 BoltTensileLimitLoad=200, BoltShearLimitLoad=0);
