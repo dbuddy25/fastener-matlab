@@ -626,6 +626,34 @@ classdef DefinedJointsPage < gui2.Page
             b = obj.DeleteButton;
         end
 
+        function answerDelete(obj, name, choice)
+            %ANSWERDELETE  Answer the Delete confirm, as a user would.
+            %   name is the joint the dialog was raised for; choice is
+            %   'Delete' or 'Cancel'.
+            %
+            %   WHY A SEAM RATHER THAN A TEST THAT ANSWERS THE DIALOG.
+            %   matlab.uitest cannot press a button inside a uiconfirm, so
+            %   a test can only get as far as "the confirm opened". That
+            %   leaves the branch that ACTUALLY DELETES unexercised — and a
+            %   test that presses Delete and then asserts the library still
+            %   holds every joint passes just as happily when the button is
+            %   wired to nothing at all. For a DESTRUCTIVE action that is
+            %   the wrong thing to leave untested.
+            %
+            %   It calls the REAL production continuation with the field
+            %   uiconfirm's CloseFcn actually delivers (evt.SelectedOption,
+            %   a character vector matching one of Options). The name is
+            %   passed the same way onDelete captures it, so the
+            %   case-insensitive lookup in onDeleteAnswered is exercised
+            %   too rather than bypassed.
+            arguments
+                obj
+                name   (1,1) string
+                choice (1,1) string
+            end
+            obj.onDeleteAnswered(name, struct('SelectedOption', char(choice)));
+        end
+
         function l = countLabel(obj)
             l = obj.CountLabel;
         end

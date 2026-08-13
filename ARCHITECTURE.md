@@ -348,7 +348,7 @@ export (Phase 3). The GUI wraps exactly these calls later.
 
 ```
 matlab/
-├── fastenerTool.m   ✅ entry-point stub (prints version)   — Phase 1
+├── fastenerTool.m   ✅ entry point: version banner + gui2.launch
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
 ├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginTensionYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); `analyzeBulk` (3.5c) — the bulk orchestrator; `runBulk` (3.6) — the one-call headless workflow; `runWorkbook` (Step 2c) — the single-workbook entry point (shared settings-apply helper with `runBulk`)
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b — Step 2a joint-table layout); global settings (`loadSettings` — temps + factors, Step 2a); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields sheets, Step 2b); generic model↔struct serialization (`toStruct`/`fromStruct`, 3.7); case save/load (`saveCase`/`loadCase`, 3.7); factor presets (`factorPresets`/`factorPreset`/`saveFactorPreset`, 3.7)

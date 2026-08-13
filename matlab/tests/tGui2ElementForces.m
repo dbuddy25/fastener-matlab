@@ -188,17 +188,41 @@ classdef tGui2ElementForces < matlab.uitest.TestCase
         function aNegativeScaleIsRefused(testCase)
             % Reversibility is a flag, not a sign: a negative scale would
             % flip every component instead of taking |axial|.
+            %
+            % ESTABLISH A NON-DEFAULT VALUE FIRST. Asserting Scale == 1
+            % after the rejected edit proved nothing on its own: 1 is also
+            % the untouched class default, so an editCell that silently
+            % no-op'd for an unrelated reason passed the same test. Commit
+            % 2 first, prove it took, then reject -1 and require the 2 to
+            % still be there — the same shape tGui2SetupPages uses for its
+            % own input guards.
             testCase.loadForces();
+            testCase.Page.editCell(1, 2, 2);
+            testCase.assertEqual( ...
+                testCase.App.State.Elements.Cases(1).Scale, 2, ...
+                'The edit path must be live before a refusal means anything.');
+
             testCase.Page.editCell(1, 2, -1);
+
             testCase.verifyEqual( ...
-                testCase.App.State.Elements.Cases(1).Scale, 1);
+                testCase.App.State.Elements.Cases(1).Scale, 2, ...
+                'A refused edit must leave the previous value, not reset it.');
         end
 
         function aNonFiniteScaleIsRefused(testCase)
+            % Same non-default-first shape as aNegativeScaleIsRefused, and
+            % for the same reason.
             testCase.loadForces();
+            testCase.Page.editCell(1, 2, 2);
+            testCase.assertEqual( ...
+                testCase.App.State.Elements.Cases(1).Scale, 2, ...
+                'The edit path must be live before a refusal means anything.');
+
             testCase.Page.editCell(1, 2, Inf);
+
             testCase.verifyEqual( ...
-                testCase.App.State.Elements.Cases(1).Scale, 1);
+                testCase.App.State.Elements.Cases(1).Scale, 2, ...
+                'A refused edit must leave the previous value, not reset it.');
         end
 
         function selectingARowNeverDirtiesTheCase(testCase)
@@ -491,6 +515,36 @@ classdef tGui2ElementForces < matlab.uitest.TestCase
             testCase.press(testCase.Page.clearAllButton());
             testCase.verifyEqual(numel(testCase.App.State.Elements.Rows), 3, ...
                 'An unanswered confirm must not have cleared anything.');
+        end
+
+        function answeringClearAllActuallyClears(testCase)
+            % THE OTHER HALF of clearAllAsksFirst: that test cannot tell a
+            % correctly-gated Clear All from a button wired to nothing,
+            % because both leave the rows in place. This drives the real
+            % continuation and asserts the rows are gone.
+            testCase.loadForces();
+            testCase.assertEqual(numel(testCase.App.State.Elements.Rows), 3, ...
+                'Fixture must start with rows, or this proves nothing.');
+            testCase.App.State.clearDirty();
+
+            testCase.Page.answerClearAll("Clear All");
+
+            testCase.verifyEmpty(testCase.App.State.Elements.Rows);
+            testCase.verifyTrue(testCase.App.State.IsDirty, ...
+                'commit() must mark the case dirty.');
+        end
+
+        function cancellingClearAllLeavesTheForcesAlone(testCase)
+            % The same continuation with the other answer, so the guard in
+            % onClearAllAnswered is exercised rather than assumed.
+            testCase.loadForces();
+            testCase.App.State.clearDirty();
+
+            testCase.Page.answerClearAll("Cancel");
+
+            testCase.verifyEqual(numel(testCase.App.State.Elements.Rows), 3);
+            testCase.verifyFalse(testCase.App.State.IsDirty, ...
+                'Cancelling must not dirty the case.');
         end
 
         function forcesSurviveTheCaseFile(testCase)

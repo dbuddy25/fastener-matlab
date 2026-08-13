@@ -676,6 +676,40 @@ classdef tGui2ElementMapping < matlab.uitest.TestCase
                 'An unanswered confirm must not have cleared anything.');
         end
 
+        function answeringClearAllActuallyClears(testCase)
+            % THE OTHER HALF of clearAllAsksFirst, and the reason that test
+            % is not enough on its own: "nothing was cleared" is equally
+            % true when the button is wired to nothing at all. This drives
+            % the real continuation and asserts the work HAPPENED.
+            testCase.setLibrary("Bracket");
+            testCase.setMapping(["1001", "1002"], "Bracket");
+            testCase.assertEqual(numel(testCase.App.State.Mapping), 2, ...
+                'Fixture must start with rows, or this proves nothing.');
+            testCase.App.State.clearDirty();
+
+            testCase.Page.answerClearAll("Clear All");
+
+            testCase.verifyEmpty(testCase.App.State.Mapping);
+            testCase.verifyTrue(testCase.App.State.IsDirty, ...
+                'commit() must mark the case dirty.');
+        end
+
+        function cancellingClearAllLeavesTheMappingAlone(testCase)
+            % Cancel runs the SAME continuation with the other answer, so
+            % the guard inside onClearAllAnswered is exercised rather than
+            % assumed. Without this, a continuation that ignored the answer
+            % entirely would still pass the test above.
+            testCase.setLibrary("Bracket");
+            testCase.setMapping(["1001", "1002"], "Bracket");
+            testCase.App.State.clearDirty();
+
+            testCase.Page.answerClearAll("Cancel");
+
+            testCase.verifyEqual(numel(testCase.App.State.Mapping), 2);
+            testCase.verifyFalse(testCase.App.State.IsDirty, ...
+                'Cancelling must not dirty the case.');
+        end
+
         function thePatternIdSurvivesTheCaseFile(testCase)
             testCase.setLibrary("Bracket");
             testCase.App.State.Mapping = ...

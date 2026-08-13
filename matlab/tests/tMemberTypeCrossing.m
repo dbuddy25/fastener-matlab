@@ -77,25 +77,23 @@ classdef tMemberTypeCrossing < matlab.unittest.TestCase
             end
         end
 
-        function bothEngagementFieldsAreClearedTogether(testCase)
-            % Documents the ACTION a crossing implies, which the predicate
-            % itself does not encode: callers clear BOTH properties, not
-            % just the one belonging to the outgoing mode. Clearing only
-            % the outgoing one would leave the incoming mode's property
-            % holding a value the analyst entered for a different meaning,
-            % and resolveEngagementLength is type-agnostic -- a ratio wins
-            % whenever it is set, whatever the member type.
-            tm = model.ThreadedMember( ...
-                Type = model.ThreadedMemberType.Insert, ...
-                EngagementRatio = 1.5, EngagementLength = 0.30);
-            testCase.verifyTrue(gui.FastenerApp.engagementModeCrossed( ...
-                tm.Type, model.ThreadedMemberType.Nut));
-            tm.Type              = model.ThreadedMemberType.Nut;
-            tm.EngagementRatio   = NaN;
-            tm.EngagementLength  = NaN;
-            testCase.verifyTrue(isnan(tm.EngagementRatio));
-            testCase.verifyTrue(isnan(tm.EngagementLength), ...
-                "Clearing only the outgoing mode's property strands the other");
-        end
+        % REMOVED: bothEngagementFieldsAreClearedTogether.
+        %   It set tm.EngagementRatio and tm.EngagementLength to NaN BY
+        %   HAND and then asserted they were NaN. It never called the
+        %   production code that does the clearing, so it would have passed
+        %   just as well with that code deleted — a comment wearing a
+        %   test's clothes. The predicate above is what this file can
+        %   honestly cover without a uifigure.
+        %
+        %   The ACTION now has a real test, and against the CURRENT
+        %   implementation rather than this one: gui2 does not clear on a
+        %   crossing at all, it derives the pair on every commit
+        %   (gui2.JointConfigPage.commitJoint sets exactly one of
+        %   EngagementRatio/EngagementLength and NaNs the other, keyed on
+        %   the member type). See
+        %   tGui2JointConfig/crossingEngagementModesDoesNotStrandTheOldValue,
+        %   which types a ratio, switches type, and asserts the stranded
+        %   value is gone — driving the real callback end to end.
+
     end
 end

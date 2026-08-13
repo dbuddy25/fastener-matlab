@@ -390,6 +390,51 @@ classdef tGui2DefinedJoints < matlab.uitest.TestCase
             testCase.verifyEqual(numel(testCase.App.State.JointLibrary), 2, ...
                 'An unanswered confirm must not have deleted anything.');
         end
+
+        function answeringDeleteActuallyRemovesTheJoint(testCase)
+            % THE OTHER HALF of deleteAsksBeforeRemovingAnything. That test
+            % asserts the library is untouched, which is equally true of a
+            % Delete button wired to nothing — and leaving the branch that
+            % DESTROYS user work untested is the wrong side to be wrong on.
+            % Deletes "a" to exercise onDeleteAnswered's case-INSENSITIVE
+            % lookup (strcmpi) rather than bypassing it with an exact name.
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryNamed(["A", "B"]);
+            testCase.App.State.clearDirty();
+
+            testCase.Page.answerDelete("a", "Delete");
+
+            testCase.verifyEqual( ...
+                string({testCase.App.State.JointLibrary.Name}), "B", ...
+                'The named joint must be gone and the other one kept.');
+            testCase.verifyTrue(testCase.App.State.IsDirty);
+        end
+
+        function cancellingDeleteLeavesTheLibraryAlone(testCase)
+            % The same continuation with the other answer, so the guard in
+            % onDeleteAnswered is exercised rather than assumed.
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryNamed(["A", "B"]);
+            testCase.App.State.clearDirty();
+
+            testCase.Page.answerDelete("A", "Cancel");
+
+            testCase.verifyEqual(numel(testCase.App.State.JointLibrary), 2);
+            testCase.verifyFalse(testCase.App.State.IsDirty, ...
+                'Cancelling must not dirty the case.');
+        end
+
+        function deletingAJointThatIsNoLongerThereIsNotAnError(testCase)
+            % onDeleteAnswered looks the name up again rather than trusting
+            % an index, because the library can change between raising the
+            % dialog and answering it. Prove the miss path returns quietly.
+            testCase.App.State.JointLibrary = ...
+                tGui2DefinedJoints.libraryNamed(["A", "B"]);
+
+            testCase.Page.answerDelete("Gone", "Delete");
+
+            testCase.verifyEqual(numel(testCase.App.State.JointLibrary), 2);
+        end
     end
 
     methods (Static, Access = private)

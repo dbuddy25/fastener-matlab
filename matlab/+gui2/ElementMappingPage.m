@@ -1676,6 +1676,31 @@ classdef ElementMappingPage < gui2.Page
             b = obj.ClearAllButton;
         end
 
+        function answerClearAll(obj, choice)
+            %ANSWERCLEARALL  Answer the Clear All confirm, as a user would.
+            %   choice is 'Clear All' or 'Cancel'.
+            %
+        %   WHY A SEAM RATHER THAN A TEST THAT ANSWERS THE DIALOG.
+        %   matlab.uitest cannot press a button inside a uiconfirm, so a
+        %   test can only get as far as "the confirm opened". That leaves
+        %   the branch that DOES THE WORK unexercised — and a test that
+        %   presses Clear All and then asserts nothing was cleared passes
+        %   just as happily when the button is wired to nothing at all.
+        %   That is exactly the vacuous shape this file's other guards
+        %   exist to avoid, so the continuation gets a seam of its own.
+        %
+        %   It calls the REAL production continuation with the field
+        %   uiconfirm's CloseFcn actually delivers (evt.SelectedOption, a
+        %   character vector matching one of Options). Nothing is
+        %   re-implemented here: pass 'Cancel' and the same code that runs
+        %   when a user cancels runs, so both branches are reachable.
+            arguments
+                obj
+                choice (1,1) string
+            end
+            obj.onClearAllAnswered(struct('SelectedOption', char(choice)));
+        end
+
         function d = assignDropDown(obj)
             d = obj.AssignDropDown;
         end

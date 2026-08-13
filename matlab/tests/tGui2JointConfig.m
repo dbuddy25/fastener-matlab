@@ -313,6 +313,51 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 testCase.App.State.Joint.ThreadedMember.StiPitchDiameter));
         end
 
+        function crossingEngagementModesDoesNotStrandTheOldValue(testCase)
+            % engine.resolveEngagementLength is TYPE-AGNOSTIC — a ratio
+            % wins whenever it is set, whatever the member type — so a
+            % ratio typed for an Insert that survived a switch to Nut would
+            % be read as this member's geometry and silently govern the
+            % thread-shear area. commitJoint prevents it structurally by
+            % setting exactly one of the pair and NaNing the other on EVERY
+            % commit, keyed on the type.
+            %
+            % Drives the real dropdown callback. The predicate this used to
+            % be checked through (gui.FastenerApp.engagementModeCrossed) is
+            % a +gui concept with no gui2 equivalent; see the note in
+            % tests/tMemberTypeCrossing.m for what was removed and why.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.engagementRatioField(), '1.5');
+            testCase.assertEqual( ...
+                testCase.App.State.Joint.ThreadedMember.EngagementRatio, 1.5, ...
+                'Fixture must actually hold a ratio, or this proves nothing.');
+
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+
+            testCase.verifyTrue(isnan( ...
+                testCase.App.State.Joint.ThreadedMember.EngagementRatio), ...
+                'The Insert ratio must not survive into a Nut.');
+        end
+
+        function crossingBackDoesNotStrandTheEngagementLength(testCase)
+            % The other direction, for the same reason: a length typed for
+            % a Nut must not be left on an Insert, whose engagement is
+            % expressed as a multiple of diameter.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.type(p.engagementLengthField(), '0.30');
+            testCase.assertEqual( ...
+                testCase.App.State.Joint.ThreadedMember.EngagementLength, 0.30, ...
+                'Fixture must actually hold a length, or this proves nothing.');
+
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+
+            testCase.verifyTrue(isnan( ...
+                testCase.App.State.Joint.ThreadedMember.EngagementLength), ...
+                'The Nut length must not survive into an Insert.');
+        end
+
         function theMemberRatedLoadReachesTheModel(testCase)
             % 5020B Sec. 4.4.1 caps the computed allowable at the load
             % rating, and until now that rating was reachable from the bulk

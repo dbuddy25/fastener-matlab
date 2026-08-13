@@ -24,14 +24,19 @@ analysis tool, deployable as a standalone Windows executable.
 
 ```
 matlab/
-├── fastenerTool.m     entry point (Phase 1 stub — prints version)
+├── fastenerTool.m     entry point — prints the version banner and opens the GUI (`+gui2`)
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
 ├── +engine/           analysis math — the core (Phases 2–3); bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook, Step 2c)
 ├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`, Phase 3.7); factor presets (`factorPreset`/`saveFactorPreset`, Phase 3.7)
 ├── +report/           XLSX export (`report.exportResults`, Phase 3.6); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
-├── +gui/              programmatic uifigure app (`gui.launch`) — a thin shell over
-│                      the engine, deliberately plain .m rather than a binary
-│                      .mlapp so it diffs in git (Phase 4)
+├── +gui/              FIRST-PASS programmatic uifigure app (`gui.launch`) — a thin
+│                      shell over the engine, deliberately plain .m rather than a
+│                      binary .mlapp so it diffs in git (Phase 4). LEGACY: kept only
+│                      until its Materials & Hardware DB tab is ported, then deleted
+├── +gui2/             the rebuilt GUI (`gui2.launch`, GUI2_SPEC.md) — what
+│                      `fastenerTool` opens. Adds the bulk workflow, the joint
+│                      cross-section view and the gate/allowables panels; nothing
+│                      in it may call into `+gui`
 ├── examples/          runnable reference scripts (`run_bulk_example.m`)
 └── tests/             validation + smoke tests (checked vs the worked example)
 ```
@@ -41,8 +46,10 @@ matlab/
 Open MATLAB, point the Current Folder at `matlab/`, then in the Command Window:
 
 ```matlab
-fastenerTool                 % prints the version banner
-runtests("tests")            % runs the smoke + model tests (should be all green)
+fastenerTool                 % version banner, then opens the GUI
+runTests                     % the FULL suite -- note the capital T. `runtests`
+                             % (lowercase) is MATLAB's own and skips this
+                             % project's end-of-run failure summary
 
 % construct a joint (Phase 1 acceptance):
 b = model.Bolt(Designation="#10-32 UNF", NominalDiameter=0.190, ...
