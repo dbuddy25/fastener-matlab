@@ -307,6 +307,277 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             testCase.verifySubstring(r.Decision, "INCOMPLETE");
         end
 
+        % ---- The YIELD system allowable (5020B §4.4.2) --------------------
+        % engine.systemTensileYieldAllowable is the yield counterpart of
+        % everything above: the minimum over the bolt's yield allowable and
+        % the internally threaded member's As*Fsy, which is the quantity
+        % NASA-STD-5020B p30 names when it introduces Eq. 17 ("the fastening
+        % SYSTEM'S allowable yield tensile load"). engine.marginTensionYield
+        % consumes it in Eq. 15 and Eq. 17, exactly as marginTensionUlt
+        % consumes the ultimate one in Eq. 6 and Eq. 10.
+
+        function dabjYieldSystemBoltGovernedButIncomplete(testCase)
+            % THE REGRESSION GUARD FOR THIS CHANGE, and the executable form
+            % of the argument that let it ship: DABJ §9's +0.63 must not
+            % move, and the reason it cannot is worth pinning, not just
+            % asserting.
+            %
+            % validation.dabjSection9 builds a Nut with
+            % RatedUltimateLoad = 15,200 lbf and NO EngagementLength. A spec
+            % rating is an ULTIMATE quantity and carries no yield
+            % information (memberTensileYldAllowable rule 2 —
+            % engine.marginNutStrength has treated a flat rating as
+            % ultimate-only all along), so the nut has an ultimate mode and
+            % NO yield mode. The yield minimum therefore degenerates to the
+            % bolt's rated 11,400 lbf and Eq. 15 still gives
+            %   MS = 11,400/6,987.5 - 1 = +0.63   (Solutions-18)
+            %
+            % But it is INCOMPLETE, and that is a real finding rather than
+            % bookkeeping: on this joint the tool genuinely does not know
+            % the nut's yield capability, and before this change nothing
+            % said so. Pin the flag alongside the number.
+            c = validation.dabjSection9();
+            s = engine.systemTensileYieldAllowable(c.Joint);
+            testCase.verifyEqual(s.PtyAllow, 11400, "AbsTol", 1e-9);
+            testCase.verifyEqual(s.GoverningMode, "bolt yield");
+            testCase.verifyFalse(s.Complete);
+            testCase.verifyEqual(s.Unassessed, "nut thread shear");
+            testCase.verifySubstring(s.Note, "INCOMPLETE");
+            testCase.verifySubstring(s.Note, "OPTIMISTIC");
+            testCase.verifySubstring(s.Note, "a rating carries no yield information");
+
+            % ... and the answer key itself, through the full run.
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            testCase.verifyEqual(row(r, "Tension-Yield").MS, ...
+                c.Expected.MS_BoltYield, "AbsTol", c.Tol.MarginAbsTol);   % +0.63
+            testCase.verifySubstring(row(r, "Tension-Yield").Method, "Eq. 15");
+            testCase.verifySubstring(row(r, "Tension-Yield").Detail, "INCOMPLETE");
+        end
+
+        function nutYieldGovernsSystem(testCase)
+            % A nut softer than the bolt sets the system YIELD allowable,
+            % the same way nutAreaGovernsSystem shows it setting the
+            % ultimate one. Ex 8-b + Phase 3.3 thread inputs (E = 0.3479 in,
+            % Le = 0.375 in), nut Fsu = 30,000 psi with Fsy SUPPLIED as
+            % 0.9*Fsu = 27,000 psi (softNutJoint's convention — so this pin
+            % does not depend on the von Mises estimate); bolt rated
+            % ultimate 15,200 lbf, no rated yield. HAND-DERIVED:
+            %   As        = 0.75*pi*0.3479*0.375        = 0.3073950 in^2
+            %   nut yield = 27,000 * 0.3073950          = 8,299.67 lbf
+            %   bolt yield (5020B Eq. 18 on the RATED ultimate)
+            %             = (120,000/160,000)*15,200    = 11,400 lbf
+            %   system    = min(11,400, 8,299.67)       = 8,299.67 lbf
+            j = tSystemAllowable.softNutJoint(30000, 0, 15200);
+            s = engine.systemTensileYieldAllowable(j);
+            testCase.verifyEqual(s.PtyAllow, 27000*0.75*pi*0.3479*0.375, ...
+                "RelTol", 1e-9);
+            testCase.verifyEqual(s.PtyAllow, 8299.67, "AbsTol", 0.5);
+            testCase.verifyEqual(s.GoverningMode, "nut thread shear");
+            testCase.verifyTrue(s.Complete);
+            % Supplied, NOT estimated — the basis must say which.
+            testCase.verifySubstring(s.Note, "supplied");
+
+            % NOT capped by the rating: a rating is an ultimate quantity.
+            % 4,000 lbf would halve the ultimate allowable and must leave
+            % the yield allowable exactly where it was.
+            j2 = tSystemAllowable.softNutJoint(30000, 4000, 15200);
+            s2 = engine.systemTensileYieldAllowable(j2);
+            testCase.verifyEqual(s2.PtyAllow, s.PtyAllow, "AbsTol", 1e-9);
+            testCase.verifyEqual(engine.systemTensileAllowable(j2).PtuAllow, ...
+                4000, "AbsTol", 1e-9);     % the ultimate side IS capped
+        end
+
+        function insertYieldGovernsSystem(testCase)
+            % Insert pull-out at YIELD, from the PARENT material — the same
+            % interface insertGovernsSystem checks at ultimate. #10-32
+            % Heli-Coil fixture: shear engagement area 0.1121 in^2, parent
+            % Al 6061-T651 with Fty = 36,000 psi and NO Fsy, so Fsy comes
+            % from the von Mises estimate NASA-STD-5020B §4.4.2 p30
+            % sanctions; bolt rated ultimate 15,200 lbf. HAND-DERIVED:
+            %   Fsy    = 36,000/sqrt(3)                 = 20,784.61 psi
+            %   insert = 0.1121 * 20,784.61             = 2,329.95 lbf
+            %   bolt yield (Eq. 18)                     = 11,400 lbf
+            %   system = min(11,400, 2,329.95)          = 2,329.95 lbf
+            j = tSystemAllowable.insertJoint( ...
+                model.Material(Name="Al 6061-T651", Ftu=42000, Fty=36000, ...
+                    Fsu=27000), 0.1121, 12949, 15200);
+            s = engine.systemTensileYieldAllowable(j);
+            testCase.verifyEqual(s.PtyAllow, 0.1121*36000/sqrt(3), "RelTol", 1e-9);
+            testCase.verifyEqual(s.PtyAllow, 2329.95, "AbsTol", 0.5);
+            testCase.verifyEqual(s.GoverningMode, "insert pull-out");
+            testCase.verifyTrue(s.Complete);
+        end
+
+        function tappedHoleYieldModeAssessed(testCase)
+            % THE DEFERRED DECISION, NOW SETTLED. engine.marginTappedParentThread
+            % has always been ultimate-only, with a header note saying a
+            % yield criterion for tapped parent threads was an open question.
+            % NASA-STD-5020B §4.4.2 answers it: p29 requires the yield
+            % assessment to address "all elements of the threaded fastening
+            % system, including the fastener, the internally threaded part
+            % such as a nut or an insert" — illustrative, and in a tapped
+            % configuration the parent IS that part — and p30 removes the
+            % obstacle that caused the deferral by sanctioning a failure
+            % theory for shear yield. So the mode is assessed HERE, in the
+            % system minimum, while the Pb-based ROW stays ultimate-only so
+            % DABJ Example 6-a's pin is untouched.
+            %
+            % DABJ Example 6-a geometry: #10-32 (E = 0.1697 in) fully
+            % engaged in 0.250-in 6061-T651 (Fty = 36,000, no Fsy).
+            % HAND-DERIVED:
+            %   As     = 0.75*pi*0.1697*0.250           = 0.0999616 in^2
+            %   Fsy    = 36,000/sqrt(3)                 = 20,784.61 psi
+            %   parent = 0.0999616 * 20,784.61          = 2,077.66 lbf
+            %   bolt yield (Eq. 18 on the rated 15,200) = 11,400 lbf
+            %   system = min(11,400, 2,077.66)          = 2,077.66 lbf
+            j = tSystemAllowable.tappedJoint(15200);
+            s = engine.systemTensileYieldAllowable(j);
+            testCase.verifyEqual(s.PtyAllow, ...
+                0.75*pi*0.1697*0.250 * 36000/sqrt(3), "RelTol", 1e-9);
+            testCase.verifyEqual(s.PtyAllow, 2077.66, "AbsTol", 0.5);
+            testCase.verifyEqual(s.GoverningMode, "tapped-hole parent thread");
+            testCase.verifyTrue(s.Complete);
+
+            % The ROW is still ultimate-only, deliberately — the yield
+            % criterion lives in the minimum above, not as a second margin
+            % on the tapped-hole check. Guard both halves of that split.
+            lc  = model.LoadCase(Name="tapped yield split", ...
+                BoltTensileLimitLoad=200, BoltShearLimitLoad=0);
+            fac = model.Factors();
+            tp  = engine.marginTappedParentThread(j, lc, fac, engine.preload(j));
+            testCase.verifyFalse(isnan(tp.MS));            % ultimate: evaluated
+            testCase.verifyTrue(isnan(tp.AllowYld));       % yield: no row
+        end
+
+        function ratedOnlyMemberYieldUnassessedFlagged(testCase)
+            % A member assessable ONLY through its rating has an ultimate
+            % mode and NO yield mode — the doctrine that keeps DABJ §9
+            % intact, checked here on a non-DABJ fixture so the two cannot
+            % be confused. Strip the engagement length from the soft-nut
+            % joint and give it a rating: the ultimate side assesses at
+            % 9,000 lbf, the yield side reports nothing and says why.
+            j = tSystemAllowable.softNutJoint(30000, 9000, 15200);
+            j.ThreadedMember.EngagementLength = NaN;
+
+            u = engine.systemTensileAllowable(j);
+            testCase.verifyEqual(u.PtuAllow, 9000, "AbsTol", 1e-9);
+            testCase.verifyTrue(u.Complete);            % ultimate: complete
+
+            s = engine.systemTensileYieldAllowable(j);
+            testCase.verifyEqual(s.PtyAllow, 11400, "AbsTol", 1e-9);  % bolt Eq. 18
+            testCase.verifyEqual(s.GoverningMode, "bolt yield");
+            testCase.verifyFalse(s.Complete);           % yield: incomplete
+            testCase.verifyEqual(s.Unassessed, "nut thread shear");
+            testCase.verifySubstring(s.Note, "a rating carries no yield information");
+        end
+
+        function noYieldModeAtAllNotEvaluated(testCase)
+            % Neither mode assessable -> PtyAllow NaN and Tension-Yield
+            % NotEvaluated, with BOTH reasons in Detail rather than a
+            % throw. Ex 8-b with the tensile stress area stripped (so the
+            % Eq. 18 fallback has no Ptu_allow to work from) and no rating;
+            % its Nut has no engagement length either.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.Bolt.TensileStressArea = NaN;
+            j.PreloadSpec = model.PreloadSpec( ...
+                Method         = model.PreloadMethod.DirectPreload, ...
+                NominalPreload = 2000, ...
+                Uncertainty    = 0);
+
+            s = engine.systemTensileYieldAllowable(j);
+            testCase.verifyTrue(isnan(s.PtyAllow));
+            testCase.verifyEqual(s.GoverningMode, "");
+            testCase.verifyFalse(s.Complete);
+            testCase.verifyEqual(numel(s.Unassessed), 2);
+
+            lc  = model.LoadCase(Name="no yield mode at all", ...
+                BoltTensileLimitLoad=2000, BoltShearLimitLoad=0);
+            fac = model.Factors();
+            r = engine.marginTensionYield(j, engine.preload(j), ...
+                engine.designLoads(lc, fac));
+            testCase.verifyTrue(isnan(r.MS));
+            testCase.verifyTrue(isnan(r.SystemAllowable));
+            testCase.verifySubstring(r.Detail, "bolt yield");
+            testCase.verifySubstring(r.Detail, "nut thread shear");
+        end
+
+        function derivedFsyFlagSurvivesIntoSystemNote(testCase)
+            % A DERIVED Fsy must never pass as test data. engine.shearYieldStrength
+            % flags the von Mises estimate NASA-STD-5020B §4.4.2 p30
+            % sanctions, and that flag has to survive two hops — through
+            % memberTensileYldAllowable into the system Note, and from
+            % there into the Tension-Yield row's Detail — or an analyst
+            % reads an estimated allowable as a measured one.
+            j = tSystemAllowable.tappedJoint(15200);   % parent has Fty, no Fsy
+            s = engine.systemTensileYieldAllowable(j);
+            testCase.verifySubstring(s.Note, "von Mises");
+            testCase.verifySubstring(s.Note, "Fty/sqrt(3)");
+
+            lc  = model.LoadCase(Name="derived Fsy trace", ...
+                BoltTensileLimitLoad=200, BoltShearLimitLoad=0);
+            fac = model.Factors();
+            r = engine.marginTensionYield(j, engine.preload(j), ...
+                engine.designLoads(lc, fac));
+            testCase.verifySubstring(r.Detail, "von Mises");
+        end
+
+        function memberGovernedYieldRuptureBranchHandDerived(testCase)
+            % THE PIN THAT SHOWS THE CORRECTION MATTERS — Eq. 16/17 with a
+            % MEMBER-governed Pty_allow, the case min() over the per-mode
+            % rows provably cannot reproduce (those rows divide by
+            % boltDesignLoad's Pb; Eq. 17 subtracts PpMax first and divides
+            % by n*phi, a different function of the same allowable).
+            %
+            % Ex 8-b geometry, so phi comes from the real stiffness path
+            % (phi = 0.3354, n = 0.5 — the same chain
+            % tests/tStiffness.m boltYieldRuptureBranch derives). Nut
+            % Fsu = 20,000 psi, Fsy SUPPLIED = 18,000 psi (softNutJoint's
+            % 0.9*Fsu); bolt rated ultimate 10,000 and rated yield 9,000;
+            % direct preload 5,000 with zero uncertainty, PtL = 2,000.
+            % HAND-DERIVED:
+            %   As         = 0.75*pi*0.3479*0.375      = 0.3073950 in^2
+            %   nut ult    = 20,000 * 0.3073950        = 6,147.90 lbf
+            %   system Ptu = min(10,000, 6,147.90)     = 6,147.90 lbf
+            %   Fig. 8 gate: PpMax 5,000 > 0.75*6,147.90 = 4,610.93
+            %                -> NOT assured, so Eq. 16/17 governs
+            %   nut yield  = 18,000 * 0.3073950        = 5,533.11 lbf
+            %   system Pty = min(9,000 bolt, 5,533.11) = 5,533.11 lbf
+            %   P'ty = (5,533.11 - 5,000)/(0.5*0.3354) = 3,178.95 lbf (Eq. 17)
+            %   Pty  = FSY*FFY*PtL = 1.25*1.0*2,000    = 2,500 lbf
+            %   MS   = 3,178.95/2,500 - 1              = +0.2716    (Eq. 16)
+            % The bolt-only allowable this row used before would have given
+            % P'ty = (9,000 - 5,000)/0.1677 = 23,851 and MS = +8.54 — the
+            % same SIGN, a different order of magnitude, and the wrong part
+            % named as the limit.
+            j = tSystemAllowable.softNutJoint(20000, 0, 10000);
+            j.BoltRatedYieldLoad = 9000;
+            j.PreloadSpec = model.PreloadSpec( ...
+                Method         = model.PreloadMethod.DirectPreload, ...
+                NominalPreload = 5000, ...
+                Uncertainty    = 0);          % PpMax = 5,000 exactly
+            lc  = model.LoadCase(Name="member-governed yield rupture branch", ...
+                BoltTensileLimitLoad=2000, BoltShearLimitLoad=0);
+            fac = model.Factors();            % DABJ defaults: FSY 1.25, FFY 1.0
+
+            s = engine.systemTensileYieldAllowable(j);
+            testCase.verifyEqual(s.PtyAllow, 18000*0.75*pi*0.3479*0.375, ...
+                "RelTol", 1e-9);
+            testCase.verifyEqual(s.GoverningMode, "nut thread shear");
+
+            r = engine.marginTensionYield(j, engine.preload(j), ...
+                engine.designLoads(lc, fac));
+            testCase.verifyFalse(r.SeparationBeforeYield);
+            testCase.verifySubstring(r.Method, "Eq. 16");
+            testCase.verifyEqual(r.MS, 0.2716, "AbsTol", 0.01);
+            testCase.verifyEqual(r.SystemAllowable, s.PtyAllow, "AbsTol", 1e-9);
+            % Detail must name WHICH part is the limit — the whole point of
+            % carrying the system Note through.
+            testCase.verifySubstring(r.Detail, "nut thread shear");
+            % And it is emphatically not the bolt-only answer.
+            testCase.verifyLessThan(r.MS, 1);
+        end
+
         function noAllowableAtAllStaysNotEvaluated(testCase)
             % TRUE unavailable case: no rating AND no At (so the derived
             % fallback cannot be formed either) AND no member mode ->

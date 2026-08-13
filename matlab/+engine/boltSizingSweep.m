@@ -188,16 +188,28 @@ function T = boltSizingSweep(bolts, material, PtL, PsL, factors, shearPlane, opt
 %       even though the bolt-only number alone would have shown a Pass;
 %       see tests/tBoltSizing.m nutGovernsBelowBoltFlipsPassToFail.
 %
-%   Tension-YIELD, SHEAR, and the Eq. 20-23 INTERACTION gate are
-%   DELIBERATELY UNCHANGED by all of the above — they stay bolt-only in
-%   every case, exactly mirroring the real per-check engine functions:
-%   engine.marginTensionYield always uses the BOLT's own Eq. 18 allowable
-%   (never engine.systemTensileAllowable — see that function's header),
-%   and engine.marginInteraction likewise "deliberately uses the BOLT's
-%   own allowable, not the system minimum" (see that function's header).
-%   This screen mirrors both choices rather than inventing a different
-%   rule, so nothing here can disagree with engine.analyze about WHICH
-%   checks are system-governed and which are bolt-only.
+%   SHEAR and the Eq. 20-23 INTERACTION gate are DELIBERATELY UNCHANGED by
+%   all of the above — they stay bolt-only in every case, mirroring
+%   engine.marginInteraction, which "deliberately uses the BOLT's own
+%   allowable, not the system minimum" (see that function's header).
+%
+%   ⚠️ Tension-YIELD IS A KNOWN, ACCEPTED DIVERGENCE — no longer a mirror.
+%   MS_TensionYield below stays bolt-only (At*Fty, NASA-STD-5020B Eq. 18),
+%   but engine.marginTensionYield now takes Pty_allow from
+%   engine.systemTensileYieldAllowable — the §4.4.2 system minimum over the
+%   bolt AND the internally threaded part, which is the quantity p30 names
+%   when it introduces Eq. 17. So this screen can Pass a size on yield that
+%   a full engine.analyze run then fails on a nut/insert-governed
+%   Pty_allow, exactly the trap the Tension-ULTIMATE path above was
+%   reworked to close.
+%
+%   IT IS LEFT DIVERGENT ON PURPOSE, not overlooked. Closing it means
+%   resolving each candidate size's member and calling the yield system
+%   allowable per row, the same rework Tension-Ultimate got; this screen is
+%   not exposed in gui2 (GUI2_SPEC §3 dropped the page), so the divergence
+%   gates nothing today, and the decision was to leave the tool alone until
+%   there is a caller that needs it. Anyone adding one must close this
+%   first. TOOL_DIFFERENCES.md carries the same record.
 %
 %   Pty_allow/MS_TensionYield (always bolt-only, unaffected by threaded-
 %   member context):
@@ -482,9 +494,14 @@ for i = 1:n
     PtuAllowBoltOnly = b.TensileStressArea * Ftu;
     % Pty_allow = At * Fty -- NASA-STD-5020B Eq. 18, Pty_allow =
     % (Fty/Ftu)*Ptu_allow, reduces to At*Fty because Ptu_allow(bolt-only)
-    % above is itself At*Ftu (boltTensileAllowable). ALWAYS bolt-only --
-    % engine.marginTensionYield never consults engine.systemTensileAllowable
-    % (see that function's header), so neither does this row.
+    % above is itself At*Ftu (boltTensileAllowable). BOLT-ONLY, and that is
+    % now a DIVERGENCE from engine.marginTensionYield rather than a mirror
+    % of it: that function takes Pty_allow from
+    % engine.systemTensileYieldAllowable (the §4.4.2 minimum over the bolt
+    % and the internally threaded part). See the ⚠️ paragraph in this
+    % file's header for why the divergence is accepted and what closing it
+    % would take -- do not "fix" this line in isolation, the fix is the
+    % per-row member resolution the Tension-Ultimate path already does.
     PtyAllow = b.TensileStressArea * Fty;
 
     % ---- Resolve a threaded member for THIS bolt size (if requested) -----

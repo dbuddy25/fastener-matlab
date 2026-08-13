@@ -461,8 +461,10 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %     have reported for this exact bolt/load pair)
             %   Pty = FSY*FFY*PtL = 1.25*1.0*3,000             = 3,750 lbf
             %   PtyAllowBolt = At*Fty = 0.03637*120,000         = 4,364.4 lbf
-            %   MS_TensionYield (ALWAYS bolt-only, per marginTensionYield's
-            %     own rule) = 4,364.4/3,750 - 1                = +0.163840
+            %   MS_TensionYield (ALWAYS bolt-only in this SCREEN -- an
+            %     accepted divergence from marginTensionYield, which now
+            %     uses the §4.4.2 system minimum; see boltSizingSweep's
+            %     header) = 4,364.4/3,750 - 1                  = +0.163840
             %   MinorArea = pi/4*0.2036^2                       = 0.03255708 in^2
             %   Psu = FSU*FFU*PsL = 1.4*1.15*300                = 483 lbf
             %   PsuAllow = 93,400*0.03255708                    = 3,040.831 lbf

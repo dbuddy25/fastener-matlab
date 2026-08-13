@@ -133,6 +133,15 @@ The yield counterpart is a deliberate conservatism, not a §4.4.1 formula: §4.4
 requires yield design loads but prints no pull-out equation. It is labelled as
 such in `marginInsert`'s `Method` string.
 
+**And it now also feeds the system yield allowable.** The same `As·Fsy` is mode 2
+of `engine.systemTensileYieldAllowable`, which `engine.marginTensionYield` uses as
+`Pty-allow` in Eq. 15 and Eq. 17 — the quantity 5020B p30 names when it introduces
+Eq. 17 ("the fastening **system's** allowable yield tensile load") and p29 scopes
+("all elements of the threaded fastening system"). Shared through
+`memberTensileYldAllowable`, so the pull-out ROW and the system minimum cannot
+disagree about the number, the area source, or whether `Fsy` was supplied or
+derived.
+
 ### 2.2 Shear yield strength exists
 An earlier revision carried no shear yield property at all, so **every**
 shear-family check was ultimate-only.
@@ -140,6 +149,40 @@ shear-family check was ultimate-only.
 `Fsy` is now a material property. When absent the engine derives `Fsy = Fty/√3`
 (von Mises) **and says so in the margin's `Method` string**, so a margin resting
 on a constitutive assumption is distinguishable from one resting on test data.
+
+### 2.3 Tapped-hole yield: assessed in the system minimum, not as a row
+`engine.marginTappedParentThread` carried a note saying whether a yield criterion
+belongs on tapped parent threads "is an open decision that has been deliberately
+deferred." §4.4.2 settles it in both directions at once. p29 requires the yield
+assessment to address "all elements of the threaded fastening system, including
+the fastener, the internally threaded part such as a nut or an insert" — "such as"
+is illustrative, and in a tapped configuration the parent IS the internally
+threaded part. p30 removes the obstacle that caused the deferral: "**Because shear
+yield strength is not a standard material property**, when evaluating the margin of
+safety under yield design loads… a failure theory (e.g., von Mises or Tresca)
+should be used" — exactly `engine.shearYieldStrength`'s `Fty/√3`.
+
+So the tapped-hole yield mode IS assessed, as `As·Fsy_parent`, inside
+`engine.systemTensileYieldAllowable` — where §4.4.2's `Pty-allow` is actually
+consumed — and NOT as a second margin on the tapped-hole row. Keeping the row
+ultimate-only leaves DABJ Example 6-a's pin exactly where the answer key put it,
+and avoids inventing a `Pb`-based yield criterion the standard never asks for.
+Printing a yield MS on that row is a separate decision; the allowable already
+exists, only the row is missing.
+
+### 2.4 Bolt Sizing screens yield bolt-only — a KNOWN divergence
+`engine.boltSizingSweep`'s `MS_TensionYield` is `At·Fty` (5020B Eq. 18), bolt-only,
+unconditionally. `engine.marginTensionYield` now takes `Pty-allow` from the §4.4.2
+system minimum. So the screen can Pass a size on yield that a full
+`engine.analyze()` run then fails on a nut- or insert-governed `Pty-allow` —
+exactly the trap the tension-ULTIMATE path of that same function was reworked to
+close (VALIDATION.md, "Bolt Sizing tension-ultimate: bolt-only defect CLOSED").
+
+Left divergent on purpose, not overlooked. Closing it means resolving each
+candidate size's own member and calling the yield system allowable per row — the
+same rework tension-ultimate got. The screen is not exposed in gui2 (`GUI2_SPEC`
+§3 dropped the page), so the divergence gates nothing today. **Anyone adding a
+caller must close this first.**
 
 ---
 

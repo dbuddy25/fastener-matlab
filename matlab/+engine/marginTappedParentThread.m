@@ -45,12 +45,30 @@ function r = marginTappedParentThread(joint, loadCase, factors, preload)
 %   6061-T651); see VALIDATION.md (Margin checks, row 14) for the
 %   area/allowable agreement and the un-knocked-vs-DABJ's-knockdown note.
 %
-%   ULTIMATE-ONLY (deliberate gap, not an oversight): unlike the insert
-%   pull-out check (engine.marginInsert), which carries a parent-material
-%   ultimate/yield pair per NASA-STD-5020B §4.4.1, this tapped-hole check
-%   has NO yield counterpart — whether a yield criterion belongs on tapped
-%   parent threads at all is an open decision that has been deliberately
-%   deferred. Do not add one without that decision.
+%   THIS ROW IS ULTIMATE-ONLY, and that is now a scoped choice rather than
+%   a deferred question. It used to read: "whether a yield criterion
+%   belongs on tapped parent threads at all is an open decision that has
+%   been deliberately deferred." NASA-STD-5020B §4.4.2 settled it, both
+%   ways at once:
+%     - p29 requires the yield assessment to "address all elements of the
+%       threaded fastening system, including the fastener, the internally
+%       threaded part such as a nut or an insert, and the clamped parts".
+%       "Such as" is illustrative, and in a tapped configuration the parent
+%       IS the internally threaded part — so a yield criterion DOES belong.
+%     - p30 removes the obstacle that caused the deferral in the first
+%       place: "Because shear yield strength is not a standard material
+%       property, when evaluating the margin of safety under yield design
+%       loads ... a failure theory (e.g., von Mises or Tresca) should be
+%       used that is compatible with the concept of tensile yield
+%       strength" — exactly engine.shearYieldStrength's Fty/sqrt(3).
+%   So the tapped-hole yield mode IS assessed, as As*Fsy_parent, but in
+%   engine.systemTensileYieldAllowable's minimum (via
+%   memberTensileYldAllowable) — which is where §4.4.2's Pty_allow is
+%   consumed — and NOT as a second margin on THIS row. Keeping the row
+%   ultimate-only leaves DABJ Example 6-a's pin exactly where the answer
+%   key put it, and avoids inventing a Pb-based yield criterion the
+%   standard never asks for. If you want a yield MS printed here, that is a
+%   new decision; the allowable already exists, so only the row is missing.
 %
 %   NotEvaluated (MS = NaN) when the configuration is not a tapped hole,
 %   when PitchDiameter / the resolved Le (EngagementLength or

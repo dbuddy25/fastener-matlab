@@ -37,7 +37,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 6 | 4.3.2 | Nominal preload substantiated by 6-set test program | OUT-OF-SCOPE | Test program; torque/nut factor are trusted inputs |
 | 7 | 4.3.3 | Preload variation Γ per Table 3 | OMITTED-BY-DECISION | Γ comes from the procedure's torque spec — see below |
 | 8 | 4.4.1 | Ultimate design loads, µ = 0 in analysis | IMPLEMENTED | `engine.designLoads`, `engine.marginTensionUlt` |
-| 9 | 4.4.2 | Yield design loads | IMPLEMENTED | `engine.marginTensionYield`, Eq. 15/16/17, Eq. 18 |
+| 9 | 4.4.2 | Yield design loads | IMPLEMENTED | `engine.marginTensionYield`, Eq. 15/16/17, Eq. 18; `Pty-allow` is the FASTENING-SYSTEM minimum (`engine.systemTensileYieldAllowable`) per p30's wording of Eq. 17 and p29's "all elements" scope, not the bolt's alone |
 | 10 | 4.4.3 | Separation loads | IMPLEMENTED | `engine.marginSeparation`, Eq. 19 |
 | 11 | 4.4.4 | Combination of loads — **incl. bending** | **PARTIAL** — ultimate interaction implemented; **yield and separation under combined loading absent** | `engine.marginInteraction` + `engine/private/boltBendingStress`; see below |
 | 12 | 4.4.5 | Preload included when rupture precedes separation | IMPLEMENTED | `separationBeforeRuptureGate`, `boltDesignLoad` |

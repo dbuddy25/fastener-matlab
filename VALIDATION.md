@@ -77,7 +77,8 @@ This is a **living document** — every new check adds a row.
 | 1 | Tension — ultimate (separation branch) | 5020B Eq. 6 | through-bolt, nf=4, sep assured | DABJ §9 | +0.69 | ✅ | tDabjCase |
 | 1r| Tension — ultimate (rupture branch) | 5020B Eq. 10 | high preload, gate fails | hand-calc | +2.704 | ✍️ | tStiffness |
 | 2 | Tension — yield (assured) | 5020B Eq. 15 | through-bolt | DABJ §9 | +0.63 | ✅ | tDabjCase |
-| 2r| Tension — yield (rupture branch, yield before separation) | 5020B Eq. 16/17 | high preload, gate fails (same Fig. 8 gate as row 1r) | hand-calc | +1.386 | ✍️ | tStiffness |
+| 2r| Tension — yield (rupture branch, yield before separation) | 5020B Eq. 16/17 | high preload, gate fails (same Fig. 8 gate as row 1r); bolt governs the system Pty-allow | hand-calc | +1.386 | ✍️ | tStiffness |
+| 2s| Tension — yield, MEMBER-governed system allowable | 5020B Eq. 16/17 with Pty-allow from §4.4.2's system minimum (`engine.systemTensileYieldAllowable`) | Ex 8-b geometry (φ = 0.3354, n = 0.5), nut Fsy 18,000 psi supplied, As = 0.3073950 in² → nut yield 5,533.11 lbf below the bolt's rated 9,000; PpMax 5,000, PtL 2,000 | hand-calc | +0.2716 (P'ty 3,178.95) | ✍️ | tSystemAllowable |
 | 3 | Shear — ultimate | 5020B Eq. 12/13/14 | body-in-shear | DABJ §9 | +3.18 | ✅ | tDabjCase |
 | 4 | Shear — tearout | TM-106943 Eq. 69–71 (req. 5020B §4.4.2) | single layer, e/D = 2.0; caution path e/D < 1.5 | hand-calc | +3.584 (Pult 14,760) | ✍️ | tBearing |
 | 5 | Bearing | TM-106943 Eq. 72–74 (req. 5020B §4.4.2) | 3/8 bolt, 0.320-in Al fitting | DABJ Ex 5-b (allowable only) + hand-calc MS | Pbr 14,760 (book ~14,800); MS +3.584 | ✅ allowable / ✍️ MS | tBearing |
@@ -178,6 +179,51 @@ This is a **living document** — every new check adds a row.
   `tests/tBoltSizing.m`, including a case where the interaction gate alone
   flips an otherwise-all-passing bolt size to Fail, with the reason surfaced
   in that row's `Notes` column so the rejection is never unexplained.
+- **Tension-yield system allowable: bolt-only defect CLOSED.**
+  `engine.marginTensionYield` used the BOLT's yield allowable in both Eq. 15
+  and Eq. 17. NASA-STD-5020B p30 defines Eq. 17's term as "the fastening
+  **system's** allowable yield tensile load", and §4.4.2 p29 scopes the
+  yield assessment to "all elements of the threaded fastening system,
+  including the fastener, the internally threaded part such as a nut or an
+  insert, and the clamped parts". The ultimate side had this right since
+  `engine.systemTensileAllowable`; there was simply no yield counterpart.
+  New `engine.systemTensileYieldAllowable` takes the minimum over bolt
+  yield and the member's `As·Fsy` (`memberTensileYldAllowable`, extracted
+  first as a behaviour-preserving step), and `marginTensionYield` consumes
+  it in both equations.
+
+  **Severity: wrong magnitudes and wrong attribution, never a wrong
+  verdict.** With member allowable `A`, `P = PpMax`, `x = n·φ·FFY·FSY·PtL`,
+  the per-mode member row gives `A/(P+x) − 1` and Eq. 17 gives
+  `(A−P)/x − 1`. Eq. 17 exceeds the row exactly when `A ≥ P + x` — i.e.
+  exactly when the row already passes — so below zero the ordering reverses
+  and above zero it does not; the SIGN never differs. No margin ever
+  reported Pass where the standard says Fail. That is also why `min()` over
+  the per-mode rows could never have substituted for this: the two forms are
+  different functions of the same allowable, not the same function of
+  different ones.
+
+  **Two rules fell out of it, both from §4.4.2 rather than inference.**
+  (a) A spec-RATED nut or insert has NO yield mode — a rating is an ultimate
+  quantity and carries no yield information — so the minimum degenerates to
+  the bolt's and is flagged INCOMPLETE / OPTIMISTIC rather than implying the
+  member was checked. This is what keeps DABJ §9's +0.63 exactly where the
+  answer key put it (`tSystemAllowable/dabjYieldSystemBoltGovernedButIncomplete`
+  pins the number AND the flag). (b) A TAPPED HOLE does get a yield mode
+  here: p29's "all elements" governs and p30's sanction of a failure theory
+  ("because shear yield strength is not a standard material property…")
+  removes the obstacle that had `engine.marginTappedParentThread` deferring
+  the question. The Pb-based tapped-hole ROW stays ultimate-only, so DABJ
+  Example 6-a's pin is untouched.
+
+  **Accepted divergence:** `engine.boltSizingSweep`'s `MS_TensionYield`
+  stays bolt-only, so that screen can Pass a size on yield that a full
+  `analyze()` then fails on a member-governed `Pty_allow` — the same trap
+  the tension-ULTIMATE rework above closed. Left open deliberately (the
+  screen is not exposed in gui2, so it gates nothing today); recorded in
+  that function's header and in `TOOL_DIFFERENCES.md`. Hand-derived pin:
+  VALIDATION row 2s, `tSystemAllowable/memberGovernedYieldRuptureBranchHandDerived`.
+
 - **Bolt Sizing tension-ultimate: bolt-only defect CLOSED.** `engine.boltSizingSweep`
   used to compute `MS_TensionUlt` from the bolt-only `Ptu_allow = At*Ftu`
   unconditionally, so a bolt size could Pass this screen and then FAIL
@@ -191,10 +237,12 @@ This is a **living document** — every new check adds a row.
   function `engine.marginTensionUlt` calls, so the two can never disagree.
   A new `TensionUltBasis` column states, per row, which allowable governed
   (`"Bolt-only (...)"` or `"System (<mode> governs)"`) — the table itself
-  now says so, not just this function's header. Tension-yield, shear, and
-  the Eq. 20-23 interaction gate are UNCHANGED (always bolt-only), mirroring
-  `engine.marginTensionYield` / `engine.marginInteraction`'s own deliberate
-  bolt-only rules. Hand-derived pins in `tests/tBoltSizing.m`:
+  now says so, not just this function's header. Shear and the Eq. 20-23
+  interaction gate are UNCHANGED (always bolt-only), mirroring
+  `engine.marginInteraction`'s own deliberate bolt-only rule.
+  **Tension-yield in this screen is now a KNOWN DIVERGENCE, not a mirror** —
+  see the §4.4.2 entry below; the screen stays bolt-only while
+  `engine.marginTensionYield` moved to the system minimum. Hand-derived pins in `tests/tBoltSizing.m`:
   `nutGovernsBelowBoltFlipsPassToFail` (NAS1351 1/4-28 + the shipped
   NAS1291C4M nut — bolt-only would show `MS_TensionUlt = +0.204803`, the
   nut's 4,580 lbf rating actually governs and the system value is

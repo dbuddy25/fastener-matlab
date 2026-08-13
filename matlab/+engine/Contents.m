@@ -30,14 +30,29 @@
 %   marginSeparation - Joint-separation margin, min preload vs separation
 %                      load (NASA-STD-5020B Eq. 19).
 %                      ✅ Phase 2.6 — validated against DABJ §9 (+0.16).
-%   marginTensionYield - Bolt yield margin, gated on the SAME Fig. 8
+%   marginTensionYield - Yield-tension margin, gated on the SAME Fig. 8
 %                      separation-before-rupture decision as marginTensionUlt:
 %                      Eq. 15 (assured) or Eq. 16/17 (not assured, needs
-%                      phi from engine.stiffness); Pty-allow falls back to
-%                      Eq. 18 (Fty/Ftu)*Ptu_allow when unrated
-%                      (boltTensileAllowable).
+%                      phi from engine.stiffness). Pty-allow is the
+%                      FASTENING-SYSTEM allowable
+%                      (systemTensileYieldAllowable, 5020B §4.4.2) in both
+%                      equations, mirroring marginTensionUlt; the bolt's own
+%                      Eq. 18 (Fty/Ftu)*Ptu_allow fallback is mode 1 of that
+%                      minimum (boltTensileAllowable).
 %                      ✅ Phase 2.6 — validated against DABJ §9 (+0.63);
 %                      ✍️ Eq. 16/17 branch hand-derived (tests/tStiffness.m).
+%   systemTensileYieldAllowable - The fastening system's allowable YIELD
+%                      tensile load (NASA-STD-5020B §4.4.2; the term p30
+%                      names when introducing Eq. 17): minimum over bolt
+%                      yield (spec rating, else the Eq. 18 estimate) and the
+%                      internal-thread member's As*Fsy
+%                      (memberTensileYldAllowable). Same shape and same
+%                      incomplete-assessment contract as
+%                      systemTensileAllowable — and it fires more often
+%                      here, because a spec-RATED nut or insert carries no
+%                      yield information and so contributes no mode at all.
+%                      ✍️ Hand-derived pins + DABJ §9 regression
+%                      (tests/tSystemAllowable.m).
 %   marginShearUlt   - Bolt ultimate-shear margin, Fsu x area by
 %                      shear-plane condition (NASA-STD-5020B Eq. 14).
 %                      ✅ Phase 2.7 — validated against DABJ §9 (+3.18).

@@ -5,10 +5,21 @@ function r = preloadWatchdog(joint, preload)
 %   NASA-STD-5020B Eq. 1: PpMax = PpiMax + P_thermal_max) against the
 %   BOLT's own tensile yield and ultimate allowables, resolved by the
 %   shared private helper boltTensileAllowable (rated-or-derived — the
-%   SAME resolution engine.marginTensionYield / engine.systemTensileAllowable
-%   / engine.marginInteraction use, so this watchdog can never disagree
-%   with those margins about which basis was used or what number
-%   resulted). All loads in lbf (see UNITS.md).
+%   SAME resolution engine.systemTensileAllowable /
+%   engine.systemTensileYieldAllowable / engine.marginInteraction use, so
+%   this watchdog can never disagree with those margins about which basis
+%   was used or what number resulted). All loads in lbf (see UNITS.md).
+%
+%   BOLT-SCOPE ON PURPOSE — it does NOT use the fastening-system minima
+%   (engine.systemTensileAllowable / engine.systemTensileYieldAllowable)
+%   that engine.marginTensionUlt and engine.marginTensionYield consume.
+%   This check asks a narrower question than a margin does: "is the
+%   installed preload about to yield or break THE BOLT". Preload is a load
+%   the bolt carries, and a weaker nut or insert does not make the bolt
+%   yield sooner — folding a member allowable in would fire this warning on
+%   a perfectly-torqued bolt because something else in the stack is the weak
+%   link, which is what the margins are for. Not an oversight; do not
+%   "align" it with the system minima.
 %
 %   It is a QUERY, not a margin check — like engine.boltLengthCheck, it is
 %   NaN-tolerant and NEVER THROWS. preload is the struct ALREADY PRODUCED
