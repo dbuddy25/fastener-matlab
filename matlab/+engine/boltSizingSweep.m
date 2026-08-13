@@ -657,7 +657,20 @@ for i = 1:n
     Rs = Psu / PsuAllow;
     % NASA-STD-5020B Eq. 20-23 criterion -- R = Rt^et + Rs^es, gate passes
     % iff R <= 1. Direct evaluation, no solve: Rt, Rs >= 0 always, so no
-    % root-find is needed (mirrors engine.marginInteraction exactly).
+    % root-find is needed.
+    %
+    % NOT AN EXACT MIRROR OF engine.marginInteraction -- this comment
+    % claimed it was until the 2026-08-13 audit. That function computes
+    % R = Rs^es + (Rt + Rb)^et with the bending ratio Rb = fbu/Ftu INSIDE
+    % the tension bracket (Eq. 20/22 as printed). There is no Rb here and
+    % no bending input to build one from: the sweep sizes a bolt before any
+    % moment is known. The consequence is the same shape as the tension-
+    % yield divergence documented in this file's header -- a size can pass
+    % this gate and then fail the real interaction check once a moment is
+    % supplied -- so the screen is optimistic on exactly the joints
+    % Sec 4.4.4 says to worry about (clearance or gapped shear transfer).
+    % Recorded rather than fixed, for the same reason: no caller is exposed
+    % in gui2, and closing it means giving the sweep a moment input.
     R = Rt^et + Rs^es;
 
     % ---- Status: Pass only when the core margins AND the interaction ----

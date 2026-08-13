@@ -31,7 +31,7 @@ function r = marginNutStrength(joint, loadCase, factors, preload)
 %       is the smaller of the two, so the substitution shrinks the area and
 %       is the conservative choice; the same 0.75·pi·E·Le form is used for
 %       every internal-thread shear area in this engine.
-%       TM-106943's own NUT STRENGTH section (p. 24) is a different,
+%       TM-106943's own NUT STRENGTH section (p. 25) is a different,
 %       spec-rated form — Eq. 81, Puh = (125,000)*At — Class II nuts
 %       developing the full tensile strength of a 125-ksi bolt, At on the
 %       basic pitch diameter, tabulated in its Table VI (Eq. 80 is that
@@ -72,14 +72,31 @@ function r = marginNutStrength(joint, loadCase, factors, preload)
 %       n·phi (NASA-STD-5020B Eq. 6 principle). Detail names which branch
 %       produced the numbers actually used.
 %
-%       RATING AS A CEILING (NASA-STD-5020B §4.4.1): 5020B directs that
-%       "nuts should be limited to the load rating of the nut" and that a
-%       procured item's strength be based on its specification rating
-%       rather than thread-stripping analysis, because such items can
-%       expand (dilate) under load, reducing the thread engagement areas —
-%       a computed engagement area is therefore OPTIMISTIC. So a supplied
-%       joint.ThreadedMember.RatedUltimateLoad does not compete with the
-%       area form; it CAPS it:
+%       RATING AS A CEILING (NASA-STD-5020B §4.4.1 p27): "Nuts should be
+%       limited to the load rating of the nut." That sentence, on its own,
+%       is what supports the cap.
+%
+%       ⚠️ THE SECOND SENTENCE THIS USED TO CITE ARGUES SOMETHING STRONGER
+%       THAN THE CAP, and citing it here misread it (found 2026-08-13).
+%       §4.4.1 p26 reads: "Assessment of a procured item such as a nut or a
+%       threaded insert should be based on the strength specified for that
+%       item RATHER THAN on thread-stripping analysis. Such items can
+%       expand under load, reducing the thread engagement areas." Read
+%       plainly, that does not say "compute an area and cap it with the
+%       rating" — it says a procured nut's allowable IS its rating and the
+%       thread-stripping computation should not be the basis at all. This
+%       tool deliberately diverges: CLAUDE.md specifies a COMPUTED
+%       ultimate/yield pair with the rating as a ceiling, which keeps a
+%       yield criterion available (a rating carries no yield information)
+%       and degrades safely when no rating is supplied. The divergence is
+%       recorded in TOOL_DIFFERENCES.md §1.1. What is corrected here is the
+%       JUSTIFICATION: p26 is not evidence for the ceiling, it is the
+%       sentence the ceiling is a departure from. The dilation argument it
+%       makes — a computed engagement area is OPTIMISTIC — is real and is
+%       exactly why the cap is lower-of.
+%
+%       So a supplied joint.ThreadedMember.RatedUltimateLoad does not
+%       compete with the area form; it CAPS it:
 %           ultimate allowable = min(As·Fsu, RatedUltimateLoad)
 %       and Detail names which source governs. Lower-of means a stale or
 %       mismatched rating can only cost margin, never grant it. The

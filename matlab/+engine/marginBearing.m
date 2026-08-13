@@ -8,8 +8,10 @@ function r = marginBearing(joint, loadCase, factors)
 %   NASA-STD-5020B §4.4.2 REQUIRES margins for the joint members (bearing
 %   among them) but prints no member-strength equations; the working
 %   equations are NASA TM-106943 (Chambers) Eq. 72-74:
-%       Abr = D * t                 (projected bearing area, Eq. 72 form)
-%       Pbr = Fbr * Abr             (bearing allowable, Eq. 72/73)
+%       Pbr = Fbr * Abr             (bearing allowable, Eq. 72)
+%       Abr = D * t                 (projected bearing area, Eq. 73)
+%   (Listed the other way round, with the numbers swapped, until the
+%   2026-08-13 audit read TM-106943 p20.)
 %       MS  = Pbr / (FF*FS*V) - 1   (Eq. 74)
 %   evaluated per flange layer for BOTH criteria: ultimate (Fbru with
 %   FFU*FSU) and yield (Fbry with FFY*FSY). The reported margin is the
@@ -68,7 +70,9 @@ detailList = strings(1, 0);
 for k = 1:numel(joint.FlangeStack)
     fl = joint.FlangeStack(k);
     t  = fl.Thickness;                    % layer thickness, in
-    % NASA TM-106943 Eq. 72 — Abr = D·t (projected bearing area)
+    % NASA TM-106943 Eq. 73 — Abr = D·t (projected bearing area)
+    %   (Eq. 72 is Pbr = Fbr·Abr, applied below; this comment said 72 until
+    %   the 2026-08-13 audit checked the printed page.)
     Abr = D * t;                          % in^2
     layerName = sprintf("layer %d (%s)", k, fl.Material.Name);
 

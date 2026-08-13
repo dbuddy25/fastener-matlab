@@ -8,8 +8,10 @@ function r = marginShearTearout(joint, loadCase, factors)
 %   NASA-STD-5020B §4.4.2 REQUIRES margins for the joint members (tear-out
 %   among them) but prints no member-strength equations; the working
 %   equations are NASA TM-106943 (Chambers) Eq. 69-71:
-%       As   = 2 * t * (e - D/2)      (two shear planes hole -> edge, Eq. 69/70)
-%       Pult = Fsu * As               (tear-out allowable, Eq. 70)
+%       As   = 2 * t * (e - D/2)      (two shear planes hole -> edge, Eq. 70)
+%       Pult = Fsu * As               (tear-out allowable, Eq. 69)
+%   (These two were labelled the other way round until the 2026-08-13
+%   audit read TM-106943 p19: Eq. 69 is the allowable, Eq. 70 the area.)
 %       MS   = Pult / (FFU*FSU*V) - 1 (Eq. 71)
 %   evaluated (ultimate only — the check uses the member Fsu) for each
 %   flange layer that has CheckShearTearout = true AND a configured

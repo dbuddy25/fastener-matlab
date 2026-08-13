@@ -56,10 +56,13 @@
 %   marginShearUlt   - Bolt ultimate-shear margin, Fsu x area by
 %                      shear-plane condition (NASA-STD-5020B Eq. 14).
 %                      ✅ Phase 2.7 — validated against DABJ §9 (+3.18).
-%   marginInteraction- Combined tension-shear interaction CHECK (NASA-STD-5020B
-%                      Eq. 20-23: BodyInShear exp 1.5/2.5, ThreadsInShear exp
-%                      2.0/1.2 — no bending term modeled, see the function
-%                      header's NO-BENDING-TERM note). NOT A MARGIN — 5020B
+%   marginInteraction- Combined tension-shear-BENDING interaction CHECK
+%                      (NASA-STD-5020B Eq. 20-23: BodyInShear exp 1.5/2.5,
+%                      ThreadsInShear exp 2.0/1.2, with Rb = fbu/Ftu INSIDE
+%                      the tension bracket). Bending has been implemented
+%                      since Phase 3.9; this entry said "no bending term
+%                      modeled" until the 2026-08-13 audit caught it.
+%                      NOT A MARGIN — 5020B
 %                      states this as a pass/fail CRITERION (R <= 1), so the
 %                      function reports the ratio R and Pass, not an MS (a
 %                      secondary "a" load-scale field is kept, informationally,
@@ -77,8 +80,9 @@
 %                      (NASA-STD-5020B §4.4.4) gates the fbu=0 omission:
 %                      NotDeclared (default)/CloseToleranceOrInterference
 %                      compute the identical R with ASSUMED/VERIFIED wording;
-%                      ClearanceOrGapped reports NotEvaluated (R = NaN, no
-%                      throw) since bending is not implemented.
+%                      ClearanceOrGapped evaluates the criterion when a
+%                      moment is supplied and reports NotEvaluated (R = NaN,
+%                      no throw) when one is not.
 %   marginSlip       - Slip margin, switched on Joint.SlipMode:
 %                      single-fastener (default, per-bolt loads, NASA-STD-5020B
 %                      Eq. 86), joint (nf·μ·PpMin vs joint totals, NASA-STD-5020B

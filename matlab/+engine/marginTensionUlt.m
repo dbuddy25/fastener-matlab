@@ -40,12 +40,32 @@ function r = marginTensionUlt(joint, preload, designLoads)
 %   governs: the bolt carries the max preload PLUS its share of the applied
 %   load, so the margin uses the joint-stiffness factor phi from
 %   engine.stiffness (NASA-STD-5020B Eq. 9) and the loading-plane factor n:
-%       P'tu = (Ptu_allow - Pp_max)/(n·phi),  MS = P'tu/Ptu - 1
-%   (NASA-STD-5020B Eq. 10). If engine.stiffness cannot run (threaded-in
-%   configuration or missing frustum geometry), the check reports MS = NaN
-%   with the reason in Decision rather than crashing the analysis. The
-%   yield-side rupture form (NASA-STD-5020B Eq. 11) is deferred — see
-%   engine.marginTensionYield.
+%       P'tu = (Ptu_allow - Pp_max)/(n·phi)          (Eq. 10)
+%       MS   = P'tu/(FF·FSu·PtL) - 1                  (Eq. 7)
+%   TWO EQUATIONS, AND THE MARGIN IS Eq. 7. This branch was labelled
+%   "Eq. 10" throughout until the 2026-08-13 audit. Eq. 10 supplies P'tu;
+%   the margin itself is Eq. 7, and Appendix A.6 p65 says so in as many
+%   words: "If separation would occur before rupture, Eq. 10 does not
+%   apply and the margin of safety is given by Eq. 6... If rupture would
+%   occur before separation, the margin of safety is given by Eq. 7." The
+%   Method string is user-visible — it reaches the Results grid, the PDF
+%   and every export — so it now names both, margin first. The yield side
+%   already had this right (Eq. 17 for P'ty, Eq. 16 for the MS).
+%
+%   If engine.stiffness cannot run (threaded-in configuration or missing
+%   frustum geometry), the check reports MS = NaN with the reason in
+%   Decision rather than crashing the analysis.
+%
+%   NASA-STD-5020B Eq. 11 is NOT a yield-side form — this header used to
+%   say it was. Eq. 11 is P'sep = Pp_max/(1 - n·phi), the ULTIMATE-side
+%   linear projection of the load that causes separation (p28), which the
+%   standard pairs with Eq. 10 to decide the branch: "If P'sep is less
+%   than P'tu, linear theory predicts that separation would occur before
+%   rupture." The tool takes that decision from the Fig. 8 gate instead
+%   and does not compute P'sep. The mislabel most likely came from
+%   Figure 8's own outcome boxes, which read "Perform analysis per
+%   Eq. 11" on the rupture path. The yield-side rupture form is Eq. 17 —
+%   see engine.marginTensionYield.
 %
 %   Ptu_allow is the FASTENING SYSTEM's allowable ultimate tensile load
 %   (NASA-STD-5020B §4.4.1: "Ptu-allow is the allowable ultimate load for
@@ -82,7 +102,7 @@ function r = marginTensionUlt(joint, preload, designLoads)
 %       Tests                   tests/tDabjCase.m — tensionUltMarginMatchesDABJ
 %                               (assured branch, Eq. 6, DABJ §9 answer key);
 %                               tests/tStiffness.m — tensionRuptureBranch
-%                               (rupture branch, Eq. 10, hand-derived);
+%                               (rupture branch, Eq. 7 via Eq. 10, hand-derived);
 %                               tests/tSystemAllowable.m — weakNutFlipsFig8Gate
 %                               (system-vs-bolt Ptu_allow flips the gate
 %                               branch), incompleteAssessmentFlagged
@@ -120,7 +140,7 @@ if ~gate.Assessed
         "MS",                      NaN, ...
         "SeparationBeforeRupture", false, ...
         "Decision",                gate.Trace, ...
-        "Method",                  "NASA-STD-5020B Eq. 6/Eq. 10 (separation before rupture) — not evaluated", ...
+        "Method",                  "NASA-STD-5020B Eq. 6/Eq. 7 (separation before rupture) — not evaluated", ...
         "SystemAllowable",         gate.SystemAllowable, ...
         "Gate",                    gateOut(false, false, gate.Trace, ...
                                        "not evaluated", NaN, NaN));
@@ -153,21 +173,21 @@ else
         % MS = P'tu/Ptu - 1 (bolt carries the preload plus n·phi of the load)
         Pprime = (PtuAllow - preload.PpMax) / (n * phi);
         MS = Pprime / designLoads.Ptu - 1;
-        Method = "NASA-STD-5020B Eq. 10 (rupture — bolt sees preload + n·phi·load)";
+        Method = "NASA-STD-5020B Eq. 7 (rupture — bolt sees preload + n·phi·load), with P'tu per Eq. 10";
         Decision = gate.Trace + string(sprintf( ...
-            ". -> Eq. 10 with phi = %.4g (NASA-STD-5020B Eq. 9), n = %.2f.", phi, n));
-        eqRan   = "NASA-STD-5020B Eq. 10";
+            ". -> Eq. 10 for P'tu then Eq. 7, with phi = %.4g (NASA-STD-5020B Eq. 9), n = %.2f.", phi, n));
+        eqRan   = "NASA-STD-5020B Eq. 7 (P'tu per Eq. 10)";
         phiUsed = phi;
         nUsed   = n;
     catch stiffErr
         % Stiffness unavailable (threaded-in configuration or missing
         % frustum geometry) — report NotEvaluated, do not crash analyze.
         MS = NaN;
-        Method = "NASA-STD-5020B Eq. 10 (rupture) — stiffness geometry required";
+        Method = "NASA-STD-5020B Eq. 7 (rupture, P'tu per Eq. 10) — stiffness geometry required";
         Decision = gate.Trace + ...
             ". Eq. 10 needs phi from engine.stiffness, which could not run: " + ...
             string(stiffErr.message);
-        eqRan = "NASA-STD-5020B Eq. 10 (could not run)";
+        eqRan = "NASA-STD-5020B Eq. 7 (P'tu per Eq. 10, could not run)";
     end
 end
 

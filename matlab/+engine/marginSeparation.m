@@ -12,6 +12,22 @@ function r = marginSeparation(preload, designLoads)
 %   relaxation, creep, and thermal) and Psep = designLoads.Psep
 %   (FSSep * FFSep * PtL).
 %
+%   TWO SCOPE LIMITS §4.4.3 PUTS ON Eq. 19, neither of which the tool can
+%   detect for you. They were recorded in COMPLIANCE.md but not at the
+%   code site until the 2026-08-13 audit:
+%
+%     AXIAL ONLY. "The equation is applicable to systems under axial
+%     loading only. Other equations or methods may be used to evaluate the
+%     margin of safety when combined loading is considered." (p32) So a
+%     joint carrying simultaneous shear or bending is outside Eq. 19's
+%     stated scope — part of the TFSR 11 gap COMPLIANCE.md records as
+%     PARTIAL, and the reason this row is not the whole separation story.
+%
+%     SEALED JOINTS. "When a joint maintains a seal ... Eq. 19 does not
+%     accurately predict the margin of safety for separation." (p32) The
+%     tool models no seal, so it cannot warn; an analyst working a sealed
+%     interface must not read this margin as the answer.
+%
 %   Returned struct fields:
 %       MS      margin of safety (double)
 %       Method  string: governing equation

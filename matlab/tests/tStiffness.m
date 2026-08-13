@@ -529,7 +529,12 @@ classdef tStiffness < matlab.unittest.TestCase
             d = engine.designLoads(lc, fac);
             r = engine.marginTensionUlt(j, p, d);
             testCase.verifyFalse(r.SeparationBeforeRupture);
-            testCase.verifySubstring(r.Method, "Eq. 10");
+            testCase.verifySubstring(r.Method, "Eq. 10");   % P'tu
+            % The MARGIN is Eq. 7; Eq. 10 only supplies P'tu.
+            % A.6 p65: "If rupture would occur before separation, the
+            % margin of safety is given by Eq. 7." Pinned so the label
+            % cannot drift back — Method is user-visible.
+            testCase.verifySubstring(r.Method, "Eq. 7");
             testCase.verifyEqual(r.MS, 2.704, "AbsTol", 0.01);
         end
 
@@ -632,7 +637,12 @@ classdef tStiffness < matlab.unittest.TestCase
             testCase.verifyFalse(r.SeparationBeforeRupture);
             testCase.verifySubstring(r.Decision, "e/D");
             testCase.verifySubstring(r.Decision, "VERIFIED failing");
-            testCase.verifySubstring(r.Method, "Eq. 10");
+            testCase.verifySubstring(r.Method, "Eq. 10");   % P'tu
+            % The MARGIN is Eq. 7; Eq. 10 only supplies P'tu.
+            % A.6 p65: "If rupture would occur before separation, the
+            % margin of safety is given by Eq. 7." Pinned so the label
+            % cannot drift back — Method is user-visible.
+            testCase.verifySubstring(r.Method, "Eq. 7");
             testCase.verifyEqual(r.MS, 20.388, "AbsTol", 0.05);
         end
 

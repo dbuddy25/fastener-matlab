@@ -82,6 +82,36 @@ function v = toolVersion()
 %            TFSR 11's yield and separation under combined loading remain
 %            required and unimplemented, and every export still says so.
 %
+%     0.6.0  EQUATION AUDIT corrections. Every equation in +engine was
+%            checked against the source PDFs — NASA-STD-5020B, TM-106943,
+%            NASM33537 — and TWO MOVE NUMBERS. Read this before comparing
+%            a 0.6.0 report against an earlier one.
+%            (a) BOLT THREAD SHEAR was ~29% UNCONSERVATIVE. The area was
+%            computed as 0.75·pi·E·Le — TM-106943 Eq. 76's INTERNAL-thread
+%            coefficient on the PITCH diameter — while the row cited
+%            Eq. 63, which prints 5·pi·Le·D_minor,int/8 on the minor
+%            diameter of the mating internal thread. The old form was
+%            declared in a comment but justified as "one consistent area
+%            basis", which does not hold: the same substitution is
+%            conservative on the internal side and unconservative on this
+%            one. That row now reads LOWER, and can newly govern.
+%            (b) THERMAL PRELOAD ignored washers while the bolt stiffness
+%            spanned them. TM-106943 Eq. 10 carries one L, shared by its
+%            bolt and joint terms. The error was exactly
+%            (alpha_washer - alpha_bolt)·t_washer and vanishes when they
+%            match; with steel washers under an A-286 bolt the old form ran
+%            ~17% HIGH, so thermal preload now reads slightly LOWER there.
+%            Also: an unset material CTE used to default to ZERO — read as
+%            "does not expand" — and now defaults to NaN, so a thermal run
+%            with a coefficient missing REFUSES and names what to fix
+%            instead of returning a confident number. A joint that used to
+%            analyse may now ask for a library update; that is the point.
+%            Citations corrected throughout (Fsy = Fty/sqrt(3) is 5020B
+%            Eq. 63; the rupture margin is Eq. 7, not Eq. 10). Two audit
+%            findings against shipped behaviour were investigated and
+%            REJECTED — the §4.4.2 yield and Figure 8 system allowables are
+%            both correct as shipped; see COMPLIANCE.md.
+%
 %   THIS IS NOT THE CASE-FILE FORMAT VERSION, and the two must never be
 %   tied together. gui2.AppState.CaseFormat
 %   ("fastener-analysis-matlab-v1") changes only when the saved-case
@@ -92,5 +122,5 @@ function v = toolVersion()
 %   Consumers: fastenerTool, gui.FastenerApp, gui2.AppState,
 %   report.singleJointReport, report.exportResults.
 
-v = "0.5.0";
+v = "0.6.0";
 end

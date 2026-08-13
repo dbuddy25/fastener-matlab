@@ -32,10 +32,23 @@ function s = systemTensileAllowable(joint)
 %   The bolt EXTERNAL-thread shear mode is deliberately NOT in this
 %   minimum — a CLOSED decision, not an open question. NASA-STD-5020B
 %   §4.7.4 handles thread stripping by DESIGN RULE, not by a computed
-%   margin: it directs that thread engagement "should be selected to
+%   margin: it directs that thread engagement "in an internally threaded
+%   part OTHER THAN A NUT, NUT PLATE, OR INSERT should be selected to
 %   ensure the minimum number of engaged complete threads such that the
-%   fastener would fail in tension before threads would strip." Combined
-%   with §4.4.1 directing spec ratings for procured items, and the fact
+%   fastener would fail in tension before threads would strip."
+%
+%   THAT EXCLUSION MATTERS AND THIS HEADER USED TO OMIT IT (quoting from
+%   "should be selected..." onward, found 2026-08-13). §4.7.4's design
+%   rule covers TAPPED HOLES only, so it cannot on its own justify leaving
+%   bolt external-thread shear out of the minimum for a nut or insert
+%   joint. The conclusion survives on a different sentence, which this
+%   header also cites — §4.4.1 p26: assessment of a procured nut or insert
+%   "should be based on the strength specified for that item rather than
+%   on thread-stripping analysis". So: tapped holes are covered by §4.7.4,
+%   nuts and inserts by §4.4.1 p26, and the exclusion holds for both — but
+%   by two different routes, not one.
+%
+%   Combined with §4.4.1 directing spec ratings for procured items, and the fact
 %   that 5020B prints no thread-shear-area equation anywhere, the standard
 %   never asks for a computed thread-shear margin, so there is nothing to
 %   fold into Ptu-allow. It is still carried as its own reported check

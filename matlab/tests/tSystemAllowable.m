@@ -202,7 +202,12 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             testCase.verifyGreaterThanOrEqual(p.PpMax, ...
                 0.75*r.SystemAllowable.PtuAllow);
             testCase.verifyFalse(r.SeparationBeforeRupture);
-            testCase.verifySubstring(r.Method, "Eq. 10");
+            testCase.verifySubstring(r.Method, "Eq. 10");   % P'tu
+            % The MARGIN is Eq. 7; Eq. 10 only supplies P'tu.
+            % A.6 p65: "If rupture would occur before separation, the
+            % margin of safety is given by Eq. 7." Pinned so the label
+            % cannot drift back — Method is user-visible.
+            testCase.verifySubstring(r.Method, "Eq. 7");
             testCase.verifyEqual(r.MS, 1.263, "AbsTol", 0.01);
             % Decision names the governing system mode
             testCase.verifySubstring(r.Decision, "nut thread shear");
