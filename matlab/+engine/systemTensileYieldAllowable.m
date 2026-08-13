@@ -3,15 +3,17 @@ function s = systemTensileYieldAllowable(joint)
 %   s = engine.systemTensileYieldAllowable(joint) returns Pty-allow as
 %   NASA-STD-5020B §4.4.2 defines it — the yield counterpart of
 %   engine.systemTensileAllowable, and the term NASA-STD-5020B Eq. 17
-%   actually names. p30, introducing Eq. 17:
-%     "where P'ty is the applied tensile load that causes the fastener load
-%      to exceed the fastening SYSTEM'S allowable yield tensile load if
-%      yielding occurs before separation"
-%   and §4.4.2 p29 scopes what that system is:
-%     "The assessment for yield design loads will address ALL ELEMENTS of
-%      the threaded fastening system, including the fastener, the
-%      internally threaded part such as a nut or an insert, and the clamped
-%      parts."
+%   actually names. The governing citation is the GLOBAL SYMBOL LIST, p13:
+%     P'ty — "the applied tensile load that causes the fastener load to
+%             exceed the FASTENING SYSTEM'S allowable yield tensile load,
+%             if yielding occurs before separation"
+%   Eq. 17 computes P'ty, so the Pty_allow inside it must be the system's
+%   or the equation does not produce the quantity the standard defines it
+%   to be. p13 defines P'tu the same way for the ultimate side, where
+%   §4.4.1 p27 independently confirms the pairing — see
+%   engine.marginTensionYield's header for the full argument, including
+%   why §4.4.2 p30's "of the material" where-clause and p29's "all
+%   elements" sentence do NOT settle it either way.
 %   So, exactly as on the ultimate side,
 %       Pty-allow = min over the system's tensile YIELD modes:
 %           bolt yield                 (spec-rated Joint.BoltRatedYieldLoad,

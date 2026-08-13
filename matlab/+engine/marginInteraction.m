@@ -296,8 +296,48 @@ end
 % on its own Margins row (marginNutStrength / marginInsert /
 % marginTappedParentThread). Folding a member-governed system allowable
 % into a bolt interaction envelope would mix failure modes across
-% equations, so the substitution is DEFERRED pending a governing
-% interpretation.
+% equations.
+%
+% NO LONGER DEFERRED — RULED 2026-08-13 (equation audit). This used to end
+% "the substitution is DEFERRED pending a governing interpretation." The
+% interpretation was taken, across all four sites where 5020B uses
+% Ptu/Pty-allow, and this one lands on the BOLT. Three grounds, in
+% increasing strength:
+%
+%   (1) §4.4.4 frames itself around the fastener — "When assessing the
+%       strength OF THE FASTENER due to combined loading...", "For
+%       FASTENERS under simultaneously applied tensile and shear loads..."
+%       (p33) — and never re-invokes the fastening system or
+%       cross-references §4.4.1's definition.
+%   (2) The empirical basis is fastener rupture: "these criteria... are
+%       based on tests of A-286 3/8-24 (NAS1956C14) FASTENERS performed at
+%       NASA MSFC in 2010" (p33), and Psu_allow is unambiguously a bolt
+%       cross-section quantity (Eq. 12/13).
+%   (3) THE BRACKET STRUCTURE ITSELF, which is decisive. Eq. 20/22 sum the
+%       tension and bending ratios inside ONE parenthesis:
+%           (Ptu/Ptu_allow + fbu/Ftu)^k
+%       fbu is a bending STRESS and Ftu an allowable STRESS on the bolt
+%       cross-section. Adding Ptu/Ptu_allow to fbu/Ftu is mechanically
+%       meaningful only if the first term is also an axial normal-stress
+%       ratio at that same section — i.e. Ptu_allow ~ Ftu*A for the
+%       governing bolt section, making the bracket (f_axial+f_bending)/Ftu
+%       at one cross section. p34 confirms the cross-section frame:
+%       "Tensile and shear stresses peak at the same cross section when
+%       the threads are in the shear plane." A nut-strip or pull-out load
+%       has no cross section; substituting it into that ratio is
+%       dimensionally legal and mechanically meaningless.
+%
+% THE GAP THIS LEAVES IS REAL AND IS NOT A DEFECT IN THIS FUNCTION.
+% 5020B provides NO interaction envelope for internally-threaded-part
+% failure under combined load. When a nut or insert governs axially,
+% Eq. 20-23 with bolt allowables genuinely does not check that member
+% under simultaneous tension and shear — and neither does anything else in
+% the standard. Substituting the system minimum into Rt would be
+% conservative and cheap, but it is an ENGINEERING JUDGMENT, not a reading
+% of 5020B, and doing it silently would redefine a cited equation's symbol
+% — which this repo's traceability rule forbids. If that residual risk
+% needs covering, add a SEPARATELY LABELLED supplementary check rather
+% than changing this one.
 %
 % Ptu_allow uses joint.BoltRatedUltimateLoad when set, else a derived
 % Ptu_allow = At*Ftu (a derived convention per NASA-STD-5020B §4.4.2, not a

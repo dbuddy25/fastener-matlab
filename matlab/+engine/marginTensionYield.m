@@ -26,18 +26,52 @@ function r = marginTensionYield(joint, preload, designLoads)
 %   Detail rather than crashing the analysis — matching
 %   engine.marginTensionUlt's handling exactly, not a new convention.
 %
-%   Pty_allow IS THE FASTENING SYSTEM'S, NOT THE BOLT'S ALONE. This row
-%   used the bolt's own yield allowable in both equations until the
-%   §4.4.2 read that produced engine.systemTensileYieldAllowable.
-%   NASA-STD-5020B p30, introducing Eq. 17, says the term is "the applied
-%   tensile load that causes the fastener load to exceed the fastening
-%   SYSTEM'S allowable yield tensile load", and §4.4.2 p29 scopes the
-%   assessment to "all elements of the threaded fastening system,
-%   including the fastener, the internally threaded part such as a nut or
-%   an insert, and the clamped parts". So Pty_allow here is
+%   Pty_allow IS THE FASTENING SYSTEM'S, NOT THE BOLT'S ALONE — and the
+%   citation for that is the GLOBAL SYMBOL LIST, p13, not §4.4.2's
+%   where-clause:
+%
+%     P'ty — "the applied tensile load that causes the fastener load to
+%             exceed the FASTENING SYSTEM'S allowable yield tensile load,
+%             if yielding occurs before separation"        (p13)
+%
+%   Eq. 17 computes P'ty. An equation whose left-hand side the standard
+%   defines, standard-wide, as the load at which the fastener load reaches
+%   the SYSTEM'S yield allowable can only produce that quantity if the
+%   Pty_allow inside it is the system's. p13 defines P'tu identically for
+%   the ultimate side, where §4.4.1 p27 independently confirms the pairing
+%   ("Ptu-allow is the allowable ultimate load for the fastening system"),
+%   so the P'/allowable relationship is established by a settled case.
+%
+%   ⚠️ DO NOT re-derive this from §4.4.2 p30's where-clause. That clause
+%   reads "...P'ty is the applied tensile load that causes the fastener
+%   load to exceed the fastening system's allowable yield tensile load if
+%   yielding occurs before separation, PtL is the limit tensile load,
+%   Pty-allow is the allowable tensile load of the material, ...". The
+%   system phrase there belongs to P'ty; the NEXT clause defines Pty-allow
+%   as "of the material", naming neither the bolt nor the system. This
+%   file cited that sentence as though it defined Pty-allow, which was a
+%   misquote (found 2026-08-13), and reading it the other way — "of the
+%   material" means the bolt — is equally unsupported. p13 is the text
+%   that settles it; p14 lists Pty-allow itself with NO owner named, and
+%   lists Ptu-allow the same way even though §4.4.1 proves that one is the
+%   system's. Silence in the symbol list is not evidence for the bolt.
+%
+%   §4.4.2 p29 ("The assessment for yield design loads will address all
+%   elements of the threaded fastening system...") is real but does NOT
+%   carry this on its own: §4.4.1 p26 has a near-identical sentence for
+%   the ultimate case and §4.4.1 still needed its separate explicit
+%   system clause. Those sentences scope the ASSESSMENT, not the symbol.
+%
+%   So Pty_allow here is
 %       min( bolt yield, internal-thread member yield )
 %   exactly as engine.marginTensionUlt takes Ptu_allow from
-%   engine.systemTensileAllowable in Eq. 6 / Eq. 10. The bolt-only
+%   engine.systemTensileAllowable in Eq. 6 / Eq. 10. Eq. 15 gets the same
+%   answer as Eq. 17 on different grounds: it is the exact yield twin of
+%   Eq. 6 (same form, same branch condition), p30 gives ONE where-clause
+%   serving Eq. 15/16/17 together so the symbol cannot have two owners
+%   three lines apart, and a separated joint still passes the full applied
+%   load through the internal threads — a bolt-only Eq. 15 beside a
+%   system Eq. 17 would put a physical discontinuity at the branch point. The bolt-only
 %   resolution is unchanged — it is mode 1 of that minimum, still
 %   boltTensileAllowable, still "rated" (joint.BoltRatedYieldLoad) or the
 %   NASA-STD-5020B Eq. 18 estimate Pty_allow = (Fty/Ftu)*Ptu_allow applied

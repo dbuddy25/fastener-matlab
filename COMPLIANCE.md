@@ -64,6 +64,40 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 
 **Counts** — IMPLEMENTED 9 · PARTIAL 1 · OMITTED-BY-DECISION 3 · ABSENT 5 · OUT-OF-SCOPE 14.
 
+> **`Ptu-allow` / `Pty-allow` — which quantity, where. RULED 2026-08-13.**
+> 5020B uses these symbols at four sites and its *where-clauses* are inconsistent,
+> so the question was adjudicated against the whole document rather than site by
+> site. **The rule that explains all four is physical, not editorial:** the symbol
+> means the **fastening system's** wherever the quantity is "the tensile load at
+> which the joint's series load path fails" — axial load passes through bolt, nut
+> and threads in series, so capacity is the weakest link — and the **bolt's**
+> wherever it is a cross-section normal-stress capacity being combined with that
+> bolt's own bending and shear stresses.
+>
+> | Site | Ruling | Deciding text |
+> |---|---|---|
+> | §4.4.1 Eq. 6/7/10 ultimate | **SYSTEM** | p27, explicit |
+> | §4.4.2 Eq. 15/16/17 yield | **SYSTEM** | **p13** global symbol list: `P′ty` is the load at which the fastener load exceeds *"the **fastening system's** allowable yield tensile load"*. Eq. 17 computes `P′ty`, so its `Pty-allow` must be the system's. |
+> | Fig. 8 / A.5 gate | **SYSTEM** | **p63**: *"…separate before **the fastening system ruptures** when the maximum preload is no greater than 85 percent of **the fastening system's allowable ultimate tensile load**."* |
+> | §4.4.4 Eq. 20–23 interaction | **BOLT** | p33 fastener framing; MSFC fastener-test basis; and decisively the bracket `(Ptu/Ptu-allow + fbu/Ftu)^k` — adding a load ratio to a bolt cross-section *stress* ratio is only meaningful if the first is also a stress ratio at that section |
+>
+> **Do not re-derive these from §4.4.2's where-clause.** p30 defines `P′ty` with the
+> system phrase and then defines `Pty-allow` as *"the allowable tensile load of the
+> material"* — naming neither party. p14 lists `Pty-allow` with **no owner**, and
+> lists `Ptu-allow` the same way even though §4.4.1 proves that one is the system's;
+> silence there is not evidence for the bolt. p62's *"the bolt's ultimate tensile
+> strength"* describes the single-bolt FE study behind Figure 8, which p63 then
+> restates in system terms. All three of these misled an audit pass before p13 and
+> p63 were found.
+>
+> **Known gap, named not fixed:** 5020B provides no interaction envelope for
+> internally-threaded-part failure under combined load, so a nut- or
+> insert-governed joint is not checked for stripping under simultaneous tension and
+> shear by Eq. 20–23 or by anything else in the standard. Substituting the system
+> minimum into `Rt` would be conservative but is an engineering judgment, not a
+> reading of 5020B; if it is ever wanted it belongs in a separately labelled
+> supplementary check, not in the cited equation.
+
 > **Shear yield strength — citation corrected 2026-08-13.** `engine.shearYieldStrength`
 > derives `Fsy = Fty/√3` when a material carries no measured `Fsy`. It cited only
 > "the von Mises criterion" as prose, and three call sites stated that no equation
