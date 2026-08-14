@@ -221,10 +221,29 @@ end
 % assured -> "Pass"; not assured -> "Fail" (rupture conservatively assumed).
 sbr = entry("Separation-before-rupture", NaN, ...
     "NASA-STD-5020B Fig. 8 (DABJ Fig. 9-9) decision tree", tu.Decision);
-if tu.SeparationBeforeRupture
-    sbr.Status = "Pass";
-else
-    sbr.Status = "Fail";
+% THREE OUTCOMES, THREE STATUSES. entry() has already set NotEvaluated
+% (this row carries no MS), so the Pass/Fail override runs ONLY when the
+% gate actually reached a determination.
+%
+% Until 2026-08-14 an UNASSESSABLE gate printed "Fail":
+% marginTensionUlt sets SeparationBeforeRupture = false when it cannot
+% assess, and this branch read false as "determined to fail". So "we could
+% not tell" was reported as "rupture may occur before separation" — a
+% determination nobody made, on the one row in the tool that did not
+% distinguish the two. NASA-STD-5020B A.5: whether separation occurs
+% before rupture "can be determined based on test, analysis, or the logic
+% flow in Figure 8" — with none of the three available there is no
+% determination to report.
+%
+% The ANALYSIS is unaffected and stays conservative: engine.boltDesignLoad
+% takes the clamped Pb (preload included) whenever the gate is not
+% ASSURED, and an unassessed gate is not assured. Only the label changes.
+if tu.Gate.Assessed
+    if tu.SeparationBeforeRupture
+        sbr.Status = "Pass";
+    else
+        sbr.Status = "Fail";
+    end
 end
 
 % ---- Interaction as its own row -- NOT a margin --------------------------

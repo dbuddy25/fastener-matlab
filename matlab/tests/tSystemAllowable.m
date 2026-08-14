@@ -655,6 +655,47 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             testCase.verifyFalse(s.Complete);
             testCase.verifyEqual(numel(s.Unassessed), 2);
         end
+        function anUnassessableGateReportsNotEvaluatedNotFail(testCase)
+            % The gate row was the ONE place this tool said a check FAILED
+            % when it meant it could not evaluate one. marginTensionUlt
+            % sets SeparationBeforeRupture = false when the gate cannot be
+            % assessed, and analyze read that false as "determined to
+            % fail" — reporting a determination nobody made.
+            %
+            % NASA-STD-5020B A.5: whether separation occurs before rupture
+            % "can be determined based on test, analysis, or the logic flow
+            % in Figure 8". With no tensile mode assessable there is no
+            % Ptu_allow to put in Figure 8's box, so none of the three is
+            % available and there is nothing to report but that.
+            %
+            % Fixture: Ex 8-b with the tensile stress area stripped, so
+            % neither the bolt rating nor the derived At*Ftu can be formed
+            % and the system allowable is NaN — the same joint
+            % noAllowableAtAllStaysNotEvaluated uses one level down.
+            c = validation.dabjExample8b();
+            j = c.Joint;
+            j.Bolt.TensileStressArea = NaN;
+            j.PreloadSpec = model.PreloadSpec( ...
+                Method         = model.PreloadMethod.DirectPreload, ...
+                NominalPreload = 2000, ...
+                Uncertainty    = 0);
+            lc  = model.LoadCase(Name = "unassessable gate", ...
+                BoltTensileLimitLoad = 2000, BoltShearLimitLoad = 0);
+
+            r = engine.analyze(j, lc, model.Factors());
+
+            gateRow = row(r, "Separation-before-rupture");
+            testCase.verifyEqual(gateRow.Status, "NotEvaluated", ...
+                'An undetermined gate must not report a determination.');
+            testCase.verifyFalse(r.Gate.Assessed);
+
+            % The ANALYSIS must stay conservative regardless: an unassessed
+            % gate is not assured, so boltDesignLoad keeps the clamped Pb.
+            % If this ever flipped to the separated form, the label change
+            % would have quietly moved margins.
+            testCase.verifyFalse(r.Gate.Assured);
+        end
+
     end
 
     methods (Static)
