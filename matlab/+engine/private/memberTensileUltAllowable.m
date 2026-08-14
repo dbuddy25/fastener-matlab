@@ -19,9 +19,12 @@ function a = memberTensileUltAllowable(joint)
 %         substitution). A per-joint
 %         ThreadedMember.ShearEngagementArea is deliberately NOT read here
 %         (see the Nut case below for why); computed ultimate Pult = Fsu·As (TM-106943 Eq. 77)
-%         with the NUT material Fsu; a spec rating CAPS it
-%         (NASA-STD-5020B §4.4.1 — nut "limited to the load rating of
-%         the nut"): EffUlt = min(Fsu·As, RatedUltimateLoad).
+%         with the NUT material Fsu — but that computed form is the
+%         FALLBACK. When ThreadedMember.RatedUltimateLoad is supplied it IS
+%         the allowable: EffUlt = RatedUltimateLoad, per NASA-STD-5020B
+%         §4.4.1 p26 ("based on the strength specified for that item rather
+%         than on thread-stripping analysis"). It was a lower-of CEILING
+%         until 2026-08-14; see the Nut case for why that was wrong.
 %       rated basis (no area available) — EffUlt = RatedUltimateLoad alone,
 %         per NASA-STD-5020B §4.4.1.
 %
@@ -109,49 +112,78 @@ switch joint.ThreadedMember.Type
             a.AreaSrc = string(sprintf("As = 0.75·pi·E·Le with E %.4f in, %s", E, rle.Note));
         end
 
-        if isnan(a.As)
-            if rating > 0
-                % NASA-STD-5020B §4.4.1 — nut limited to its load rating:
-                % EffUlt = RatedUltimateLoad (flat rated basis, no area)
-                a.Basis    = "rated";
-                a.EffUlt   = rating;
-                a.Assessed = true;
+        % ---- THE RATING IS THE BASIS, NOT A CEILING ----------------------
+        % NASA-STD-5020B §4.4.1 p26: "Assessment of a procured item such as
+        % a nut or a threaded insert should be based on the strength
+        % specified for that item RATHER THAN on thread-stripping analysis.
+        % Such items can expand under load, reducing the thread engagement
+        % areas." p27 adds the bound: "Nuts should be limited to the load
+        % rating of the nut" — which is satisfied automatically once the
+        % rating IS the basis.
+        %
+        % This used to compute Fsu·As and apply the rating as a lower-of
+        % CEILING, so a nut whose tested rating exceeded the computed area
+        % form reported the computed number — the very thread-stripping
+        % figure p26 says not to base the assessment on, and in the
+        % direction that costs margin. Changed 2026-08-14 on Dan's call
+        % ("use the rating of nut if available... comply with 5020");
+        % CLAUDE.md and TOOL_DIFFERENCES.md §1.1 updated to match.
+        %
+        % A supplied rating therefore needs NO material data at all. Fsu is
+        % required only for the fallback, when no rating was given. (The
+        % YIELD side is untouched and still needs area + Fsy — a rating is
+        % an ultimate quantity and carries no yield information; see
+        % memberTensileYldAllowable.)
+        if rating > 0
+            a.Basis    = "rated";
+            a.EffUlt   = rating;
+            a.Assessed = true;
+            if ~isnan(a.As)
+                Fsu = joint.ThreadedMember.Material.Fsu;
+                if ~isnan(Fsu)
+                    % Computed for COMPARISON only — never used as the
+                    % allowable now. Surfaced so a reviewer can see how far
+                    % the spec value sits from the thread-shear estimate;
+                    % a large gap either way is worth a second look at the
+                    % engagement length or the rating itself.
+                    a.AllowUlt = Fsu * a.As;
+                    a.RatNote  = string(sprintf( ...
+                        "spec rating %.0f lbf GOVERNS per 5020B §4.4.1 p26 (a procured nut is assessed on its specified strength, not thread-stripping analysis); the computed area form would give %.0f lbf, shown for comparison only", ...
+                        rating, a.AllowUlt));
+                else
+                    a.RatNote = string(sprintf( ...
+                        "spec rating %.0f lbf GOVERNS per 5020B §4.4.1 p26; no nut Fsu, so no computed area form to compare against — none is needed, the rating is the basis", ...
+                        rating));
+                end
             else
-                a.Reason = "no thread-shear area (needs Bolt.PitchDiameter + " + ...
-                    "ThreadedMember.EngagementLength or EngagementRatio x Bolt.NominalDiameter) " + ...
-                    "and no spec-rated load (ThreadedMember.RatedUltimateLoad)";
+                a.RatNote = string(sprintf( ...
+                    "spec rating %.0f lbf GOVERNS per 5020B §4.4.1 p26 (no thread-shear area available; none is needed for the ultimate)", ...
+                    rating));
             end
+            return
+        end
+
+        % ---- No rating: fall back to the computed thread-shear form -----
+        if isnan(a.As)
+            a.Reason = "no spec-rated load (ThreadedMember.RatedUltimateLoad) " + ...
+                "and no thread-shear area to fall back on (needs Bolt.PitchDiameter + " + ...
+                "ThreadedMember.EngagementLength or EngagementRatio x Bolt.NominalDiameter)";
             return
         end
 
         a.Basis = "area";
         Fsu = joint.ThreadedMember.Material.Fsu;   % NUT ultimate shear strength, psi
         if isnan(Fsu)
-            a.Reason = "a thread-shear area is available but the nut " + ...
-                "ThreadedMember.Material.Fsu is NaN — the spec rating, if any, only " + ...
-                "CAPS the computed allowable (lower-of) and cannot stand in for it";
+            a.Reason = "no spec-rated load (ThreadedMember.RatedUltimateLoad), and " + ...
+                "the computed fallback needs ThreadedMember.Material.Fsu, which is NaN";
             return
         end
         % TM-106943 Eq. 77 — Pult = Fsu·As (nut internal-thread shear allowable)
         a.AllowUlt = Fsu * a.As;
-        % NASA-STD-5020B §4.4.1 — the spec rating CAPS the computed
-        % ultimate allowable (lower-of; nuts dilate under load, so a
-        % computed area is optimistic): EffUlt = min(Fsu·As, RatedUltimateLoad)
-        if rating > 0
-            if rating < a.AllowUlt
-                a.EffUlt  = rating;
-                a.RatNote = string(sprintf( ...
-                    "spec rating %.0f lbf GOVERNS the ultimate allowable (caps computed %.0f lbf per 5020B §4.4.1)", ...
-                    rating, a.AllowUlt));
-            else
-                a.EffUlt  = a.AllowUlt;
-                a.RatNote = string(sprintf( ...
-                    "spec rating %.0f lbf not limiting (computed allowable %.0f lbf is lower)", ...
-                    rating, a.AllowUlt));
-            end
-        else
-            a.EffUlt = a.AllowUlt;
-        end
+        % Reached only when NO rating was supplied — the rating path
+        % returned above. So the computed form is the allowable outright,
+        % with nothing to cap it.
+        a.EffUlt   = a.AllowUlt;
         a.Assessed = true;
 
     case model.ThreadedMemberType.Insert

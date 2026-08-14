@@ -15,11 +15,29 @@ Section numbers are stable: other documents (`COMPLIANCE.md`, `ENGINE_CHECKS.md`
 
 ## 1. Decisions with a stated reason
 
-### 1.1 Nut strength is capped by the nut's rated load
-A nut is assessed by the same thread-shear calculation used for an insert —
-shear engagement area (`0.75·π·E·Le`) × the nut material's shear strength,
-ultimate and yield — but the nut's spec-rated `Pult` bounds that result, and the
-lower of the two governs.
+### 1.1 A rated nut is assessed on its rating, not on a thread-shear calculation
+**Corrected 2026-08-14 — this section previously described a CEILING**, in which
+the tool computed `0.75·π·E·Le × Fsu` and applied the rating as a lower-of bound.
+That inverted what §4.4.1 asks for: p26 makes the specified strength the *basis*
+("**rather than on** thread-stripping analysis"), so whenever a rating exists the
+computed thread-stripping figure is precisely the number not to use. Under the
+ceiling, a nut whose tested rating exceeded the computed form reported the
+computed one — costing margin on the strength of a calculation the standard
+says is unreliable for a procured item.
+
+Now: **the rating is the ultimate allowable when supplied**; the
+`0.75·π·E·Le × Fsu` form is the fallback when it is not. p27's "limited to the
+load rating" is satisfied automatically once the rating is the basis. Two
+consequences worth stating plainly — a rated nut needs **no material data at
+all** for its ultimate (Fsu is only for the fallback), and the same value flows
+into `systemTensileAllowable`, so the nut row and the system minimum cannot
+disagree about one nut.
+
+The **yield** criterion is untouched and is never rating-based: a rating is an
+ultimate quantity and says nothing about the onset of permanent deformation, so
+yield still needs an area and `Fsy`. A rated nut with no `Fsy` therefore reports
+an ultimate margin and names the yield side as unassessable, rather than
+refusing both.
 
 NASA-STD-5020B §4.4.1:
 > "Assessment of a procured item such as a nut or a threaded insert should be

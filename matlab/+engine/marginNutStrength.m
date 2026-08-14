@@ -247,18 +247,27 @@ nut = joint.ThreadedMember.Material;      % the NUT material
 Fsu = nut.Fsu;                            % nut ultimate shear strength, psi
 sy  = engine.shearYieldStrength(nut);     % supplied Fsy, or Fty/sqrt(3) von Mises estimate
 
-if isnan(Fsu) || isnan(sy.Fsy)
-    missing = strings(1, 0);
-    if isnan(Fsu)
-        missing(end+1) = "Fsu";                       %#ok<AGROW>
-    end
-    if isnan(sy.Fsy)
-        missing(end+1) = "Fsy (and Fty to estimate it)"; %#ok<AGROW>
-    end
+% WHICH MATERIAL DATA IS ACTUALLY REQUIRED depends on whether a rating was
+% supplied, because since 2026-08-14 the rating IS the ultimate allowable
+% rather than a ceiling on a computed one (NASA-STD-5020B §4.4.1 p26 — see
+% memberTensileUltAllowable):
+%   ULTIMATE  needs the rating, OR the computed form's Fsu. Not both.
+%   YIELD     always needs Fsy (or Fty to estimate it) — a rating is an
+%             ultimate quantity and says nothing about the onset of
+%             permanent deformation.
+% So a rated nut with no material properties at all still gets an ultimate
+% margin and reports the yield side as unassessable, which is strictly more
+% than the old rule gave (it refused both). What is NOT allowed is silence:
+% whichever criterion cannot be formed is named in Detail.
+if ~ua.Assessed && isnan(sy.Fsy)
     r = notEval(methodArea, ...
-        "Not evaluated: a thread-shear area is available but the nut " + ...
-        "ThreadedMember.Material lacks " + join(missing, " and ") + ...
-        " — both criteria are required (no silent fallback to the flat rating).");
+        "Not evaluated: " + ua.Reason + "; and no yield criterion either " + ...
+        "(ThreadedMember.Material lacks Fsy, and Fty to estimate it).");
+    r.As = As;
+    return
+end
+if ~ua.Assessed
+    r = notEval(methodArea, "Not evaluated: " + ua.Reason + ".");
     r.As = As;
     return
 end
@@ -286,26 +295,36 @@ end
 ya       = memberTensileYldAllowable(joint);
 allowYld = ya.AllowYld;   % yield allowable, lbf  (= sy.Fsy * As)
 
-% NASA-STD-5020B §4.4.1 — the nut is "limited to the load rating of the
-% nut": the spec rating CAPS the computed ultimate allowable (lower-of;
-% nuts dilate under load, so the computed area is optimistic) —
-%     ultimate allowable = min(Fsu·As, RatedUltimateLoad)
-% (cap applied in memberTensileUltAllowable; disposition in ua.RatNote).
-% The yield criterion is NOT capped: the rating is an ultimate quantity
-% (see header).
+% NASA-STD-5020B §4.4.1 p26 — a procured nut's ultimate allowable IS its
+% specified rating, "rather than on thread-stripping analysis"; the computed
+% Fsu·As form is the fallback when no rating was given, and is carried
+% alongside for comparison when both exist (resolved in
+% memberTensileUltAllowable; disposition in ua.RatNote). The yield criterion
+% is never rating-based: a rating is an ultimate quantity (see header).
 effUlt  = ua.EffUlt;
 ratNote = ua.RatNote;
 
 % TM-106943 Eq. 65 MS form, each criterion vs the design bolt load built
 % with its own factor pair (thread-family convention — factors inside Pb,
 % external term only):
-%   ultimate: MS = min(Fsu·As, rating) / Pb − 1, Pb = PpMax + FFU·FSU·n·phi·PtL (5020B Eq. 8)
+%   ultimate: MS = effUlt / Pb − 1, effUlt = rating if supplied else Fsu·As,
+%             Pb = PpMax + FFU·FSU·n·phi·PtL (5020B Eq. 8)
 MSu = effUlt / d.Pb - 1;
 %   yield:    MS = Fsy·As / PbYield − 1, PbYield = PpMax + FFY·FSY·n·phi·PtL (5020B Eq. 8 form, yield factors)
 MSy = allowYld / d.PbYield - 1;
 
 % Worst criterion governs (marginBearing shape) — named in Detail.
-if MSu <= MSy
+%
+% MSy CAN BE NaN and must not swallow a valid ultimate. Since the rating
+% became the ultimate basis, a rated nut with no Fsy (or no area to apply it
+% to) has an assessable ULTIMATE and no yield criterion at all. A bare
+% `MSu <= MSy` comparison is false against NaN, so it would fall to the else
+% branch and report the whole row NotEvaluated — throwing away a margin the
+% standard says we have. Take the ultimate alone in that case and say so.
+if isnan(MSy)
+    MS   = MSu;
+    crit = "ultimate (yield not assessable: " + ya.Reason + ")";
+elseif MSu <= MSy
     MS   = MSu;
     crit = "ultimate";
 else
@@ -314,8 +333,8 @@ else
 end
 
 detail = "Governing: " + crit + " — " + areaSrc + string(sprintf( ...
-    ", nut %s Fsu %.0f psi, allowables ult %.0f / yld %.0f lbf, Pb ult %.0f / yld %.0f lbf", ...
-    nut.Name, Fsu, effUlt, allowYld, d.Pb, d.PbYield)) + "; " + sy.Basis;
+    ", nut %s Fsu %s psi, allowables ult %.0f / yld %s lbf, Pb ult %.0f / yld %.0f lbf", ...
+    nut.Name, num(Fsu), effUlt, num(allowYld), d.Pb, d.PbYield)) + "; " + sy.Basis;
 if strlength(ratNote) > 0
     detail = detail + "; " + ratNote;
 end
@@ -338,4 +357,16 @@ function r = notEval(method, detail)
 r = struct("MS", NaN, "Method", method, "Detail", string(detail), ...
     "As", NaN, "Pult", NaN, "AllowYld", NaN, ...
     "Pb", NaN, "PbYield", NaN, "Rating", NaN);
+end
+
+function s = num(v)
+%NUM  A number for Detail, or an em dash when it was never available.
+%   Fsu and the yield allowable are both optional now that a spec rating
+%   can carry the ultimate on its own; printing "NaN" in a report reads as
+%   a defect rather than as "not needed here".
+if isnan(v)
+    s = "—";
+else
+    s = string(sprintf("%.0f", v));
+end
 end

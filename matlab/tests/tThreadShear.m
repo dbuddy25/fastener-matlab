@@ -324,24 +324,36 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifySubstring(r.Detail, "GOVERNS");
         end
 
-        function nutRatingNotLimiting(testCase)
-            % Same fixture with a rating ABOVE the computed allowable
-            % (20,000 > 18,443.7): the computed area form stands, and the
-            % Detail records that the rating is not limiting.
+        function nutRatingAboveTheComputedFormStillGoverns(testCase)
+            % REVERSED 2026-08-14. This was nutRatingNotLimiting, and it
+            % asserted the opposite: with a rating ABOVE the computed area
+            % form (20,000 > 18,443.7) the computed number stood and the
+            % Detail said the rating was "not limiting".
             %
-            % Fig. 8 GATE ASSURED (system Ptu_allow = min(bolt-derived
-            % 14,048, nut 18,443.7) = 14,048; rating 20,000 is not limiting
-            % on the nut mode either — see boltThreadShearHandDerived for
-            % the full condition derivation) -> SEPARATED Pb form,
-            % Pb = 4,830 lb, PbYield = 3,750 lb: the MS is identical to
-            % nutYieldGovernsHandDerived (+2.279, yield governs).
+            % That was the ceiling reading. NASA-STD-5020B §4.4.1 p26 says
+            % a procured nut is assessed "on the strength specified for
+            % that item RATHER THAN on thread-stripping analysis" — so the
+            % rating is the BASIS, not a cap, and 18,443.7 was exactly the
+            % thread-stripping figure p26 excludes. p27's "limited to the
+            % load rating" is then satisfied automatically.
+            %
+            % Fig. 8 GATE ASSURED -> SEPARATED Pb form, Pb = 4,830 lb,
+            % PbYield = 3,750 lb:
+            %   ult: 20,000/4,830 - 1 = +3.141   (was 18,443.7 -> +2.819)
+            %   yld: 12,295.8/3,750 - 1 = +2.279 <- still governs
+            % So Pult moves and the MARGIN DOES NOT: yield was governing
+            % before and still is. Both are asserted, because a test that
+            % only checked MS would have passed through this change blind.
             [j, lc, fac] = nutJoint(model.Material( ...
                 Name="Soft nut (yield pin)", Fsu=60000, Fsy=40000), 20000, NaN);
             r = engine.marginNutStrength(j, lc, fac, engine.preload(j));
-            testCase.verifyEqual(r.Pult, 18443.7, "RelTol", 0.001);
+            testCase.verifyEqual(r.Pult, 20000, "AbsTol", 1e-9, ...
+                'The rating is the ultimate allowable, not a ceiling on one.');
             testCase.verifyEqual(r.MS, 2.279, "AbsTol", 0.01);
             testCase.verifyEqual(r.Rating, 20000);
-            testCase.verifySubstring(r.Detail, "not limiting");
+            testCase.verifySubstring(r.Detail, "GOVERNS");
+            % The computed form is still reported, for comparison only.
+            testCase.verifySubstring(r.Detail, "comparison only");
         end
 
         function nutRatingOnlyFallback(testCase)
@@ -396,12 +408,22 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifySubstring(r.Detail, "yield");
             testCase.verifySubstring(r.Detail, "von Mises");
             testCase.verifySubstring(r.Detail, "estimated");
-            % Fsu present but Fty/Fsy both NaN -> NotEvaluated with the
-            % reason (no silent ultimate-only, no silent rating fallback)
+            % Fty/Fsy both NaN, but a RATING is supplied. Before
+            % 2026-08-14 this was NotEvaluated on the rule that neither
+            % criterion may fall back to the rating. Now the rating IS the
+            % ultimate allowable (§4.4.1 p26), so the ultimate is
+            % assessable on its own and only the YIELD side is missing:
+            %   ult: 10,000/4,830 - 1 = +1.070, and nothing to compare it to
+            % Reporting a margin the standard says we have beats refusing
+            % it because a number we no longer use cannot be formed.
             [j2, lc2, fac2] = nutJoint(model.Material( ...
                 Name="Fsu only", Fsu=60000), 10000, NaN);
             r2 = engine.marginNutStrength(j2, lc2, fac2, engine.preload(j2));
-            testCase.verifyTrue(isnan(r2.MS));
+            testCase.verifyEqual(r2.MS, 1.070, "AbsTol", 0.01);
+            testCase.verifyTrue(isnan(r2.AllowYld), ...
+                'No Fsy, so no yield allowable exists.');
+            % ...and the row must SAY the yield side is missing, not omit it.
+            testCase.verifySubstring(r2.Detail, "yield not assessable");
             testCase.verifySubstring(r2.Detail, "Fsy");
         end
 

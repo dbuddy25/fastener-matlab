@@ -99,16 +99,26 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             testCase.verifyTrue(s.Complete);
         end
 
-        function nutRatingCapsSystem(testCase)
-            % The spec rating is a lower-of CEILING on the computed nut
-            % allowable (NASA-STD-5020B §4.4.1, "limited to the load
-            % rating of the nut") — same arithmetic the nut margin row uses
-            % (memberTensileUltAllowable is shared). HAND-DERIVED:
+        function nutRatingIsTheNutAllowableInTheSystemMinimum(testCase)
+            % REVERSED 2026-08-14 (was nutRatingCapsSystem). The rating is
+            % no longer a lower-of CEILING on a computed nut allowable — it
+            % IS the nut's allowable, per NASA-STD-5020B §4.4.1 p26:
+            % assessment of a procured item is "based on the strength
+            % specified for that item RATHER THAN on thread-stripping
+            % analysis". p27's "limited to the load rating" then holds
+            % automatically. The system minimum has to see the same number
+            % the nut row does, or the two disagree about one nut.
+            %
+            % HAND-DERIVED (computed form shown only to prove it is NOT
+            % what the system uses):
             %   computed = 30,000 * 0.75*pi*0.3479*0.375 = 9,221.86 lbf
-            %   rating 8,000 < computed -> system = min(15,200, 8,000)
-            %                                     = 8,000 lbf  (rating caps)
-            %   rating 20,000 > computed -> system = min(15,200, 9,221.86)
-            %                                      = 9,221.86 lbf (no cap)
+            %   rating 8,000  -> nut allowable 8,000
+            %                    system = min(15,200 bolt, 8,000) = 8,000
+            %   rating 20,000 -> nut allowable 20,000   (was 9,221.86)
+            %                    system = min(15,200 bolt, 20,000) = 15,200
+            % The second case is the one that moved, and it moved the
+            % GOVERNING MODE with it: the nut used to govern, the bolt now
+            % does. That is the visible consequence of the change.
             j = tSystemAllowable.softNutJoint(30000, 8000, 15200);
             s = engine.systemTensileAllowable(j);
             testCase.verifyEqual(s.PtuAllow, 8000, "AbsTol", 1e-9);
@@ -116,8 +126,9 @@ classdef tSystemAllowable < matlab.unittest.TestCase
 
             j = tSystemAllowable.softNutJoint(30000, 20000, 15200);
             s = engine.systemTensileAllowable(j);
-            testCase.verifyEqual(s.PtuAllow, 30000*0.75*pi*0.3479*0.375, ...
-                "RelTol", 1e-9);
+            testCase.verifyEqual(s.PtuAllow, 15200, "AbsTol", 1e-9, ...
+                'A rating above the computed form is used, not clamped to it.');
+            testCase.verifyEqual(s.GoverningMode, "bolt tension");
         end
 
         function insertGovernsSystem(testCase)
@@ -260,14 +271,36 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             testCase.verifySubstring(r.Decision, "nut thread shear");
         end
 
-        function areaWithoutFsuIsNotSilentlyRated(testCase)
-            % NO SILENT FALLBACK: with a thread-shear area available but no
-            % nut Fsu, the true allowable min(Fsu·As, rating) is unknowable
-            % and is <= the rating — standing the 10,000 lbf rating in for
-            % it would be OPTIMISTIC. The mode must report unassessed (the
-            % same rule engine.marginNutStrength applies), leaving the
-            % system minimum incomplete at the bolt's 15,200 lbf.
+        function aRatedNutNeedsNoMaterialDataForItsUltimate(testCase)
+            % REVERSED 2026-08-14 (was areaWithoutFsuIsNotSilentlyRated).
+            % That test asserted a rated nut with no Fsu must report
+            % UNASSESSED, reasoning that "the true allowable
+            % min(Fsu·As, rating) is unknowable and is <= the rating, so
+            % standing the rating in for it would be OPTIMISTIC."
+            %
+            % That reasoning is pure ceiling logic and it dissolved with
+            % the ceiling. Under §4.4.1 p26 the rating is not an upper
+            % bound on an unknown — it is the allowable. Fsu is needed only
+            % for the FALLBACK form, which a rated nut never reaches. So
+            % the mode is fully assessable at 10,000 lbf and the system
+            % minimum is COMPLETE, not incomplete.
+            %   system = min(15,200 bolt, 10,000 nut) = 10,000
             j = tSystemAllowable.softNutJoint(NaN, 10000, 15200);  % Fsu NaN
+            s = engine.systemTensileAllowable(j);
+            testCase.verifyEqual(s.PtuAllow, 10000, "AbsTol", 1e-9);
+            testCase.verifyEqual(s.GoverningMode, "nut thread shear");
+            testCase.verifyTrue(s.Complete, ...
+                'A rated nut is assessed, so nothing is missing from the minimum.');
+            testCase.verifyFalse(contains(s.Note, "INCOMPLETE"));
+        end
+
+        function anUnratedNutStillNeedsFsuForTheFallback(testCase)
+            % The other side of the same rule, so the reversal above did
+            % not quietly delete the guard. With NO rating there is nothing
+            % to be assessed on but the computed form, and that form needs
+            % Fsu — so this must still refuse, and the system minimum must
+            % still report itself INCOMPLETE.
+            j = tSystemAllowable.softNutJoint(NaN, 0, 15200);   % Fsu NaN, no rating
             s = engine.systemTensileAllowable(j);
             testCase.verifyEqual(s.PtuAllow, 15200, "AbsTol", 1e-9);
             testCase.verifyFalse(s.Complete);
