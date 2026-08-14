@@ -159,7 +159,7 @@ function printFailureDetail(results)
 %
 %   Wrapped end to end: a run that has just told you 700 tests passed must
 %   not then error while formatting its own report.
-maxLines = 14;    % per failure — enough for actual/expected, not a wall
+maxLines = 22;    % per failure — fits an identifier, message and stack
 maxChars = 110;   % per line — keeps it inside a terminal width
 
 try
@@ -186,7 +186,7 @@ try
             fprintf('   %s\n', t);
         end
         if numel(lines) > shown
-            fprintf('   ... %d more line(s) in the inline report above\n', ...
+            fprintf('   ... %d more line(s) suppressed\n', ...
                 numel(lines) - shown);
         end
     end
@@ -211,8 +211,62 @@ for r = reshape(d.DiagnosticRecord, 1, [])
     end
     lines = [lines, textOf(r, 'TestDiagnosticResult')]; %#ok<AGROW>
     lines = [lines, textOf(r, 'FrameworkDiagnosticResult')]; %#ok<AGROW>
+    % AN UNCAUGHT ERROR CARRIES NEITHER OF THE ABOVE. Those two properties
+    % live on QualificationDiagnosticRecord (a failed verify/assert);
+    % ExceptionDiagnosticRecord instead carries the MException on
+    % .Exception. Reading only the qualification pair meant an
+    % [ExceptionThrown] failure printed its event tag and NOTHING ELSE —
+    % no identifier, no message, no line number — which is the one failure
+    % kind where the report is the only evidence available, since the
+    % suite runs on a machine away from the one it is debugged on. That
+    % cost a full 12-minute run on 2026-08-14.
+    lines = [lines, exceptionLines(r)]; %#ok<AGROW>
 end
 lines = lines(strlength(strtrim(lines)) > 0);
+end
+
+function out = exceptionLines(rec)
+%EXCEPTIONLINES  Identifier, message and project stack from an MException.
+%   Empty for any record that is not an exception record, so the caller can
+%   append it unconditionally.
+%
+%   The stack is trimmed to frames inside this project: an MException from
+%   deep in the engine arrives with a dozen framework frames on top of it
+%   (TestRunner, TestCase.run, the plugin chain) that say nothing about the
+%   defect. What identifies it is the +engine / +model / tests frame, and
+%   that is usually the first one or two.
+out = string.empty(1, 0);
+if ~isprop(rec, 'Exception')
+    return
+end
+try
+    ex = rec.Exception;
+catch
+    return
+end
+if isempty(ex) || ~isa(ex, 'MException')
+    return
+end
+
+if strlength(string(ex.identifier)) > 0
+    out(end + 1) = string(ex.identifier);
+end
+out = [out, strtrim(splitlines(string(ex.message)))'];
+
+srcDir = fileparts(mfilename("fullpath"));      % .../matlab
+frames = 0;
+for f = reshape(ex.stack, 1, [])
+    if frames >= 6
+        break
+    end
+    if ~startsWith(string(f.file), srcDir)
+        continue                                 % framework frame — noise
+    end
+    [~, base, ext] = fileparts(string(f.file));
+    out(end + 1) = "  at " + string(f.name) + " (" + base + ext + ...
+        ":" + string(f.line) + ")"; %#ok<AGROW>
+    frames = frames + 1;
+end
 end
 
 function out = textOf(rec, prop)
