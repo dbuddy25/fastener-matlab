@@ -163,6 +163,22 @@ else
     highlight = Text(sprintf("%s, MS = %.3f", r.GoverningCheck, r.WorstMargin));
     highlight.Bold = true;
     append(callout, highlight);
+    % SAY SO WHEN THE GOVERNING CHECK IS NOT ONE 5020B REQUIRES. Only the
+    % bolt-thread-shear row is in that position (engine.analyze's
+    % SUPPLEMENTAL note has the reasoning: §4.7.4 handles thread stripping
+    % by design rule, not by a computed margin). Without this line a reader
+    % could redesign a joint to satisfy a requirement the standard does not
+    % levy, or state a 5020B compliance result that rests on a check
+    % outside it. The margin itself is still real and still reported —
+    % this caveats what it means, not whether to trust it.
+    if isfield(r, "GoverningIsRequiredByStd") && ~r.GoverningIsRequiredByStd
+        note = Text([" — this check is SUPPLEMENTAL to NASA-STD-5020B, " ...
+            "which handles thread stripping by design rule (4.7.4) rather " ...
+            "than by a computed margin. Every check 5020B does require " ...
+            "carries a wider margin than this one."]);
+        note.Italic = true;
+        append(callout, note);
+    end
     add(ch, callout);
 end
 add(rpt, ch);

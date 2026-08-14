@@ -20,7 +20,7 @@ key in the project. Anything that moves them is wrong until proven otherwise.
 | 3 | Insert internal-thread | ✅ reviewed | **No change.** Will read NotEvaluated on every real Heli-Coil joint because the allowable is not published for wire inserts — NASM33537, Dan's tool and our library all agree it does not exist. §4.4.1 anticipates this ("one **or both** may be provided"). The row stays: key-locked inserts do publish one. |
 | 4 | Nut strength | ⚠️ **changed** | **`3db9797`** — a rated nut is assessed on its rating, not on thread-stripping. §4.4.1 p26 makes the specified strength the *basis*; the tool had it as a ceiling. Dan: "comply with 5020." |
 | 5 | Tapped-hole parent thread | ⚠️ **changed** | Citation was **TM Eq. 79**, which presumes an insert whose external area can be borrowed (TM p23) — a tapped hole has none. Corrected to **Eq. 76/77**, the internal-thread mode of whatever the bolt screws into. Also: **TM Eq. 80 scopes all three thread modes to "ultimate strength only"**, so this row's ultimate-only stance is TM's own — and its nut/insert siblings' yield criteria are the anomaly, now labelled supplemental. Dan on the +0.425 Ex 6-a margin: "would not concern anyone." |
-| 6 | Bolt-thread shear | — | |
+| 6 | Bolt-thread shear | ⚠️ **changed** | **5020B does not require this check at all.** §4.7.4 handles thread stripping by DESIGN RULE — a "should" with no TFSR number — and 5020B prints no thread-shear-area equation anywhere. The row is kept (a computed stripping margin can only be more conservative) but is now MARKED, because correcting its area (`6e3e370`, −21% allowable) made it far more likely to govern. Dan: "we just want to comply with 5020B." |
 | 7 | Tension-Ultimate | — | |
 | 8 | Separation-before-rupture gate | — | |
 | 9 | Slip | — | |
@@ -30,6 +30,22 @@ key in the project. Anything that moves them is wrong until proven otherwise.
 | 13 | Bearing | — | |
 | 14 | Shear tear-out | — | |
 | 15 | Shear-ultimate | — | |
+
+## Required vs supplemental — the axis that was missing
+
+`gui2.BulkAnalysisPage.CoreChecks` split checks by **which document supplies the
+equation**. That is not the compliance question. Bearing, tear-out and
+bearing-under-head take their formulas from TM-106943 but 5020B **requires**
+them — §4.4.1 p26 scopes the assessment to "all elements of the threaded
+fastening system, including the fastener, the internally threaded part such as a
+nut or an insert, **and the clamped parts**" — it simply prints no
+member-strength equation.
+
+On the axis that matters, **exactly one of the fifteen rows is not required**:
+**Bolt-thread shear**. `Result.Margins(k).Required` now carries this, and
+`Result.GoverningIsRequiredByStd` lets the PDF caveat a governing check that
+sits outside the standard, rather than inviting a redesign to satisfy a
+requirement 5020B never levied.
 
 ## Cross-document rule this review established
 

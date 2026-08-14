@@ -519,6 +519,53 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifyTrue(isnan(r2.MS));
         end
 
+        function onlyBoltThreadShearIsMarkedSupplemental(testCase)
+            % NASA-STD-5020B REQUIRES every margin row but one. Bearing,
+            % tear-out and bearing-under-head take their formulas from
+            % TM-106943, but §4.4.1 p26 requires them ("all elements of the
+            % threaded fastening system... AND THE CLAMPED PARTS") — 5020B
+            % just prints no member-strength equation. Same for the
+            % nut/insert/tapped internal-thread rows.
+            %
+            % Bolt-thread shear is the exception: §4.7.4 handles thread
+            % stripping by DESIGN RULE ("should be selected to ensure...
+            % the fastener would fail in tension before threads would
+            % strip"), a "should" with no TFSR number, and 5020B prints no
+            % thread-shear-area equation anywhere.
+            %
+            % Pinned as a SET rather than one flag, so adding a row without
+            % deciding which side it falls on breaks this test rather than
+            % silently defaulting to "required".
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+
+            names = [r.Margins.Name];
+            req   = [r.Margins.Required];
+            testCase.verifyEqual(names(~req), "Bolt-thread shear", ...
+                'Exactly one row is not required by 5020B.');
+            testCase.verifyTrue(all(req(names ~= "Bolt-thread shear")), ...
+                'Every other row is a 5020B requirement, whoever prints the equation.');
+        end
+
+        function aSupplementalGoverningCheckIsFlagged(testCase)
+            % The reason the marking exists. Correcting the thread-shear
+            % area to TM Eq. 63 as printed (6e3e370) took ~21% off this
+            % row's allowable, so it governs far more often than it used
+            % to — and a PDF naming it as THE governing check with no
+            % caveat invites redesigning a joint to satisfy a requirement
+            % 5020B does not levy.
+            %
+            % On DABJ §9 the thread rows are all NotEvaluated (no
+            % EngagementLength), so the governing check there is a required
+            % one and the flag must read TRUE. Guarding the true case as
+            % well as the concept: a flag that is never true is as useless
+            % as one that is never false.
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            testCase.verifyEqual(r.GoverningCheck, "Slip");
+            testCase.verifyTrue(r.GoverningIsRequiredByStd);
+        end
+
         function dabjSection9RegressionUnchanged(testCase)
             % Phase 3.3 must not disturb the DABJ §9 answer key. The §9
             % fixture is a Nut joint with NO EngagementLength (and no
