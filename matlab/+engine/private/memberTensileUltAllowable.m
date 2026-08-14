@@ -45,7 +45,7 @@ function a = memberTensileUltAllowable(joint)
 %         §4.4.1).
 %
 %     TappedHole:
-%       EffUlt = Fsu·As with As = 0.75·pi·E·Le (TM-106943 Eq. 79 parent
+%       EffUlt = Fsu·As with As = 0.75·pi·E·Le (TM-106943 Eq. 76/77 parent
 %       pull-out strength Pult = Fsu·As, pitch-diameter area form);
 %       ultimate-only, no rating for a tapped hole.
 %
@@ -289,7 +289,9 @@ switch joint.ThreadedMember.Type
         % Pitch-diameter thread-shear area — As = 0.75·pi·E·Le
         a.As      = 0.75 * pi * E * Le;               % parent internal-thread shear area, in^2
         a.AreaSrc = string(sprintf("As = 0.75·pi·E·Le with E %.4f in, %s", E, rle.Note));
-        % TM-106943 Eq. 79 — Pult = Fsu·As (parent pull-out strength)
+        % TM-106943 Eq. 77 on the Eq. 76 area — Pult = Fsu·As. NOT Eq. 79:
+        % that mode presumes an insert whose external area can be borrowed
+        % (TM p23); a tapped hole has none. See marginTappedParentThread.
         a.AllowUlt = Fsu * a.As;
         a.EffUlt   = a.AllowUlt;
         a.Assessed = true;

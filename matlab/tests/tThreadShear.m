@@ -98,7 +98,11 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifyEqual(r.As, 0.75*pi*0.1697*0.250, "AbsTol", 1e-12);
             testCase.verifyEqual(r.Pb, 1894, "AbsTol", 1e-9);
             testCase.verifyEqual(r.MS, 0.425, "AbsTol", 0.01);
-            testCase.verifySubstring(r.Method, "Eq. 79");
+            % Eq. 76/77, not Eq. 79 — corrected 2026-08-14. Eq. 79 is
+            % TM's INSERT parent-material mode and borrows the insert's
+            % external area (TM p23); a tapped hole has no insert. The
+            % parent's own internal threads are Eq. 76's mode.
+            testCase.verifySubstring(r.Method, "Eq. 76");
             testCase.verifySubstring(r.Method, "0.75");
             % Wrong configuration -> NotEvaluated, not a crash
             j2 = j;

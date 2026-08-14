@@ -18,14 +18,15 @@ function r = marginTappedParentThread(joint, loadCase, factors, preload)
 %   (OVERRIDING EngagementLength — Detail says which), else the unchanged
 %   joint.ThreadedMember.EngagementLength. NASA-STD-5020B prints no thread-shear-area
 %   equation; the working reference is NASA TM-106943 (Chambers), whose
-%   Eq. 79 gives the tapped-parent pull-out strength Pult = Fsu·As (this
+%   TM-106943 Eq. 76 gives the internal-thread shear area of whatever the
+%   bolt screws into, and Eq. 77 the allowable Pult = Fsu·As (this
 %   tool supplies the 0.75·pi·E·Le area; TM's own Eq. 78/79 area uses a
 %   5/8 coefficient, and DABJ §6 uses the H28 tolerance form with a
 %   judgment knockdown — see the validation note below). The 0.75
 %   coefficient on the pitch diameter is used consistently across every
 %   internal-thread shear area in this engine, so the nut, insert and
 %   tapped-hole rows are formed on one basis. Then:
-%       Pult = Fsu·As            (TM-106943 Eq. 79)
+%       Pult = Fsu·As            (TM-106943 Eq. 77 on the Eq. 76 area)
 %       MS   = Pult/Pb - 1       (TM-106943 Eq. 65 MS form)
 %   with Fsu = joint.ThreadedMember.Material.Fsu (the PARENT material) and
 %   the design bolt load Pb from engine.boltDesignLoad (phi COMPUTED for
@@ -106,6 +107,24 @@ function r = marginTappedParentThread(joint, loadCase, factors, preload)
 %
 %   Validation status/coverage: see VALIDATION.md (Margin checks, row 14).
 
+%   WHY Eq. 76 AND NOT Eq. 79 — corrected 2026-08-14 by the margin review.
+%   This row cited Eq. 79, which is TM-106943's INSERT PARENT MATERIAL
+%   THREAD FAILURE mode. Read at the source (TM p23), Eq. 79 presumes an
+%   insert is present: its area is "assumed to be the same as the insert's
+%   reduced external thread shear area used for equation (78)". A tapped
+%   hole has no insert, so there is no such area to borrow.
+%
+%   The failing surface here is the PARENT'S OWN INTERNAL THREADS, which is
+%   structurally Eq. 76's mode — "the internal thread shear strength is
+%   based on the major diameter of the mating EXTERNAL threads" (TM p21),
+%   i.e. the internal thread of whatever the bolt screws into. Same form
+%   engine.marginNutStrength borrows for a nut, and for the same reason.
+%
+%   Eq. 76 prints As = 3·pi·Le·D_major,ext/4. This uses the PITCH diameter
+%   in place of the major — smaller, therefore CONSERVATIVE — which is the
+%   same substitution declared on the nut path. The 3/4 coefficient is
+%   Eq. 76's own.
+%
 arguments
     joint    (1,1) model.Joint
     loadCase (1,1) model.LoadCase
@@ -113,7 +132,7 @@ arguments
     preload  (1,1) struct
 end
 
-method = "TM-106943 Eq. 79 (tapped-hole parent thread shear) via the As = 0.75·pi·E·Le pitch-diameter form + Eq. 65 MS; Pb per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, Pb = FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
+method = "TM-106943 Eq. 76/77 (tapped-hole parent internal-thread shear) via the As = 0.75·pi·E·Le pitch-diameter form + Eq. 65 MS; Pb per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, Pb = FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
 
 if joint.ThreadedMember.Type ~= model.ThreadedMemberType.TappedHole
     r = struct("MS", NaN, "Method", method, ...
@@ -137,7 +156,7 @@ if isnan(E) || isnan(Le) || isnan(Fsu)
 end
 
 % Pitch-diameter thread-shear area — As = 0.75·pi·E·Le — and the
-% TM-106943 Eq. 79 allowable Pult = Fsu·As (parent pull-out strength),
+% TM-106943 Eq. 77 allowable Pult = Fsu·As on the Eq. 76 area,
 % both computed in memberTensileUltAllowable, SHARED with
 % engine.systemTensileAllowable (5020B §4.4.1 system minimum) so this row
 % and the system allowable can never disagree.

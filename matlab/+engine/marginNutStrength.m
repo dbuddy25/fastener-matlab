@@ -170,6 +170,24 @@ function r = marginNutStrength(joint, loadCase, factors, preload)
 %
 %   Validation status/coverage: see VALIDATION.md (Margin checks, row 8).
 
+%
+%   ⚠️ THE YIELD CRITERION IS SUPPLEMENTAL TO BOTH DOCUMENTS, and the
+%   margin review (2026-08-14) established that it should say so. TM-106943
+%   Eq. 80, p24, scopes its own thread-shear modes explicitly: "The margin
+%   of safety should be calculated for all three modes of failure, FOR
+%   ULTIMATE STRENGTH ONLY, to determine the limiting mode of failure." So
+%   TM does not ask for a yield margin on this row. NASA-STD-5020B §4.4.2
+%   p29 separately requires the yield assessment to "address all elements
+%   of the threaded fastening system" — but that obligation is discharged
+%   by engine.systemTensileYieldAllowable, which folds this member's
+%   As·Fsy into the Tension-Yield row's Pty_allow.
+%
+%   This row's yield criterion is therefore EXTRA: neither TM's method nor
+%   5020B's requirement, but per-mode visibility that both allow and
+%   neither asks for. It is kept because a governing yield mode is worth
+%   naming rather than leaving buried inside a system minimum — and it is
+%   labelled here so nobody mistakes it for TM's. engine.marginTappedParentThread
+%   is the consistent one: ultimate only, exactly as Eq. 80 says.
 arguments
     joint    (1,1) model.Joint
     loadCase (1,1) model.LoadCase

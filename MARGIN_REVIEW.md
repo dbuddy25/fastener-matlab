@@ -19,7 +19,7 @@ key in the project. Anything that moves them is wrong until proven otherwise.
 | 2 | Insert external (pull-out) | ✅ reviewed | **No change.** The yield criterion — flagged as "the tool's own, no equation number" — is **algebraically identical to Dan's spreadsheet**: both scale the ultimate by `Fsy/Fsu` of the parent. Moves from unsupported to unnumbered-but-corroborated. |
 | 3 | Insert internal-thread | ✅ reviewed | **No change.** Will read NotEvaluated on every real Heli-Coil joint because the allowable is not published for wire inserts — NASM33537, Dan's tool and our library all agree it does not exist. §4.4.1 anticipates this ("one **or both** may be provided"). The row stays: key-locked inserts do publish one. |
 | 4 | Nut strength | ⚠️ **changed** | **`3db9797`** — a rated nut is assessed on its rating, not on thread-stripping. §4.4.1 p26 makes the specified strength the *basis*; the tool had it as a ceiling. Dan: "comply with 5020." |
-| 5 | Tapped-hole parent thread | — | |
+| 5 | Tapped-hole parent thread | ⚠️ **changed** | Citation was **TM Eq. 79**, which presumes an insert whose external area can be borrowed (TM p23) — a tapped hole has none. Corrected to **Eq. 76/77**, the internal-thread mode of whatever the bolt screws into. Also: **TM Eq. 80 scopes all three thread modes to "ultimate strength only"**, so this row's ultimate-only stance is TM's own — and its nut/insert siblings' yield criteria are the anomaly, now labelled supplemental. Dan on the +0.425 Ex 6-a margin: "would not concern anyone." |
 | 6 | Bolt-thread shear | — | |
 | 7 | Tension-Ultimate | — | |
 | 8 | Separation-before-rupture gate | — | |
@@ -30,6 +30,20 @@ key in the project. Anything that moves them is wrong until proven otherwise.
 | 13 | Bearing | — | |
 | 14 | Shear tear-out | — | |
 | 15 | Shear-ultimate | — | |
+
+## Cross-document rule this review established
+
+**TM-106943 Eq. 80 (p24) scopes its thread-shear modes to ultimate only:**
+*"The margin of safety should be calculated for all three modes of failure, for
+ultimate strength only."* NASA-STD-5020B §4.4.2 p29 separately requires the
+yield assessment to *"address all elements of the threaded fastening system"*.
+
+The tool satisfies both by splitting them: **the per-mode ROWS follow TM
+(ultimate)**, and **the yield obligation is discharged by
+`systemTensileYieldAllowable`**, which folds each member's `As·Fsy` into
+Tension-Yield. The nut and insert rows additionally carry a yield criterion —
+extra to both documents, kept for per-mode visibility, and now labelled as such
+so it is not mistaken for TM's method.
 
 ## Open assumptions surfaced, not yet closed
 
