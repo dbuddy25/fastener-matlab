@@ -51,7 +51,7 @@ arguments
     factors  (1,1) model.Factors
 end
 
-method = "NASA TM-106943 Eq. 72-74 (bolt bearing); required by NASA-STD-5020B §4.4.2";
+method = "NASA TM-106943 Eq. 72-74 (bolt bearing) — Eq. 73 area D*t, Eq. 72 Pbr = Fbr*Abr, Eq. 74 MS, both criteria per TM p20 (\"checked for both yield and ultimate\"); required for the clamped parts by NASA-STD-5020B §4.4.1 p26 (ultimate) and §4.4.2 p29 (yield)";
 
 V = loadCase.BoltShearLimitLoad;   % PsL, most-loaded bolt — bearing is driven by SHEAR, lbf
 D = joint.Bolt.NominalDiameter;    % bolt major diameter, in

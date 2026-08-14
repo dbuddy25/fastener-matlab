@@ -112,7 +112,7 @@ arguments
     preload  (1,1) struct
 end
 
-method = "NASA TM-106943 Eq. 75 area + Eq. 74 MS form (bearing under head/nut); required by NASA-STD-5020B §4.4.2";
+method = "NASA TM-106943 Eq. 75 area (pi/4)(dh^2-dt^2) + Eq. 74 MS form (bearing under head/nut), both criteria per TM p20; required for the clamped parts by NASA-STD-5020B §4.4.1 p26 (ultimate) and §4.4.2 p29 (yield); design load per NASA-STD-5020B Eq. 8 / §4.4.5 (no FS on preload)";
 
 PtL = loadCase.BoltTensileLimitLoad;   % most-loaded-bolt tensile limit load, lbf
 if isnan(PtL)

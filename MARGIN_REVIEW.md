@@ -26,9 +26,9 @@ key in the project. Anything that moves them is wrong until proven otherwise.
 | 9 | Slip | ⚠️ **changed** | Equations, preload sources and the no-`n·φ` demand term all check out against A.10 as printed. The gap was elsewhere: **TFSR 14 caps µ at 0.20/0.10 and the tool was silent on it** — `mustBeNonnegative`, no ceiling, no warning, while the slip margin scales directly with µ. Now warned in both bands (`engine.frictionCheck`). Eq. 84 carries an `FFSlip` 5020B does not print (conservative, default 1.0, documented). Dan: worst-across-the-pattern for the per-bolt loads, which is what Eq. 86's own caveat asks for; `FSSlip` left at 1.0 as program-defined. |
 | 10 | Separation | ⚠️ **changed** | Eq. 19 itself is one correctly-plumbed line, and the Eq. 4/Eq. 5 preload split underneath it holds. The gap was §4.2.2 p19: **separation-critical joints should carry FF ≥ 1.15**, and the tool already knew the condition — `PreloadSpec.SeparationCritical` drives the Eq. 4 preload — but nothing connected it to `FFSep`, which defaults to 1.0. Now warned (`engine.fittingFactorCheck`), factor untouched. Figure 1 read directly for the first time; hazard class confirmed permanently out of scope. |
 | 11 | Interaction | ⚠️ **changed** (twice) | **`fb2d40f`** — the no-tensile-allowable exit omitted `Bending`, crashing `engine.analyze` on any joint with neither a bolt rating nor a stress area. Then reviewed on its merits: the equations are **right** — Eq. 20/22 form with bending folded inside the tension bracket against `Ftu`, exponent swap correct, Psu-allow switched Eq. 12/13 by shear plane, preload correctly omitted per §4.4.4, and "Eq. 20/21" is an honest label because the two coincide at fbu = 0. The defect was downstream: **`report.exportResults` counted Pass as `WorstMargin >= 0`**, and interaction is excluded from `WorstMargin` by design, so an element failing Eq. 20-23 was exported as passing. Eq. 21/23 (plastic bending via `Fbu`) confirmed not needed — Dan: "we don't use that." R stays the reported form, not `a − 1` — Dan: "we don't report that as a margin." |
-| 12 | Bearing under head | — | |
-| 13 | Bearing | — | |
-| 14 | Shear tear-out | — | |
+| 12 | Bearing under head | ⚠️ **changed** (citation) | Equations correct: TM Eq. 75 annulus, Eq. 74 MS form, both criteria per TM p20, and the clamped-branch denominator correctly leaves preload unfactored per 5020B §4.4.5. Method string cited only §4.4.2 — the *yield* section — for a row computing both criteria; now cites **§4.4.1 p26 (ultimate) and §4.4.2 p29 (yield)**, both of which name "the clamped parts" explicitly. Nut-side branch still exercised by no fixture. |
+| 13 | Bearing | ⚠️ **changed** (citation) | TM Eq. 72-74 correct, both criteria per TM's own "checked for both yield and ultimate". Same §4.4.2-only citation, same fix. |
+| 14 | Shear tear-out | ⚠️ **changed** | TM Eq. 69-71 correct and the e/D < 1.5 validity caution already present. But the row was **ultimate-only with no yield criterion anywhere** — TM-faithful (Eq. 69 is `Pult` throughout and its tear-out section never mentions yield), yet §4.4.2 p29 requires the yield assessment to address the clamped parts, and unlike the thread rows this gap is **not** discharged by `systemTensileYieldAllowable`, which covers tensile modes only. Added `Pyld = Fsy·As` vs `FFY·FSY·V`, `Fsy` via the shared `engine.shearYieldStrength` (supplied, else 5020B Eq. 63). Dan: *"whatever 5020 says is the guide."* Citation fixed as above. |
 | 15 | Shear-ultimate | — | |
 
 ## Required vs supplemental — the axis that was missing
@@ -87,6 +87,23 @@ so it is not mistaken for TM's method.
   `model.Material` property. Staying on Eq. 20/22 is the conservative choice and
   5020B says so. Dan, 2026-08-14: "we don't use that from what i recall." Closed
   unless a joint needs it.
+- **TM's `MS < 0.5` trigger for a Bruhn-type analysis** — TM-106943 p20:
+  *"A more rigorous method … is the recommended method if the preceding
+  equations indicate marginal results (e.g., MS < 0.5) or if the e/D ratio is
+  below 1.5."* The e/D half is implemented as a Detail caution; the MS < 0.5
+  half is not. Dan, 2026-08-14: *"no we don't do that, could note it for review
+  later though."* Noted, not implemented.
+- **Tear-out yield vs ultimate is near-coincident for Al 7075-T7351** at the
+  template factors: `Fsu/(FFU·FSU)` = 22,592 against `Fsy/(FFY·FSY)` = 22,632
+  per unit shear — ultimate governs by 0.18%. Worth knowing that the new yield
+  criterion sits a fraction under the old one on the tool's most common flange
+  alloy, so a factor change could flip which governs.
+- **Nut side of bearing-under-head** — `ThreadedMember.BearingDiameter` /
+  `NutWasher.OuterDiameter` branch is exercised by no fixture. Head side has two
+  hand-derived pins.
+- **`Material.Fbru`/`Fbry` default to 0** — the same "physical claim as a
+  default" that made the CTE guard inert on 2026-08-13. Harmless today because
+  every guard is `> 0`, so 0 reads as unset, but it is the same latent trap.
 - **`FSSlip` = 1.0 default** — right for limit-load slip (TFSR 13's primary case),
   low for the yield-load case §4.4.6 also permits. Dan: "usually program
   defined." Exposed on `model.Factors`, so it is a setting rather than an

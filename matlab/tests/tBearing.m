@@ -86,6 +86,97 @@ classdef tBearing < matlab.unittest.TestCase
             testCase.verifyTrue(isnan(r2.MS));
         end
 
+        function tearoutYieldCriterionCanGovern(testCase)
+            % NASA-STD-5020B §4.4.2 p29 [TFSR 9] requires the yield
+            % assessment to address "all elements of the threaded fastening
+            % system ... AND THE CLAMPED PARTS". TM-106943 works tear-out
+            % at ultimate only (Eq. 69 is Pult = Fsu*As throughout, and
+            % unlike the bearing section it never mentions yield), so this
+            % row had no yield criterion and nothing else covered it:
+            % engine.systemTensileYieldAllowable discharges the yield
+            % obligation for the TENSILE member modes, and tear-out is
+            % shear-driven.
+            %
+            % HAND-DERIVED, same geometry as shearTearoutHandDerived:
+            %   As   = 2*0.320*(0.75 - 0.1875) = 0.36 in^2   (TM Eq. 70)
+            %   ultimate: Pult = 41,000*0.36 = 14,760 lbf
+            %             MS = 14760/(1.15*1.4*2000) = 14760/3220 - 1 = +3.584
+            %   yield:    Pyld = 20,000*0.36 =  7,200 lbf
+            %             MS = 7200/(1.0*1.25*2000) = 7200/2500 - 1 = +1.880
+            % Yield is the lower of the two, so it governs.
+            fm = model.Material(Name="Tear-out member", Fsu=41000, Fsy=20000);
+            b  = model.Bolt(Designation="3/8", NominalDiameter=0.375, ...
+                ThreadsPerInch=24, TensileStressArea=0.0878);
+            j  = model.Joint(Name="tear-out yield joint", Bolt=b, ...
+                FlangeStack=model.FlangeLayer(Material=fm, Thickness=0.320, ...
+                                              EdgeDistance=0.75));
+            lc  = model.LoadCase(Name="tear-out shear", ...
+                BoltTensileLimitLoad=0, BoltShearLimitLoad=2000);
+            fac = model.Factors();   % FFU 1.15, FSU 1.4, FFY 1.0, FSY 1.25
+
+            r = engine.marginShearTearout(j, lc, fac);
+            testCase.verifyEqual(r.MS, 1.880, "AbsTol", 0.01);
+            testCase.verifySubstring(r.Detail, "yield");
+            testCase.verifySubstring(r.Method, "§4.4.2 p29");
+
+            % A SUPPLIED Fsy carries no estimate note -- only a derived one
+            % does, so a real number is never dressed up as an estimate.
+            testCase.verifyFalse(contains(r.Detail, "Eq. 63"));
+        end
+
+        function tearoutYieldUsesDerivedFsyAndSaysSo(testCase)
+            % No Fsy, but an Fty: NASA-STD-5020B Eq. 63 (p66, A.8)
+            % Fsy = Fty/sqrt(3). The repo convention is that an ESTIMATED
+            % Fsy must never pass as test data, so the governing line has
+            % to name the estimate.
+            %   Fsy  = 30,000/sqrt(3) = 17,320.5 psi
+            %   Pyld = 17,320.5*0.36  =  6,235.4 lbf
+            %   MS   = 6235.4/2500 - 1 = +1.494   (governs over +3.584)
+            fm = model.Material(Name="Tear-out member", Fsu=41000, Fty=30000);
+            b  = model.Bolt(Designation="3/8", NominalDiameter=0.375, ...
+                ThreadsPerInch=24, TensileStressArea=0.0878);
+            j  = model.Joint(Name="tear-out derived-Fsy joint", Bolt=b, ...
+                FlangeStack=model.FlangeLayer(Material=fm, Thickness=0.320, ...
+                                              EdgeDistance=0.75));
+            lc  = model.LoadCase(Name="tear-out shear", ...
+                BoltTensileLimitLoad=0, BoltShearLimitLoad=2000);
+
+            r = engine.marginShearTearout(j, lc, model.Factors());
+            testCase.verifyEqual(r.MS, 1.494, "AbsTol", 0.01);
+            testCase.verifySubstring(r.Detail, "Eq. 63");
+        end
+
+        function tearoutSkipsYieldWithNoYieldData(testCase)
+            % A member with neither Fsy nor Fty is UNASSESSED for yield,
+            % not failed. shearTearoutHandDerived above depends on this --
+            % its fixture carries only Fsu, and its +3.584 pin would move
+            % if a yield criterion were invented from nothing.
+            %
+            % The companion assertion is what makes that non-vacuous: the
+            % SAME fixture with an Fsy added DOES produce a different
+            % margin, so "unchanged" here means the criterion was skipped,
+            % not that the machinery is dead.
+            b  = model.Bolt(Designation="3/8", NominalDiameter=0.375, ...
+                ThreadsPerInch=24, TensileStressArea=0.0878);
+            lc = model.LoadCase(Name="tear-out shear", ...
+                BoltTensileLimitLoad=0, BoltShearLimitLoad=2000);
+            fac = model.Factors();
+            build = @(mat) model.Joint(Name="tear-out skip joint", Bolt=b, ...
+                FlangeStack=model.FlangeLayer(Material=mat, Thickness=0.320, ...
+                                              EdgeDistance=0.75));
+
+            noYield = model.Material(Name="Fsu only", Fsu=41000);
+            rNo = engine.marginShearTearout(build(noYield), lc, fac);
+            testCase.verifyEqual(rNo.MS, 3.584, "AbsTol", 0.01, ...
+                'With no yield data the ultimate criterion alone governs.');
+            testCase.verifyFalse(contains(rNo.Detail, "yield"));
+
+            withYield = model.Material(Name="Fsu and Fsy", Fsu=41000, Fsy=20000);
+            rYes = engine.marginShearTearout(build(withYield), lc, fac);
+            testCase.verifyNotEqual(rYes.MS, rNo.MS, ...
+                'The yield criterion must be live -- otherwise the skip proves nothing.');
+        end
+
         function tearoutCautionBelowValidity(testCase)
             % e/D = 0.5/0.375 = 1.33 < 1.5: Eq. 69-71 is outside its
             % validity range there — the margin still computes (As =

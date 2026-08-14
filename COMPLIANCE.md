@@ -302,6 +302,37 @@ says only "typically warrants a larger fitting factor" — a judgment and a
 non-number. The separation rule is the only one that states a threshold *and*
 keys off a condition the joint model already carries.
 
+### §4.4.2 p29 — the clamped parts' yield assessment under shear
+
+§4.4.1 p26 and §4.4.2 p29 [TFSR 9] use the same scope sentence, one for
+ultimate and one for yield: the assessment addresses *"all elements of the
+threaded fastening system, including the fastener, the internally threaded part
+such as a nut or an insert, **and the clamped parts**."*
+
+The three member-strength rows take their equations from TM-106943, which
+5020B relies on because it prints none of its own. TM's coverage is uneven, and
+the tool now follows TM for the FORM and 5020B for the OBLIGATION:
+
+| Row | TM says | Tool |
+|---|---|---|
+| Bearing (Eq. 72–74) | *"checked for both yield and ultimate"* | both |
+| Bearing under head (Eq. 75 + 74) | *"again … for both yield and ultimate"* | both |
+| Shear tear-out (Eq. 69–71) | ultimate only — `Pult = Fsu·As`, yield never mentioned | **both**, yield added 2026-08-14 |
+
+Tear-out was the gap. It is ultimate-only in TM, and unlike the thread-shear
+rows — whose ultimate-only stance is discharged by
+`engine.systemTensileYieldAllowable` folding each member's `As·Fsy` into
+Tension-Yield — nothing covered it, because that helper handles **tensile**
+member modes and tear-out is shear-driven. `Pyld = Fsy·As` against `FFY·FSY·V`
+now closes it, with `Fsy` from the shared `engine.shearYieldStrength` (supplied,
+else 5020B Eq. 63 `Fty/√3`, flagged as an estimate when derived).
+
+Dan, 2026-08-14: *"whatever 5020 says is the guide."*
+
+All three rows' `Method` strings cited only §4.4.2 — the yield section — which
+was wrong for their ultimate criteria and, on tear-out, cited a yield
+requirement the row did not meet. They now cite both sections.
+
 ### Creep loss is not used — deferred as a possible later feature
 
 Table 1 requires `Ppc` be subtracted on the minimum-preload side *"if
