@@ -25,7 +25,7 @@ key in the project. Anything that moves them is wrong until proven otherwise.
 | 8 | Separation-before-rupture gate | ⚠️ **changed** | **Edge distance is now required by the GUI gate.** With none supplied the engine treats Fig. 8's `e/D ≥ 1.5` condition as PASSING and marks it ASSUMED — not neutral, since an assured gate selects the smaller separated `Pb` and pushes nine rows' margins **up on no evidence**. The engine cannot refuse: neither validation fixture supplies an edge distance (DABJ §9 included), so mandating it there would destroy the published +0.69/+0.63 — and DABJ itself works §9 gate-assured without stating one. Enforcement moved to the entry path. Dan: "user has to enter edge distance." Also fixed: an unassessable gate reported **Fail** — a determination nobody made — and now reports NotEvaluated. The analysis was and stays conservative (`boltDesignLoad` keeps the clamped `Pb`); only the label changed. |
 | 9 | Slip | — | |
 | 10 | Separation | — | |
-| 11 | Interaction | — | |
+| 11 | Interaction | ⚠️ **fixed ahead of review** | **`fb2d40f`** — the no-tensile-allowable exit omitted `Bending`, and `engine.analyze` reads `ia.Bending` unconditionally, so any joint with neither a bolt rating nor a stress area **crashed the whole run** instead of reporting NotEvaluated. Row still to be reviewed on its merits. |
 | 12 | Bearing under head | — | |
 | 13 | Bearing | — | |
 | 14 | Shear tear-out | — | |
@@ -73,3 +73,39 @@ so it is not mistaken for TM's method.
   default with a plan to revisit.
 - **Computed insert area vs HC 68-2 slope/intercept** — the two agree to 1–2%.
   Dan: "not worried about 1–2% and this is how we've done it before."
+
+## What running fixtures through the whole pipeline found
+
+Rows 1–8 were reviewed by reading. One defect (`fb2d40f`) was found a different
+way: by putting a fixture through `engine.analyze` that had only ever been used
+against `engine.stiffness` and single margin functions.
+
+`marginInteraction` has four not-evaluated exits. Three go through a shared
+`bendingNotEvaluated` helper whose stated job is *"one shape for all the
+not-evaluated exits, so a caller never has to guess which fields a NaN result
+carries"*. The fourth hand-rolled its own struct and left `Bending` out. Since
+`analyze` reads that field unconditionally to fill `Result.Bending`, a joint
+with no assessable tensile allowable lost **every** margin because **one**
+could not be formed — a crash precisely where the design says NotEvaluated.
+
+**Two existing tests walk that exact branch and had always passed.** They read
+`R` and `Detail`; neither asked for `Bending`. Value assertions were never going
+to catch it, so the new test asserts the *shape* — which is what the caller
+actually depends on.
+
+Worth recording as method, not just as a fix: the review's premise is that
+defects now live in plumbing and branch selection rather than in the formulas,
+and this one was invisible to equation review, invisible to the existing margin
+tests, and visible immediately to an unfamiliar fixture run end to end.
+
+Two supporting fixes came out of the same hunt:
+
+- **`0ccd4a8`** — the failure report printed `[ExceptionThrown]` and nothing
+  else. It read only the properties carried by *qualification* records (a failed
+  verify/assert); an uncaught error carries its `MException` elsewhere, so every
+  line was filtered away. For a suite that runs on a machine away from the one
+  it is debugged on, that made the one failure kind that most needs a message
+  produce none. Now prints identifier, message and the in-project stack frames.
+- **`3d4f6ad`** — a new test had been written into a `methods (Access =
+  private)` block, so MATLAB never registered it and the assertion had never run
+  once. The suite total being one short of the prediction is what exposed it.
