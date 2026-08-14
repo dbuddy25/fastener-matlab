@@ -2027,14 +2027,39 @@ classdef JointConfigPage < gui2.Page
             if strlength(obj.selectedKey(obj.MemberMaterialDropDown)) == 0
                 missing(end + 1) = string(obj.MemberMaterialLabel.Text); %#ok<AGROW>
             end
-            % Flange material is required only for a row actually in the
-            % stack - a row with no thickness is not part of this joint.
+            % Flange material and edge distance are required only for a row
+            % actually in the stack - a row with no thickness is not part of
+            % this joint.
+            %
+            % EDGE DISTANCE IS REQUIRED HERE, NOT IN THE ENGINE, and the split
+            % is deliberate. NASA-STD-5020B Figure 8's first decision box is
+            % "Ec > Eb/3 AND e/D >= 1.5"; with no edge distance supplied,
+            % engine.private.separationBeforeRuptureGate treats that condition
+            % as PASSING and marks it ASSUMED. That is not a neutral default:
+            % a gate that reads assured selects the SEPARATED design bolt load
+            % (Pb = FF*FS*PtL) instead of the clamped form that carries
+            % preload, which is normally smaller - so assuming e/D passes
+            % pushes nine rows' margins UP on no evidence.
+            %
+            % The engine cannot refuse instead: neither validation fixture
+            % supplies an edge distance, DABJ Section 9 included, so making it
+            % mandatory there would take the gate to not-assessable and
+            % destroy the only published answer key the project has (+0.69
+            % and +0.63). DABJ works Section 9 to a gate-assured answer
+            % without stating edge distances, so ASSUMED is what the worked
+            % example itself does. Enforcement therefore belongs on the entry
+            % path, where a real joint is being described by someone who can
+            % read it off a drawing. Dan, 2026-08-14: "user has to enter edge
+            % distance."
             anyLayer = false;
             for i = 1:gui2.JointConfigPage.MaxFlangeLayers
                 if obj.parsePositive(obj.FlangeThickness{i}) > 0
                     anyLayer = true;
                     if strlength(obj.selectedKey(obj.FlangeMaterial{i})) == 0
                         missing(end + 1) = sprintf("Flange layer %d material", i); %#ok<AGROW>
+                    end
+                    if isnan(obj.parsePositive(obj.FlangeEdge{i}))
+                        missing(end + 1) = sprintf("Flange layer %d edge distance", i); %#ok<AGROW>
                     end
                 end
             end

@@ -1657,10 +1657,40 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
             testCase.type(p.flangeThickness(1), '0.25');
             testCase.choose(p.flangeMaterial(1), char(mats(1)));
+            % Required since 2026-08-14: without it the Fig. 8 gate assumes
+            % e/D >= 1.5 passes, which pushes margins up on no evidence.
+            testCase.type(p.flangeEdge(1), '0.75');
             testCase.type(p.engagementLengthField(), '0.25');
             testCase.type(p.nominalTorqueField(), '50');
             testCase.type(p.boltTensileField(), '400');
             testCase.type(p.boltShearField(), '200');
+        end
+
+        function analyzeIsGatedOnEdgeDistance(testCase)
+            % NASA-STD-5020B Figure 8's first decision box needs e/D, and
+            % with no edge distance the engine's gate treats that condition
+            % as passing and marks it ASSUMED. Assumed-pass is NOT neutral:
+            % an assured gate selects the SEPARATED design bolt load, which
+            % is normally smaller than the clamped form, so nine rows'
+            % margins come out higher on no evidence.
+            %
+            % The engine cannot refuse -- neither validation fixture supplies
+            % an edge distance, DABJ §9 included, and making it mandatory
+            % there would destroy the published +0.69/+0.63. So the entry
+            % path enforces it instead, and this pins that split.
+            p = testCase.Page;
+            testCase.fillRunnableJoint();
+            testCase.assertTrue(p.analyzeButton().Enable == "on" || ...
+                p.analyzeButton().Enable == 1, ...
+                'Fixture must be runnable before removing the edge distance.');
+
+            testCase.type(p.flangeEdge(1), '');
+
+            testCase.verifyFalse(p.analyzeButton().Enable == "on" || ...
+                p.analyzeButton().Enable == 1);
+            testCase.verifyTrue( ...
+                contains(string(p.requiredLabel().Text), "edge distance"), ...
+                'And the label must name what is missing.');
         end
 
         function [boltKey, matKey, spec] = firstBoltSpecPair(testCase)
