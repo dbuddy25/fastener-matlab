@@ -34,7 +34,19 @@ function r = marginInsert(joint, loadCase, factors, preload)
 %           yield:    MS = A_shear·Fsy / PbYield − 1,
 %                     PbYield = PpMax + FFY·FSY·n·phi·PtL
 %       with Fsu/Fsy of joint.ThreadedMember.Material (the PARENT material
-%       the insert is installed in). A NaN Fsy is estimated as Fty/sqrt(3)
+%       the insert is installed in).
+%
+%       THE YIELD CRITERION IS CORROBORATED BY PRACTICE, even though it
+%       carries no equation number. Reviewed with Dan 2026-08-14: his
+%       spreadsheet computes the insert's yield tensile strength as
+%       (ultimate tensile strength x parent Fsy) / parent Fsu. Ours is
+%       As*Fsy, and since the ultimate is As*Fsu that is the same thing —
+%       both scale the ultimate allowable by the parent's shear
+%       yield/ultimate ratio. So this is the standard construction rather
+%       than something invented here; §4.4.2 simply prints no pull-out
+%       equation to number it with.
+%
+%       A NaN Fsy is estimated as Fty/sqrt(3)
 %       (NASA-STD-5020B Eq. 63, von Mises) via engine.shearYieldStrength —
 %       the estimate is ALWAYS
 %       flagged in Detail so a constitutive assumption never masquerades as

@@ -31,6 +31,26 @@ function r = marginInsertInternal(joint, loadCase, factors, preload)
 %   outcome: the standard says the value should come from the spec, and the
 %   tool will not invent one.
 %
+%   EXPECT THIS ROW TO READ NotEvaluated ON HELICAL WIRE INSERTS, and do
+%   NOT "fix" it. Reviewed with Dan 2026-08-14: the internal-thread
+%   allowable is simply not published for a wire insert — the wire engages
+%   over the full length and the parent gives out first, so it is not the
+%   governing mode. NASM33537 carries geometry only, this project's
+%   library carries no rating field, and Dan's own spreadsheet has none
+%   either. §4.4.1 anticipates exactly this: "One OR BOTH may be provided
+%   in the insert specification." Deriving a number here to make the row
+%   non-blank would violate p26 outright.
+%
+%   The row still earns its place: KEY-LOCKED inserts (MIL-I-45914A, the
+%   source of TM-106943's Table IV areas) do publish an internal-thread
+%   rating, so this check is live for that product even though it is not
+%   for Heli-Coils.
+%
+%   ⚠️ DO NOT enter Heli-Coil TB 68-2 tensile-strength numbers here. Those
+%   are PULL-OUT strength — the quantity engine.marginInsert computes from
+%   the parent — and filing them under the internal-thread heading is the
+%   exact mix-up the §4.4.1 row swap (7f78ade) corrected.
+%
 %   ULTIMATE ONLY, deliberately. A specification rating is an ultimate
 %   quantity; §4.4.2 requires yield design loads but supplies no yield
 %   counterpart for a procured item's rating, and dividing the rating by a
