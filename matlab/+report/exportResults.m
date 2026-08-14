@@ -12,9 +12,13 @@ function file = exportResults(T, file, opts)
 %
 %   For .xlsx the workbook gets THREE sheets:
 %       Results  — the full results table (one row per element)
-%       Summary  — counts: total elements, Pass (WorstMargin >= 0, no
-%                  Error), Fail (WorstMargin < 0), Error (nonempty Error
-%                  column). Skipped when T lacks WorstMargin/Error columns.
+%       Summary  — counts: total elements, Pass, Fail, Error (nonempty
+%                  Error column). Skipped when T lacks WorstMargin/Error
+%                  columns. FAIL IS NOT WorstMargin < 0 ALONE — see the
+%                  note at the counting code: the NASA-STD-5020B Eq. 20-23
+%                  interaction criterion is a ratio, carries no MS, and is
+%                  therefore absent from WorstMargin, so an element that
+%                  fails it used to be exported as Pass.
 %       About    — tool name, version (toolVersion), run timestamp and the
 %                  governing standard, so an exported workbook stays
 %                  traceable to the build that produced it. Any strings
@@ -63,11 +67,36 @@ if isXlsx
     % Summary sheet (counts) — only when the analyzeBulk columns exist
     vars = string(T.Properties.VariableNames);
     if all(ismember(["WorstMargin", "Error"], vars))
-        isErr  = strlength(T.Error) > 0;
-        isPass = ~isErr & T.WorstMargin >= 0;
-        isFail = ~isErr & T.WorstMargin < 0;
-        Metric = ["Total elements"; "Pass (WorstMargin >= 0)"; ...
-                  "Fail (WorstMargin < 0)"; "Error"];
+        isErr = strlength(T.Error) > 0;
+
+        % INTERACTION IS A FAILURE MODE THAT CARRIES NO MARGIN.
+        % NASA-STD-5020B Eq. 20-23 is a pass/fail CRITERION (R <= 1), not a
+        % margin equation, so engine.analyze gives that row MS = NaN and
+        % engine.analyzeBulk exports the ratio in its own InteractionR
+        % column. NaN is exactly what excludes it from WorstMargin -- which
+        % meant an element failing Eq. 20-23 was counted here as Pass, on a
+        % Summary sheet that gets emailed on and read as "47 elements
+        % pass". The Results sheet was never wrong; this count was.
+        %
+        % NaN > 1 is false, so an unevaluated interaction row does not
+        % become a failure.
+        failsInteraction = false(height(T), 1);
+        if ismember("InteractionR", vars)
+            failsInteraction = T.InteractionR > 1;
+        end
+
+        % Fail FIRST, then Pass excludes it: an element can have a
+        % non-negative worst margin AND fail interaction, and that is the
+        % whole case this exists for.
+        isFail = ~isErr & (T.WorstMargin < 0 | failsInteraction);
+
+        % NaN WorstMargin (nothing evaluated) stays neither Pass nor Fail,
+        % as before -- hence the explicit >= 0 rather than ~isFail. Total
+        % is deliberately not the sum of the other three.
+        isPass = ~isErr & ~isFail & T.WorstMargin >= 0;
+
+        Metric = ["Total elements"; "Pass"; ...
+                  "Fail (margin < 0 or interaction R > 1)"; "Error"];
         Count  = [height(T); nnz(isPass); nnz(isFail); nnz(isErr)];
         writetable(table(Metric, Count), file, "Sheet", "Summary");
     end

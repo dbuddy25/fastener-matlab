@@ -375,6 +375,60 @@ classdef tExport < matlab.unittest.TestCase
             testCase.verifyTrue(any(A.Value == toolVersion()), ...
                 'And must not have displaced the version stamp.');
         end
+
+        function summaryCountsAnInteractionFailureAsFailed(testCase)
+            % NASA-STD-5020B Eq. 20-23 is a pass/fail CRITERION, not a
+            % margin, so engine.analyze gives the Interaction row MS = NaN
+            % and it is excluded from WorstMargin by the same NaN filter
+            % every NotEvaluated row uses. The Summary sheet counted Pass
+            % as WorstMargin >= 0, so an element with healthy margins that
+            % FAILED Eq. 20-23 was exported as a pass -- on the sheet that
+            % gets emailed on and read as "N elements pass".
+            %
+            % Four rows, one per case, so the counts are unambiguous rather
+            % than inferred from a single total.
+            T = table( ...
+                ["e1"; "e2"; "e3"; "e4"], ...
+                [ 0.50;  -0.20;   0.80;   0.40], ...   % WorstMargin
+                [ 0.48;   0.30;   1.35;   NaN ], ...   % InteractionR
+                [   "";     "";     "";   ""  ], ...   % Error
+                'VariableNames', ...
+                {'ElementId', 'WorstMargin', 'InteractionR', 'Error'});
+
+            f = string(tempname) + ".xlsx";
+            testCase.addTeardown(@() delete(f));
+            report.exportResults(T, f);
+
+            S = readtable(f, "Sheet", "Summary", "TextType", "string");
+            count = @(m) S.Count(startsWith(S.Metric, m));
+
+            testCase.verifyEqual(count("Total"), 4);
+            % e1 passes outright; e4's NaN interaction is NOT a failure
+            % (NaN > 1 is false), and its margin is positive.
+            testCase.verifyEqual(count("Pass"), 2);
+            % e2 on margin, e3 on interaction ALONE -- the case that used
+            % to count as a pass.
+            testCase.verifyEqual(count("Fail"), 2);
+            testCase.verifyEqual(count("Error"), 0);
+        end
+
+        function summaryStillCountsWithoutAnInteractionColumn(testCase)
+            % report.exportResults is documented as working on any table
+            % carrying WorstMargin + Error, not only on analyzeBulk output.
+            % The interaction guard must be optional, not a new required
+            % column -- and the old behaviour must survive its absence.
+            T = table(["e1"; "e2"], [0.5; -0.2], ["", ""]', ...
+                'VariableNames', {'ElementId', 'WorstMargin', 'Error'});
+
+            f = string(tempname) + ".xlsx";
+            testCase.addTeardown(@() delete(f));
+            report.exportResults(T, f);
+
+            S = readtable(f, "Sheet", "Summary", "TextType", "string");
+            count = @(m) S.Count(startsWith(S.Metric, m));
+            testCase.verifyEqual(count("Pass"), 1);
+            testCase.verifyEqual(count("Fail"), 1);
+        end
     end
 end
 
