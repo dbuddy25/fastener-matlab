@@ -258,11 +258,25 @@ sbr = entry("Separation-before-rupture", NaN, ...
 % The ANALYSIS is unaffected and stays conservative: engine.boltDesignLoad
 % takes the clamped Pb (preload included) whenever the gate is not
 % ASSURED, and an unassessed gate is not assured. Only the label changes.
+% NOT "Pass"/"Fail" — THE GATE IS A BRANCH SELECTION, NOT A CRITERION.
+% Nothing is being assessed against an allowable here. A gate that is not
+% assured does not mean the hardware failed; it means rupture before
+% separation is conservatively assumed, so engine.boltDesignLoad keeps the
+% clamped Pb (preload included) and the Eq. 10 branch prices that into
+% Tension-Ultimate. Reporting that determination as "Fail" states a verdict
+% nobody reached — the same error the unassessable case made until it was
+% changed to NotEvaluated, one branch over.
+%
+% "Assured" / "NotAssured" is not new vocabulary: gui2.ResultsPage's
+% decision panel has always stated this branch as ASSURED / NOT ASSURED
+% (see tGui2Results' theGateStatesItsBranchRatherThanAPassOrFail), and the
+% gate struct itself carries Gate.Assured. The engine's Status string was
+% the last place still calling it a pass or a failure.
 if tu.Gate.Assessed
     if tu.SeparationBeforeRupture
-        sbr.Status = "Pass";
+        sbr.Status = "Assured";
     else
-        sbr.Status = "Fail";
+        sbr.Status = "NotAssured";
     end
 end
 

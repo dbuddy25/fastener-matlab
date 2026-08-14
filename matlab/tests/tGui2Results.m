@@ -163,7 +163,7 @@ classdef tGui2Results < matlab.uitest.TestCase
             % reports one fact twice and paints a red failure on a sound
             % joint. The engine gives the gate MS = NaN so it cannot govern
             % WorstMargin; the verdict follows the same rule.
-            testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
+            testCase.showResult(tGui2Results.syntheticResult("decisionNotAssured"));
 
             verdict = string(testCase.Page.verdictLabel().Text);
             testCase.verifyFalse(contains(upper(verdict), "FAIL"), ...
@@ -445,7 +445,7 @@ classdef tGui2Results < matlab.uitest.TestCase
             %SYNTHETICRESULT  A Result with known margins, for exact assertions.
             %   "mixed"         one over the cap, one failure, two unevaluated
             %   "noFailures"    nothing fails, something unevaluated
-            %   "decisionFails" only Separation-before-rupture fails
+            %   "decisionNotAssured" the gate selects the rupture branch
             %   "withWarning"   as "mixed", plus one warning row
             %   "withPreload"   as "mixed", plus Preload and DesignLoads
             %
@@ -457,13 +457,16 @@ classdef tGui2Results < matlab.uitest.TestCase
                 'Name', string(n), 'MS', ms, 'R', rr, 'Status', string(st), ...
                 'Method', string(me), 'Detail', string(de));
 
-            sbrStatus = "Pass";
-            if variant == "decisionFails"
-                sbrStatus = "Fail";
+            % The gate's two determined outcomes. NOT Pass/Fail: it
+            % selects a branch rather than assessing anything against an
+            % allowable (see engine.analyze and Result's Status note).
+            sbrStatus = "Assured";
+            if variant == "decisionNotAssured"
+                sbrStatus = "NotAssured";
             end
             tyStatus = "Fail";
             tyMS     = -0.14;
-            if variant == "noFailures" || variant == "decisionFails"
+            if variant == "noFailures" || variant == "decisionNotAssured"
                 tyStatus = "Pass";
                 tyMS     = 0.44;
             end
@@ -869,7 +872,7 @@ classdef tGui2Results < matlab.uitest.TestCase
     %   separate fields.
     methods (Test)
         function theGoverningEquationIsItsOwnLine(testCase)
-            testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
+            testCase.showResult(tGui2Results.syntheticResult("decisionNotAssured"));
             txt = string(testCase.Page.decisionArea().Value);
 
             testCase.verifyTrue(any(contains(txt, "Governing equation")), ...
@@ -880,7 +883,7 @@ classdef tGui2Results < matlab.uitest.TestCase
         function theRuptureBranchShowsTheNumbersBehindIt(testCase)
             % phi and n only exist on the Eq. 10 branch, and they are what
             % someone re-deriving that margin by hand needs.
-            testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
+            testCase.showResult(tGui2Results.syntheticResult("decisionNotAssured"));
             txt = string(testCase.Page.decisionArea().Value);
 
             testCase.verifyTrue(any(contains(txt, "phi = 0.336")));
@@ -942,7 +945,7 @@ classdef tGui2Results < matlab.uitest.TestCase
     % ---- The gate names the branch it selects -------------------------------
     methods (Test)
         function theGateStatesItsBranchRatherThanAPassOrFail(testCase)
-            testCase.showResult(tGui2Results.syntheticResult("decisionFails"));
+            testCase.showResult(tGui2Results.syntheticResult("decisionNotAssured"));
 
             txt = string(testCase.App.page("Results").decisionArea().Value);
             testCase.verifyTrue(any(contains(txt, "NOT ASSURED")), ...

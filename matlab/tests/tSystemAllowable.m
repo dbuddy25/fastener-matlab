@@ -696,6 +696,52 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             testCase.verifyFalse(r.Gate.Assured);
         end
 
+        function anAssessedGateStatesItsBranchNotAPassOrFail(testCase)
+            % The sibling of the test above. That one covered a gate that
+            % reached NO determination; this one covers a gate that reached
+            % one -- which used to be reported as "Pass" or "Fail".
+            %
+            % Nothing is assessed against an allowable at this gate. It
+            % selects which equation prices the bolt load: NASA-STD-5020B
+            % Eq. 6 when separation is assured before rupture, Eq. 10 (with
+            % preload, via engine.boltDesignLoad's clamped Pb) when it is
+            % not. A joint on the Eq. 10 branch has not failed anything --
+            % the conservative branch is already priced into
+            % Tension-Ultimate, and reporting it a second time as a "Fail"
+            % states a verdict nobody reached.
+            c = validation.dabjSection9();
+
+            % Assured: PpMax 11,070 < 0.75 * Ptu_allow (0.75 * 15,200 =
+            % 11,400), so Fig. 8's first tier is satisfied.
+            rA = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            testCase.assertTrue(rA.Gate.Assessed);
+            testCase.assertTrue(rA.Gate.Assured, ...
+                'DABJ §9 is the assured branch; the fixture must still be.');
+            testCase.verifyEqual(row(rA, "Separation-before-rupture").Status, ...
+                "Assured");
+
+            % Not assured: drop the rating so 0.75 * Ptu_allow = 10,500
+            % falls BELOW the same PpMax of 11,070, flipping the branch
+            % with nothing else about the joint changed.
+            j = c.Joint;
+            j.BoltRatedUltimateLoad = 14000;
+            rN = engine.analyze(j, c.LoadCase, c.Factors);
+            testCase.assertTrue(rN.Gate.Assessed);
+            testCase.assertFalse(rN.Gate.Assured, ...
+                'The lowered rating must actually flip the branch.');
+            testCase.verifyEqual(row(rN, "Separation-before-rupture").Status, ...
+                "NotAssured");
+
+            % The point of the whole change: neither determined outcome is
+            % a pass or a failure. A caller counting failures across
+            % Result.Margins must not pick this row up.
+            for st = [row(rA, "Separation-before-rupture").Status, ...
+                      row(rN, "Separation-before-rupture").Status]
+                testCase.verifyNotEqual(st, "Fail");
+                testCase.verifyNotEqual(st, "Pass");
+            end
+        end
+
     end
 
     methods (Static)

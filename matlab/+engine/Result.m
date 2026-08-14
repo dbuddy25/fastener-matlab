@@ -28,6 +28,11 @@ classdef Result
     %                                (not just Interaction's) so Margins
     %                                stays one uniform struct array.
     %                        Status  string — "Pass" | "Fail" | "NotEvaluated"
+    %                                | "Assured" | "NotAssured" (the
+    %                                Separation-before-rupture row ONLY — it
+    %                                selects a branch rather than assessing
+    %                                anything against an allowable, so it is
+    %                                neither passing nor failing)
     %                        Method  string — governing-equation citation
     %                                (surfaced from each margin function), or
     %                                the future phase for unbuilt checks
@@ -86,7 +91,12 @@ classdef Result
     %   which is only meaningful over true margins) with Status set
     %   directly from their own pass/fail logic:
     %     "Separation-before-rupture" — the NASA-STD-5020B Fig. 8 gate is
-    %       boolean; Status is Pass/Fail from the gate decision (Narrative).
+    %       boolean; Status is Assured/NotAssured from the gate decision
+    %       (Narrative), or NotEvaluated when the gate reached none. NOT
+    %       Pass/Fail: a gate that is not assured has not failed, it has
+    %       selected the conservative rupture branch, which
+    %       engine.boltDesignLoad then prices into the margins that DO
+    %       assess something.
     %     "Interaction" — NASA-STD-5020B Eq. 20-23 is a pass/fail CRITERION
     %       (R <= 1), not a margin equation; Status is Pass/Fail from
     %       R <= 1. The ratio R itself is on this row's own R field (and

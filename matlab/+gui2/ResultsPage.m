@@ -1184,6 +1184,14 @@ classdef ResultsPage < gui2.Page
                     s = 'Pass';
                 case "Fail"
                     s = 'FAIL';
+                case "Assured"
+                    % The Separation-before-rupture gate. Reads as the
+                    % branch it selected, matching what the decision panel
+                    % below the table has always said, because it assesses
+                    % nothing against an allowable.
+                    s = 'Assured';
+                case "NotAssured"
+                    s = 'Not assured';
                 otherwise
                     s = 'Not evaluated';
             end

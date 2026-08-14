@@ -420,6 +420,12 @@ for i = 1:height(T)
         case "Fail"
             rowStyle = {BackgroundColor("#" + st.FailBg), ...
                         Color("#" + st.FailText)};
+        case {"Assured", "NotAssured"}
+            % The Separation-before-rupture gate: a branch selection, not a
+            % verdict. Left unstyled ON PURPOSE -- green would claim a pass,
+            % red a failure, and the NotEvaluated amber would claim the gate
+            % reached no determination when it reached one.
+            rowStyle = {};
         otherwise   % NotEvaluated -- amber, never the grey of "nothing here"
             rowStyle = {BackgroundColor("#" + st.NotEvalBg)};
     end
