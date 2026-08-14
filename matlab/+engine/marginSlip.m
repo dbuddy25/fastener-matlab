@@ -23,8 +23,8 @@ function r = marginSlip(joint, loadCase, preload, factors)
 %   Ignored — check not evaluated: MS = NaN (analyze renders NotEvaluated).
 %
 %   In both evaluated modes mu = joint.FrictionCoefficient, PpMin =
-%   preload.PpMinSlip (worst-case min preload SCOPED TO SLIP — see below),
-%   and applied tension erodes the
+%   the worst-case min preload — preload.PpMinSlip for Eq. 84, preload.PpMin
+%   for Eq. 86 (see below) — and applied tension erodes the
 %   clamp (hence the mu*PtL demand term). If mu = 0 the check is not
 %   evaluated: MS = NaN with an explanatory Method string. NaN required
 %   loads error with id engine:marginSlip:boltLoadsRequired
@@ -59,12 +59,41 @@ function r = marginSlip(joint, loadCase, preload, factors)
 %   separation-critical joint is a per-fastener event — one bolt letting go
 %   is the failure — so the full Γ applies to the single worst bolt.
 %
-%   This check used the joint-scoped preload.PpMin until 2026-08-13, which
-%   fed slip the Eq. 4 value on separation-critical joints. Conservative
-%   (Eq. 4 is the lower preload, so slip capacity was understated — about
-%   14%% at Γ = 0.25, nf = 4) but not what §4.3.1 assigns. On a
-%   non-separation-critical joint the two forms coincide, so nothing there
-%   ever moved.
+%   The Eq. 84 branch used the joint-scoped preload.PpMin until
+%   2026-08-13, which fed it the Eq. 4 value on separation-critical
+%   joints. Conservative (Eq. 4 is the lower preload, so slip capacity was
+%   understated — about 14%% at Γ = 0.25, nf = 4) but not what §4.3.1
+%   assigns. On a non-separation-critical joint the two forms coincide, so
+%   nothing there ever moved.
+%
+%   EQ. 86 DOES NOT GET THE √nf, and this is the one place the text and the
+%   rationale pull apart. §4.3.1 says "joint-slip analysis" without
+%   distinguishing the two equations, and Eq. 86 is introduced (p74) as
+%   "another acceptable approach" to the same analysis — so on the text
+%   alone it would take Eq. 5. But A.2.1, "Rationale for Eqs. 5 and 26b"
+%   (p50), states the premise the factor rests on:
+%
+%     "When performing slip analysis, the concern related to preload is
+%      NOT the variation in preload for a single fastener, it is the
+%      variation in TOTAL preload for the joint... the probability
+%      distribution for total preload is the same as the probability
+%      distribution for the MEAN preload for the bolts in the pattern...
+%      a standard deviation equal to the standard deviation of the
+%      population divided by the SQUARE ROOT OF THE NUMBER OF BOLTS."
+%
+%   Eq. 84's capacity is nf·μ·PpMin — the joint total, exactly the
+%   quantity A.2.1 describes, so the √nf applies. Eq. 86's is μ·PpMin for
+%   ONE fastener, which is the case A.2.1 explicitly excludes. Applying
+%   the averaging there would credit a variance reduction that the
+%   single-fastener check never earns, and it is non-conservative.
+%
+%   So this branch keeps the joint-scoped PpMin. NOTE that is not
+%   obviously right either: on a joint that is not separation-critical,
+%   PpMin is itself the Eq. 5 form, so Eq. 86 still sees a √nf there.
+%   Taking A.2.1 literally would want a third, full-Γ single-fastener
+%   minimum — a form 5020B never prints for slip. Left as the
+%   pre-existing behaviour rather than invented; recorded in
+%   COMPLIANCE.md as an open question.
 %
 arguments
     joint    (1,1) model.Joint
@@ -133,12 +162,14 @@ else  % model.SlipMode.SingleFastener (the default)
     end
 
     % NASA-STD-5020B Eq. 86 (numerator) — Capacity = μ·PpMin (one fastener's friction resistance from clamp-up)
-    % PpMinSlip, NOT PpMin — see the SLIP TAKES Eq. 5 note in the header.
-    Capacity = mu * preload.PpMinSlip;
+    % PpMin, NOT PpMinSlip — the joint-scoped minimum. See EQ. 86 DOES NOT
+    % GET THE √nf in the header: A.2.1 ties that factor to the joint TOTAL,
+    % which is not what this branch computes.
+    Capacity = mu * preload.PpMin;
     % NASA-STD-5020B Eq. 86 (denominator) — Demand = FSslip·FFslip·(PsL + μ·PtL)
     % (this fastener's applied shear + friction lost to its applied tension)
     Demand = FSslip * FFslip * (PsL + mu * PtL);
-    % NASA-STD-5020B Eq. 86 — MS = (μ·PpMinSlip) / (FSslip·FFslip·(PsL + μ·PtL)) - 1
+    % NASA-STD-5020B Eq. 86 — MS = (μ·PpMin) / (FSslip·FFslip·(PsL + μ·PtL)) - 1
     MS = Capacity / Demand - 1;
 
     r = struct( ...

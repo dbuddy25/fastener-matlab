@@ -250,10 +250,18 @@ This is a **living document** — every new check adds a row.
   (`slipIgnoresTheSeparationCriticalFlag`): flipping the flag must move the
   separation margin and leave the slip margin exactly where it was.
 
+  **Scope: Eq. 84 only.** `PpMinSlip` feeds the joint-slip equation, not the
+  single-fastener Eq. 86. A.2.1 (p50) ties the `√n_f` to the joint TOTAL — *"the
+  concern… is not the variation in preload for a single fastener, it is the
+  variation in total preload for the joint"* — which is Eq. 84's `n_f·μ·PpMin`
+  and not Eq. 86's `μ·PpMin`. Crediting the averaging to the single-fastener
+  check would be non-conservative. See COMPLIANCE.md for the text-vs-rationale
+  conflict this leaves open.
+
   **One judgment call, flagged not buried:** Eq. 5 is printed for the
   torque-controlled form, and 5020B says nothing about direct preload. The
-  `√n_f` is applied on that branch too, on Appendix A.2's rationale — the
-  statistic is about preload variation across `n_f` fasteners, not about torque.
+  `√n_f` is applied on that branch too, on A.2.1's reasoning — the statistic is
+  about preload variation across `n_f` fasteners, not about torque.
 
 - **Thermal preload ignored washers while the bolt stiffness spanned them: CORRECTED.**
   TM-106943 Eq. 10 carries ONE `L`, shared between its Eq. 6 bolt term

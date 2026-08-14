@@ -64,6 +64,36 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 
 **Counts** — IMPLEMENTED 9 · PARTIAL 1 · OMITTED-BY-DECISION 3 · ABSENT 5 · OUT-OF-SCOPE 14.
 
+> **Eq. 5's √n_f goes to Eq. 84 but NOT to Eq. 86 — and the text and the
+> rationale disagree about that. OPEN.**
+> §4.3.1 assigns minimum initial preload by ANALYSIS: p23 and p47 both give
+> Eq. 5 (`1−Γ/√n_f`) to *"joint-slip analysis"*, and p48 frames it as binary —
+> Γ applies *"in all analyses except separation analysis of separation-critical
+> joints"*. On the text alone, both slip equations take Eq. 5, since 5020B
+> introduces Eq. 86 (p74) as *"another acceptable approach"* to the same
+> analysis.
+>
+> **A.2.1 (p50), the rationale for Eq. 5, says otherwise:** *"When performing
+> slip analysis, the concern related to preload is **not the variation in
+> preload for a single fastener**, it is the variation in **total preload for
+> the joint**… a standard deviation equal to the standard deviation of the
+> population divided by the square root of the number of bolts."* The `√n_f` is
+> a Central-Limit argument about the joint total. Eq. 84's capacity
+> (`n_f·μ·PpMin`) *is* that total; Eq. 86's (`μ·PpMin`) is the single fastener
+> the sentence excludes.
+>
+> **The tool follows the rationale**, because the direction matters: crediting
+> the averaging to Eq. 86 would reduce a variance the single-fastener check
+> never earns, and that is non-conservative. Eq. 84 takes `PpMinSlip`
+> (always Eq. 5); Eq. 86 takes `PpMin` (follows `SeparationCritical`).
+>
+> **What is still unresolved:** on a joint that is *not* separation-critical,
+> `PpMin` is itself the Eq. 5 form, so Eq. 86 still sees a `√n_f` there. Taking
+> A.2.1 literally would want a third, full-Γ single-fastener minimum — a form
+> 5020B never prints for slip. Left as the pre-existing behaviour rather than
+> invented. Worth an adjudication if single-fastener slip ever governs a real
+> design.
+
 > **Insert pull-out assumes a SOLID HOMOGENEOUS parent — stated, not guarded.**
 > §4.4.1 p27, immediately after describing the area × parent-`Fsu` form:
 > *"Such an allowable pull-out load applies when the insert is installed in a

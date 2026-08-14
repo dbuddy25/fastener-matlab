@@ -588,6 +588,31 @@ classdef tDabjCase < matlab.unittest.TestCase
                 'Separation DOES follow the flag — Eq. 4 is the stricter minimum.');
         end
 
+        function singleFastenerSlipDoesNotGetTheJointAveraging(testCase)
+            % THE OTHER HALF, and the distinction is the point. Eq. 84's
+            % capacity is nf·μ·PpMin — the joint TOTAL — which is exactly
+            % the quantity A.2.1 (p50) says the √nf addresses: "the concern
+            % related to preload is NOT the variation in preload for a
+            % single fastener, it is the variation in TOTAL preload for the
+            % joint." Eq. 86's capacity is μ·PpMin for ONE fastener, the
+            % case that sentence excludes.
+            %
+            % So flipping SeparationCritical MUST move the single-fastener
+            % margin (it rides on PpMin) while leaving the joint-slip
+            % margin alone (PpMinSlip). Getting these the same way round
+            % would mean the averaging had been credited to a check that
+            % never earns it — non-conservative.
+            c = validation.dabjSection9();
+            jn = c.Joint;  jn.SlipMode = model.SlipMode.SingleFastener;
+            js = jn;       js.PreloadSpec.SeparationCritical = true;
+
+            rn = engine.marginSlip(jn, c.LoadCase, engine.preload(jn), c.Factors);
+            rs = engine.marginSlip(js, c.LoadCase, engine.preload(js), c.Factors);
+
+            testCase.verifyLessThan(rs.MS, rn.MS, ...
+                'Eq. 86 rides on PpMin, so the flag must reach it.');
+        end
+
         function theDabjSlipAnswerKeyIsOnTheEq5Path(testCase)
             % Guards the boundary the change had to not cross. DABJ §9 is
             % SeparationCritical = false (p. 9-11), so Eq. 5 governs BOTH
