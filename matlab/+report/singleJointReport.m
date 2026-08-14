@@ -16,7 +16,7 @@ function file = singleJointReport(joint, loadCase, factors, file)
 %       3. Preload               r.Preload (PpiMax/PpiMin/PpMax/PpMin/
 %                               ThermalDelta), lbf
 %       4. Design loads          r.DesignLoads (Ptu/Pty/Psu/Psep), lbf
-%       5. Warnings              r.Warnings (bolt length / preload) --
+%       5. Warnings              r.Warnings (bolt length / preload / friction) --
 %                               SKIPPED ENTIRELY when Warnings is empty.
 %                               Per warning: the Message in its severity
 %                               color (Critical red, Warning amber), then

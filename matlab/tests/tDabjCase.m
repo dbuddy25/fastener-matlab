@@ -652,6 +652,87 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifySubstring(r.Method, "ignored");
         end
 
+        function muAboveTheCeilingWarns(testCase)
+            % NASA-STD-5020B §4.4.6b [TFSR 14] caps mu at 0.20 for ANY
+            % surface absent test substantiation. Nothing in the tool used
+            % to mention it, and the slip margin scales directly with mu —
+            % 0.35 reports a margin 75% higher than 0.20 on the same joint.
+            c = validation.dabjSection9();
+            j = c.Joint;
+            j.FrictionCoefficient = 0.35;
+
+            r = engine.analyze(j, c.LoadCase, c.Factors);
+            w = warningNamed(r, "FrictionAboveTFSR14");
+            testCase.assertNotEmpty(w, ...
+                'mu = 0.35 must raise the TFSR 14 warning.');
+            testCase.verifyEqual(w.Severity, "Warning");
+            testCase.verifySubstring(w.Method, "TFSR 14");
+            testCase.verifySubstring(w.Detail, "0.35");
+
+            % A WARNING, NOT A REFUSAL: TFSR 14's ceiling is conditional
+            % ("unless otherwise substantiated by test"), so the margin
+            % must still be computed on the value the analyst entered.
+            slip = r.Margins([r.Margins.Name] == "Slip");
+            testCase.verifyFalse(isnan(slip.MS), ...
+                'The slip margin must still be computed, not suppressed.');
+        end
+
+        function muInTheBareMetalBandNamesTheCondition(testCase)
+            % 0.20 is the number someone reaches for as "the 5020B value",
+            % and it is wrong on any coated, painted, lubricated or
+            % nonmetallic faying surface — which is most flight hardware.
+            % The middle band is therefore not silent; it names the
+            % condition so the analyst confirms it rather than inheriting
+            % it from a default.
+            c = validation.dabjSection9();
+            j = c.Joint;
+            j.FrictionCoefficient = 0.20;
+
+            r = engine.analyze(j, c.LoadCase, c.Factors);
+            w = warningNamed(r, "FrictionRequiresBareMetal");
+            testCase.assertNotEmpty(w, ...
+                'mu = 0.20 must name the surface condition it depends on.');
+            testCase.verifySubstring(w.Detail, "uncoated");
+            testCase.verifyEmpty(warningNamed(r, "FrictionAboveTFSR14"), ...
+                '0.20 is at the limit, not above it.');
+        end
+
+        function muAtOrBelowPointOneIsSilent(testCase)
+            % DABJ §9 itself runs mu = 0.1 — the tier-2 limit, permitted on
+            % ANY surface. The answer key must not acquire a warning: a
+            % check that fires on the published example is a check nobody
+            % will read.
+            c = validation.dabjSection9();
+            testCase.assertEqual(c.Joint.FrictionCoefficient, 0.1, ...
+                'This test is only meaningful while DABJ §9 sits at 0.1.');
+
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            testCase.verifyEmpty(warningNamed(r, "FrictionAboveTFSR14"));
+            testCase.verifyEmpty(warningNamed(r, "FrictionRequiresBareMetal"));
+        end
+
+        function ignoredSlipNeverWarnsAboutFriction(testCase)
+            % mu feeds nothing but engine.marginSlip. With slip ignored
+            % there is no friction claim to answer for, and a warning would
+            % be noise about a number in an unused field.
+            c = validation.dabjSection9();
+            j = c.Joint;
+            j.FrictionCoefficient = 0.5;          % well over any limit
+            j.SlipMode            = model.SlipMode.Ignored;
+
+            r = engine.analyze(j, c.LoadCase, c.Factors);
+            testCase.verifyEmpty(warningNamed(r, "FrictionAboveTFSR14"), ...
+                'An unused coefficient is not a compliance claim.');
+
+            % And the companion that proves the machinery was live: the
+            % SAME mu on the SAME joint DOES warn once slip is evaluated.
+            % Without this, the assertion above would pass against a
+            % frictionCheck that never fires at all.
+            j.SlipMode = model.SlipMode.Joint;
+            r2 = engine.analyze(j, c.LoadCase, c.Factors);
+            testCase.verifyNotEmpty(warningNamed(r2, "FrictionAboveTFSR14"));
+        end
+
         function analyzeReproducesAllDABJMargins(testCase)
             % Phase 2.9: ONE engine.analyze call reproduces every published
             % DABJ margin, names the governing check (the deliberate slip
@@ -969,4 +1050,22 @@ function ms = marginMS(r, name)
 mask = [r.Margins.Name] == name;
 assert(nnz(mask) == 1, "margin ""%s"" not found exactly once", name);
 ms = r.Margins(mask).MS;
+end
+
+function w = warningNamed(r, name)
+%WARNINGNAMED  One Result.Warnings row by Name, or [] if absent.
+%   Returns EMPTY rather than asserting, because the absence of a warning
+%   is itself something several tests assert on.
+%
+%   Guards the empty case explicitly: Result.Warnings defaults to a 1x0
+%   struct, and [emptyStruct.Name] is a 0x0 double, so comparing it to a
+%   string would error rather than return "no match".
+w = [];
+if isempty(r.Warnings)
+    return
+end
+mask = [r.Warnings.Name] == name;
+if any(mask)
+    w = r.Warnings(find(mask, 1));
+end
 end

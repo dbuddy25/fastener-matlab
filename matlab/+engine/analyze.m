@@ -215,6 +215,16 @@ if strlength(pw.Name) > 0
         "Detail",   pw.Detail);
 end
 
+fc = engine.frictionCheck(joint);   % NASA-STD-5020B §4.4.6b [TFSR 14] — mu <= 0.20 bare metal / 0.10 otherwise, absent test data
+if strlength(fc.Name) > 0
+    warnings(end+1) = struct( ...
+        "Name",     fc.Name, ...
+        "Severity", fc.Severity, ...
+        "Message",  fc.Detail, ...
+        "Method",   fc.Method, ...
+        "Detail",   fc.Detail);
+end
+
 % ---- Separation-before-rupture as its own row ----------------------------
 % The gate (NASA-STD-5020B Fig. 8 / DABJ Fig. 9-9) is boolean — it has no
 % numeric MS, so its Status comes from the gate result, not the NaN rule:

@@ -42,7 +42,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 11 | 4.4.4 | Combination of loads — **incl. bending** | **PARTIAL** — ultimate interaction implemented; **yield and separation under combined loading absent** | `engine.marginInteraction` + `engine/private/boltBendingStress`; see below |
 | 12 | 4.4.5 | Preload included when rupture precedes separation | IMPLEMENTED | `separationBeforeRuptureGate`, `boltDesignLoad` |
 | 13 | 4.4.6a | Friction credited only at limit/yield | IMPLEMENTED (structurally) | µ appears only in `marginSlip`; no ultimate check calls it |
-| 14 | 4.4.6b | µ ≤ 0.20 / ≤ 0.10 absent test substantiation | OMITTED-BY-DECISION | Working practice keeps µ at 0.10–0.20 — see below |
+| 14 | 4.4.6b | µ ≤ 0.20 / ≤ 0.10 absent test substantiation | IMPLEMENTED (warning) | `engine.frictionCheck` — `Result.Warnings` above each cap; see below |
 | 15 | 4.5 | Fatigue life | OMITTED-BY-DECISION | `MATLAB_TOOL_PRD.md` §4, "Out of scope (v1)" |
 | 16 | 4.6.1 | Preload-independent locking feature | OUT-OF-SCOPE | Hardware selection |
 | 17 | 4.6.2 | Mechanical locking feature on rotating bolts | OUT-OF-SCOPE | Hardware selection |
@@ -233,20 +233,44 @@ requires separation-critical joints to use a statistically-derived Γ
 `SeparationCritical` selects Eq. 4 vs Eq. 5 and has no bearing on where Γ comes
 from.
 
-### TFSR 14 — µ is held at or below the standard's caps by practice
+### TFSR 14 — µ is screened against both caps, and warned on
 
 §4.4.6b caps µ at **0.20** for uncoated, cleaned, visibly-clean metal and
 **0.10** for everything else — coated, painted, lubricated or non-metallic —
-unless substantiated by test.
+unless substantiated by test. It is a **shall**.
 
-Working practice keeps µ deliberately low, in the 0.10–0.20 range, which sits
-at or under the standard's limits. `Joint.FrictionCoefficient` is therefore
-validated `mustBeNonnegative` and no ceiling is enforced in code. Compliance
-rests on the entered value, and the value is visible and editable at the point
-of use.
+`engine.frictionCheck` screens the entered value whenever slip is actually
+evaluated (`SlipMode` other than `Ignored`, µ > 0) and adds a
+`Result.Warnings` row, which reaches both the Results page and the PDF:
 
-TFSR 13 — friction credited only at limit or yield, never ultimate — is
-enforced structurally regardless, since µ reaches only `marginSlip`.
+| µ | Outcome |
+|---|---|
+| > 0.20 | `FrictionAboveTFSR14` — above the cap for **any** surface |
+| 0.10 < µ ≤ 0.20 | `FrictionRequiresBareMetal` — names the surface condition the value depends on |
+| ≤ 0.10 | silent; permitted on any surface |
+
+**A warning, not a refusal.** The cap is conditional — *"unless otherwise
+substantiated by test"*, and §4.4.6b explicitly contemplates higher values with
+program- or project-approved testing. A tool that rejected µ > 0.20 would
+reject a legitimate substantiated input, and the analyst holds the test report.
+The margin is still computed on the value entered. Same stance as
+`engine.preloadWatchdog`.
+
+**Why the middle band is not silent.** Which cap applies depends on coating,
+lubricant and cleanliness at *and after* assembly — none of which the joint
+model carries, and none inferable from a material name (the same alloy is 0.20
+bare and 0.10 anodized). 0.20 is also the value reached for as "the 5020B
+number", and it is wrong on most flight hardware. Naming the condition makes it
+a confirmation rather than an inheritance.
+
+This replaces the previous OMITTED-BY-DECISION stance ("working practice keeps
+µ at 0.10–0.20"), which rested on habit rather than on anything the tool
+checked. Reviewed 2026-08-14; Dan: *"can we include recommendations or
+warnings?"*
+
+TFSR 13 — friction credited only at limit or yield, never ultimate — remains
+enforced structurally, since µ reaches only `marginSlip` and no ultimate
+allowable takes a friction credit.
 
 ### Creep loss is not used — deferred as a possible later feature
 

@@ -23,7 +23,7 @@ key in the project. Anything that moves them is wrong until proven otherwise.
 | 6 | Bolt-thread shear | ⚠️ **changed** | **5020B does not require this check at all.** §4.7.4 handles thread stripping by DESIGN RULE — a "should" with no TFSR number — and 5020B prints no thread-shear-area equation anywhere. The row is kept (a computed stripping margin can only be more conservative) but is now MARKED, because correcting its area (`6e3e370`, −21% allowable) made it far more likely to govern. Dan: "we just want to comply with 5020B." |
 | 7 | Tension-Ultimate | ✅ reviewed | **No change.** Surfaced an undocumented scope requirement — §4.4.1 p27 and §4.4.2 p30 both require the analysis to "account for load redistribution", and nothing in the repo mentioned it. Dan: the FE model handles load distribution, so it is satisfied upstream; now recorded in COMPLIANCE.md. Empty-`FlangeStack` throw confirmed safe: the GUI Analyze gate requires a flange thickness and bulk catches per row. |
 | 8 | Separation-before-rupture gate | ⚠️ **changed** | **Edge distance is now required by the GUI gate.** With none supplied the engine treats Fig. 8's `e/D ≥ 1.5` condition as PASSING and marks it ASSUMED — not neutral, since an assured gate selects the smaller separated `Pb` and pushes nine rows' margins **up on no evidence**. The engine cannot refuse: neither validation fixture supplies an edge distance (DABJ §9 included), so mandating it there would destroy the published +0.69/+0.63 — and DABJ itself works §9 gate-assured without stating one. Enforcement moved to the entry path. Dan: "user has to enter edge distance." Also fixed: an unassessable gate reported **Fail** — a determination nobody made — and now reports NotEvaluated. The analysis was and stays conservative (`boltDesignLoad` keeps the clamped `Pb`); only the label changed. |
-| 9 | Slip | — | |
+| 9 | Slip | ⚠️ **changed** | Equations, preload sources and the no-`n·φ` demand term all check out against A.10 as printed. The gap was elsewhere: **TFSR 14 caps µ at 0.20/0.10 and the tool was silent on it** — `mustBeNonnegative`, no ceiling, no warning, while the slip margin scales directly with µ. Now warned in both bands (`engine.frictionCheck`). Eq. 84 carries an `FFSlip` 5020B does not print (conservative, default 1.0, documented). Dan: worst-across-the-pattern for the per-bolt loads, which is what Eq. 86's own caveat asks for; `FSSlip` left at 1.0 as program-defined. |
 | 10 | Separation | — | |
 | 11 | Interaction | ⚠️ **fixed ahead of review** | **`fb2d40f`** — the no-tensile-allowable exit omitted `Bending`, and `engine.analyze` reads `ia.Bending` unconditionally, so any joint with neither a bolt rating nor a stress area **crashed the whole run** instead of reporting NotEvaluated. Row still to be reviewed on its merits. |
 | 12 | Bearing under head | — | |
@@ -73,6 +73,20 @@ so it is not mistaken for TM's method.
   default with a plan to revisit.
 - **Computed insert area vs HC 68-2 slope/intercept** — the two agree to 1–2%.
   Dan: "not worried about 1–2% and this is how we've done it before."
+- **Eq. 84/85's scope disqualifiers** — "only apply to a joint that is
+  concentrically loaded in tension and shear, has equal nominal preload for all
+  fasteners, and equivalent fastener sizes… when any of these conditions are
+  violated, these equations **cannot be used**." Undetectable without bolt-pattern
+  coordinates the tool does not import. A feature, not a fix.
+- **Eq. 86's `Pp-min` scope** — the single-fastener branch takes the joint-scoped
+  `PpMin`, which is itself the Eq. 5 √n_f form on a non-separation-critical joint.
+  A.2.1 ties that averaging to the joint TOTAL, so taken literally Eq. 86 would
+  want a third, full-Γ single-fastener minimum that 5020B never prints. Left as
+  pre-existing behaviour rather than invented.
+- **`FSSlip` = 1.0 default** — right for limit-load slip (TFSR 13's primary case),
+  low for the yield-load case §4.4.6 also permits. Dan: "usually program
+  defined." Exposed on `model.Factors`, so it is a setting rather than an
+  assumption.
 
 ## What running fixtures through the whole pipeline found
 
