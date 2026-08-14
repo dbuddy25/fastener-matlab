@@ -229,7 +229,13 @@ classdef tBoltAllowable < matlab.unittest.TestCase
             % Detail and never asked for Bending. So this asserts the
             % SHAPE, which is the part a caller depends on and the part no
             % value assertion was ever going to notice.
-            j   = tBoltAllowable.baseJoint(NaN, NaN);   % no rating, no At
+            % No rating AND no At: baseJoint(NaN, NaN) only clears the
+            % ratings, and the fixture's own At = 0.0878 still forms the
+            % derived At*Ftu, so the allowable resolves and the exit is
+            % never reached. Both have to go, exactly as the two tests
+            % above do it.
+            j   = tBoltAllowable.baseJoint(NaN, NaN);
+            j.Bolt.TensileStressArea = NaN;
             lc  = model.LoadCase(Name="shape check", ...
                 BoltTensileLimitLoad=1000, BoltShearLimitLoad=0);
             fac = model.Factors();
