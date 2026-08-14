@@ -457,11 +457,20 @@ classdef tGui2Results < matlab.uitest.TestCase
                 'Name', string(n), 'MS', ms, 'R', rr, 'Status', string(st), ...
                 'Method', string(me), 'Detail', string(de));
 
-            % The gate's two determined outcomes. NOT Pass/Fail: it
-            % selects a branch rather than assessing anything against an
-            % allowable (see engine.analyze and Result's Status note).
-            sbrStatus = "Assured";
-            if variant == "decisionNotAssured"
+            % ONE SOURCE OF TRUTH FOR THE BRANCH. Result.Gate and the
+            % gate row's Status are two views of the same determination,
+            % and the fixture used to derive the first from the second by
+            % string comparison -- so renaming the status silently flipped
+            % every variant to not-assured while still looking correct.
+            % Both now come from this boolean.
+            %
+            % The status is NOT Pass/Fail: the gate selects a branch rather
+            % than assessing anything against an allowable (see
+            % engine.analyze and engine.Result's Status note).
+            gateAssured = variant ~= "decisionNotAssured";
+            if gateAssured
+                sbrStatus = "Assured";
+            else
                 sbrStatus = "NotAssured";
             end
             tyStatus = "Fail";
@@ -516,7 +525,7 @@ classdef tGui2Results < matlab.uitest.TestCase
             % what the decisions panel now reads. Before, it dug the same
             % facts out of tu.Decision prose that arrived as Narrative AND
             % as the gate row's Detail.
-            if sbrStatus == "Pass"
+            if gateAssured
                 r.Gate = struct('Assessed', true, 'Assured', true, ...
                     'Trace', "e/D >= 1.5 ASSUMED (no EdgeDistance set)", ...
                     'Equation', "NASA-STD-5020B Eq. 6", 'Phi', NaN, 'N', NaN);
