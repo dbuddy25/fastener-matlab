@@ -64,6 +64,26 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 
 **Counts** — IMPLEMENTED 9 · PARTIAL 1 · OMITTED-BY-DECISION 3 · ABSENT 5 · OUT-OF-SCOPE 14.
 
+> **Load redistribution (§4.4.1 p27, §4.4.2 p30) is satisfied UPSTREAM, not in
+> the tool.** Both sections carry the same paragraph: *"When performing
+> [ultimate/yield] analysis, the analysis **should account for load
+> redistribution** due to geometric design features, localized yielding,
+> separation, or slipping. The loads acting on individual members of the fastened
+> joint are dependent on features of the joint design (e.g., fastener to bearing
+> surface clearance), materials (e.g., a bearing-critical versus shear-critical
+> joint design), and friction… Examples of load redistribution are shown in
+> Appendix A.12."*
+>
+> The engine analyses one bolt at a time against loads it is given, and models no
+> redistribution between fasteners. **Confirmed with Dan 2026-08-14: the FE model
+> handles load distribution**, and its per-bolt results are exactly what the bulk
+> path consumes. So the requirement is met before the tool sees the loads — but
+> it is met *by the analyst's FE work*, not by anything here, and a joint whose
+> loads did not come from an FE model that accounts for it would not satisfy this
+> paragraph. Recorded because it was documented nowhere: not in this file, not in
+> TOOL_DIFFERENCES.md, not in the engine. A "should" with no TFSR number, but it
+> appears twice.
+
 > **Eq. 5's √n_f goes to Eq. 84 but NOT to Eq. 86 — and the text and the
 > rationale disagree about that. OPEN.**
 > §4.3.1 assigns minimum initial preload by ANALYSIS: p23 and p47 both give

@@ -110,6 +110,20 @@ function r = marginTensionUlt(joint, preload, designLoads)
 %
 %   Validation status/coverage: see VALIDATION.md (Margin checks, rows 1, 1r, 12).
 
+%   WHY THIS ROW THROWS ON AN EMPTY FlangeStack, alone among the fifteen.
+%   Every other margin degrades to NotEvaluated. Here the empty stack means
+%   no grip, and grip is upstream of stiffness, preload and the Fig. 8 gate
+%   alike — there is no partial answer to give, only a cascade of NaN that
+%   would read as "not applicable" rather than "not configured".
+%
+%   Reviewed 2026-08-14 and left as a throw, because neither entry path can
+%   reach it: gui2.JointConfigPage's Analyze gate (missingRequired) lists
+%   "A flange layer thickness" among the selections Analyze cannot run
+%   without, and engine.analyzeBulk catches per row and puts the message in
+%   that row's Error column. Dan: "user will always fill the flange stack."
+%   A single-joint caller driving the engine headless can still hit it, and
+%   should — the error names the missing input.
+%
 arguments
     joint       (1,1) model.Joint
     preload     (1,1) struct
