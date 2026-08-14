@@ -23,7 +23,8 @@ function r = marginSlip(joint, loadCase, preload, factors)
 %   Ignored — check not evaluated: MS = NaN (analyze renders NotEvaluated).
 %
 %   In both evaluated modes mu = joint.FrictionCoefficient, PpMin =
-%   preload.PpMin (worst-case min preload), and applied tension erodes the
+%   preload.PpMinSlip (worst-case min preload SCOPED TO SLIP — see below),
+%   and applied tension erodes the
 %   clamp (hence the mu*PtL demand term). If mu = 0 the check is not
 %   evaluated: MS = NaN with an explanatory Method string. NaN required
 %   loads error with id engine:marginSlip:boltLoadsRequired
@@ -38,6 +39,33 @@ function r = marginSlip(joint, loadCase, preload, factors)
 %   = -0.65 (a deliberate failing margin -- the book's joint slips at limit
 %   load).
 
+%   SLIP TAKES Eq. 5, ALWAYS — it does not follow the joint's
+%   separation-critical flag. NASA-STD-5020B §4.3.1 assigns the two
+%   minimum-initial-preload forms BY ANALYSIS, not by joint, and says so
+%   twice:
+%       p22: "For use in separation analysis of separation-critical joints
+%             and for fatigue analysis..."            (Eq. 4, 1 - Γ)
+%       p23: "For use in JOINT-SLIP ANALYSIS and separation analysis of
+%             joints that are not separation-critical..."
+%                                                     (Eq. 5, 1 - Γ/√nf)
+%   and again at p47 (Eq. 26b) for the thermal-adjusted form. So joint-slip
+%   analysis takes Eq. 5 unconditionally, even on a joint the analyst has
+%   flagged separation-critical.
+%
+%   The physics behind the √nf (Appendix A.2's rationale) is why the split
+%   is by analysis: slip resists on the SUMMED friction of all nf
+%   fasteners, so the joint's AVERAGE minimum preload is the right
+%   statistic and the installation variation averages down. Separation of a
+%   separation-critical joint is a per-fastener event — one bolt letting go
+%   is the failure — so the full Γ applies to the single worst bolt.
+%
+%   This check used the joint-scoped preload.PpMin until 2026-08-13, which
+%   fed slip the Eq. 4 value on separation-critical joints. Conservative
+%   (Eq. 4 is the lower preload, so slip capacity was understated — about
+%   14%% at Γ = 0.25, nf = 4) but not what §4.3.1 assigns. On a
+%   non-separation-critical joint the two forms coincide, so nothing there
+%   ever moved.
+%
 arguments
     joint    (1,1) model.Joint
     loadCase (1,1) model.LoadCase
@@ -82,12 +110,13 @@ if mode == model.SlipMode.Joint
 
     nf = joint.BoltCount;
     % NASA-STD-5020B Eq. 84 (numerator) — Capacity = nf·μ·PpMin (friction resistance from clamp-up, all nf bolts)
-    Capacity = nf * mu * preload.PpMin;
+    % PpMinSlip, NOT PpMin — see the SLIP TAKES Eq. 5 note in the header.
+    Capacity = nf * mu * preload.PpMinSlip;
     % NASA-STD-5020B Eq. 84 (denominator) — Demand = FSslip·FFslip·(PsL_joint + μ·PtL_joint)
     % (applied joint shear + friction lost to applied joint tension; FFslip
     % applied beyond the standard's FS for consistency with Eq. 86)
     Demand = FSslip * FFslip * (PsLjoint + mu * PtLjoint);
-    % NASA-STD-5020B Eq. 84 — MS = (nf·μ·PpMin) / (FSslip·FFslip·(PsL_joint + μ·PtL_joint)) - 1
+    % NASA-STD-5020B Eq. 84 — MS = (nf·μ·PpMinSlip) / (FSslip·FFslip·(PsL_joint + μ·PtL_joint)) - 1
     MS = Capacity / Demand - 1;
 
     r = struct( ...
@@ -104,11 +133,12 @@ else  % model.SlipMode.SingleFastener (the default)
     end
 
     % NASA-STD-5020B Eq. 86 (numerator) — Capacity = μ·PpMin (one fastener's friction resistance from clamp-up)
-    Capacity = mu * preload.PpMin;
+    % PpMinSlip, NOT PpMin — see the SLIP TAKES Eq. 5 note in the header.
+    Capacity = mu * preload.PpMinSlip;
     % NASA-STD-5020B Eq. 86 (denominator) — Demand = FSslip·FFslip·(PsL + μ·PtL)
     % (this fastener's applied shear + friction lost to its applied tension)
     Demand = FSslip * FFslip * (PsL + mu * PtL);
-    % NASA-STD-5020B Eq. 86 — MS = (μ·PpMin) / (FSslip·FFslip·(PsL + μ·PtL)) - 1
+    % NASA-STD-5020B Eq. 86 — MS = (μ·PpMinSlip) / (FSslip·FFslip·(PsL + μ·PtL)) - 1
     MS = Capacity / Demand - 1;
 
     r = struct( ...

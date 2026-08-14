@@ -549,6 +549,56 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifySubstring(r.Method, "Eq. 84");
         end
 
+        function slipIgnoresTheSeparationCriticalFlag(testCase)
+            % NASA-STD-5020B §4.3.1 assigns the two minimum-initial-preload
+            % forms BY ANALYSIS, not by joint: p23 gives Eq. 5 to
+            % "JOINT-SLIP ANALYSIS and separation analysis of joints that
+            % are not separation-critical", and p47 repeats it. So flipping
+            % SeparationCritical must move the SEPARATION margin and leave
+            % the SLIP margin exactly where it was.
+            %
+            % Stated as an invariant rather than a hand-derived number
+            % because the invariant IS the requirement — any number I could
+            % pin here would also pass if slip quietly followed the flag by
+            % a coincidence of magnitudes.
+            c = validation.dabjSection9();
+            jn = c.Joint;                       % as shipped: not sep-critical
+            js = c.Joint;
+            js.PreloadSpec.SeparationCritical = true;
+
+            pn = engine.preload(jn);
+            ps = engine.preload(js);
+
+            % The slip-scoped minimum is Eq. 5 on BOTH, so it must not move.
+            testCase.verifyEqual(ps.PpMinSlip, pn.PpMinSlip, "AbsTol", 1e-9);
+            % The joint-scoped minimum DOES follow the flag: Eq. 4 drops it.
+            testCase.verifyLessThan(ps.PpMin, pn.PpMin, ...
+                'Eq. 4 must give a lower Ppi-min than Eq. 5 for nf > 1.');
+
+            % ...and that is exactly what each margin must see.
+            slipN = engine.marginSlip(jn, c.LoadCase, pn, c.Factors);
+            slipS = engine.marginSlip(js, c.LoadCase, ps, c.Factors);
+            testCase.verifyEqual(slipS.MS, slipN.MS, "AbsTol", 1e-9, ...
+                'Slip takes Eq. 5 unconditionally — the flag must not reach it.');
+
+            dn = engine.designLoads(c.LoadCase, c.Factors);
+            sepN = engine.marginSeparation(jn, pn, dn);
+            sepS = engine.marginSeparation(js, ps, dn);
+            testCase.verifyLessThan(sepS.MS, sepN.MS, ...
+                'Separation DOES follow the flag — Eq. 4 is the stricter minimum.');
+        end
+
+        function theDabjSlipAnswerKeyIsOnTheEq5Path(testCase)
+            % Guards the boundary the change had to not cross. DABJ §9 is
+            % SeparationCritical = false (p. 9-11), so Eq. 5 governs BOTH
+            % its minimums and PpMinSlip must equal PpMin exactly — which
+            % is why the published -0.65 slip margin does not move.
+            c = validation.dabjSection9();
+            p = engine.preload(c.Joint);
+            testCase.verifyFalse(c.Joint.PreloadSpec.SeparationCritical);
+            testCase.verifyEqual(p.PpMinSlip, p.PpMin, "AbsTol", 1e-12);
+        end
+
         function singleFastenerSlipMatches(testCase)
             % Single-fastener slip (NASA-STD-5020B Eq. 86, the tool DEFAULT)
             % on the DABJ joint with PER-BOLT limit loads. HAND-DERIVED, not

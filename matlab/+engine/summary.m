@@ -128,6 +128,13 @@ rows(end+1,:) = ["Preload (computed)", "PpiMin",       fmt(p.PpiMin),       "lbf
 rows(end+1,:) = ["Preload (computed)", "ThermalDelta", fmt(p.ThermalDelta), "lbf"];
 rows(end+1,:) = ["Preload (computed)", "PpMax",        fmt(p.PpMax),        "lbf"];
 rows(end+1,:) = ["Preload (computed)", "PpMin",        fmt(p.PpMin),        "lbf"];
+% Shown only when it differs from PpMin — i.e. only on a
+% separation-critical joint, where NASA-STD-5020B §4.3.1 gives slip
+% Eq. 5 while separation takes Eq. 4. Listing an identical second row
+% on every other joint would be noise.
+if isfield(p, "PpMinSlip") && ~isequaln(p.PpMinSlip, p.PpMin)
+    rows(end+1,:) = ["Preload (computed)", "PpMin (slip, Eq. 5)", fmt(p.PpMinSlip), "lbf"];
+end
 
 T = table(rows(:,1), rows(:,2), rows(:,3), rows(:,4), ...
     VariableNames=["Group", "Item", "Value", "Unit"]);

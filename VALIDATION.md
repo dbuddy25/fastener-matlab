@@ -225,6 +225,36 @@ This is a **living document** — every new check adds a row.
   that function's header and in `TOOL_DIFFERENCES.md`. Hand-derived pin:
   VALIDATION row 2s, `tSystemAllowable/memberGovernedYieldRuptureBranchHandDerived`.
 
+- **Joint slip took the wrong minimum preload on separation-critical joints: CORRECTED.**
+  NASA-STD-5020B §4.3.1 assigns the two minimum-initial-preload forms **by
+  analysis, not by joint**, and says so twice — p22 gives Eq. 4 (`1−Γ`) to
+  *"separation analysis of separation-critical joints and… fatigue analysis"*,
+  p23 gives Eq. 5 (`1−Γ/√n_f`) to *"**joint-slip analysis** and separation
+  analysis of joints that are not separation-critical"*, and p47 repeats the
+  split for the thermal-adjusted forms. `engine.preload` computed one `PpMin`
+  from `PreloadSpec.SeparationCritical` and both `marginSeparation` and
+  `marginSlip` consumed it, so slip on a separation-critical joint ran on the
+  Eq. 4 value.
+
+  Direction was **conservative** — Eq. 4 is the lower preload, so slip capacity
+  was understated (~14% at `Γ = 0.25, n_f = 4`) — but it is not what §4.3.1
+  assigns. `engine.preload` now returns `PpMinSlip` alongside `PpMin`;
+  `marginSlip` takes the former, `marginSeparation` the latter. On a joint that
+  is not separation-critical the two are identical, so the pair diverges only
+  where the standard says it should.
+
+  **DABJ §9 is `SeparationCritical = false`** (p. 9-11), so `PpMinSlip == PpMin`
+  there and the published **−0.65** slip margin does not move — pinned by
+  `tDabjCase/theDabjSlipAnswerKeyIsOnTheEq5Path`. The behaviour that does change
+  is pinned as an invariant rather than a number
+  (`slipIgnoresTheSeparationCriticalFlag`): flipping the flag must move the
+  separation margin and leave the slip margin exactly where it was.
+
+  **One judgment call, flagged not buried:** Eq. 5 is printed for the
+  torque-controlled form, and 5020B says nothing about direct preload. The
+  `√n_f` is applied on that branch too, on Appendix A.2's rationale — the
+  statistic is about preload variation across `n_f` fasteners, not about torque.
+
 - **Thermal preload ignored washers while the bolt stiffness spanned them: CORRECTED.**
   TM-106943 Eq. 10 carries ONE `L`, shared between its Eq. 6 bolt term
   (`δ_b = P_th/K_b + α_b·L·ΔT`) and its Eq. 7 joint term — verified against the

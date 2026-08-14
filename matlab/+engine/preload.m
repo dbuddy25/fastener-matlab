@@ -13,6 +13,34 @@ function p = preload(joint)
 %       PpMax        max in-service preload = PpiMax + P_thermal_max
 %       PpMin        min in-service preload =
 %                    (1 - relaxation)·PpiMin - creep - P_thermal_min
+%       PpiMinSlip   min initial preload SCOPED TO SLIP — always Eq. 5
+%       PpMinSlip    min in-service preload scoped to slip, same Eq. 2
+%                    adjustments applied to PpiMinSlip
+%
+%   TWO MINIMUMS, BECAUSE §4.3.1 SCOPES THEM BY ANALYSIS, NOT BY JOINT.
+%   The standard says it twice — p22: "For use in separation analysis of
+%   separation-critical joints and for fatigue analysis..." (Eq. 4,
+%   1 - Γ); p23: "For use in JOINT-SLIP ANALYSIS and separation analysis
+%   of joints that are not separation-critical..." (Eq. 5, 1 - Γ/√nf) —
+%   and again at p47 for the thermal-adjusted forms (Eq. 26a/26b). So
+%   joint-slip analysis takes Eq. 5 even on a separation-critical joint.
+%
+%   PpMin follows Joint.PreloadSpec.SeparationCritical and is what
+%   engine.marginSeparation consumes. PpMinSlip is always the Eq. 5 form
+%   and is what engine.marginSlip consumes. On a joint that is NOT
+%   separation-critical the two are identical, so the pair only diverges
+%   where §4.3.1 says it should. Returning both, rather than switching on
+%   a caller-supplied flag, keeps each margin's choice visible at the
+%   point of use. Before 2026-08-13 slip received PpMin, which fed it the
+%   Eq. 4 value on separation-critical joints — conservative (~14%% low on
+%   slip capacity at Γ = 0.25, nf = 4) but not what §4.3.1 assigns.
+%
+%   The √nf is statistical, and Appendix A.2's rationale is why the split
+%   is by analysis: slip resists on the SUMMED friction of all nf
+%   fasteners, so the joint's AVERAGE minimum is the right statistic and
+%   installation variation averages down. Separation of a
+%   separation-critical joint is a per-fastener event — one bolt letting
+%   go is the failure — so the full Γ applies to the single worst bolt.
 %
 %   Preload method (PreloadSpec.Method):
 %     TorqueControl — nominal torque + tolerance, NASA-STD-5020B c-factor form:
@@ -99,18 +127,33 @@ switch ps.Method
         cMin = 1 - ps.TorqueTolerance;
         % NASA-STD-5020B Eq. 3 — Ppi_max = c_max·(1 + Γ)·Ppi_nom
         PpiMax = cMax * (1 + G) * PpiNom;
+        % NASA-STD-5020B Eq. 5 — Ppi_min = c_min·(1 - Γ/√nf)·Ppi_nom
+        % ALWAYS computed, because §4.3.1 assigns it to joint-slip analysis
+        % unconditionally (see the two-minimums note in the header).
+        PpiMinSlip = cMin * (1 - G/sqrt(nf)) * PpiNom;
         if ps.SeparationCritical
             % NASA-STD-5020B Eq. 4 (separation-critical) — Ppi_min = c_min·(1 - Γ)·Ppi_nom
             PpiMin = cMin * (1 - G) * PpiNom;
         else
-            % NASA-STD-5020B Eq. 5 (not separation-critical) — Ppi_min = c_min·(1 - Γ/√nf)·Ppi_nom
-            PpiMin = cMin * (1 - G/sqrt(nf)) * PpiNom;
+            % Not separation-critical: §4.3.1 p23 assigns Eq. 5 to this
+            % separation analysis too, so the two coincide here.
+            PpiMin = PpiMinSlip;
         end
     case model.PreloadMethod.DirectPreload
         % NASA-STD-5020B Eq. 3/4 uncertainty form with c = 1 (no torque
         % tolerance) — PpiMax = (1 + Γ)·Pnom, PpiMin = (1 - Γ)·Pnom
         PpiMax = (1 + G) * ps.NominalPreload;
         PpiMin = (1 - G) * ps.NominalPreload;
+        % Eq. 5's √nf form applied to the direct-preload branch as well.
+        % A JUDGMENT CALL, flagged rather than buried: Eq. 5 is printed for
+        % the torque-controlled form, and 5020B says nothing about direct
+        % preload here. Appendix A.2's rationale for the √nf is statistical
+        % — the variation of the joint's AVERAGE preload falls as the
+        % fastener count rises — and that argument is about preload
+        % variation, not about torque. Γ means the same thing on this
+        % branch, so the same averaging applies. Conservative to omit,
+        % which is what the tool did before 2026-08-13.
+        PpiMinSlip = (1 - G/sqrt(joint.BoltCount)) * ps.NominalPreload;
     otherwise
         error("engine:preload:unknownMethod", ...
             "Unsupported preload method: %s", string(ps.Method));
@@ -200,13 +243,19 @@ ThermalDelta = PthermalMax;                      % reported: max-side gain, lbf
 PpMax = PpiMax + PthermalMax;
 % NASA-STD-5020B Eq. 2 — PpMin = (1 - relaxation)·PpiMin - creep - P_thermal_min
 PpMin = (1 - ps.RelaxationFraction) * PpiMin - ps.CreepLoss - PthermalMin;
+% The slip-scoped minimum takes the SAME Eq. 2 adjustments — relaxation,
+% creep and the thermal loss are properties of the joint, not of which
+% analysis is asking. Only the Eq. 4-vs-Eq. 5 initial preload differs.
+PpMinSlip = (1 - ps.RelaxationFraction) * PpiMinSlip - ps.CreepLoss - PthermalMin;
 
 p = struct( ...
     "PpiMax",       PpiMax, ...
     "PpiMin",       PpiMin, ...
     "ThermalDelta", ThermalDelta, ...
     "PpMax",        PpMax, ...
-    "PpMin",        PpMin);
+    "PpMin",        PpMin, ...
+    "PpiMinSlip",   PpiMinSlip, ...
+    "PpMinSlip",    PpMinSlip);
 end
 
 % ---- Local helpers --------------------------------------------------------
