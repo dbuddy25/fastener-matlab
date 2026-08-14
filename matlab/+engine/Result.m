@@ -33,9 +33,21 @@ classdef Result
     %                                the future phase for unbuilt checks
     %                        Detail  string — free text (e.g. the Fig. 8
     %                                decision trace); "" when not needed
+    %                        Required logical — does NASA-STD-5020B require
+    %                                this check? TRUE for all but
+    %                                bolt-thread shear. Note this is NOT
+    %                                "which document supplies the equation":
+    %                                bearing, tear-out and bearing-under-head
+    %                                are TM-106943 formulas that §4.4.1 p26
+    %                                REQUIRES ("all elements... and the
+    %                                clamped parts"), 5020B simply prints no
+    %                                member-strength equation.
     %       WorstMargin    double — minimum MS over the evaluated (non-NaN)
     %                      checks; NaN if none evaluated
     %       GoverningCheck string — Name of the check with the worst margin
+    %       GoverningIsRequiredByStd logical — false only when that check is
+    %                      one 5020B does not require (bolt-thread shear;
+    %                      §4.7.4 handles stripping by design rule)
     %       Narrative      string — the NASA-STD-5020B Fig. 8
     %                      separation-before-rupture decision text
     %       Warnings       (1,:) struct — ZERO OR MORE rows, mirroring the
@@ -152,9 +164,26 @@ classdef Result
         Margins        (1,:) struct = repmat(struct( ...
                            "Name", "", "MS", NaN, "R", NaN, ...
                            "Status", "NotEvaluated", ...
-                           "Method", "", "Detail", ""), 1, 0)
+                           "Method", "", "Detail", "", ...
+                           "Required", true), 1, 0)
         WorstMargin    (1,1) double = NaN
         GoverningCheck (1,1) string = ""
+
+        % Is GoverningCheck a check NASA-STD-5020B actually REQUIRES?
+        % TRUE for every row but one — see engine.analyze's SUPPLEMENTAL
+        % note. Bolt-thread shear is the exception: §4.7.4 handles thread
+        % stripping by design rule, not by a computed margin, and 5020B
+        % prints no thread-shear-area equation anywhere. It became far more
+        % likely to govern when its area was corrected to TM Eq. 63 as
+        % printed, so a report naming it needs to say it sits outside the
+        % standard — otherwise a reader may redesign to satisfy a
+        % requirement that does not exist, or rest a compliance statement
+        % on a check 5020B never levied.
+        %
+        % TRUE when nothing governs: there is no supplemental result to
+        % caveat, and a caller reading this as "safe to state as a 5020B
+        % result" should not be tripped by an empty GoverningCheck.
+        GoverningIsRequiredByStd (1,1) logical = true
         Narrative      (1,1) string = ""
         Warnings       (1,:) struct = repmat(struct( ...
                            "Name", "", "Severity", "Warning", ...

@@ -274,36 +274,6 @@ margins = [ ...
     entry("Tapped-hole parent-thread", tp.MS, tp.Method, tp.Detail)];
 
 % ---- Worst margin / governing check (thresholds, not equations) ----------
-% ---- Which checks does NASA-STD-5020B actually REQUIRE? ------------------
-% Not the same question as "which document supplies the equation", and the
-% margin review (2026-08-14) found the two had been conflated. Bearing,
-% tear-out and bearing-under-head take their formulas from TM-106943, but
-% 5020B REQUIRES them: §4.4.1 p26 scopes the ultimate assessment to "all
-% elements of the threaded fastening system, including the fastener, the
-% internally threaded part such as a nut or an insert, AND THE CLAMPED
-% PARTS" — it simply prints no member-strength equation. Same for the
-% nut / insert / tapped-hole internal-thread rows: the internally threaded
-% part is named explicitly.
-%
-% Exactly ONE row is a check 5020B never asks for:
-%
-%   Bolt-thread shear — §4.7.4 handles thread stripping by DESIGN RULE, not
-%   by a computed margin: "thread engagement in an internally threaded part
-%   other than a nut, nut plate, or insert SHOULD be selected to ensure ...
-%   that the fastener would fail in tension before threads would strip."
-%   That is a "should" with no TFSR number (24 and 25 nearby cover grip
-%   runout and blind holes), and 5020B prints no thread-shear-area equation
-%   anywhere. The row is kept — a computed stripping margin can only be
-%   more conservative than the design rule — but it is marked, because it
-%   became materially more likely to GOVERN when its area was corrected to
-%   TM Eq. 63 as printed (6e3e370, ~21% less allowable). A reader should
-%   not redesign a joint to satisfy a requirement the standard does not
-%   levy, and a compliance statement should not rest on one.
-SUPPLEMENTAL = "Bolt-thread shear";
-for k = 1:numel(margins)
-    margins(k).Required = ~ismember(margins(k).Name, SUPPLEMENTAL);
-end
-
 msAll   = [margins.MS];
 idxEval = find(~isnan(msAll));          % evaluated checks only (ignore NaN)
 if isempty(idxEval)
@@ -358,13 +328,53 @@ elseif ms >= 0
 else
     status = "Fail";
 end
+% Set here rather than in a pass over the assembled array so the field is
+% present on EVERY row by construction and the field order stays canonical
+% — every row in this file goes through entry(), including the two
+% non-margin rows (Separation-before-rupture, Interaction).
+required = ~ismember(string(name), entrySupplemental());
+
 e = struct( ...
     "Name",   string(name), ...
     "MS",     ms, ...
     "R",      r, ...
+    "Required", required, ...
     "Status", status, ...
     "Method", string(method), ...
     "Detail", string(detail));
+end
+
+function names = entrySupplemental()
+%ENTRYSUPPLEMENTAL  The margin rows NASA-STD-5020B does NOT require.
+%   Kept as a named function rather than a literal so the set has one
+%   definition and a reader can find every use of it. Every other row gets
+%   Required = true.
+%
+%   Not the same question as "which document supplies the equation", and the
+%   margin review (2026-08-14) found the two had been conflated. Bearing,
+%   tear-out and bearing-under-head take their formulas from TM-106943, but
+%   5020B REQUIRES them: §4.4.1 p26 scopes the ultimate assessment to "all
+%   elements of the threaded fastening system, including the fastener, the
+%   internally threaded part such as a nut or an insert, AND THE CLAMPED
+%   PARTS" — it simply prints no member-strength equation. Same for the
+%   nut / insert / tapped-hole internal-thread rows: the internally threaded
+%   part is named explicitly.
+%
+%   Exactly ONE row is a check 5020B never asks for:
+%
+%     Bolt-thread shear — §4.7.4 handles thread stripping by DESIGN RULE, not
+%     by a computed margin: "thread engagement in an internally threaded part
+%     other than a nut, nut plate, or insert SHOULD be selected to ensure ...
+%     that the fastener would fail in tension before threads would strip."
+%     That is a "should" with no TFSR number (24 and 25 nearby cover grip
+%     runout and blind holes), and 5020B prints no thread-shear-area equation
+%     anywhere. The row is kept — a computed stripping margin can only be
+%     more conservative than the design rule — but it is marked, because it
+%     became materially more likely to GOVERN when its area was corrected to
+%     TM Eq. 63 as printed (6e3e370, ~21% less allowable). A reader should
+%     not redesign a joint to satisfy a requirement the standard does not
+%     levy, and a compliance statement should not rest on one.
+names = "Bolt-thread shear";
 end
 
 function tf = governingRequired(margins, governing)
