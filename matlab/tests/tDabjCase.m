@@ -581,9 +581,13 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyEqual(slipS.MS, slipN.MS, "AbsTol", 1e-9, ...
                 'Slip takes Eq. 5 unconditionally — the flag must not reach it.');
 
+            % marginSeparation takes (preload, designLoads) — no joint. Eq. 19
+            % reads only PpMin and Psep, so there is nothing on the Joint it
+            % needs, and the separation-critical choice has already been made
+            % upstream in engine.preload.
             dn = engine.designLoads(c.LoadCase, c.Factors);
-            sepN = engine.marginSeparation(jn, pn, dn);
-            sepS = engine.marginSeparation(js, ps, dn);
+            sepN = engine.marginSeparation(pn, dn);
+            sepS = engine.marginSeparation(ps, dn);
             testCase.verifyLessThan(sepS.MS, sepN.MS, ...
                 'Separation DOES follow the flag — Eq. 4 is the stricter minimum.');
         end
