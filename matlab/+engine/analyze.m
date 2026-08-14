@@ -225,6 +225,16 @@ if strlength(fc.Name) > 0
         "Detail",   fc.Detail);
 end
 
+ffc = engine.fittingFactorCheck(joint, factors);   % NASA-STD-5020B §4.2.2 p19 — FF >= 1.15 for separation-critical joints
+if strlength(ffc.Name) > 0
+    warnings(end+1) = struct( ...
+        "Name",     ffc.Name, ...
+        "Severity", ffc.Severity, ...
+        "Message",  ffc.Detail, ...
+        "Method",   ffc.Method, ...
+        "Detail",   ffc.Detail);
+end
+
 % ---- Separation-before-rupture as its own row ----------------------------
 % The gate (NASA-STD-5020B Fig. 8 / DABJ Fig. 9-9) is boolean — it has no
 % numeric MS, so its Status comes from the gate result, not the NaN rule:

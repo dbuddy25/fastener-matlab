@@ -32,7 +32,8 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 1 | 4.1 | Fastening System Control Plan at PRR | OUT-OF-SCOPE | Milestone submission to the Technical Authority |
 | 2 | 4.2.1 | Program-specified factors of safety | IMPLEMENTED | `model.Factors` → `engine.designLoads` |
 | 3 | 4.2.2 | Fitting factor | IMPLEMENTED | `model.Factors` FFU/FFY/FFSep/FFSlip |
-| 4 | 4.2.3 | Separation FS per Figure 1 | IMPLEMENTED (value applied; Fig. 1 tree not encoded — see note) | `engine.marginSeparation`, Eq. 19 |
+| 4 | 4.2.3 | Separation FS per Figure 1 | IMPLEMENTED (value applied; Fig. 1 tree not encoded — hazard class out of scope, see note) | `engine.marginSeparation`, Eq. 19 |
+| — | 4.2.2 | FF ≥ 1.15 for separation-critical joints | IMPLEMENTED (warning) | `engine.fittingFactorCheck` — `Result.Warnings`; see note |
 | 5 | 4.3.1 | Max/min preload incl. variation, relaxation, creep, temperature | IMPLEMENTED | `engine.preload` — creep not applicable, see below |
 | 6 | 4.3.2 | Nominal preload substantiated by 6-set test program | OUT-OF-SCOPE | Test program; torque/nut factor are trusted inputs |
 | 7 | 4.3.3 | Preload variation Γ per Table 3 | OMITTED-BY-DECISION | Γ comes from the procedure's torque spec — see below |
@@ -271,6 +272,35 @@ warnings?"*
 TFSR 13 — friction credited only at limit or yield, never ultimate — remains
 enforced structurally, since µ reaches only `marginSlip` and no ultimate
 allowable takes a friction credit.
+
+### §4.2.2 — the separation-critical flag's second obligation, now warned on
+
+§4.2.2 p19: *"Separation analysis of joints that are separation-critical should
+include a fitting factor of at least **1.15** as a multiplier of the required
+separation factor of safety."*
+
+The tool already knows the condition — `PreloadSpec.SeparationCritical`, which
+`engine.preload` acts on to select the Eq. 4 minimum initial preload over
+Eq. 5 (§4.3.1 p22). §4.2.2 levies a second obligation from the same flag, on
+the fitting factor, and nothing connected the two: a separation-critical joint
+at defaults got the Eq. 4 preload and `FFSep = 1.0`, silently.
+
+`engine.fittingFactorCheck` now raises `SeparationFittingFactorLow` when the
+flag is set and `FFSep < 1.15`, naming §4.2.2 for review.
+
+**A warning, and the factor is not touched.** §4.2.2 is a *should* with real
+carve-outs — 1.0 "may be adequate" where the joint's functionality is verified
+by test to limit load or greater, or where load paths and stresses come from
+detailed FEA correlated with tests of similar systems. Both are routine here
+and neither is visible to the tool. Promoting `FFSep` silently would also move
+every separation margin without the analyst asking. Dan, 2026-08-14: *"yeah
+just warn, don't change factors. reference 5020 section to review in warning."*
+
+**§4.2.2's other fitting-factor rules stay unchecked**, deliberately: the yield
+rule keys off "particularly sensitive to local yielding" and the shear rule
+says only "typically warrants a larger fitting factor" — a judgment and a
+non-number. The separation rule is the only one that states a threshold *and*
+keys off a condition the joint model already carries.
 
 ### Creep loss is not used — deferred as a possible later feature
 
@@ -601,9 +631,24 @@ Eq. 84/86 carry only the factor of safety. Conservative, and documented.
 **Figure 1's decision tree is not encoded** (TFSR 4). `FSSep` is a raw preset
 value. Unlike Γ, the governing input here is a hazard classification — whether
 separation credibly causes a catastrophic or critical hazard — which is a
-program judgment a tool cannot make. The floors that follow from it (≥ 1.2
-critical, ≥ 1.0 otherwise) could be enforced once the hazard class is known,
-but hazard class is not modelled.
+program judgment a tool cannot make.
+
+Figure 1 read directly 2026-08-14 (the 2026-08-13 audit skipped it as an
+image), so the branches are now recorded rather than paraphrased:
+
+| Separation credibly leads to | FS_sep |
+|---|---|
+| a **catastrophic** hazard | the program-levied value for **FS_u** |
+| a **critical** hazard | greater of **1.2** and the program-levied FS_y |
+| neither | greater of **1.0** and the program-levied test factor |
+
+The earlier note gave these as "≥ 1.2 critical, ≥ 1.0 otherwise" and omitted
+the catastrophic branch entirely, which is the one that lands at FS_u.
+
+**Hazard class is deliberately not modelled** and will not be. Dan, 2026-08-14:
+*"never use hazard class"* — this project does not work in that classification,
+so there is no input from which to evaluate the tree, and adding the field
+would invite a tree nobody here can populate. `FSSep` stays analyst-supplied.
 
 *Cross-checked 2026-08-13 against the legacy spreadsheet tool: no decision tree
 and no conditional logic there either — `FSSep` is a value, same as here.* So

@@ -733,6 +733,66 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyNotEmpty(warningNamed(r2, "FrictionAboveTFSR14"));
         end
 
+        function separationCriticalWithLowFittingFactorWarns(testCase)
+            % NASA-STD-5020B §4.2.2 p19 levies a SECOND obligation from the
+            % separation-critical flag: FF >= 1.15 for separation analysis.
+            % engine.preload already acts on that flag (Eq. 4 rather than
+            % Eq. 5), so the tool knew the answer to the condition and said
+            % nothing about the consequence.
+            c = validation.dabjSection9();
+            j = c.Joint;
+            j.PreloadSpec.SeparationCritical = true;
+            fac = c.Factors;                 % FFSep = 1.0 by default
+
+            r = engine.analyze(j, c.LoadCase, fac);
+            w = warningNamed(r, "SeparationFittingFactorLow");
+            testCase.assertNotEmpty(w, ...
+                'A separation-critical joint at FFSep = 1.0 must be flagged.');
+            testCase.verifySubstring(w.Method, "4.2.2");
+            testCase.verifySubstring(w.Detail, "4.2.2");
+
+            % THE FACTOR MUST NOT MOVE. Dan: "just warn, don't change
+            % factors." Promoting FFSep silently would shift every
+            % separation margin without the analyst asking.
+            testCase.verifyEqual(fac.FFSep, 1.0, ...
+                'The check must not mutate the factors it screens.');
+            sep = r.Margins([r.Margins.Name] == "Separation");
+            expected = engine.marginSeparation( ...
+                engine.preload(j), engine.designLoads(c.LoadCase, fac));
+            testCase.verifyEqual(sep.MS, expected.MS, "AbsTol", 1e-12, ...
+                'The separation margin must be unchanged by the warning.');
+        end
+
+        function separationCriticalAtOnePointOneFiveIsSilent(testCase)
+            % At the threshold there is nothing to say. Also the companion
+            % that keeps the test above honest: same joint, same flag, only
+            % the factor differs, so a check that fired unconditionally
+            % would show up here.
+            c = validation.dabjSection9();
+            j = c.Joint;
+            j.PreloadSpec.SeparationCritical = true;
+            fac = c.Factors;
+            fac.FFSep = 1.15;
+
+            r = engine.analyze(j, c.LoadCase, fac);
+            testCase.verifyEmpty(warningNamed(r, "SeparationFittingFactorLow"));
+        end
+
+        function nonSeparationCriticalNeverWarnsOnFittingFactor(testCase)
+            % §4.2.2's threshold applies to separation-critical joints
+            % only, and 5020B says 1.0 "may be adequate" when the system is
+            % not separation-critical. DABJ §9 is not, and runs FFSep = 1.0
+            % — so the answer key must stay silent.
+            c = validation.dabjSection9();
+            testCase.assertFalse(c.Joint.PreloadSpec.SeparationCritical, ...
+                'This test is only meaningful while DABJ §9 is not separation-critical.');
+            testCase.assertLessThan(c.Factors.FFSep, 1.15, ...
+                'And only while its FFSep is under the threshold.');
+
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            testCase.verifyEmpty(warningNamed(r, "SeparationFittingFactorLow"));
+        end
+
         function analyzeReproducesAllDABJMargins(testCase)
             % Phase 2.9: ONE engine.analyze call reproduces every published
             % DABJ margin, names the governing check (the deliberate slip
