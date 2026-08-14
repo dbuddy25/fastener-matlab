@@ -215,6 +215,56 @@ classdef tBoltAllowable < matlab.unittest.TestCase
             testCase.verifySubstring(ia.Detail, "BoltMaterial.Ftu");
         end
 
+        function everyInteractionExitCarriesTheBendingBlock(testCase)
+            % engine.analyze reads ia.Bending UNCONDITIONALLY (analyze.m,
+            % Result.Bending). A not-evaluated exit that omits the field
+            % therefore does not degrade to NotEvaluated — it kills the
+            % whole run with "Unrecognized field name", every margin lost
+            % because one could not be formed.
+            %
+            % That is exactly what the no-tensile-allowable exit did: it
+            % hand-rolled its own struct instead of going through
+            % bendingNotEvaluated. The two tests directly above walk that
+            % same branch and passed throughout, because they read R and
+            % Detail and never asked for Bending. So this asserts the
+            % SHAPE, which is the part a caller depends on and the part no
+            % value assertion was ever going to notice.
+            j   = tBoltAllowable.baseJoint(NaN, NaN);   % no rating, no At
+            lc  = model.LoadCase(Name="shape check", ...
+                BoltTensileLimitLoad=1000, BoltShearLimitLoad=0);
+            fac = model.Factors();
+            d   = engine.designLoads(lc, fac);
+
+            ia = engine.marginInteraction(j, d);
+            testCase.assertTrue(isnan(ia.R), ...
+                'Fixture must reach a not-evaluated exit for this to mean anything.');
+            testCase.verifyTrue(isfield(ia, "Bending"), ...
+                'A not-evaluated interaction result must still carry Bending.');
+            testCase.verifyFalse(ia.Bending.Included, ...
+                'Nothing was evaluated, so bending cannot be reported as included.');
+
+            % The Method must name the cause. bendingNotEvaluated defaults
+            % to a "(§4.4.4 bending)" label that is right for the three
+            % bending exits and wrong for this one.
+            testCase.verifyFalse(contains(ia.Method, "bending"), ...
+                'A missing tensile allowable is not a bending exit.');
+
+            % And the whole point: analyze survives it, and the block
+            % reaches the Result intact.
+            %
+            % NOT asserted via the Interaction row's MS: analyze.m builds
+            % that row as entry("Interaction", NaN, ...) — its MS is NaN in
+            % EVERY run, evaluated or not, because the row carries R rather
+            % than a margin. isnan on it would pass against a completely
+            % broken engine. Result.Bending is the field that only gets
+            % populated if the exit actually carried one.
+            r = engine.analyze(j, lc, fac);
+            testCase.verifyFalse(r.Bending.Included, ...
+                'Result.Bending must arrive populated, with bending excluded.');
+            testCase.verifyGreaterThan(strlength(r.Bending.Condition), 0, ...
+                'A populated block names the shear-transfer condition.');
+        end
+
         function unavailableFtyNaNLeavesYieldNotEvaluatedButUltimateFine(testCase)
             % Ultimate IS assessable (rated), but Fty is NaN so Eq. 18
             % cannot form the yield fallback -- ultimate margins succeed

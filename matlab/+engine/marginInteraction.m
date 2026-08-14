@@ -362,9 +362,18 @@ end
 % no throw) only when neither basis is available.
 bt = boltTensileAllowable(joint);
 if ~bt.Ult.Assessed
-    r = struct("R", NaN, "Pass", false, "a", NaN, ...
-        "Method", "NASA-STD-5020B Eq. 20-23 — not evaluated", ...
-        "Detail", "Not evaluated: " + bt.Ult.Reason + ".");
+    % THROUGH THE SHARED HELPER, like the other three not-evaluated exits.
+    % This one used to hand-roll its own struct and left out Bending, so
+    % engine.analyze — which reads ia.Bending unconditionally — died with
+    % "Unrecognized field name" on any joint whose bolt tensile allowable
+    % could not be assessed, instead of reporting NotEvaluated. A crash
+    % where the design says NotEvaluated, and in the one configuration
+    % least likely to be exercised: an analysis run with no Ptu_allow at
+    % all. The helper exists precisely so a caller never has to guess
+    % which fields a NaN result carries; the fix is to use it.
+    r = bendingNotEvaluated("Not evaluated: " + bt.Ult.Reason + ".", ...
+        bend, joint.ShearTransferCondition, ...
+        "NASA-STD-5020B Eq. 20-23 — not evaluated");
     return
 end
 PtuAllow = bt.Ult.Value;
@@ -507,19 +516,30 @@ r = struct( ...
 end
 
 % ---- Local helpers --------------------------------------------------------
-function r = bendingNotEvaluated(detail, bend, condition)
+function r = bendingNotEvaluated(detail, bend, condition, method)
 %BENDINGNOTEVALUATED  The NotEvaluated return, with the bending block intact.
-%   One shape for all three bending-related not-evaluated exits, so a
-%   caller never has to guess which fields a NaN result carries. The
-%   condition is PASSED IN rather than assumed to be ClearanceOrGapped:
-%   two of the three exits (no section, no Ftu) are reachable from any
-%   determination, and a Bending block that misreported which one the
-%   analyst recorded would be worse than none.
+%   One shape for ALL FOUR not-evaluated exits, so a caller never has to
+%   guess which fields a NaN result carries. The condition is PASSED IN
+%   rather than assumed to be ClearanceOrGapped: two of the exits (no
+%   section, no Ftu) are reachable from any determination, and a Bending
+%   block that misreported which one the analyst recorded would be worse
+%   than none.
+%
+%   METHOD IS OVERRIDABLE because not every not-evaluated exit is about
+%   bending. Three are, and take the default. The fourth — no assessable
+%   bolt tensile allowable — is not, and labelling it "(§4.4.4 bending)"
+%   would name the wrong cause on the row the analyst reads.
+arguments
+    detail
+    bend
+    condition
+    method (1,1) string = "NASA-STD-5020B Eq. 20-23 — not evaluated (§4.4.4 bending)"
+end
 r = struct( ...
     "R",       NaN, ...
     "Pass",    false, ...
     "a",       NaN, ...
-    "Method",  "NASA-STD-5020B Eq. 20-23 — not evaluated (§4.4.4 bending)", ...
+    "Method",  method, ...
     "Detail",  string(detail), ...
     "Bending", bendingOut(bend, NaN, condition, false));
 end
