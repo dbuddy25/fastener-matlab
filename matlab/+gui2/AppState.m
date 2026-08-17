@@ -324,14 +324,19 @@ classdef AppState < handle
     % ---- Hardware library -------------------------------------------------
     methods
         function loadLibrary(obj)
-            %LOADLIBRARY  Load the bundled hardware library; degrade gracefully.
+            %LOADLIBRARY  Load this installation's hardware library.
+            %   loadInstalled(), NOT load(): the bare form reads only the
+            %   shipped seed, so a custom entry saved from the Materials &
+            %   Hardware page would be gone on the next launch -- saved, and
+            %   silently not loaded, which is the worst of the three
+            %   possible behaviours.
             %   A failure must never stop the app opening: LibraryOK goes
             %   false, the message is stored for the shell to surface
             %   non-blocking after the window is visible, and saving is
             %   refused until it is fixed (GUI2_HARVEST.md, Shell / File
             %   operations).
             try
-                obj.Library   = data.Library.load();   % fires LibraryChanged
+                obj.Library   = data.Library.loadInstalled();   % fires LibraryChanged
                 obj.LibraryOK = ~isempty(obj.Library.boltKeys()) && ...
                                 ~isempty(obj.Library.materialKeys());
                 obj.LibraryLoadError = "";

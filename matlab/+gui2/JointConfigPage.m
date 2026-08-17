@@ -206,6 +206,12 @@ classdef JointConfigPage < gui2.Page
 
             obj.listenTo('JointChanged', @() obj.refresh());
             obj.listenTo('LoadCaseChanged', @() obj.refresh());
+            % A material added on the Materials & Hardware page has to reach
+            % these pickers, or it is invisible until the app restarts. This
+            % page's dropdowns are populated once at build, and until step 9
+            % NOTHING in +gui2 subscribed to LibraryChanged at all -- the
+            % event was declared, fired, and had no listeners.
+            obj.listenTo('LibraryChanged', @() obj.refreshLibraryDropdowns());
             obj.refresh();
         end
 
@@ -1079,6 +1085,73 @@ classdef JointConfigPage < gui2.Page
             c.Layout.Row = row; c.Layout.Column = 2;
             c.HorizontalAlignment = 'right';
             c.Tooltip = tip;
+        end
+
+        function refreshLibraryDropdowns(obj)
+            %REFRESHLIBRARYDROPDOWNS  Re-list every picker fed by the library.
+            %   SAVE AND RESTORE, always. Setting Items can drop the current
+            %   Value, and MATLAB fires no callback when it does -- so a
+            %   naive repopulation silently reselects whatever sorts first
+            %   and the joint quietly changes material underneath the
+            %   analyst. trySelect restores the selection if the library
+            %   still carries it and falls back to the BLANK sentinel if it
+            %   does not, which reads as "choose one" rather than as a real
+            %   choice nobody made.
+            if ~obj.IsBuilt || ~obj.State.LibraryOK
+                return
+            end
+
+            obj.repopulate(obj.BoltDropDown,           obj.libraryItems('bolt'));
+            obj.repopulate(obj.BoltMaterialDropDown,   obj.libraryItems('boltMaterial'));
+            obj.repopulate(obj.MemberMaterialDropDown, obj.libraryItems('member'));
+            for i = 1:numel(obj.FlangeMaterial)
+                obj.repopulate(obj.FlangeMaterial{i}, obj.libraryItems('flange'));
+            end
+            for which = {'Head', 'Nut'}
+                w = obj.washerGroup(which{1});
+                obj.repopulate(w.Material, obj.libraryItems('washerMaterial'));
+            end
+
+            % The FAMILY pickers cannot go through repopulate: their Items
+            % are display labels while their Value is a token (ItemsData),
+            % and populateSpecPickers deliberately resets Value to Custom.
+            % Save the token across the rebuild and put it back if the
+            % catalogue still offers it.
+            saved = obj.familyTokens();
+            obj.populateSpecPickers();
+            obj.restoreFamilyTokens(saved);
+        end
+
+        function repopulate(obj, dd, items)
+            %REPOPULATE  New Items, same selection where it survives.
+            if isempty(dd) || ~isvalid(dd)
+                return
+            end
+            saved = dd.Value;
+            dd.Items = items;
+            obj.trySelect(dd, saved);
+        end
+
+        function t = familyTokens(obj)
+            %FAMILYTOKENS  The nut/washer family selections, as tokens.
+            t = struct('Nut', "", 'Head', "", 'NutWasher', "");
+            if ~isempty(obj.NutSpecDropDown) && isvalid(obj.NutSpecDropDown)
+                t.Nut = string(obj.NutSpecDropDown.Value);
+            end
+            hw = obj.washerGroup('Head');
+            if ~isempty(hw.Spec) && isvalid(hw.Spec)
+                t.Head = string(hw.Spec.Value);
+            end
+            nw = obj.washerGroup('Nut');
+            if ~isempty(nw.Spec) && isvalid(nw.Spec)
+                t.NutWasher = string(nw.Spec.Value);
+            end
+        end
+
+        function restoreFamilyTokens(obj, saved)
+            gui2.JointConfigPage.restoreToken(obj.NutSpecDropDown, saved.Nut);
+            gui2.JointConfigPage.restoreToken(obj.washerGroup('Head').Spec, saved.Head);
+            gui2.JointConfigPage.restoreToken(obj.washerGroup('Nut').Spec, saved.NutWasher);
         end
 
         function items = libraryItems(obj, which)
@@ -2583,6 +2656,20 @@ classdef JointConfigPage < gui2.Page
 
     % ---- Member type labels -----------------------------------------------
     methods (Static, Access = private)
+        function restoreToken(dd, token)
+            %RESTORETOKEN  Put an ItemsData token back after a rebuild.
+            %   These pickers hold a TOKEN in Value and a display label in
+            %   Items, so trySelect (which matches on Items) cannot be used
+            %   here -- it would compare a token against a label, never
+            %   match, and silently reset every family picker to Custom.
+            if isempty(dd) || ~isvalid(dd) || strlength(token) == 0
+                return
+            end
+            if any(strcmp(dd.ItemsData, char(token)))
+                dd.Value = char(token);
+            end
+        end
+
         function setItemsAndData(dd, labels, tokens)
             %SETITEMSANDDATA  Repopulate a picker, preserving the selection.
             %   ItemsData is CLEARED FIRST. Assigning Items while ItemsData

@@ -719,6 +719,24 @@ classdef tLibrary < matlab.unittest.TestCase
                 'Adding an entry must not imply anyone approved it.');
         end
 
+        function loadInstalledFallsBackToTheBaseline(testCase)
+            % With no user library present, loadInstalled must be exactly
+            % load(). The GUI, runBulk, runWorkbook and makeTemplate all go
+            % through it now, so a fallback that returned something else
+            % would change every headless run on a clean install.
+            %
+            % Guarded rather than assumed: if this machine happens to HAVE
+            % a user library, the assertion below would be testing the
+            % overlay path and quietly passing for the wrong reason.
+            testCase.assumeFalse(isfile(data.Library.userPath()), ...
+                'This machine has a real user library; the fallback path is not reachable here.');
+
+            lib = data.Library.loadInstalled();
+            testCase.verifyEqual(numel(lib.boltKeys()), ...
+                numel(data.Library.load().boltKeys()));
+            testCase.verifyEmpty(lib.materialKeys("custom"));
+        end
+
         function userPathIsResolvableAndNotTheBaseline(testCase)
             % save() refuses the bundled seed, so a custom library needs
             % somewhere else to live. This is that somewhere.

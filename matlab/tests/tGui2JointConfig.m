@@ -998,6 +998,80 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 'No clamped stack means no grip, and grip is upstream of everything.');
         end
 
+        function aMaterialAddedToTheLibraryAppearsWithoutARestart(testCase)
+            % Until step 9 NOTHING in +gui2 listened to LibraryChanged --
+            % the event was declared, fired, and had no subscribers at all.
+            % These dropdowns are populated once at build, so a material
+            % added on the Materials & Hardware page was invisible here
+            % until the app was restarted.
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            before = numel(p.boltMaterialDropDown().Items);
+
+            lib = lib.addMaterial(struct("key", "Late alloy", ...
+                "ftu", 100000, "fty", 90000, "fsu", 60000, ...
+                "roles", {{'bolt'}}, ...
+                "source", "tGui2JointConfig test entry"));
+            testCase.App.State.Library = lib;    % fires LibraryChanged
+
+            items = string(p.boltMaterialDropDown().Items);
+            testCase.verifyEqual(numel(items), before + 1, ...
+                'The bolt-material picker did not pick up the new material.');
+            testCase.verifyTrue(any(items == "Late alloy"));
+        end
+
+        function repopulatingTheDropdownsKeepsTheCurrentSelection(testCase)
+            % Setting Items can drop the current Value, and MATLAB fires no
+            % callback when it does -- so a naive repopulation silently
+            % reselects whatever sorts first and the joint changes material
+            % underneath the analyst. THIS is the reason for save/restore.
+            p    = testCase.Page;
+            mats = testCase.App.State.Library.materialKeys(Role = "bolt");
+            testCase.assumeGreaterThan(numel(mats), 0);
+            chosen = char(mats(end));
+            testCase.choose(p.boltMaterialDropDown(), chosen);
+            testCase.assertEqual(p.boltMaterialDropDown().Value, chosen);
+
+            lib = testCase.App.State.Library;
+            lib = lib.addMaterial(struct("key", "Another alloy", ...
+                "ftu", 1, "fty", 1, "fsu", 1, "roles", {{'bolt'}}, ...
+                "source", "tGui2JointConfig test entry"));
+            testCase.App.State.Library = lib;
+
+            testCase.verifyEqual(p.boltMaterialDropDown().Value, chosen, ...
+                'The repopulation moved the analyst''s selection.');
+        end
+
+        function aLibraryChangeReachesEveryLibraryBackedPicker(testCase)
+            % One listener, five picker families. A refresh that updated
+            % only the one dropdown a test happened to check would pass a
+            % narrower test and still leave the flange and member pickers
+            % stale.
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            counts = @() [numel(p.boltMaterialDropDown().Items), ...
+                          numel(p.memberMaterialDropDown().Items), ...
+                          numel(p.flangeMaterial(1).Items)];
+            before = counts();
+
+            % No roles tag: flange and member take any material, the
+            % role-filtered bolt picker does not. So this proves the
+            % unfiltered pickers refreshed AND that the role filter still
+            % applies after a refresh.
+            lib = lib.addMaterial(struct("key", "Flange-only alloy", ...
+                "ftu", 1, "fty", 1, "fsu", 1, ...
+                "source", "tGui2JointConfig test entry"));
+            testCase.App.State.Library = lib;
+
+            after = counts();
+            testCase.verifyEqual(after(1), before(1), ...
+                'An untagged material is not a bolt material.');
+            testCase.verifyEqual(after(2), before(2) + 1, ...
+                'The member-material picker did not refresh.');
+            testCase.verifyEqual(after(3), before(3) + 1, ...
+                'The flange-material picker did not refresh.');
+        end
+
         function analyzeIsGatedOnEdgeDistance(testCase)
             % NASA-STD-5020B Figure 8's first decision box needs e/D, and
             % with no edge distance the engine's gate treats that condition

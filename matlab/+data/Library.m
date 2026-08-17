@@ -162,6 +162,28 @@ classdef Library
             p = string(fullfile(fileparts(mfilename("fullpath")), "library.json"));
         end
 
+        function obj = loadInstalled()
+            %LOADINSTALLED  The library this installation actually runs on.
+            %   userPath() when that file exists -- load() then overlays it
+            %   on the shipped baseline, so the result is baseline plus
+            %   whatever this installation added -- and the bare baseline
+            %   when it does not.
+            %
+            %   USE THIS, NOT load(), ANYWHERE A REAL RUN RESOLVES HARDWARE.
+            %   The GUI, the bulk runners and the template generator all
+            %   called load() directly, which reads only the seed. That was
+            %   invisible while nothing could write a user library; the
+            %   moment the Materials & Hardware page could, it would have
+            %   meant a material added and saved in the GUI was not found by
+            %   runBulk, and was gone from the GUI itself after a restart.
+            p = data.Library.userPath();
+            if isfile(p)
+                obj = data.Library.load(p);
+            else
+                obj = data.Library.load();
+            end
+        end
+
         function p = userPath()
             %USERPATH  Where this installation's CUSTOM entries live.
             %   fullfile(userpath, "fastener_library.json"), falling back to

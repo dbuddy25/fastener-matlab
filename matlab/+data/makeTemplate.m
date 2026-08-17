@@ -68,7 +68,7 @@ if isfile(outFile)
     delete(outFile);   % start clean so the workbook is exactly these sheets
 end
 
-lib = data.Library.load();
+lib = data.Library.loadInstalled();   % baseline + this installation's custom entries
 
 J = jointColumns();      % Nx5 {matlab, friendly, description, units, valid/default}
 E = elementColumns();

@@ -64,7 +64,7 @@ if ~isfile(workbookFile)
         "Workbook not found: %s", workbookFile);
 end
 
-lib = data.Library.load();
+lib = data.Library.loadInstalled();   % baseline + this installation's custom entries
 jl  = data.loadJointLibrary(workbookFile, lib, "Joints");
 el  = data.loadElements(workbookFile, "Elements");
 s   = data.loadSettings(workbookFile, "Settings");

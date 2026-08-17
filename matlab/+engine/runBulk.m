@@ -109,7 +109,7 @@ if strlength(outFile) > 0
     end
 end
 
-lib = data.Library.load();
+lib = data.Library.loadInstalled();   % baseline + this installation's custom entries
 jl  = data.loadJointLibrary(jointFile, lib);
 el  = data.loadElements(elementsFile);
 
