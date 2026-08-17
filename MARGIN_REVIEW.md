@@ -13,6 +13,9 @@ the scope conditions 5020B attaches → open questions.
 **Standing rule:** DABJ §9's seven published margins are the only external answer
 key in the project. Anything that moves them is wrong until proven otherwise.
 
+**COMPLETE — all fifteen rows reviewed, 2026-08-13 to 2026-08-17.** Nine changed,
+six confirmed correct. The answer key never moved. Suite: 793 green.
+
 | # | Row | Status | Outcome |
 |---|---|---|---|
 | 1 | Tension-Yield | ✅ reviewed | **No change.** `Pty_allow` = system minimum confirmed from three directions: p13's global symbol list, the fable adjudication, and Dan's spreadsheet (which includes Heli-Coil strengths in its `Pty-allow`). `n = 0.5` kept as a deliberate default. |
@@ -29,7 +32,7 @@ key in the project. Anything that moves them is wrong until proven otherwise.
 | 12 | Bearing under head | ⚠️ **changed** (citation) | Equations correct: TM Eq. 75 annulus, Eq. 74 MS form, both criteria per TM p20, and the clamped-branch denominator correctly leaves preload unfactored per 5020B §4.4.5. Method string cited only §4.4.2 — the *yield* section — for a row computing both criteria; now cites **§4.4.1 p26 (ultimate) and §4.4.2 p29 (yield)**, both of which name "the clamped parts" explicitly. Nut-side branch still exercised by no fixture. |
 | 13 | Bearing | ⚠️ **changed** (citation) | TM Eq. 72-74 correct, both criteria per TM's own "checked for both yield and ultimate". Same §4.4.2-only citation, same fix. |
 | 14 | Shear tear-out | ⚠️ **changed** | TM Eq. 69-71 correct and the e/D < 1.5 validity caution already present. But the row was **ultimate-only with no yield criterion anywhere** — TM-faithful (Eq. 69 is `Pult` throughout and its tear-out section never mentions yield), yet §4.4.2 p29 requires the yield assessment to address the clamped parts, and unlike the thread rows this gap is **not** discharged by `systemTensileYieldAllowable`, which covers tensile modes only. Added `Pyld = Fsy·As` vs `FFY·FSY·V`, `Fsy` via the shared `engine.shearYieldStrength` (supplied, else 5020B Eq. 63). Dan: *"whatever 5020 says is the guide."* Citation fixed as above. |
-| 15 | Shear-ultimate | — | |
+| 15 | Shear-ultimate | ✅ reviewed | **No change.** Eq. 12/13/14 all correct, `BodyArea` correctly falling back to nominal D (which is what Eq. 12 prints), the necked-shank substitution documented and conservative, and the NaN guard naming the specific missing input — which matters because `marginInteraction` reuses `ShearAllowable`. Two scope points recorded rather than changed: no spec-rated shear allowable exists (Eq. 12 makes computing an explicit alternative, unlike §4.4.1 p26's nut directive, and the library's ratings are tensile only), and `PsL` is **per shear plane** — identical to the bolt total in single shear, which Dan confirmed is the only configuration used. |
 
 ## Required vs supplemental — the axis that was missing
 
@@ -144,3 +147,50 @@ Two supporting fixes came out of the same hunt:
 - **`3d4f6ad`** — a new test had been written into a `methods (Access =
   private)` block, so MATLAB never registered it and the assertion had never run
   once. The suite total being one short of the prediction is what exposed it.
+
+## What the review actually found
+
+Fifteen rows, nine changed. **Not one was a mistranscribed equation** — the
+2026-08-13 audit had already checked all ~33 against the printed pages, and it
+was right. Every defect was one layer out from the formula:
+
+| Where the defect lived | Rows |
+|---|---|
+| A requirement the tool could evaluate but never mentioned | 8 (edge distance), 9 (TFSR 14 µ caps), 10 (§4.2.2 FF ≥ 1.15) |
+| A criterion the governing document required and the supplement omitted | 14 (tear-out yield) |
+| A verdict word for something that is not a verdict | 8 (gate Fail → NotEvaluated, then → Assured/NotAssured) |
+| A consumer misreading a deliberate NaN | 11 (`exportResults` counted an interaction failure as a pass) |
+| A citation naming the wrong section | 12, 13, 14 (§4.4.2 only, on rows computing an ultimate criterion) |
+| A crash on a path the design says reports NotEvaluated | 11 (`Bending` missing from one exit) |
+
+Three of these were invisible to reading the margin function itself: the export
+count, the crash, and the tear-out yield gap all lived in the relationship
+between a row and something else.
+
+**The two rules adopted at the start held up.** *Follow every cross-reference
+before concluding* produced the Figure 1 correction (the previous audit had
+skipped it as an image and recorded the branches wrong) and the §4.2.2 finding
+(one section away from the FS_sep the row uses). *State what the standard
+requires before showing what the code does* is why rows 9, 10 and 14 were found
+at all — each began as "what does 5020B oblige here?" rather than "is this line
+right?"
+
+**Where the process cost a run.** Three of the ten pushes needed a follow-up
+commit: a test written into a `methods (Access = private)` block that never
+registered, a GUI fixture that rebuilt `Result.Gate` from a status string that
+had just been renamed, and a `\"` escape that does not exist in MATLAB
+double-quoted strings and left a file unparseable. All three were caught by the
+suite, and the second was caught by a test asserting the exact thing it was
+written to protect. The exception reporter added in `0ccd4a8` — which prints an
+uncaught error's identifier, message and in-project stack instead of the bare
+word `[ExceptionThrown]` — paid for itself twice in the same afternoon.
+
+## Still open after the review
+
+Nothing blocking. The open assumptions above are decisions, not gaps, with two
+exceptions worth a future sitting:
+
+- **Tear-out yield vs ultimate on Al 7075-T7351** sit 0.18% apart at the
+  template factors. A factor change flips which governs on the most common
+  flange alloy.
+- **The nut side of bearing-under-head** is exercised by no fixture.

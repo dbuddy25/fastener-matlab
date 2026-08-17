@@ -19,6 +19,10 @@ analysis tool, deployable as a standalone Windows executable.
 - **`VALIDATION.md`** — the validation coverage matrix: every check/scenario, its
   answer-key source, and whether it's validated ✅ / hand-derived ✍️ / pending ⏳.
   A living doc — every new check adds a row.
+- **`MARGIN_REVIEW.md`** — the row-by-row review of all fifteen margins against
+  NASA-STD-5020B, walked with the engineer of record (complete, 2026-08-17).
+  Records what changed, what was confirmed correct, and the open assumptions
+  that are decisions rather than gaps.
 
 ## Source layout
 

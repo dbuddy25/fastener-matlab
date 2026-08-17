@@ -14,6 +14,24 @@ function r = marginShearUlt(joint, designLoads)
 %   where Fsu = joint.BoltMaterial.Fsu and Psu = designLoads.Psu
 %   (FSU * FFU * PsL).
 %
+%   PsL IS PER SHEAR PLANE. NASA-STD-5020B Eq. 14 defines it as "the limit
+%   shear load acting on the shear plane", and the allowable above is one
+%   area -- one plane's capacity. Identical to the bolt's total in single
+%   shear (the only configuration this tool is used for); see
+%   model.LoadCase's header for the double-shear case, which the tool does
+%   not model and which would read 2x conservative if entered as a total.
+%
+%   NO SPEC-RATED SHEAR ALLOWABLE. Eq. 12 offers a choice -- "commonly
+%   assumed to be half the value given in the fastener specification for
+%   double-shear joints, when applicable, OR is calculated by [Eq. 12]" --
+%   so computing is one of the two forms the standard names, not a
+%   fallback. Note this is a genuine "or", unlike the NUT case at §4.4.1
+%   p26, where the assessment of a procured item "should be based on the
+%   strength specified for that item RATHER THAN on thread-stripping
+%   analysis" (see engine.marginNutStrength). The library's boltSpecs carry
+%   ratedUltimateLoad/ratedYieldLoad, both TENSILE; no shear rating exists
+%   in the spec data, so there is nothing to prefer. Confirmed 2026-08-17.
+%
 %   NaN GUARD: Fsu (joint.BoltMaterial.Fsu), the shear-plane area
 %   (BodyArea/MinorArea per joint.ShearPlane), and designLoads.Psu must
 %   all be set; if any is NaN the check reports MS = NaN (NotEvaluated)
