@@ -57,6 +57,12 @@ classdef HardwareLibraryPage < gui2.Page
         Tables      = struct()      % entity token -> uitable handle
         CountLabels = struct()      % entity token -> the "n of m" label
         DetailArea                  % full source text for the selected row
+        AddButton
+        DuplicateButton
+        SaveButton
+        Dialog                      % the add/duplicate form (its own uifigure)
+        DialogFields = struct()     % field name -> control, while open
+        DialogSpec                  % which section the open form is for
         BuildCount   (1,1) double = 0
         RefreshCount (1,1) double = 0
     end
@@ -122,6 +128,13 @@ classdef HardwareLibraryPage < gui2.Page
             obj.refresh();
         end
 
+        function delete(obj)
+            % A uifigure cannot be a child of the app window, so nothing
+            % else tears it down. FastenerApp.delete deletes every page for
+            % exactly this reason.
+            obj.closeForm();
+        end
+
         function refresh(obj)
             obj.RefreshCount = obj.RefreshCount + 1;
             if isempty(obj.TabGroup) || ~isvalid(obj.TabGroup)
@@ -130,6 +143,7 @@ classdef HardwareLibraryPage < gui2.Page
             for spec = gui2.HardwareLibraryPage.sectionSpecs()
                 obj.renderSection(spec);
             end
+            obj.updateButtons();
         end
     end
 
@@ -140,7 +154,7 @@ classdef HardwareLibraryPage < gui2.Page
             bar.Layout.Row    = row;
             bar.Layout.Column = 1;
             bar.RowHeight     = {'1x'};
-            bar.ColumnWidth   = {50, 130, '1x'};
+            bar.ColumnWidth   = {50, 130, '1x', 'fit', 'fit', 'fit'};
             bar.Padding       = [0 0 0 0];
             bar.ColumnSpacing = 8;
 
@@ -158,6 +172,27 @@ classdef HardwareLibraryPage < gui2.Page
             obj.FilterDropDown.Layout.Row    = 1;
             obj.FilterDropDown.Layout.Column = 2;
             obj.FilterDropDown.ValueChangedFcn = @(~, ~) obj.refresh();
+
+            obj.DuplicateButton = uibutton(bar, 'push', ...
+                'Text', 'Duplicate as Custom…', ...
+                'Tooltip', ['Open the form pre-filled from the selected ' ...
+                            'entry. Baseline entries are read-only, so a ' ...
+                            'change to one starts as a custom copy.'], ...
+                'ButtonPushedFcn', @(~, ~) obj.onDuplicate());
+            obj.DuplicateButton.Layout.Row = 1;  obj.DuplicateButton.Layout.Column = 4;
+
+            obj.AddButton = uibutton(bar, 'push', 'Text', 'Add…', ...
+                'Tooltip', 'Add a new custom entry to this section.', ...
+                'ButtonPushedFcn', @(~, ~) obj.onAdd());
+            obj.AddButton.Layout.Row = 1;  obj.AddButton.Layout.Column = 5;
+
+            obj.SaveButton = uibutton(bar, 'push', 'Text', 'Save Library', ...
+                'FontWeight', 'bold', ...
+                'Tooltip', ['Write the custom entries to this ' ...
+                            'installation''s library file. Baseline ' ...
+                            'entries are never written.'], ...
+                'ButtonPushedFcn', @(~, ~) obj.onSave());
+            obj.SaveButton.Layout.Row = 1;  obj.SaveButton.Layout.Column = 6;
         end
 
         function buildSection(obj, spec)
@@ -293,6 +328,326 @@ classdef HardwareLibraryPage < gui2.Page
         end
     end
 
+    % ---- Actions ----------------------------------------------------------
+    methods (Access = private)
+        function updateButtons(obj)
+            if isempty(obj.SaveButton) || ~isvalid(obj.SaveButton)
+                return
+            end
+            ok = obj.State.LibraryOK && ~isempty(obj.State.Library);
+            obj.AddButton.Enable       = ok;
+            obj.DuplicateButton.Enable = ok;
+            % Save is enabled only when there is something of the user's to
+            % write. A Save that writes a file containing nothing but the
+            % header reads as "saved" and has saved nothing.
+            obj.SaveButton.Enable = ok && obj.customCount() > 0;
+        end
+
+        function n = customCount(obj)
+            n = 0;
+            if ~obj.State.LibraryOK || isempty(obj.State.Library)
+                return
+            end
+            for spec = gui2.HardwareLibraryPage.sectionSpecs()
+                list = obj.State.Library.entries(spec.Id);
+                for i = 1:numel(list)
+                    if strcmp(string(list{i}.origin), "custom")
+                        n = n + 1;
+                    end
+                end
+            end
+        end
+
+        function spec = activeSpec(obj)
+            %ACTIVESPEC  The section whose tab is on top.
+            specs = gui2.HardwareLibraryPage.sectionSpecs();
+            spec  = specs(1);
+            if isempty(obj.TabGroup) || ~isvalid(obj.TabGroup)
+                return
+            end
+            titles = string({obj.TabGroup.Children.Title});
+            k = find(titles == string(obj.TabGroup.SelectedTab.Title), 1);
+            if ~isempty(k)
+                spec = specs(k);
+            end
+        end
+
+        function onAdd(obj)
+            obj.openForm(obj.activeSpec(), struct());
+        end
+
+        function onDuplicate(obj)
+            %ONDUPLICATE  Open the form pre-filled from the selected entry.
+            %   NOT AN INSTANT COPY. duplicateAsCustom on its own produces
+            %   an identical entry under a new name, and nobody duplicates
+            %   an allowable in order to keep every number the same — the
+            %   copy exists to be changed. With inline editing deliberately
+            %   out of scope, the pre-filled form IS the edit, and it is
+            %   also where the new citation gets demanded: a copy that
+            %   silently inherited the original's source would attribute
+            %   the analyst's numbers to a document that does not contain
+            %   them.
+            spec = obj.activeSpec();
+            t    = obj.Tables.(spec.Id);
+            if isempty(t.Selection)
+                obj.setStatus('Select an entry to duplicate first.');
+                return
+            end
+            key = string(t.Data{t.Selection(1), 2});   % col 2 is always key
+            try
+                seed = obj.libraryEntry(spec.Id, key);
+            catch err
+                uialert(obj.figureHandle(), err.message, 'Cannot duplicate');
+                return
+            end
+            seed.key = obj.uniqueKey(spec.Id, key);
+            obj.openForm(spec, seed);
+        end
+
+        function e = libraryEntry(obj, entityId, key)
+            list = obj.State.Library.entries(entityId);
+            for i = 1:numel(list)
+                if strcmp(string(list{i}.key), key)
+                    e = list{i};
+                    return
+                end
+            end
+            error("gui2:HardwareLibraryPage:entryNotFound", ...
+                "No %s entry named ""%s"".", entityId, key);
+        end
+
+        function k = uniqueKey(obj, entityId, key)
+            %UNIQUEKEY  "<key> (Custom)", then (2), (3)... — the same shape
+            %   data.Library.duplicateAsCustom produces, so a key made here
+            %   and one made there are indistinguishable later.
+            existing = strings(1, 0);
+            list = obj.State.Library.entries(entityId);
+            for i = 1:numel(list)
+                existing(end+1) = string(list{i}.key); %#ok<AGROW>
+            end
+            k = key + " (Custom)";
+            n = 2;
+            while any(existing == k)
+                k = sprintf("%s (Custom) (%d)", key, n);
+                n = n + 1;
+            end
+        end
+
+        function onSave(obj)
+            path = data.Library.userPath();
+            try
+                obj.State.Library.save(path);
+            catch err
+                uialert(obj.figureHandle(), err.message, 'Save failed');
+                return
+            end
+            obj.setStatus(sprintf('Saved %d custom entr%s to %s', ...
+                obj.customCount(), ...
+                gui2.HardwareLibraryPage.plural(obj.customCount()), path));
+        end
+    end
+
+    % ---- The add / duplicate form -----------------------------------------
+    methods (Access = private)
+        function openForm(obj, spec, seed)
+            %OPENFORM  The one entry form, for adding and for duplicating.
+            %   A SEPARATE uifigure, not a uiconfirm: uiconfirm has no input
+            %   controls, and the blocking form deadlocks the App Testing
+            %   Framework anyway.
+            obj.closeForm();          % never two at once
+            obj.DialogSpec = spec;
+
+            d = uifigure('Name', sprintf('Add %s', spec.Title), ...
+                'Visible', 'off');
+            fig = obj.figureHandle();
+            d.Position(3:4) = [520 560];
+            d.Position(1:2) = fig.Position(1:2) + ...
+                (fig.Position(3:4) - d.Position(3:4)) / 2;
+            d.CloseRequestFcn = @(~, ~) obj.closeForm();
+            obj.Dialog = d;
+
+            g = uigridlayout(d, [3 1]);
+            % FIXED PIXEL ROWS, not 'fit'. A WordWrap label in a 'fit' row
+            % can chase its own height and hang the window.
+            g.RowHeight   = {40, '1x', 34};
+            g.ColumnWidth = {'1x'};
+            g.Padding     = [10 10 10 10];
+            g.RowSpacing  = 8;
+
+            lb = uilabel(g, 'Text', ...
+                ['New entries are always CUSTOM. Fields marked * are ' ...
+                 'required, and a source citation is required on every ' ...
+                 'written entry.'], 'WordWrap', 'on');
+            lb.Layout.Row = 1;  lb.Layout.Column = 1;
+            lb.FontColor  = gui2.palette('mutedText');
+
+            obj.buildFormFields(g, 2, spec, seed);
+
+            bar = uigridlayout(g, [1 3]);
+            bar.Layout.Row = 3;  bar.Layout.Column = 1;
+            bar.RowHeight   = {'1x'};
+            bar.ColumnWidth = {'1x', 'fit', 'fit'};
+            bar.Padding     = [0 0 0 0];
+            ok = uibutton(bar, 'push', 'Text', 'Add', 'FontWeight', 'bold', ...
+                'ButtonPushedFcn', @(~, ~) obj.onFormCommit());
+            ok.Layout.Row = 1;  ok.Layout.Column = 2;
+            cancel = uibutton(bar, 'push', 'Text', 'Cancel', ...
+                'ButtonPushedFcn', @(~, ~) obj.closeForm());
+            cancel.Layout.Row = 1;  cancel.Layout.Column = 3;
+
+            d.Visible = 'on';
+        end
+
+        function buildFormFields(obj, parent, row, spec, seed)
+            % Every displayed column except origin gets a control: origin is
+            % not the analyst's to choose (a new entry is custom, full stop).
+            fields = spec.Fields(~strcmp(spec.Fields, 'origin'));
+
+            host = uigridlayout(parent, [numel(fields) 2]);
+            host.Layout.Row = row;  host.Layout.Column = 1;
+            host.ColumnWidth = {190, '1x'};
+            host.RowHeight   = repmat({26}, 1, numel(fields));
+            host.Padding     = [0 0 0 0];
+            host.RowSpacing  = 4;
+            host.Scrollable  = 'on';
+
+            obj.DialogFields = struct();
+            for i = 1:numel(fields)
+                f = fields{i};
+                label = f;
+                if any(strcmp(spec.Required, f)) || strcmp(f, 'source')
+                    label = [f ' *'];
+                end
+                lb = uilabel(host, 'Text', label);
+                lb.Layout.Row = i;  lb.Layout.Column = 1;
+
+                c = obj.buildFieldControl(host, i, spec, f, seed);
+                obj.DialogFields.(f) = c;
+            end
+        end
+
+        function c = buildFieldControl(obj, host, row, spec, f, seed)
+            hasSeed = isfield(seed, f) && ~isempty(seed.(f));
+            if isfield(spec.Refs, f)
+                ref = spec.Refs.(f);
+                if iscell(ref)
+                    choices = ref;              % a fixed list, e.g. UNF/UNC
+                else
+                    % A library entity token: offer the REAL keys, so a
+                    % cross-reference cannot be typed wrong. addBoltSpec and
+                    % addNut both reject a reference that names nothing, and
+                    % discovering that at commit time is a worse way to
+                    % learn it than not being offered the option.
+                    choices = obj.keyChoices(ref);
+                end
+                c = uidropdown(host, 'Items', choices);
+                if hasSeed && any(strcmp(choices, char(string(seed.(f)))))
+                    c.Value = char(string(seed.(f)));
+                end
+            elseif any(strcmp(spec.Text, f)) || strcmp(f, 'source')
+                c = uieditfield(host, 'text');
+                if hasSeed
+                    c.Value = char(string(seed.(f)));
+                end
+            else
+                c = uieditfield(host, 'numeric', 'AllowEmpty', true);
+                c.Value = [];
+                if hasSeed && isnumeric(seed.(f)) && isscalar(seed.(f))
+                    c.Value = seed.(f);
+                end
+            end
+            c.Layout.Row = row;  c.Layout.Column = 2;
+        end
+
+        function items = keyChoices(obj, entityId)
+            list = obj.State.Library.entries(entityId);
+            items = cell(1, numel(list));
+            for i = 1:numel(list)
+                items{i} = char(string(list{i}.key));
+            end
+        end
+
+        function onFormCommit(obj)
+            spec = obj.DialogSpec;
+            try
+                entry = obj.readForm(spec);
+                lib   = obj.addTo(obj.State.Library, spec.Id, entry);
+            catch err
+                % The dialog STAYS OPEN on a rejection, with the analyst's
+                % typing intact — closing it would make them retype
+                % everything to fix one field.
+                uialert(obj.Dialog, err.message, 'Entry rejected');
+                return
+            end
+            obj.closeForm();
+            % Assignment fires LibraryChanged, which re-renders this page
+            % and (step 9d) every dropdown that reads the library. NOT
+            % markDirty: the hardware library is not part of the case.
+            obj.State.Library = lib;
+            obj.setStatus(sprintf('Added %s "%s". Not saved yet — use Save Library.', ...
+                spec.Id, string(entry.key)));
+        end
+
+        function entry = readForm(obj, spec)
+            entry = struct();
+            fields = fieldnames(obj.DialogFields);
+            for i = 1:numel(fields)
+                f = fields{i};
+                v = obj.DialogFields.(f).Value;
+                if ischar(v) || isstring(v)
+                    if strlength(strtrim(string(v))) == 0
+                        continue    % blank optional field: leave it absent
+                    end
+                    entry.(f) = string(v);
+                elseif isempty(v)
+                    continue        % empty numeric: absent, not zero
+                else
+                    entry.(f) = v;
+                end
+            end
+            % Pre-check the required set so the analyst is told which field
+            % is missing before data.Library rejects the whole entry.
+            % data.Library still checks independently — this is a courtesy,
+            % not the guard.
+            missing = strings(1, 0);
+            for f = [string(spec.Required), "source"]
+                if ~isfield(entry, f)
+                    missing(end+1) = f; %#ok<AGROW>
+                end
+            end
+            if ~isempty(missing)
+                error("gui2:HardwareLibraryPage:missingRequired", ...
+                    "Fill in: %s.", strjoin(missing, ", "));
+            end
+        end
+
+        function lib = addTo(~, lib, entityId, entry)
+            switch entityId
+                case 'material', lib = lib.addMaterial(entry);
+                case 'bolt',     lib = lib.addBolt(entry);
+                case 'boltSpec', lib = lib.addBoltSpec(entry);
+                case 'nut',      lib = lib.addNut(entry);
+                case 'washer',   lib = lib.addWasher(entry);
+                case 'insert',   lib = lib.addInsert(entry);
+                otherwise
+                    error("gui2:HardwareLibraryPage:badEntityType", ...
+                        "Unknown entity type ""%s"".", entityId);
+            end
+        end
+
+        function closeForm(obj)
+            if ~isempty(obj.Dialog) && isvalid(obj.Dialog)
+                delete(obj.Dialog);
+            end
+            obj.Dialog       = [];
+            obj.DialogFields = struct();
+        end
+
+        function fig = figureHandle(obj)
+            fig = ancestor(obj.Root, 'figure');
+        end
+    end
+
     % ---- The section table ------------------------------------------------
     methods (Static, Access = private)
         function specs = sectionSpecs()
@@ -305,6 +660,20 @@ classdef HardwareLibraryPage < gui2.Page
             %   Columns header text, units per UNITS.md
             %   Widths  uitable ColumnWidth
             %   Noun    plural, for the "n of m" count line
+            %   Required fields data.Library's add* refuses to go without.
+            %           Copied from its requireFields calls DELIBERATELY
+            %           rather than inferred: the form marks them and
+            %           pre-checks them so the analyst is told before the
+            %           commit, but data.Library remains the authority and
+            %           still rejects independently. Two checks, one truth.
+            %   Text    fields that are TEXT rather than numeric. Everything
+            %           not listed here and not in Refs is a number, which
+            %           is the safer default -- a numeric field rendered as
+            %           text still commits a number, a number rendered as
+            %           text commits a string into an allowable.
+            %   Refs    field -> either a fixed choice list, or a
+            %           data.Library entity token whose keys are the
+            %           choices. Renders as a dropdown.
             %
             %   Materials, bolts and bolt specs are ported from the
             %   first-pass DB tab. Nuts, washers and inserts never had a
@@ -317,7 +686,10 @@ classdef HardwareLibraryPage < gui2.Page
                     'Columns', {{'Origin', 'Key', 'Ftu (psi)', 'Fty (psi)', ...
                                  'Fsu (psi)', 'Fsy (psi)', 'Fbru (psi)', ...
                                  'Fbry (psi)', 'E (psi)', 'CTE (1/degC)', 'Source'}}, ...
-                    'Widths',  {{62, 120, 75, 75, 75, 75, 75, 75, 90, 90, 'auto'}}), ...
+                    'Widths',  {{62, 120, 75, 75, 75, 75, 75, 75, 90, 90, 'auto'}}, ...
+                    'Required', {{'key', 'ftu', 'fty', 'fsu'}}, ...
+                    'Text',     {{'key'}}, ...
+                    'Refs',     {struct()}), ...
                 struct('Id', 'bolt', 'Title', 'Bolts', 'Noun', 'bolts', ...
                     'Fields',  {{'origin', 'key', 'spec', 'type', ...
                                  'nominalDiameter', 'series', 'tpi', ...
@@ -329,13 +701,23 @@ classdef HardwareLibraryPage < gui2.Page
                                  'At (in^2)', 'Minor dia (in)', ...
                                  'Pitch dia (in)', 'Body dia (in)', ...
                                  'Head brg face OD (in)', 'Thread len (in)', 'Source'}}, ...
-                    'Widths',  {{62, 110, 165, 60, 80, 50, 40, 70, 82, 82, 80, 100, 90, 'auto'}}), ...
+                    'Widths',  {{62, 110, 165, 60, 80, 50, 40, 70, 82, 82, 80, 100, 90, 'auto'}}, ...
+                    'Required', {{'key', 'nominalDiameter', 'series', 'tpi', 'tensileStressArea'}}, ...
+                    'Text',     {{'key', 'spec', 'type'}}, ...
+                    'Refs',     {struct('series', {{'UNF', 'UNC'}})}), ...
                 struct('Id', 'boltSpec', 'Title', 'Bolt Specs', 'Noun', 'bolt specs', ...
                     'Fields',  {{'origin', 'key', 'bolt', 'material', ...
                                  'ratedUltimateLoad', 'ratedYieldLoad', 'source'}}, ...
                     'Columns', {{'Origin', 'Key', 'Bolt', 'Material', ...
                                  'Rated ult (lbf)', 'Rated yield (lbf)', 'Source'}}, ...
-                    'Widths',  {{62, 140, 110, 110, 95, 100, 'auto'}}), ...
+                    'Widths',  {{62, 140, 110, 110, 95, 100, 'auto'}}, ...
+                    'Required', {{'key', 'bolt', 'material', 'ratedUltimateLoad', 'ratedYieldLoad'}}, ...
+                    'Text',     {{'key'}}, ...
+                    ... % bolt and material are LIBRARY KEYS -- addBoltSpec
+                    ... % rejects one that names nothing, so the form offers
+                    ... % the real list rather than a text box that can be
+                    ... % wrong in a way only the commit discovers.
+                    'Refs',     {struct('bolt', "bolt", 'material', "material")}), ...
                 struct('Id', 'nut', 'Title', 'Nuts', 'Noun', 'nuts', ...
                     'Fields',  {{'origin', 'key', 'spec', 'thread', ...
                                  'nominalDiameter', 'tpi', 'height', ...
@@ -345,7 +727,11 @@ classdef HardwareLibraryPage < gui2.Page
                                  'Nom dia (in)', 'TPI', 'Height (in)', ...
                                  'Bearing dia (in)', 'Material', ...
                                  'Rated ult (lbf)', 'Source'}}, ...
-                    'Widths',  {{62, 130, 100, 110, 80, 40, 75, 100, 90, 95, 'auto'}}), ...
+                    'Widths',  {{62, 130, 100, 110, 80, 40, 75, 100, 90, 95, 'auto'}}, ...
+                    'Required', {{'key', 'spec', 'nominalDiameter', 'tpi', 'height', ...
+                                  'bearingDiameter', 'material', 'ratedUltimateLoad'}}, ...
+                    'Text',     {{'key', 'spec', 'thread'}}, ...
+                    'Refs',     {struct('material', "material")}), ...
                 struct('Id', 'washer', 'Title', 'Washers', 'Noun', 'washers', ...
                     ... % Geometry only -- no material and no rated load,
                     ... % which is why there is no strength column here.
@@ -355,7 +741,11 @@ classdef HardwareLibraryPage < gui2.Page
                     'Columns', {{'Origin', 'Key', 'Spec', 'Size code', ...
                                  'Nom dia (in)', 'ID (in)', 'OD (in)', ...
                                  'Thickness (in)', 'Source'}}, ...
-                    'Widths',  {{62, 130, 100, 75, 80, 75, 75, 90, 'auto'}}), ...
+                    'Widths',  {{62, 130, 100, 75, 80, 75, 75, 90, 'auto'}}, ...
+                    'Required', {{'key', 'spec', 'nominalDiameter', 'innerDiameter', ...
+                                  'outerDiameter', 'thickness'}}, ...
+                    'Text',     {{'key', 'spec', 'sizeCode'}}, ...
+                    'Refs',     {struct()}), ...
                 struct('Id', 'insert', 'Title', 'Inserts', 'Noun', 'inserts', ...
                     ... % Tapped-hole geometry only -- no strength data
                     ... % exists to seed, because NASM33537 defers to
@@ -373,13 +763,28 @@ classdef HardwareLibraryPage < gui2.Page
                                  'STI minor min (in)', 'STI minor max (in)', ...
                                  'Tap major max (in)', 'C''sink min (in)', ...
                                  'C''sink max (in)', 'Source'}}, ...
-                    'Widths',  {{62, 130, 100, 110, 80, 40, 105, 105, 105, 105, 105, 100, 100, 'auto'}})];
+                    'Widths',  {{62, 130, 100, 110, 80, 40, 105, 105, 105, 105, 105, 100, 100, 'auto'}}, ...
+                    'Required', {{'key', 'spec', 'nominalDiameter', 'tpi', ...
+                                  'stiPitchDiameterMin', 'stiPitchDiameterMax', ...
+                                  'stiMinorDiameterMin', 'stiMinorDiameterMax', ...
+                                  'tapMajorDiameterMax', 'countersinkDiameterMin', ...
+                                  'countersinkDiameterMax'}}, ...
+                    'Text',     {{'key', 'spec', 'thread'}}, ...
+                    'Refs',     {struct()})];
         end
 
         function spec = specFor(entityId)
             specs = gui2.HardwareLibraryPage.sectionSpecs();
             spec  = specs(strcmp({specs.Id}, entityId));
             spec  = spec(1);
+        end
+
+        function p = plural(n)
+            if n == 1
+                p = 'y';
+            else
+                p = 'ies';
+            end
         end
 
         function row = entryRow(e, fields)
@@ -451,6 +856,76 @@ classdef HardwareLibraryPage < gui2.Page
         function ids = sectionIds(~)
             specs = gui2.HardwareLibraryPage.sectionSpecs();
             ids   = string({specs.Id});
+        end
+
+        function b = addButton(obj)
+            b = obj.AddButton;
+        end
+
+        function b = duplicateButton(obj)
+            b = obj.DuplicateButton;
+        end
+
+        function b = saveButton(obj)
+            b = obj.SaveButton;
+        end
+
+        function selectSection(obj, entityId)
+            %SELECTSECTION  Put a section's tab on top, as a click would.
+            %   The action buttons all work on the ACTIVE tab, so a test
+            %   driving Add or Duplicate has to be able to say which
+            %   section it means.
+            specs = gui2.HardwareLibraryPage.sectionSpecs();
+            k = find(strcmp({specs.Id}, char(entityId)), 1);
+            obj.TabGroup.SelectedTab = obj.TabGroup.Children(k);
+        end
+
+        function openAddForm(obj, entityId)
+            %OPENADDFORM  Open the entry form without a gesture.
+            %   matlab.uitest cannot reliably press a control on the MAIN
+            %   window while a second uifigure holds focus, so everything
+            %   past the button is driven through seams.
+            obj.selectSection(entityId);
+            obj.onAdd();
+        end
+
+        function openDuplicateForm(obj, entityId, row)
+            obj.selectSection(entityId);
+            obj.Tables.(char(entityId)).Selection = row;
+            obj.onDuplicate();
+        end
+
+        function tf = formIsOpen(obj)
+            tf = ~isempty(obj.Dialog) && isvalid(obj.Dialog);
+        end
+
+        function c = formField(obj, name)
+            %FORMFIELD  One control in the open form, by entry field name.
+            c = obj.DialogFields.(char(name));
+        end
+
+        function setFormField(obj, name, value)
+            obj.DialogFields.(char(name)).Value = value;
+        end
+
+        function commitForm(obj)
+            %COMMITFORM  Press Add on the open form.
+            obj.onFormCommit();
+        end
+
+        function cancelForm(obj)
+            obj.closeForm();
+        end
+
+        function saveTo(obj, path)
+            %SAVETO  onSave, but to a caller-chosen path.
+            %   onSave writes to data.Library.userPath(), which is the REAL
+            %   user's library — a test must never touch it.
+            obj.State.Library.save(path);
+        end
+
+        function n = customEntryCount(obj)
+            n = obj.customCount();
         end
 
         function n = buildCount(obj)

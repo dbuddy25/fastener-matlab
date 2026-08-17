@@ -269,6 +269,182 @@ classdef tGui2HardwareLibrary < matlab.uitest.TestCase
         end
     end
 
+    % ---- Adding and duplicating ------------------------------------------
+    methods (Test)
+        function saveIsDisabledUntilThereIsSomethingOfYours(testCase)
+            % A Save that writes a file containing nothing but the header
+            % reads as "saved" and has saved nothing.
+            testCase.verifyEqual(char(testCase.Page.saveButton().Enable), 'off', ...
+                'A clean install has no custom entries to write.');
+
+            lib = testCase.App.State.Library;
+            lib = lib.addMaterial(struct("key", "Test alloy", "ftu", 1, ...
+                "fty", 1, "fsu", 1, "source", "test entry"));
+            testCase.App.State.Library = lib;
+
+            testCase.verifyEqual(char(testCase.Page.saveButton().Enable), 'on');
+        end
+
+        function theAddFormOffersEveryColumnExceptOrigin(testCase)
+            % Origin is not the analyst's to choose: a new entry is custom,
+            % full stop. Everything else they can see, they can set.
+            testCase.Page.openAddForm("material");
+            testCase.addTeardown(@() testCase.Page.cancelForm());
+
+            testCase.assertTrue(testCase.Page.formIsOpen());
+            testCase.verifyError(@() testCase.Page.formField("origin"), ...
+                'MATLAB:nonExistentField');
+            testCase.verifyNotEmpty(testCase.Page.formField("key"));
+            testCase.verifyNotEmpty(testCase.Page.formField("source"));
+        end
+
+        function addingAMaterialPutsItInTheLibraryAndTheTable(testCase)
+            before = size(testCase.Page.sectionTable("material").Data, 1);
+
+            testCase.Page.openAddForm("material");
+            testCase.Page.setFormField("key",    'Inconel 718 (site)');
+            testCase.Page.setFormField("ftu",    180000);
+            testCase.Page.setFormField("fty",    150000);
+            testCase.Page.setFormField("fsu",    108000);
+            testCase.Page.setFormField("source", 'Site test report 2026-08');
+            testCase.Page.commitForm();
+
+            testCase.verifyFalse(testCase.Page.formIsOpen(), ...
+                'A successful commit closes the form.');
+
+            % In the library...
+            keys = testCase.App.State.Library.materialKeys("custom");
+            testCase.verifyTrue(any(keys == "Inconel 718 (site)"));
+
+            % ...and on screen, without renavigating.
+            data = testCase.Page.sectionTable("material").Data;
+            testCase.verifyEqual(size(data, 1), before + 1);
+            k = find(string(data(:, 2)) == "Inconel 718 (site)", 1);
+            testCase.assertNotEmpty(k);
+            testCase.verifyEqual(string(data{k, 1}), "custom");
+        end
+
+        function anEntryWithNoSourceIsRefusedAndTheFormStaysOpen(testCase)
+            % The citation rule is data.Library's (step 9a). What matters
+            % here is that the form REPORTS it rather than swallowing it,
+            % and that it does not throw away everything already typed --
+            % closing on a rejection means retyping eight fields to fix one.
+            testCase.Page.openAddForm("material");
+            testCase.addTeardown(@() testCase.Page.cancelForm());
+
+            testCase.Page.setFormField("key", 'No citation');
+            testCase.Page.setFormField("ftu", 1);
+            testCase.Page.setFormField("fty", 1);
+            testCase.Page.setFormField("fsu", 1);
+            testCase.Page.commitForm();
+
+            testCase.verifyTrue(testCase.Page.formIsOpen(), ...
+                'A rejected entry must not discard the analyst''s typing.');
+            testCase.verifyEqual(testCase.Page.formField("key").Value, ...
+                'No citation', 'The typing survived.');
+            testCase.verifyFalse( ...
+                any(testCase.App.State.Library.materialKeys() == "No citation"));
+        end
+
+        function aMissingRequiredFieldNamesTheField(testCase)
+            % "Fill in: fsu" beats "Missing required field" with no clue
+            % which one, on a form with eleven rows.
+            testCase.Page.openAddForm("material");
+            testCase.addTeardown(@() testCase.Page.cancelForm());
+
+            testCase.Page.setFormField("key",    'Half filled');
+            testCase.Page.setFormField("ftu",    1);
+            testCase.Page.setFormField("source", 'test');
+            testCase.Page.commitForm();
+
+            testCase.verifyTrue(testCase.Page.formIsOpen());
+            testCase.verifyFalse( ...
+                any(testCase.App.State.Library.materialKeys() == "Half filled"));
+        end
+
+        function duplicatePreFillsTheFormFromTheSelectedEntry(testCase)
+            % NOT AN INSTANT COPY. Nobody duplicates an allowable to keep
+            % every number the same -- the copy exists to be changed, and
+            % with inline editing out of scope the pre-filled form IS the
+            % edit.
+            data = testCase.Page.sectionTable("material").Data;
+            srcKey = string(data{1, 2});
+
+            testCase.Page.openDuplicateForm("material", 1);
+            testCase.addTeardown(@() testCase.Page.cancelForm());
+
+            testCase.assertTrue(testCase.Page.formIsOpen());
+            % The key is pre-suffixed so it cannot collide on commit...
+            testCase.verifyEqual(string(testCase.Page.formField("key").Value), ...
+                srcKey + " (Custom)");
+            % ...and the numbers came across, or there is nothing to edit.
+            testCase.verifyGreaterThan(testCase.Page.formField("ftu").Value, 0);
+        end
+
+        function duplicatingWithNothingSelectedSaysSoRatherThanThrowing(testCase)
+            testCase.Page.selectSection("material");
+            testCase.Page.sectionTable("material").Selection = [];
+
+            testCase.Page.duplicateButton().ButtonPushedFcn([], []);
+
+            testCase.verifyFalse(testCase.Page.formIsOpen(), ...
+                'Nothing selected means nothing to pre-fill.');
+        end
+
+        function aCrossReferenceIsChosenFromTheRealKeys(testCase)
+            % addBoltSpec rejects a bolt or material that names nothing, and
+            % discovering that at commit time is a worse way to learn it
+            % than not being offered the option.
+            testCase.Page.openAddForm("boltSpec");
+            testCase.addTeardown(@() testCase.Page.cancelForm());
+
+            boltField = testCase.Page.formField("bolt");
+            testCase.verifyClass(boltField, "matlab.ui.control.DropDown");
+            testCase.verifyEqual(numel(boltField.Items), ...
+                numel(testCase.App.State.Library.boltKeys()));
+        end
+
+        function addingAnEntryNeverDirtiesTheCase(testCase)
+            % Same rule as browsing: the hardware library is app-scoped and
+            % is not written to the case file.
+            testCase.App.State.clearDirty("");
+
+            testCase.Page.openAddForm("material");
+            testCase.Page.setFormField("key",    'Clean case alloy');
+            testCase.Page.setFormField("ftu",    1);
+            testCase.Page.setFormField("fty",    1);
+            testCase.Page.setFormField("fsu",    1);
+            testCase.Page.setFormField("source", 'test');
+            testCase.Page.commitForm();
+
+            testCase.verifyFalse(testCase.App.State.IsDirty, ...
+                'Editing the app-scoped library must not dirty the case.');
+        end
+
+        function saveWritesTheCustomEntriesOnly(testCase)
+            % saveTo rather than pressing Save: onSave writes to
+            % data.Library.userPath(), which is the REAL user's library.
+            % A test must never touch it.
+            fx = testCase.applyFixture( ...
+                matlab.unittest.fixtures.TemporaryFolderFixture);
+            path = string(fullfile(fx.Folder, "user_library.json"));
+
+            lib = testCase.App.State.Library;
+            lib = lib.addMaterial(struct("key", "Saved alloy", "ftu", 1, ...
+                "fty", 1, "fsu", 1, "source", "test entry"));
+            testCase.App.State.Library = lib;
+
+            testCase.Page.saveTo(path);
+
+            raw = jsondecode(fileread(path));
+            testCase.verifyNumElements(raw.materials, 1);
+            testCase.verifyEqual(string(raw.materials(1).key), "Saved alloy");
+            testCase.verifyEqual(string(raw.materials(1).origin), "custom");
+            testCase.verifyTrue(isfield(raw.materials(1), "modifiedBy"), ...
+                'The provenance stamp must reach the file.');
+        end
+    end
+
     % ---- Shell contracts, moved from tGui2Shell --------------------------
     %   These pinned lazy construction and refresh-per-visit through
     %   PlaceholderPage's counters. This page removing the last placeholder
