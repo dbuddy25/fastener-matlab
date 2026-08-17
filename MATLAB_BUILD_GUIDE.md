@@ -31,7 +31,8 @@ The code is organized into five **areas** (the MATLAB packages). The build proce
 +engine/    analysis math — the core (preload, forces, margins, solver)
 +data/      library + case save/load, table import (JSON / Excel workbook)
 +report/    PDF (Report Generator) + XLSX export
-+gui/       App Designer uifigure app
++gui2/      programmatic uifigure app (rail + card over AppState)
++gui/       superseded first-pass app, deleted at step 10
 tests/      validation cases + unit tests
 ```
 
@@ -193,16 +194,19 @@ writetable(results, "margins.xlsx");                % answers out
 
 ---
 
-# Phase 4 — GUI (App Designer)
+# Phase 4 — GUI (programmatic `uifigure`)
 
 **Committed deliverable. The GUI is a thin shell over the engine's API** — every control calls an already-tested function; **no analysis logic lives in the GUI.** This is why headless-first pays off: the GUI just wires buttons to functions that already work.
 
-**4.1 · App shell** — `uifigure` with the 11 tabs as panels + navigation.
-**4.2–4.10 · One tab per step**, each wired to the engine: Project & Factors → Joint Config → Single-Joint Analysis (+results) → Defined Joints → Element Mapping → Element Forces/import → Bulk Analysis (+table +XLSX) → Bolt Sizing → Materials & Hardware DB editor.
-**4.11 · Static content** — User Guide + References tabs.
-**4.12 · Unit system** — °C/°F display toggle at the GUI boundary (engine stays °C).
-**4.13 · Visualizations** — joint schematic + decision-tree diagram on `uiaxes`.
-**4.14 · Theming** — light/dark styling.
+**`GUI2_SPEC.md` is the live specification — build against that, not this section.** The step list below is the plan of record; the detail moved to `GUI2_SPEC.md` §14 when the first-pass tab shell was replaced by the rail + card shell over `AppState`.
+
+Two structural decisions worth carrying here because they changed the shape of the phase: it is **not App Designer** (programmatic `.m` only — see `CLAUDE.md`, Tech), and it is **not 11 flat tabs** (the tab shell produced an 11,945-line class).
+
+**Steps 1–8 · DONE** — app shell + rail, and the nine built pages: Project, Factors, Temp Loads, Joint Config, Results, Defined Joints, Element Mapping, Element Forces, Bulk Analysis.
+**Step 9 · Materials & Hardware** — the last unbuilt page; a `PlaceholderPage` today. Design in `GUI2_SPEC.md` §16.
+**Step 10 · Help menu, and delete `+gui`** — User Guide and References live on the menu bar, not as pages.
+
+Deferred, not scheduled: °C/°F display toggle at the GUI boundary (engine stays °C), joint cross-section preview (`GUI2_SPEC.md` §17), dark mode.
 
 ---
 

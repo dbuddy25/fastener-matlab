@@ -354,7 +354,11 @@ matlab/
 ├── +data/           ✅ library loader (`Library` + `library.json`, 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b — Step 2a joint-table layout); global settings (`loadSettings` — temps + factors, Step 2a); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields sheets, Step 2b); generic model↔struct serialization (`toStruct`/`fromStruct`, 3.7); case save/load (`saveCase`/`loadCase`, 3.7); factor presets (`factorPresets`/`factorPreset`/`saveFactorPreset`, 3.7)
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ✅ XLSX export (`exportResults`, 3.6); single-joint PDF report (`singleJointReport`, 3.8, via MATLAB Report Generator)
-├── +gui/            ⏳ App Designer app (thin shell)        — Phase 4
+├── +gui2/           ✅ THE GUI — programmatic uifigure app, `classdef < handle` on
+│                    `uigridlayout`; rail + card shell over `AppState`. 10 pages;
+│                    Materials & Hardware is still a `PlaceholderPage` (step 9) — Phase 4
+├── +gui/            ☠️  SUPERSEDED first-pass app. Kept only until step 10 deletes it;
+│                    do not build against it — see `GUI2_SPEC.md` §5 for why it was replaced
 ├── examples/        ✅ runnable headless reference (`run_bulk_example.m`, 3.6)
 └── tests/           ✅ smoke + model tests; ⏳ validation   — throughout
 ```
@@ -364,8 +368,8 @@ Package classes reference each other with the `model.` / `engine.` prefix.
 ### 3.1 Dependency graph — what calls what
 
 Generated from source (comments stripped, so documentation mentions do not count
-as calls). File counts: `+model` 15 · `+engine` 31 · `+engine/private` 9 ·
-`+data` 14 · `+report` 3 · `+gui` 7 · `+validation` 2.
+as calls). File counts (2026-08-17): `+model` 16 · `+engine` 37 · `+engine/private` 8 ·
+`+data` 15 · `+report` 5 · `+gui2` 19 · `+gui` 7 (superseded) · `+validation` 2.
 
 **The single-joint chain.** `analyze` is the only orchestrator — it calls 18
 things and nothing calls back into it:
@@ -555,7 +559,7 @@ Phase 2.2), not a type.
 | Single-workbook bulk run (`engine.runWorkbook` over the `data.makeTemplate` workbook; header-tolerant `data.loadElements`; optional `sheet` arg on all three loaders) | Step 2c | ✅ |
 | Case save/load, factor presets | 3.7 | ⏳ |
 | Single-joint PDF report (`report.singleJointReport`, via MATLAB Report Generator) | 3.8 | ✅ |
-| GUI (`+gui`) | 4 | ⏳ |
+| GUI (`+gui2`) | 4 | ✅ substantially — steps 9 (Materials & Hardware) and 10 (Help menu, delete `+gui`) remain |
 | Packaging (`.exe`) | 5 | ⏳ |
 
 ---

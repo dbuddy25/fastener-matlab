@@ -10,8 +10,6 @@ analysis tool, deployable as a standalone Windows executable.
 - **`MATLAB_BUILD_GUIDE.md`** — the build sequence: five phases (1–5), each a
   chain of small steps with a "Done when" acceptance test.
 - **`MATLAB_TOOL_PRD.md`** — the requirements spec (what to build + the rules).
-- **`MATLAB_TOOL_DECK_OUTLINE.md`** — plain-English outline of the tool for a
-  project overview presentation.
 - **`ARCHITECTURE.md`** — how the pieces fit together (layers, data flow, design
   decisions); a living doc, updated as each phase step lands.
 - **`UNITS.md`** — the unit contract: English units (in, lbf, psi) with
@@ -147,13 +145,17 @@ Launch it with `cd matlab; fastenerTool`.
 **What's left**, in the order it matters — see `MATLAB_BUILD_GUIDE.md`,
 *"What remains"*, for the detail:
 
-1. **Separation before pull-out** — Figure 8 logic applied to the threaded
-   member. The last gap with real engineering content.
-2. **UN vs UNJ thread form** — seeded stress areas may be ~8% conservative;
+1. **Materials & Hardware page** (GUI step 9) — the last unbuilt page; it is a
+   `PlaceholderPage` today. Design in `GUI2_SPEC.md` §16.
+2. **Help menu, and delete `+gui`** (GUI step 10).
+3. **UN vs UNJ thread form** — seeded stress areas may be ~8% conservative;
    see `VALIDATION.md`. Conservative, but it matters for sizing.
-3. **Seed materials, nuts and inserts** — fasteners are seeded (32 NAS
-   sizes); the rest are hand-entered.
-4. **Bolt Sizing tab**, then **Phase 5 packaging**.
+4. **Phase 5 packaging.**
+
+Separation-before-rupture on the threaded member — once listed here as the last
+real engineering gap — is done: all three thread rows take their design load
+from `engine.boltDesignLoad`, which applies the Fig. 8 gate through the shared
+`separationBeforeRuptureGate` helper.
 
 > **Phase 3.4 is dead, not deferred.** The planned second validation wave was
 > to draw on non-public case data; that data is not going into this repository.
@@ -163,142 +165,13 @@ Launch it with `cd matlab; fastenerTool`.
 
 `TOOL_DIFFERENCES.md` records every place this tool takes a deliberate position
 where the standard leaves a choice open — what it does, and why.
-The `+model` package defines `Bolt`, `Material`, `ThreadedMember`, `FlangeLayer`,
-`Joint`, `PreloadSpec`, `LoadCase`, `Factors`, and the enums (`ThreadSeries`,
-`ThreadedMemberType`, `ShearPlaneCondition`, `PreloadMethod`); a full joint
-constructs in the Command Window (see `+model/Joint.m`, exercised by
-`tests/tModel.m`). The `+data` package holds the hardware/material library:
-`data.Library.load()` serves the DABJ case's bolt + materials by key
-(`lib.bolt("3/8-24 UNF")`, `lib.material("A-286")`, exercised by
-`tests/tLibrary.m`). The `+validation` package encodes the answer key:
-`validation.dabjSection9()` builds the DABJ §9 joint/loads/factors from the
-library and pins every published intermediate and margin (exercised by
-`tests/tDabjCase.m`). The `+engine` package computes the preloads, design
-loads, and six DABJ-validated margin checks, and
-`engine.analyze(joint, loadCase, factors)` runs them all in one call,
-returning the standard `engine.Result` — the 15-check margin table
-(`Pass|Fail|NotEvaluated`), `WorstMargin`/`GoverningCheck`, the Fig. 8
-narrative, and `asTable()` for export (one `analyze()` call reproduces all
-six DABJ §9 margins in `tests/tDabjCase.m`). `engine.stiffness(joint)`
-computes bolt/member stiffness and the stiffness factor phi (Shigley 30°
-conical frustum; phi per NASA-STD-5020B Eq. 9), validated against DABJ
-Example 8-b via `validation.dabjExample8b()` (exercised by
-`tests/tStiffness.m`), and is wired in (3.1b): `engine.preload` computes
-the thermal preload change from the joint stiffness (NASA TM-106943
-Eq. 10) when no `ThermalRate` override is supplied, and
-`engine.marginTensionUlt` computes the real rupture-branch margin
-(NASA-STD-5020B Eq. 10 via phi) when the Fig. 8 gate is not assured,
-and `engine.marginTensionYield` implements the yield-side analogue
-(5020B Eq. 16/17) off the SAME gate. Phase 3.2 adds
-the three member-strength checks required by NASA-STD-5020B §4.4.2, with
-the working equations from NASA TM-106943 (Chambers): bolt bearing on
-the flanges (`engine.marginBearing`, Eq. 72-74, allowable validated
-against DABJ Example 5-b: Pbr = 14,760 lbf), flange shear tear-out
-(`engine.marginShearTearout`, Eq. 69-71, hand-derived pin; e/D < 1.5
-flagged as outside validity), and bearing under the head/nut
-(`engine.marginBearingUnderHead`, Eq. 75 annulus + Eq. 74 MS form on the
-bolt axial load Pb = PpMax + n·phi·PtL per 5020B Eq. 8, hand-derived pin
-on the Example 8-b geometry) — all wired into `analyze()`
-(`tests/tBearing.m`), with new `FlangeLayer` fields `HoleDiameter`,
-`EdgeDistance`, and `CheckShearTearout`. Phase 3.3 completes the 15-check
-set with the four thread-strength checks, using the thread-shear-area
-method: `As = 0.75·π·E·Le` (E = pitch diameter, `Bolt.PitchDiameter`;
-Le = engagement, `ThreadedMember.EngagementLength`) with `Pult = Fsu·As`
-and `MS = Pult/Pb − 1` (NASA TM-106943 Eq. 63-65/76-77/79 basis; Pb per
-NASA-STD-5020B Eq. 8) — `engine.marginBoltThreadShear` (bolt Fsu),
-`engine.marginNutStrength` (nut Fsu), and
-`engine.marginTappedParentThread` (parent Fsu — closes the long-standing
-tapped-hole gap; area/allowable cross-checked vs DABJ Example 6-a within
-1.5%) — while inserts use the manufacturer (Heli-Coil) rated pull-out load
-directly (`engine.marginInsert`), one spec value on the insert
-internal-thread row (`tests/tThreadShear.m`). Phase 3.5a adds FEM force
-resolution: `engine.resolveForces(F, axis)` projects one element's 6-DOF
-force vector onto the bolt axis (`model.BoltAxis`, new `Joint.BoltAxis`
-field, default Z) — axial = signed force along the axis, shear = RSS of
-the two transverse forces (single-fastener CBUSH projection; no
-bolt-pattern moment distribution) — and
-`engine.loadCaseFromForces(F, axis, ...)` turns that into a per-bolt
-`model.LoadCase` (`Reversible`/`ScaleFactor` options; hand-derived 3-4-5
-pins in `tests/tForces.m`). Phase 3.5b adds the bulk input parsers:
-`data.loadJointLibrary(file, lib)` reads a joint-table (.csv or .xlsx, one
-row per joint, library keys resolved through `data.Library`; header-row
-auto-detect, `AxialX/Y/Z` bolt-direction marks, boltSpec auto-lookup for
-the rated loads, On-gated washers, `Nut*`/`Helicoil*` threaded-member
-columns; no temperature columns — temps are global settings) into
-`model.Joint` objects, `data.loadElements(file)` reads an element + forces
-table (`element_id`/`joint_name`/FX..MZ per row; same header-row
-auto-detect as the joint reader, so a friendly banner row is tolerated)
-into the struct consumed by `engine.resolveForces`, and
-`data.loadSettings(file)` reads the global settings key/value file
-(NominalTempC/HotTempC/ColdTempC + the eight factor keys → a
-`model.Factors`). All three loaders take an optional trailing `sheet`
-argument (name or index) to read a named sheet of a workbook. Template files with the exact column
-headers live at `matlab/templates/` — the joint template's first row is a
-demo joint built from real catalog hardware in a DABJ-Section-9-like
-configuration (`tests/tBulkParsers.m` parses the templates and checks that
-row's field mapping; the DABJ §9 fixture itself is now built in code by
-`validation.dabjSection9`, independent of the template — see
-`tests/tBulk.m`'s header). `ThermalRate` is not a template column (or a
-GUI field) — it is not an analyst-facing input at all; every parsed/
-GUI-built joint's thermal preload comes from CTE mismatch + joint
-stiffness (TM-106943 Eq. 10, `model.PreloadSpec`). Phase 3.5c ties it together:
-`engine.analyzeBulk(jointLibrary, elements, factors)` maps the pipeline
-(`loadCaseFromForces` → `analyze`) over every element and returns a
-writetable-ready results table — one row per element with the resolved
-per-bolt Axial/Shear, all 15 margin MS columns, WorstMargin/GoverningCheck,
-and an Error column (a missing joint or a failed analyze marks the row,
-never aborts the batch). The end-to-end run reproduces the DABJ §9
-per-bolt margins from the template CSV (`tests/tBulk.m`). Phase 3.5d adds
-joint-slip bolt-pattern aggregation: for a `SlipMode.Joint` joint the
-orchestrator groups the element's pattern (optional `pattern_id` elements
-column — the physical joint instance — falling back to the joint name),
-vector-sums the scaled forces into the NASA-STD-5020B Eq. 84 joint totals,
-and evaluates joint slip ONLY when the pattern's element count equals
-`Joint.BoltCount` (the nf check — a mismatch leaves Slip NaN with a `Note`
-column saying why, never a silently wrong margin). A four-element pattern
-splitting the §9 joint totals reproduces the book's joint-slip −0.65
-end-to-end; pattern torsion is not modeled (same scope as Eq. 84).
-Single-fastener slip — the default — evaluates normally per element.
-Phase 3.6 completes the Headless Release: `report.exportResults(T, file)`
-writes the results table to `.xlsx` (Results sheet + a Summary sheet with
-Pass/Fail/Error counts) or `.csv` by extension, and
-`engine.runBulk(jointFile, elementsFile, settingsFile, outFile)` runs the
-whole pipeline — library load → parse → apply global settings temps to
-every joint → resolve → analyze → export — in one call (settings optional:
-empty/omitted → `model.Factors()` defaults with the joints' own
-temperatures, and a `model.Factors` object in the slot is accepted for
-back-compat; a runnable reference lives at
-`matlab/examples/run_bulk_example.m`; exercised by `tests/tExport.m`).
-Step 2c adds the single-workbook entry point:
-`engine.runWorkbook(workbookFile, outFile)` runs the same pipeline (shared
-settings-apply helper — the two entry points cannot drift) on the
-Joints/Elements/Settings sheets of one `data.makeTemplate` workbook, whose
-shipped example content reproduces the DABJ §9 per-bolt margins end-to-end
-(`tests/tWorkbook.m`). See `MATLAB_BUILD_GUIDE.md`.
-Phase 3.8 adds the single-joint PDF report:
-`report.singleJointReport(joint, loadCase, factors, file)` runs
-`engine.analyze` and builds one PDF (via MATLAB Report Generator) — title
-page, inputs, preload, design loads, the 15-row margins table (governing
-row bold, Fail rows red, plus a "Governing: ..." callout), the Fig. 8
-separation-before-rupture narrative, and a governing-equations (citation)
-table for every evaluated check. Equation citations only — full
-step-by-step symbolic derivations are a follow-up. Errors with id
-`report:singleJointReport:reportGenRequired` if Report Generator isn't
-installed/licensed; the test (`tests/tPdfReport.m`) skips rather than
-fails in that case.
-Phase 3.7 adds case save/load + factor presets: `data.toStruct`/
-`data.fromStruct` are a generic recursive model-object↔struct converter
-(every `+model` class shares one implementation — Dependent properties are
-never written back, enums round-trip by member name, object arrays like
-`FlangeStack` are detected from the property's declared default
-cardinality so a single-layer stack still round-trips as an array).
-`data.saveCase`/`data.loadCase` wrap a `Joint` (+ optional
-`LoadCase`/`Factors`/`Name`) in a `schemaVersion`-tagged JSON file
-(`ConvertInfAndNaN=false` so NaN "unconfigured" sentinels survive);
-lossless — re-`engine.analyze`-ing a save→load copy of the DABJ §9 case
-reproduces every published margin (`tests/tCaseIO.m`).
-`data.factorPresets()` holds the built-in (protected) presets
-(`"NASA-STD-5020B"` plus two named alternates); `data.factorPreset(name)`
-resolves built-in-or-user by name; `data.saveFactorPreset(name, factors,
-file)` writes a user preset (default path under `userpath()`) and refuses
-to overwrite a built-in name.
+
+### How it got here
+
+The phase-by-phase build history used to be restated here in full. It is not
+any more: `ARCHITECTURE.md` owns that narrative and is updated as each step
+lands, and keeping a second copy in the front door meant two places to update
+and one of them silently rotting — which is exactly what happened to the launch
+command above. For the per-package detail see `ARCHITECTURE.md`; for the phase
+sequence see `MATLAB_BUILD_GUIDE.md`; for the margin-by-margin review of the
+engine against the standard see `MARGIN_REVIEW.md`.

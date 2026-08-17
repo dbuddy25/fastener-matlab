@@ -1,7 +1,7 @@
 # PRD — MATLAB Fastener Analysis Tool
 
 **Status:** Draft for implementation · **Standard:** NASA-STD-5020B
-**Companion docs:** `MATLAB_BUILD_GUIDE.md` (build sequence & phases), `MATLAB_TOOL_DECK_OUTLINE.md` (project overview deck)
+**Companion docs:** `MATLAB_BUILD_GUIDE.md` (build sequence & phases), `GUI2_SPEC.md` (the GUI spec)
 
 > This PRD is the *requirements* spec — **what** the tool must do and the rules it must obey. The build guide is the *sequence* — the order to build it in (five phases). Read them together: a requirement here maps to one or more phase steps there.
 
@@ -35,7 +35,7 @@ Build a **new, ground-up MATLAB application** for NASA-STD-5020B bolted-joint ma
 - Full 5020B margin engine (15 checks), preload (incl. thermal), force resolution, interaction, separation/slip, separation-before-rupture, tapped-hole parent-thread check.
 - JSON hardware/material library + JSON case save/load.
 - PDF + Excel reporting.
-- App Designer GUI (11 tabs) with °C/°F toggle and joint/decision-tree visuals.
+- Programmatic `uifigure` GUI (rail + card shell, 10 pages) — §5.5. The °C/°F toggle and the cross-section preview are still unbuilt.
 - Standalone Windows `.exe` via MATLAB Compiler.
 
 ### Out of scope (v1)
@@ -78,10 +78,26 @@ Plus supporting computations: preload (incl. thermal), bolt/member stiffness + s
 - **Excel:** bulk results → `.xlsx` (`writetable`/`writecell`).
 - **PDF (Report Generator):** single-joint summary + all margins + step-by-step worked-equation derivations.
 
-### 5.5 GUI (App Designer `uifigure`, Phase 4 — after the Headless Release)
-11 tabs, each wired to the engine and independently usable:
-Project & Factors · Joint Config · Single-Joint Analysis (+results) · Defined Joints · Element Mapping · Element Forces/import · Bulk Analysis (+table +XLSX) · Bolt Sizing · Materials & Hardware DB editor · User Guide · References.
-Plus: °C/°F unit toggle at the GUI boundary, joint schematic + decision-tree diagram on `uiaxes`, light/dark theming, version/build stamping.
+### 5.5 GUI (programmatic `uifigure`, Phase 4 — after the Headless Release)
+A **left rail + card** shell over a shared `AppState`, each page wired to the
+engine and independently usable. **As built** (`matlab/+gui2`, 10 pages):
+
+> SETUP — Project · Factors · Temp Loads · Joint Config
+> SINGLE JOINT — Results · Defined Joints
+> BULK — Element Mapping · Element Forces · Bulk Analysis
+> REFERENCE — Materials & Hardware *(step 9, still a placeholder)*
+
+Differences from the 11-tab list this section carried until 2026-08-17, all
+deliberate: Project and Factors are separate pages; Temp Loads is its own page
+because it is global rather than per-joint; **Bolt Sizing is absent** (the
+engine's `boltSizingSweep` is headless-only for now); User Guide and References
+moved from tabs to the **Help menu**; and the shell is a rail rather than a flat
+`uitabgroup` — the tab shell produced an 11,945-line class, which is the
+evidence it does not scale. See `GUI2_SPEC.md` for the live spec.
+
+Still wanted, not built: °C/°F unit toggle at the GUI boundary (engine stays
+°C), joint cross-section preview (`GUI2_SPEC.md` §17), dark mode. Version/build
+stamping is done — `toolVersion` reaches the PDF and the exports.
 
 ## 6. Domain model (engine types)
 

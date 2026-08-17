@@ -1,5 +1,12 @@
 # GUI2 Spec — the rebuilt GUI
 
+> **`GUI_PORT_SPEC.md` was deleted 2026-08-17.** Its live content — the
+> Materials & Hardware page design and the cross-section preview — is now §16
+> and §17 below. Everything else in it was superseded layout advice for the
+> first-pass tab shell. References to it in this file and in code comments are
+> historical citations; the file itself is recoverable from git history
+> (`git show <rev>:GUI_PORT_SPEC.md`).
+
 Design spec for the second-pass GUI. It replaces `GUI_PORT_SPEC.md` as the
 authority on the GUI layer; that document stays as the record of the first pass
 and the source of the behavior checklist (§14).
@@ -709,6 +716,87 @@ Each step lands complete — spec section, class, test, run — before the next.
   seeded bolt carries `threadLength`, so L1 can only be entered. Deriving it
   would mean per-part-number bolt entries (thread length is length-dependent,
   not a property of the thread size), which is a `+data` change and a separate
-  decision — it would multiply the 32 catalogue entries by every ordered length.
+  decision — it would multiply the 25 catalogue entries by every ordered length.
 - **Dark mode** — near-free in R2026a, but below performance in priority.
   Deferred, not ruled out.
+
+---
+
+## 16. Materials & Hardware (step 9) — the surviving design
+
+Rescued verbatim-in-substance from `GUI_PORT_SPEC.md` §6 when that file was
+deleted 2026-08-17. It was the only place this page had ever been designed, and
+step 9 is the next thing to build. Everything else in that file was superseded
+layout advice for the first-pass shell.
+
+**Two different things share the word "library" — keep them straight.**
+*Materials & Hardware* is app-scoped (baseline + custom, persisted to
+`library.json`, shared across every case). *Defined Joints* is case-scoped (a
+dict inside the case JSON, unprotected). The rail labels already reflect this;
+each page states it in-page too.
+
+**Structure.** A `Source:` filter (All / Baseline / Custom) above sub-tabs —
+Materials, Bolts, Nuts, Inserts, Washers, Bolt Specs — each an identical
+"table + button bar". **Write one parameterised builder and call it once per
+entity type**; do not write six near-identical tabs.
+
+**Interaction model, which is the opposite of what most people build.** Editing
+an existing row is **inline** — double-click, type, commit straight to storage,
+no Save button. **Adding** a row is a modal form dialog.
+
+MATLAB's `ColumnEditable` is per-column, not per-cell, so per-row protection has
+to be enforced in `CellEditCallback`: if the row is baseline, revert `t.Data` and
+`uialert("Baseline entries are read-only. Use Duplicate as Custom.")`. Also grey
+the row with `uistyle` so the block is telegraphed rather than discovered after
+typing.
+
+**The data layer is ALREADY BUILT — do not re-design it.** `data.Library`
+carries an `origin` field (`"baseline"` | `"custom"`, absent = baseline),
+`save()` writes only custom entries and `load()` re-merges the shipped baseline,
+and `duplicateAsCustom(key)` exists for every managed section. The three reasons
+it was built first still explain the constraints the page must respect:
+
+- **Upgrade safety.** Without the split, `save()` would write the whole merged
+  table to the user's file, and a corrected baseline value would never reach
+  them — their stale file would win forever. A data-correctness problem, not a
+  UI one.
+- **Compliance traceability.** *"Was this allowable the shipped reviewed value,
+  or something an analyst typed?"* must be answerable from the output.
+- **Cost asymmetry.** Retrofitting after users have saved libraries would mean a
+  migration that guesses which rows were baseline. There is no good guess.
+
+**Visual distinction is one glyph in column 1** — 🔒 baseline, ✏ custom. No
+colour, no separate table.
+
+**The key UX move: `Duplicate as Custom` works on any row.** A user who wants to
+tweak a baseline material duplicates it (name gets a ` (Custom)` suffix) and
+edits the copy. Protection without an escape hatch just makes people angry.
+
+**Skip admin mode.** Duplicate-as-custom covers ~95% of the need, and curating
+the shipped baseline is better done by editing the seed file directly. The
+admin tier, checksums and the packaging-path split are still only designed, in
+`LIBRARY_PLAN.md`.
+
+**Any library change must refresh dependent dropdowns**, or a newly added
+material is invisible until restart.
+
+## 17. Joint cross-section preview — deferred, geometry only
+
+Also rescued from `GUI_PORT_SPEC.md` (§13). Still deferred, still the lowest
+value-per-hour item on the list, but it is a real design and nothing else
+records it.
+
+Draws a to-scale axial cross-section: head → washer → flanges (split left/right
+with the true clearance gap) → nut/insert/tapped host → shank at true length,
+plus centreline, dashed frustum lines at the joint's frustum angle, per-flange
+labels, and — after analysis — the loading-plane line.
+
+**Genuinely useful, not decorative.** It catches exactly what the Joint Config
+form is prone to: a bolt too short for the stack, a washer wider than the
+flange, an implausible engagement, a loading plane outside the grip.
+
+**Geometry only.** On a `uiaxes` with `DataAspectRatio = [1 1 1]` and limits
+taken from real dimensions, ~15 `rectangle`/`patch`/`line`/`text` calls do it —
+and **drawing in MATLAB data coordinates removes the manual pixel-scaling layer
+entirely**. Skip gradients, hex chamfers and coil hatching. Host it in a
+right-hand column of Joint Config rather than a separate window.

@@ -1,7 +1,17 @@
 # Library Tiering and GUI Editing — design notes
 
-> Notes only, written 2026-08-04. **Nothing here is built, and it is
-> deliberately NOT next** — see §5 for what comes first and why.
+> Written 2026-08-04. **Status corrected 2026-08-17: the baseline/custom split
+> IS now built** — `data.Library` carries an `origin` field
+> (`"baseline"` | `"custom"`, absent = baseline), `save()` writes only custom
+> entries while `load()` re-merges the shipped baseline, and
+> `duplicateAsCustom(key)` exists for every managed section. That is roughly
+> the first third of this document, and it landed without the document being
+> updated to say so.
+>
+> **Still unbuilt, and the reason to keep this file:** the third *admin* tier,
+> the checksum / version-stamp mechanism (§2.4, §4), and the packaging-path
+> split (`%APPDATA%` vs install dir, §3). The GUI page that exposes any of it
+> is step 9 — its design is in `GUI2_SPEC.md` §16, not here.
 >
 > Requirement as stated: the material/hardware library is **admin-controlled**,
 > but users can add **custom entries**.
