@@ -8,10 +8,21 @@
 > the first third of this document, and it landed without the document being
 > updated to say so.
 >
-> **Still unbuilt, and the reason to keep this file:** the third *admin* tier,
-> the checksum / version-stamp mechanism (§2.4, §4), and the packaging-path
-> split (`%APPDATA%` vs install dir, §3). The GUI page that exposes any of it
-> is step 9 — its design is in `GUI2_SPEC.md` §16, not here.
+> **Step 9 landed 2026-08-17** and closed more of this: the Materials &
+> Hardware page (`gui2.HardwareLibraryPage`) browses all six sections with
+> their citations visible, adds and duplicates custom entries, and persists
+> them. §3's packaging question is **decided** — the custom library lives at
+> `data.Library.userPath()` (`userpath()` with a repo-local fallback,
+> mirroring the factor presets), and `data.Library.loadInstalled()` overlays
+> it on the shipped baseline for every reader. Provenance landed with it:
+> mandatory `source` on write, plus `modifiedBy` / `modifiedUtc`.
+>
+> **Still unbuilt, and the reason to keep this file:** the third *admin* tier
+> and the checksum / version-stamp mechanism (§2.4, §4). Also still open, and
+> stated in §2 rather than settled: whether a tool upgrade may overwrite a
+> site-approved value. `data.Library`'s merge rule is *the file wins*, which
+> is right while the baseline is the authority and inverts if sites curate
+> their own — worth settling before there is field data.
 >
 > Requirement as stated: the material/hardware library is **admin-controlled**,
 > but users can add **custom entries**.

@@ -693,8 +693,8 @@ Each step lands complete — spec section, class, test, run — before the next.
 | 6 | Element Mapping |
 | 7 | Element Forces |
 | 8 | Bulk Analysis |
-| 9 | Materials & Hardware |
-| 10 | Help menu + bundled PDFs; delete `+gui` |
+| 9 | Materials & Hardware — **DONE** (see §16) |
+| 10 | Help menu + bundled PDFs; delete `+gui` — the only step left |
 
 ---
 
@@ -722,12 +722,12 @@ Each step lands complete — spec section, class, test, run — before the next.
 
 ---
 
-## 16. Materials & Hardware (step 9) — the surviving design
+## 16. Materials & Hardware — BUILT (step 9, 2026-08-17)
 
-Rescued verbatim-in-substance from `GUI_PORT_SPEC.md` §6 when that file was
-deleted 2026-08-17. It was the only place this page had ever been designed, and
-step 9 is the next thing to build. Everything else in that file was superseded
-layout advice for the first-pass shell.
+`gui2.HardwareLibraryPage`. The design below was rescued from
+`GUI_PORT_SPEC.md` §6 when that file was deleted; three parts of it were
+**changed on the way in**, and those changes are marked. Everything unmarked
+was built as written.
 
 **Two different things share the word "library" — keep them straight.**
 *Materials & Hardware* is app-scoped (baseline + custom, persisted to
@@ -740,15 +740,25 @@ Materials, Bolts, Nuts, Inserts, Washers, Bolt Specs — each an identical
 "table + button bar". **Write one parameterised builder and call it once per
 entity type**; do not write six near-identical tabs.
 
-**Interaction model, which is the opposite of what most people build.** Editing
-an existing row is **inline** — double-click, type, commit straight to storage,
-no Save button. **Adding** a row is a modal form dialog.
+**CHANGED — no inline editing.** The original called for double-click-to-edit
+committing straight to storage, with per-row protection enforced in
+`CellEditCallback` by reverting `t.Data` on a baseline row. Built instead as
+**browse + Add + Duplicate as Custom**, every table `ColumnEditable = false`.
 
-MATLAB's `ColumnEditable` is per-column, not per-cell, so per-row protection has
-to be enforced in `CellEditCallback`: if the row is baseline, revert `t.Data` and
-`uialert("Baseline entries are read-only. Use Duplicate as Custom.")`. Also grey
-the row with `uistyle` so the block is telegraphed rather than discovered after
-typing.
+Two reasons. A table that *looks* editable and then reverts teaches the analyst
+to distrust the page — and `ColumnEditable` is per-column, not per-cell, so
+every baseline row would have had to invite the edit before refusing it.
+Second, `data.Library` has no edit-in-place method, and adding one means
+rename handling plus referential integrity for the cross-references
+(`boltSpec.bolt`, `nut.material`) that nothing else needed yet.
+
+**CHANGED — Duplicate opens the form pre-filled, rather than committing a copy.**
+`duplicateAsCustom` on its own produces an entry identical to the original under
+a new name, and nobody duplicates an allowable to keep every number the same —
+the copy exists to be changed. With inline editing out of scope the pre-filled
+form *is* the edit. It is also where the new citation is demanded: a copy that
+silently inherited the original's `source` would attribute the analyst's numbers
+to a document that does not contain them.
 
 **The data layer is ALREADY BUILT — do not re-design it.** `data.Library`
 carries an `origin` field (`"baseline"` | `"custom"`, absent = baseline),
@@ -765,8 +775,13 @@ it was built first still explain the constraints the page must respect:
 - **Cost asymmetry.** Retrofitting after users have saved libraries would mean a
   migration that guesses which rows were baseline. There is no good guess.
 
-**Visual distinction is one glyph in column 1** — 🔒 baseline, ✏ custom. No
-colour, no separate table.
+**CHANGED — origin renders as the words `baseline` / `custom`, not 🔒 / ✏.**
+The glyphs are non-ASCII (the lock is outside the Basic Multilingual Plane),
+this code is written on a machine that never runs it, and a font-fallback or
+file-encoding problem on the Windows target would silently break the one column
+that carries the protection state. A word cannot fail that way. Inherited from
+the first-pass DB tab, which made the same call for the same reason. No colour,
+no separate table.
 
 **The key UX move: `Duplicate as Custom` works on any row.** A user who wants to
 tweak a baseline material duplicates it (name gets a ` (Custom)` suffix) and
@@ -778,7 +793,26 @@ admin tier, checksums and the packaging-path split are still only designed, in
 `LIBRARY_PLAN.md`.
 
 **Any library change must refresh dependent dropdowns**, or a newly added
-material is invisible until restart.
+material is invisible until restart. Built: `JointConfigPage` subscribes to
+`LibraryChanged` — nothing in `+gui2` did before step 9 — and every picker
+saves and restores its selection across the repopulation, because setting
+`Items` can drop `Value` and MATLAB fires no callback when it does. The nut and
+washer family pickers restore a **token** rather than a label, since their
+`Items` are display strings and their `Value` is `ItemsData`.
+
+**Persistence.** Custom entries go to `data.Library.userPath()` —
+`userpath()` plus a repo-local fallback, mirroring the factor presets.
+`save()` refuses the bundled seed and a compiled standalone cannot write its
+own install directory. `data.Library.loadInstalled()` is the read side, and
+`AppState`, `runBulk`, `runWorkbook` and `makeTemplate` all go through it: the
+bare `load()` reads only the seed, so a saved entry would have been invisible
+to bulk and gone from the GUI on the next launch.
+
+**Provenance.** Every written entry carries a mandatory `source`, plus
+`modifiedBy` / `modifiedUtc`. `approvedBy` / `approvedUtc` are in the schema
+and preserved across a round trip but nothing writes them — signing an
+allowable off as reviewed is a separate act the tool does not perform. See
+`COMPLIANCE.md` and `data.Library`'s header.
 
 ## 17. Joint cross-section preview — deferred, geometry only
 

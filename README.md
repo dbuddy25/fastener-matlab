@@ -33,8 +33,10 @@ matlab/
 ├── +report/           XLSX export (`report.exportResults`, Phase 3.6); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
 ├── +gui/              FIRST-PASS programmatic uifigure app (`gui.launch`) — a thin
 │                      shell over the engine, deliberately plain .m rather than a
-│                      binary .mlapp so it diffs in git (Phase 4). LEGACY: kept only
-│                      until its Materials & Hardware DB tab is ported, then deleted
+│                      binary .mlapp so it diffs in git (Phase 4). LEGACY and now
+│                      fully superseded -- its Materials & Hardware DB tab was the
+│                      last thing it still had, and step 9 rebuilt it. Deleted at
+│                      step 10; do not build against it
 ├── +gui2/             the rebuilt GUI (`gui2.launch`, GUI2_SPEC.md) — what
 │                      `fastenerTool` opens. Adds the bulk workflow, the joint
 │                      cross-section view and the gate/allowables panels; nothing
@@ -145,12 +147,15 @@ Launch it with `cd matlab; fastenerTool`.
 **What's left**, in the order it matters — see `MATLAB_BUILD_GUIDE.md`,
 *"What remains"*, for the detail:
 
-1. **Materials & Hardware page** (GUI step 9) — the last unbuilt page; it is a
-   `PlaceholderPage` today. Design in `GUI2_SPEC.md` §16.
-2. **Help menu, and delete `+gui`** (GUI step 10).
-3. **UN vs UNJ thread form** — seeded stress areas may be ~8% conservative;
+1. **Help menu, and delete `+gui`** (GUI step 10) — the last GUI step.
+2. **UN vs UNJ thread form** — seeded stress areas may be ~8% conservative;
    see `VALIDATION.md`. Conservative, but it matters for sizing.
-4. **Phase 5 packaging.**
+3. **Phase 5 packaging.**
+
+Materials & Hardware (GUI step 9) landed 2026-08-17: all six library sections
+browsable with their source citations visible, custom entries added or
+duplicated from a baseline row, and persisted to a per-installation library
+file. See `GUI2_SPEC.md` §16.
 
 Separation-before-rupture on the threaded member — once listed here as the last
 real engineering gap — is done: all three thread rows take their design load
