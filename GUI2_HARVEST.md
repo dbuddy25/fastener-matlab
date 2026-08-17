@@ -680,17 +680,21 @@ Recorded so the harvest isn't mistaken for a to-do list.
 
 ## F. Resolved — the scope questions
 
-All four settled; the rule is in `GUI2_SPEC.md` §2, *"The displayed 9 is the
-tool's scope."*
+> **SUPERSEDED IN PART — the 9-check scope this section assumes is gone.**
+> When this was written the GUI displayed 9 of the 15 computed checks. It now
+> displays **all 15** (14 margin rows + the Fig. 8 gate). `GUI2_SPEC.md` §2's
+> heading is *"Check scope — all 15 displayed"*, and `ResultsPage.m` prints
+> *"SCOPE: all 15 computed checks are shown"*. The whitelist was wrong in two
+> ways found in use — see `GUI2_SPEC.md` §2 for both. Items 1 and 2 below are
+> rewritten to match; 3 and 4 were never scope-dependent and stand as written.
 
-1. **Worst margin / governing check — not displayed anywhere.** Both span all
-   15 checks (`analyze.m:269–277`), so either could name a row that isn't in
-   the table. Nine colored rows carry the signal on their own. Bulk substitutes
-   a **scoped pass count** (`7/9 pass`) for the engine's `WorstMargin` column.
-   **Never recompute a minimum over the displayed subset.**
-2. **Export scope — the displayed 9**, with the scope statement carried in the
-   workbook and the PDF, prominent enough that a reviewer cannot mistake the
-   file for a complete 5020B assessment.
+1. **Worst margin / governing check — still not displayed anywhere.** The
+   reason changed: it is no longer that they could name a hidden row (none are
+   hidden now), but that a single headline number flattens 15 different
+   questions into one. The rows carry the signal themselves.
+   **Never recompute a minimum over a displayed subset.**
+2. **Export scope — everything computed**, with the scope statement still
+   carried in the workbook and the PDF.
 3. **No unit layer for now.** US customary + °C, as today. Wanted eventually,
    so numeric formatting stays in centralized helpers (`fmtGeom`,
    `fmtOptional`, …) and is never inlined at call sites — that turns a future
@@ -714,10 +718,19 @@ anywhere, so `F5` was never wired. All three are new builds against
 Not defects in the GUI — gaps in the seeded library that change what the tool
 can do.
 
-**`boltSpecs` is empty.** `matlab/+data/library.json` carries 28 materials,
-32 bolts, 20 nuts, 30 inserts and 58 washers — and **zero** bolt specs. The key
-and the schema are present and `data.Library` reads them, so this reads as
-unfinished seeding rather than a decision.
+> **CLOSED — this gap no longer exists.** `library.json` now carries 28
+> materials, **25 bolts, 25 boltSpecs**, 20 nuts, 30 inserts and 58 washers.
+> The catalogue was pruned from 32 to 25 entries and A-286 rated loads were
+> catalogued for all 25, so the bolt-spec cascade DOES fire on the shipped
+> data and `tGui2JointConfig` now assumes the opposite condition
+> (*"every bolt material in the library has a spec for this bolt"*). The
+> section is kept because its reasoning about honest provenance is still the
+> rule; the numbers and the consequences below are historical.
+
+**`boltSpecs` was empty.** At the time of writing, `matlab/+data/library.json`
+carried 28 materials, 32 bolts, 20 nuts, 30 inserts and 58 washers — and
+**zero** bolt specs. The key and the schema were present and `data.Library`
+read them, so it read as unfinished seeding rather than a decision.
 
 Consequences, all honest but worth knowing:
 
@@ -727,9 +740,9 @@ Consequences, all honest but worth knowing:
 - Every bolt therefore falls back to **`At · Ftu`** for its ultimate allowable —
   which `ENGINE_CHECKS.md` labels *"a derived convention, no 5020B equation"* —
   and to 5020B Eq. 18 for yield.
-- Two `tGui2JointConfig` tests assume out rather than passing vacuously against
-  data that cannot exercise them. That is the tests behaving correctly, but it
-  means **a green suite does not prove the resolve-and-fill path works.**
+- Two `tGui2JointConfig` tests assumed out rather than passing vacuously
+  against data that could not exercise them. That was the tests behaving
+  correctly. (Since resolved — see the note above; the cascade now fires.)
 
 **Left as-is deliberately (2026-08-06).** Filling it needs real spec-rated loads
 from procurement documents — NAS1351 / NAS1352 and the rest. A fabricated rating

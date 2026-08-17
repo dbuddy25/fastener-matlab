@@ -28,7 +28,7 @@ flowchart LR
     R[engine.Result<br/>Margins · WorstMargin<br/>GoverningCheck · Warnings]
 
     subgraph OUT[" Consumers "]
-        GUI[gui.FastenerApp]
+        GUI[gui2.FastenerApp]
         PDF[report.singleJointReport]
         XL[report.exportResults]
     end

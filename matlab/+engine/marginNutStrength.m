@@ -195,7 +195,7 @@ arguments
     preload  (1,1) struct
 end
 
-methodArea = "TM-106943 Eq. 76 (nut internal thread shear) via the As = 0.75·pi·E·Le pitch-diameter form + Eq. 77 allowable Pult = Fsu·As (yield counterpart Fsy·As vs PbYield with FFY·FSY), Eq. 65 MS; spec rating per NASA-STD-5020B §4.4.1 as an ultimate ceiling when set; Pb/PbYield per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
+methodArea = "TM-106943 Eq. 76 (nut internal thread shear) via the As = 0.75·pi·E·Le pitch-diameter form + Eq. 77 allowable Pult = Fsu·As (yield counterpart Fsy·As vs PbYield with FFY·FSY), Eq. 65 MS; a spec rating, when set, IS the nut's ultimate allowable per NASA-STD-5020B §4.4.1 p26 (assessment based on the strength specified for the item rather than on thread-stripping analysis) and REPLACES the computed area form above, which then serves only as a comparison; Pb/PbYield per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
 methodRated = "Nut spec-rated ultimate load (NASA-STD-5020B §4.4.1 — nut limited to its load rating), Eq. 65 MS form; ultimate-only (a rating carries no yield information); Pb per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, Pb = FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
 
 if joint.ThreadedMember.Type ~= model.ThreadedMemberType.Nut

@@ -142,7 +142,7 @@ end to end: define a joint from library-backed dropdowns, analyze it, or map
 FEM element IDs to joints, import forces one load case per sheet, run the
 batch and export a formatted workbook.
 
-Launch it with `cd matlab; gui.launch`.
+Launch it with `cd matlab; fastenerTool`.
 
 **What's left**, in the order it matters — see `MATLAB_BUILD_GUIDE.md`,
 *"What remains"*, for the detail:

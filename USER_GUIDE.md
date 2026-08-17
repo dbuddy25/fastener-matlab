@@ -24,7 +24,7 @@ A **margin of safety (MS)** is `strength / load − 1`: **≥ 0 passes**, **< 0 
 2. Sanity check — in the Command Window:
    ```matlab
    fastenerTool          % prints the version banner
-   runtests("tests")     % should be all green
+   runTests              % note the capital T - should be all green
    ```
 
 > Requires MATLAB R2021a or newer. Base MATLAB is enough to run analyses.
