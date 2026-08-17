@@ -596,6 +596,139 @@ classdef tLibrary < matlab.unittest.TestCase
             testCase.verifyEqual(string(raw.boltSpecs(1).key), "1/4 Ti 160ksi");
         end
 
+        function addWithoutASourceIsRefused(testCase)
+            % NO CITATION, NO ENTRY. While the baseline is curated by
+            % editing library.json, git carries who changed a number and
+            % why. Once the app writes entries that record has to live on
+            % the entry — an allowable with no provenance is not usable in
+            % a margin someone has to sign.
+            %
+            % All six types, because the rule lives in one choke point
+            % (stampNew) and the point of testing all six is that a
+            % seventh entity type cannot later be added that skips it.
+            lib = data.Library.load();
+
+            drop = @(e) rmfield(e, "source");
+            testCase.verifyError(@() lib.addMaterial(drop(testCase.sampleMaterial())), ...
+                "data:Library:missingSource");
+            testCase.verifyError(@() lib.addBolt(drop(testCase.sampleBolt())), ...
+                "data:Library:missingSource");
+            testCase.verifyError(@() lib.addNut(drop(testCase.sampleNut())), ...
+                "data:Library:missingSource");
+            testCase.verifyError(@() lib.addWasher(drop(testCase.sampleWasher())), ...
+                "data:Library:missingSource");
+            testCase.verifyError(@() lib.addInsert(drop(testCase.sampleInsert())), ...
+                "data:Library:missingSource");
+
+            % boltSpec needs its referenced bolt/material present first, or
+            % it would fail on the reference check instead and prove nothing.
+            lib2 = testCase.libWithSampleEntries();
+            spec = drop(testCase.sampleBoltSpec());
+            spec.key = "1/4 Ti 160ksi (second)";
+            testCase.verifyError(@() lib2.addBoltSpec(spec), ...
+                "data:Library:missingSource");
+        end
+
+        function aWhitespaceOnlySourceIsNotASource(testCase)
+            % The guard is on CONTENT, not on the field existing — a form
+            % that writes an untouched text box would otherwise satisfy it.
+            lib = data.Library.load();
+            e = testCase.sampleMaterial();
+            e.source = "   ";
+            testCase.verifyError(@() lib.addMaterial(e), ...
+                "data:Library:missingSource");
+        end
+
+        function readingNeverRequiresASource(testCase)
+            % Enforced on WRITE only. A user file written before this rule
+            % existed must still load, or the guard strands the data it was
+            % meant to protect.
+            fx = testCase.applyFixture( ...
+                matlab.unittest.fixtures.TemporaryFolderFixture);
+            path = string(fullfile(fx.Folder, "legacy.json"));
+            e = rmfield(testCase.sampleMaterial(), "source");
+            e.origin = "custom";
+            testCase.writeJson(path, struct("materials", e));
+
+            lib = data.Library.load(path);
+            testCase.verifyTrue(any(lib.materialKeys("custom") == "Ti-6Al-4V"), ...
+                'A sourceless legacy entry must still load.');
+        end
+
+        function addStampsWhoAndWhen(testCase)
+            % Replaces the commit author and date that git carried while
+            % the baseline was curated by hand.
+            lib = data.Library.load();
+            lib = lib.addMaterial(testCase.sampleMaterial());
+
+            e = testCase.entryNamed(lib, "material", "Ti-6Al-4V");
+            testCase.verifyTrue(isfield(e, "modifiedBy"));
+            testCase.verifyGreaterThan(strlength(string(e.modifiedBy)), 0, ...
+                'modifiedBy degrades to "unknown", never to blank.');
+            testCase.verifyTrue(isfield(e, "modifiedUtc"));
+            % ISO-8601 Z, so it sorts lexically and carries no local offset.
+            testCase.verifyMatches(char(string(e.modifiedUtc)), ...
+                '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$');
+        end
+
+        function duplicateKeepsTheCitationButTakesItsOwnStamp(testCase)
+            % The copy's NUMBERS are still the original's, so the original
+            % citation is the honest one to carry. But the copy was made by
+            % a person at a time, and the baseline it came from has no
+            % stamp at all — so the stamp must be the copy's own.
+            lib = data.Library.load();
+            [lib, newKey] = lib.duplicateAsCustom("A286", "material");
+
+            src = testCase.entryNamed(lib, "material", "A286");
+            cp  = testCase.entryNamed(lib, "material", newKey);
+
+            testCase.verifyEqual(string(cp.source), string(src.source), ...
+                'The copy carries the original citation verbatim.');
+            testCase.verifyTrue(isfield(cp, "modifiedBy"));
+            testCase.verifyFalse(isfield(src, "modifiedBy"), ...
+                'The baseline original must not acquire a stamp.');
+        end
+
+        function approvalFieldsSurviveARoundTripUnwritten(testCase)
+            % approvedBy/approvedUtc are schema-only: nothing in the tool
+            % signs an allowable off yet. They are here now because
+            % retrofitting them once sites hold real libraries means
+            % migrating real data. Prove the round trip preserves them, and
+            % that add does NOT invent them.
+            fx = testCase.applyFixture( ...
+                matlab.unittest.fixtures.TemporaryFolderFixture);
+            path = string(fullfile(fx.Folder, "approved.json"));
+
+            lib = data.Library.load();
+            e = testCase.sampleMaterial();
+            e.approvedBy  = "R. Reviewer";
+            e.approvedUtc = "2026-08-17T12:00:00Z";
+            lib = lib.addMaterial(e);
+            lib.save(path);
+
+            back = data.Library.load(path);
+            got  = testCase.entryNamed(back, "material", "Ti-6Al-4V");
+            testCase.verifyEqual(string(got.approvedBy), "R. Reviewer");
+            testCase.verifyEqual(string(got.approvedUtc), "2026-08-17T12:00:00Z");
+
+            % And an ordinary add leaves them absent rather than blank.
+            plain = testCase.entryNamed( ...
+                data.Library.load().addBolt(testCase.sampleBolt()), ...
+                "bolt", "1/4-28 UNF");
+            testCase.verifyFalse(isfield(plain, "approvedBy"), ...
+                'Adding an entry must not imply anyone approved it.');
+        end
+
+        function userPathIsResolvableAndNotTheBaseline(testCase)
+            % save() refuses the bundled seed, so a custom library needs
+            % somewhere else to live. This is that somewhere.
+            p = data.Library.userPath();
+            testCase.verifyGreaterThan(strlength(p), 0);
+            testCase.verifyNotEqual(p, data.Library.defaultPath(), ...
+                'The user library must never resolve to the shipped seed.');
+            testCase.verifyTrue(endsWith(p, ".json"));
+        end
+
         function saveLoadRoundTripPreservesOrigins(testCase)
             fx = testCase.applyFixture( ...
                 matlab.unittest.fixtures.TemporaryFolderFixture);
@@ -1266,6 +1399,22 @@ classdef tLibrary < matlab.unittest.TestCase
                        "stiMinorDiameterMax", 0.26, "tapMajorDiameterMax", 0.30, ...
                        "countersinkDiameterMin", 0.29, "countersinkDiameterMax", 0.32, ...
                        "source", "tLibrary test entry");
+        end
+
+        function e = entryNamed(~, lib, entityType, key)
+            %ENTRYNAMED  One raw entry struct by key, or a clear failure.
+            %   entries() is the only accessor that exposes origin, source
+            %   and the provenance stamps — the typed getters drop all of
+            %   them — so provenance assertions have to come through here.
+            list = lib.entries(entityType);
+            for i = 1:numel(list)
+                if strcmp(string(list{i}.key), string(key))
+                    e = list{i};
+                    return
+                end
+            end
+            error("tLibrary:entryNotFound", ...
+                "No %s entry named ""%s"".", entityType, key);
         end
 
         function lib = libWithSampleEntries(testCase)

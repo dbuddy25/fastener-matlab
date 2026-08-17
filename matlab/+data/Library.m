@@ -61,6 +61,30 @@ classdef Library
     %   already means the citation string here, and one name for two
     %   unrelated fields is exactly how they get conflated.)
     %
+    %   PROVENANCE ON WRITE (GUI step 9 — the app as system of record).
+    %   While the baseline is curated by editing library.json directly, git
+    %   carries the record: who changed a number, when, and with what
+    %   review behind it. Once the app writes entries, git stops carrying
+    %   that for anything a site adds, so the entry has to. Every add* and
+    %   duplicateAsCustom therefore goes through stampNew/stampProvenance
+    %   and writes:
+    %     - source      MANDATORY on write (data:Library:missingSource).
+    %                   Reading stays permissive, so an older file without
+    %                   it still loads — this can never strand existing data.
+    %     - modifiedBy  the OS user name, or "unknown" (never an error: an
+    %                   unattributed entry beats a lost one).
+    %     - modifiedUtc ISO-8601 Z timestamp.
+    %   approvedBy / approvedUtc are IN THE SCHEMA and preserved across a
+    %   save/load round trip, but nothing writes them yet — signing an
+    %   allowable off as reviewed is a separate act the tool does not
+    %   perform. They are here now because retrofitting them after sites
+    %   hold real libraries means migrating real data, which is the same
+    %   argument that put origin in early.
+    %
+    %   THE CUSTOM ENTRIES LIVE AT userPath(), not next to the seed:
+    %   save() refuses the bundled baseline, and a compiled standalone
+    %   cannot write its own install directory.
+    %
     %   The rules the origin field enforces:
     %     - Entries loaded from a file WITHOUT an origin field default to
     %       "baseline" (legacy files). An origin that is present but neither
@@ -136,6 +160,32 @@ classdef Library
         function p = defaultPath()
             %DEFAULTPATH  The bundled library.json, located next to Library.m.
             p = string(fullfile(fileparts(mfilename("fullpath")), "library.json"));
+        end
+
+        function p = userPath()
+            %USERPATH  Where this installation's CUSTOM entries live.
+            %   fullfile(userpath, "fastener_library.json"), falling back to
+            %   a repo-local file next to +data/ when userpath() is empty
+            %   (not yet initialized on this MATLAB install) — the same
+            %   shape, and the same fallback, as the user factor-presets
+            %   file in +data/private/userFactorPresetsPath.m.
+            %
+            %   WHY NOT THE INSTALL DIRECTORY. save() refuses to write the
+            %   bundled seed, and a compiled standalone cannot reliably
+            %   write inside its own install directory anyway — on Windows
+            %   that is typically under Program Files, read-only for a
+            %   normal user. LIBRARY_PLAN.md section 3.
+            %
+            %   NOT USED AS A DEFAULT ARGUMENT ANYWHERE. Callers pass it
+            %   explicitly, and tests pass a temp path instead, so a test
+            %   run can never read or write the real user's library.
+            up = userpath();
+            if isempty(up) || strlength(string(up)) == 0
+                p = string(fullfile(fileparts(mfilename("fullpath")), ...
+                    "user_library.json"));
+            else
+                p = string(fullfile(char(up), "fastener_library.json"));
+            end
         end
     end
 
@@ -751,7 +801,7 @@ classdef Library
             end
             data.Library.requireFields(entry, ["key" "ftu" "fty" "fsu"], ...
                 "material");
-            entry = data.Library.applyOrigin(entry, "material");
+            entry = data.Library.stampNew(entry, "material");
             obj.checkNewKey(obj.Materials, entry.key, "material");
             obj.Materials{end+1} = entry;
         end
@@ -781,7 +831,7 @@ classdef Library
                         "Bolt ""%s"": unknown thread series ""%s"" (expected UNF or UNC).", ...
                         string(entry.key), string(entry.series));
             end
-            entry = data.Library.applyOrigin(entry, "bolt");
+            entry = data.Library.stampNew(entry, "bolt");
             obj.checkNewKey(obj.Bolts, entry.key, "bolt");
             obj.Bolts{end+1} = entry;
         end
@@ -800,7 +850,7 @@ classdef Library
             data.Library.requireFields(entry, ...
                 ["key" "bolt" "material" "ratedUltimateLoad" "ratedYieldLoad"], ...
                 "bolt spec");
-            entry = data.Library.applyOrigin(entry, "bolt spec");
+            entry = data.Library.stampNew(entry, "bolt spec");
             obj.checkNewKey(obj.BoltSpecs, entry.key, "bolt spec");
             if ~any(strcmp(obj.boltKeys(), string(entry.bolt)))
                 error("data:Library:unknownBolt", ...
@@ -832,7 +882,7 @@ classdef Library
             data.Library.requireFields(entry, ...
                 ["key" "spec" "nominalDiameter" "tpi" "height" ...
                  "bearingDiameter" "material" "ratedUltimateLoad"], "nut");
-            entry = data.Library.applyOrigin(entry, "nut");
+            entry = data.Library.stampNew(entry, "nut");
             obj.checkNewKey(obj.Nuts, entry.key, "nut");
             if ~any(strcmp(obj.materialKeys(), string(entry.material)))
                 error("data:Library:unknownMaterial", ...
@@ -860,7 +910,7 @@ classdef Library
             data.Library.requireFields(entry, ...
                 ["key" "spec" "nominalDiameter" "innerDiameter" ...
                  "outerDiameter" "thickness"], "washer");
-            entry = data.Library.applyOrigin(entry, "washer");
+            entry = data.Library.stampNew(entry, "washer");
             obj.checkNewKey(obj.Washers, entry.key, "washer");
             obj.Washers{end+1} = entry;
         end
@@ -888,7 +938,7 @@ classdef Library
                  "stiPitchDiameterMax" "stiMinorDiameterMin" ...
                  "stiMinorDiameterMax" "tapMajorDiameterMax" ...
                  "countersinkDiameterMin" "countersinkDiameterMax"], "insert");
-            entry = data.Library.applyOrigin(entry, "insert");
+            entry = data.Library.stampNew(entry, "insert");
             obj.checkNewKey(obj.Inserts, entry.key, "insert");
             obj.Inserts{end+1} = entry;
         end
@@ -944,6 +994,12 @@ classdef Library
             end
             e.key    = newKey;
             e.origin = "custom";
+            % The copy inherits the ORIGINAL's source citation verbatim,
+            % which is right: the numbers are the original's until someone
+            % changes them. But the copy is a new entry made by a person at
+            % a time, so it gets its own modifiedBy/modifiedUtc rather than
+            % the baseline's (which has none).
+            e = data.Library.stampProvenance(e);
             obj.(hitProp){end+1} = e;
         end
 
@@ -1089,6 +1145,69 @@ classdef Library
                     list{i}.origin = data.Library.validOrigin( ...
                         list{i}.origin, list{i}.key, what);
                 end
+            end
+        end
+
+        function entry = stampNew(entry, what)
+            %STAMPNEW  Everything a NEW entry must carry before it is stored.
+            %   One choke point for all six add* methods, so a new entity
+            %   type cannot be added later that quietly skips a rule.
+            %   Origin first (it names the entry in the later errors), then
+            %   the citation, then the provenance stamp.
+            entry = data.Library.applyOrigin(entry, what);
+            data.Library.requireSource(entry, what);
+            entry = data.Library.stampProvenance(entry);
+        end
+
+        function requireSource(entry, what)
+            %REQUIRESOURCE  No citation, no entry.
+            %   WHY THIS IS MANDATORY RATHER THAN OPTIONAL. The library's
+            %   authority currently comes from git: every one of the shipped
+            %   entries carries a cited source, and every change to one is a
+            %   reviewable diff with an author, a date and a test run behind
+            %   it. Once the app writes entries, git stops being that record
+            %   for anything a site adds — so the entry has to carry what
+            %   the commit used to. A number with no provenance is not
+            %   usable in a margin someone has to sign.
+            %
+            %   Enforced on WRITE only. Reading stays permissive: an older
+            %   user file without the field still loads, so this cannot
+            %   strand data someone already has.
+            if ~isfield(entry, "source") || ...
+                    strlength(strtrim(string(entry.source))) == 0
+                error("data:Library:missingSource", ...
+                    "%s entry ""%s"" has no source: every written entry must cite where its values came from (a specification, a test report, or a handbook).", ...
+                    what, string(entry.key));
+            end
+        end
+
+        function entry = stampProvenance(entry)
+            %STAMPPROVENANCE  Who wrote this entry, and when.
+            %   Replaces the commit author and date that git carried while
+            %   the baseline was curated by editing library.json directly.
+            %
+            %   approvedBy/approvedUtc are deliberately NOT set here. They
+            %   are a separate act — a program signing off an allowable as
+            %   reviewed — and nothing in the tool performs it yet. They are
+            %   in the schema, and preserved across a save/load round trip,
+            %   so the field is ready before any site has data to migrate.
+            entry.modifiedBy  = data.Library.currentUser();
+            entry.modifiedUtc = string(datetime("now", "TimeZone", "UTC", ...
+                "Format", "uuuu-MM-dd'T'HH:mm:ss'Z'"));
+        end
+
+        function u = currentUser()
+            %CURRENTUSER  Best available identity, never an error.
+            %   Windows sets USERNAME, POSIX sets USER. A missing name must
+            %   not block a save, so this degrades to "unknown" rather than
+            %   throwing — an unattributed entry is worth more than a lost
+            %   one, and it is still visibly unattributed.
+            u = string(getenv("USERNAME"));
+            if strlength(u) == 0
+                u = string(getenv("USER"));
+            end
+            if strlength(u) == 0
+                u = "unknown";
             end
         end
 
