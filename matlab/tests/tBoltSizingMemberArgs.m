@@ -2,15 +2,23 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
     %TBOLTSIZINGMEMBERARGS  Bolt Sizing tab's Threaded member picker -> the
     %   engine.boltSizingSweep name-value args it drives.
     %
-    %   The Bolt Sizing tab's Threaded member picker (gui.FastenerApp's
-    %   BsMemberTypeDD / BsNutSpecDD / BsMemberMaterialDD /
-    %   BsMemberRatedField / BsMemberEngagementField) has no reachable test
-    %   seam of its own (no test in this suite instantiates gui.FastenerApp
-    %   -- it builds a real uifigure), but the UI-state -> engine-args
-    %   translation and the Sweep-button gating rule are both factored into
-    %   PURE, public Static helpers that need no app/GUI instance at all:
-    %       gui.FastenerApp.boltSizingMemberArgs(memberType, library, nutSpec, member)
-    %       gui.FastenerApp.boltSizingMemberSelectionReady(memberType, nutSpec, memberMaterialChosen)
+    %   THERE IS NO BOLT SIZING TAB. There was one in the first-pass GUI,
+    %   whose picker these two helpers translated; +gui2 deliberately does
+    %   not rebuild it (GUI2_SPEC.md Sec. 3: the engine sweep "stays in the
+    %   engine, untouched and re-addable"), and GUI step 10 deleted +gui.
+    %
+    %   The helpers moved to +engine with this file's assertions rather than
+    %   being deleted alongside the tab, because they are what "re-addable"
+    %   means in practice: without them, rebuilding the tab means
+    %   rediscovering which selection maps to which sweep argument, and that
+    %   mapping is the part that is easy to get wrong -- a Nut routed
+    %   through the ThreadedMember template is rejected by the engine, and
+    %   an Insert that loses its Library silently drops to a different
+    %   allowable basis while reporting the wrong reason.
+    %
+    %   Both are PURE and need no app or GUI instance at all:
+    %       engine.boltSizingMemberArgs(memberType, library, nutSpec, member)
+    %       engine.boltSizingMemberSelectionReady(memberType, nutSpec, memberMaterialChosen)
     %   This file is the test surface for those two helpers, plus an
     %   integration check that splicing boltSizingMemberArgs' output into
     %   engine.boltSizingSweep reproduces the SAME result as calling that
@@ -36,7 +44,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
         function noneReturnsEmptyArgsTodaysCallShape(testCase)
             % "None (bolt-only)" -> memberType empty -> {} -- TODAY'S exact
             % 6-arg engine.boltSizingSweep call shape, unchanged.
-            nvArgs = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvArgs = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.empty(1, 0));
             testCase.verifyEqual(nvArgs, {});
         end
@@ -49,7 +57,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             % nutSpecs() is a lightweight, representative fingerprint that
             % the SAME lib object was passed through unchanged.
             lib = data.Library.load();
-            nvArgs = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvArgs = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.Nut, lib, "NAS1291");
             testCase.verifyEqual(nvArgs{1}, 'Library');
             testCase.verifyClass(nvArgs{2}, 'data.Library');
@@ -68,7 +76,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             % REJECTS Type Nut there).
             tm = model.ThreadedMember(Type = model.ThreadedMemberType.Nut, ...
                 Material = model.Material(), RatedUltimateLoad = 500);
-            nvArgs = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvArgs = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.Insert, ...
                 data.Library.empty(1, 0), "", tm);
             testCase.verifyEqual(nvArgs{1}, 'ThreadedMember');
@@ -79,7 +87,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
         function tappedHoleForcesTemplateType(testCase)
             tm = model.ThreadedMember(Material = model.Material(), ...
                 EngagementLength = 0.3);
-            nvArgs = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvArgs = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.TappedHole, ...
                 data.Library.empty(1, 0), "", tm);
             testCase.verifyEqual(nvArgs{1}, 'ThreadedMember');
@@ -88,7 +96,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
         end
 
         function insertTemplateCarriesEngagementRatioAndPassesThroughShearArea(testCase)
-            % gui.FastenerApp's collectBoltSizingMemberSelection (not
+            % The caller that fills the template (not
             % itself testable here without a live GUI) builds an Insert
             % template with EngagementRatio (never EngagementLength -- see
             % that method); it no longer sets ShearEngagementArea at all --
@@ -107,7 +115,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             tm = model.ThreadedMember(Material = model.Material(), ...
                 RatedUltimateLoad = 2600, EngagementRatio = 1.5, ...
                 ShearEngagementArea = 0.174);
-            nvArgs = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvArgs = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.Insert, ...
                 data.Library.empty(1, 0), "", tm);
             testCase.verifyEqual(nvArgs{1}, 'ThreadedMember');
@@ -137,7 +145,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             lib = data.Library.load();
             tm  = model.ThreadedMember(Material = model.Material(), ...
                 EngagementRatio = 1.5);
-            nvArgs = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvArgs = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.Insert, lib, "", tm);
             % Order matters to the three sibling tests above, which pin
             % nvArgs{1}; the Library is appended, not prepended.
@@ -148,7 +156,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
                 "Insert mode must pass a NON-empty Library, or boltSizingSweep's per-row insertFor lookup never fires");
             % A Tapped Hole has no catalogue to resolve against, so it must
             % NOT acquire a Library it cannot use.
-            nvTap = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvTap = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.TappedHole, lib, "", tm);
             testCase.verifyEqual(numel(nvTap), 2);
             testCase.verifyEqual(nvTap{1}, 'ThreadedMember');
@@ -162,7 +170,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             % ThreadsPerInch -- exactly the collision EngagementRatio
             % (a ratio, not an absolute value) exists to avoid for
             % Engagement Le. StiPitchDiameter has no ratio form, so
-            % gui.FastenerApp's collectBoltSizingMemberSelection never
+            % The caller that fills the template never
             % populates it on the template (it would be correct for at
             % most one row of the sweep); it stays the model default NaN.
             % boltSizingMemberArgs is a pure pass-through here too -- it
@@ -173,7 +181,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             tmDefault = model.ThreadedMember(Material = model.Material(), ...
                 RatedUltimateLoad = 2600, EngagementRatio = 1.5);
             testCase.verifyTrue(isnan(tmDefault.StiPitchDiameter));
-            nvArgsDefault = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvArgsDefault = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.Insert, ...
                 data.Library.empty(1, 0), "", tmDefault);
             testCase.verifyTrue(isnan(nvArgsDefault{2}.StiPitchDiameter));
@@ -181,7 +189,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             tmSet = model.ThreadedMember(Material = model.Material(), ...
                 RatedUltimateLoad = 2600, EngagementRatio = 1.5, ...
                 StiPitchDiameter = 0.402);
-            nvArgsSet = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvArgsSet = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.Insert, ...
                 data.Library.empty(1, 0), "", tmSet);
             testCase.verifyEqual(nvArgsSet{2}.StiPitchDiameter, 0.402, "AbsTol", 1e-12);
@@ -190,36 +198,36 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
         % ---- boltSizingMemberSelectionReady ---------------------------------
 
         function noneIsAlwaysReady(testCase)
-            [ok, reason] = gui.FastenerApp.boltSizingMemberSelectionReady( ...
+            [ok, reason] = engine.boltSizingMemberSelectionReady( ...
                 model.ThreadedMemberType.empty(1, 0));
             testCase.verifyTrue(ok);
             testCase.verifyEqual(strlength(reason), 0);
         end
 
         function nutNeedsANonBlankSpecChosen(testCase)
-            [okBlank, reasonBlank] = gui.FastenerApp.boltSizingMemberSelectionReady( ...
+            [okBlank, reasonBlank] = engine.boltSizingMemberSelectionReady( ...
                 model.ThreadedMemberType.Nut, "");
             testCase.verifyFalse(okBlank);
             testCase.verifyTrue(contains(reasonBlank, "nut spec"));
 
-            [okChosen, reasonChosen] = gui.FastenerApp.boltSizingMemberSelectionReady( ...
+            [okChosen, reasonChosen] = engine.boltSizingMemberSelectionReady( ...
                 model.ThreadedMemberType.Nut, "NAS1291");
             testCase.verifyTrue(okChosen);
             testCase.verifyEqual(strlength(reasonChosen), 0);
         end
 
         function insertAndTappedHoleNeedAMemberMaterialChosen(testCase)
-            [okNoMat, reasonNoMat] = gui.FastenerApp.boltSizingMemberSelectionReady( ...
+            [okNoMat, reasonNoMat] = engine.boltSizingMemberSelectionReady( ...
                 model.ThreadedMemberType.Insert, "", false);
             testCase.verifyFalse(okNoMat);
             testCase.verifyTrue(contains(reasonNoMat, "member material"));
 
-            [okMat, reasonMat] = gui.FastenerApp.boltSizingMemberSelectionReady( ...
+            [okMat, reasonMat] = engine.boltSizingMemberSelectionReady( ...
                 model.ThreadedMemberType.Insert, "", true);
             testCase.verifyTrue(okMat);
             testCase.verifyEqual(strlength(reasonMat), 0);
 
-            [okTapped, ~] = gui.FastenerApp.boltSizingMemberSelectionReady( ...
+            [okTapped, ~] = engine.boltSizingMemberSelectionReady( ...
                 model.ThreadedMemberType.TappedHole, "", true);
             testCase.verifyTrue(okTapped);
         end
@@ -249,7 +257,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
                 model.ShearPlaneCondition.ThreadsInShear, ...
                 Library = lib, NutSpec = "NAS1291");
 
-            nvArgs = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvArgs = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.Nut, lib, "NAS1291");
             viaHelper = engine.boltSizingSweep(b, m, 3000, 300, fac, ...
                 model.ShearPlaneCondition.ThreadsInShear, nvArgs{:});
@@ -278,7 +286,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             direct = engine.boltSizingSweep(b, m, 2000, 500, fac, ...
                 model.ShearPlaneCondition.BodyInShear);
 
-            nvArgs = gui.FastenerApp.boltSizingMemberArgs( ...
+            nvArgs = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.empty(1, 0));
             viaHelper = engine.boltSizingSweep(b, m, 2000, 500, fac, ...
                 model.ShearPlaneCondition.BodyInShear, nvArgs{:});
