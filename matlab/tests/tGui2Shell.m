@@ -70,48 +70,22 @@ classdef tGui2Shell < matlab.uitest.TestCase
     end
 
     % ---- Lazy construction ------------------------------------------------
-    methods (Test)
-        function pagesAreNotBuiltUntilVisited(testCase)
-            % GUI2_SPEC.md Section 10 rule 1. Over a remote session, building
-            % ten pages into the first paint is the most expensive thing the
-            % shell could do.
-            unvisited = testCase.App.page(testCase.aPlaceholderPageId());
-            testCase.verifyEqual(unvisited.buildCount(), 0, ...
-                'A page was built before it was ever navigated to.');
-        end
-
-        function buildRunsExactlyOnceAcrossManyVisits(testCase)
-            id   = testCase.aPlaceholderPageId();
-            page = testCase.App.page(id);
-
-            testCase.App.navigateTo(id);
-            testCase.verifyEqual(page.buildCount(), 1);
-
-            testCase.App.navigateTo("Factors");
-            testCase.App.navigateTo(id);
-            testCase.App.navigateTo("Factors");
-            testCase.App.navigateTo(id);
-
-            testCase.verifyEqual(page.buildCount(), 1, ...
-                'Page was rebuilt on a return visit; it must be built once and shown by visibility.');
-        end
-
-        function everyVisitRefreshesThePage(testCase)
-            % The counterpart to building once: the page must re-read
-            % AppState each time it is shown, or it renders whatever was
-            % true when it was first built.
-            id   = testCase.aPlaceholderPageId();
-            page = testCase.App.page(id);
-
-            testCase.App.navigateTo(id);
-            testCase.verifyEqual(page.refreshCount(), 1);
-
-            testCase.App.navigateTo("Project");
-            testCase.App.navigateTo(id);
-            testCase.verifyEqual(page.refreshCount(), 2, ...
-                'Navigating to a built page did not refresh it from AppState.');
-        end
-    end
+    %   MOVED TO tGui2HardwareLibrary. These three pinned the shell's
+    %   lazy-build and refresh-per-visit contracts through PlaceholderPage's
+    %   buildCount/refreshCount counters. Step 9 made Materials & Hardware
+    %   real, which removed the last placeholder and would have left all
+    %   three skipping quietly on the assumeNotEmpty in aPlaceholderPageId —
+    %   a contract silently untested rather than visibly broken, which is
+    %   the worse of the two.
+    %
+    %   They now run against gui2.HardwareLibraryPage's own counters, which
+    %   is a STRONGER test than the placeholder version: it proves the
+    %   contracts hold for a page that really builds widgets and really
+    %   reads AppState, rather than for one whose build drew a label.
+    %
+    %   aPlaceholderPageId went with them: it existed only to feed these
+    %   three, and an unused private helper waiting for a placeholder that
+    %   may never come back is dead code, not foresight.
 
     % ---- Dirty flag and title ---------------------------------------------
     methods (Test)
@@ -266,31 +240,6 @@ classdef tGui2Shell < matlab.uitest.TestCase
             page = testCase.App.page("Results");
             testCase.verifyEqual(page.railStatus(), "", ...
                 'A page with nothing to report should show no glyph.');
-        end
-    end
-
-    % ---- Helpers ----------------------------------------------------------
-    methods (Access = private)
-        function id = aPlaceholderPageId(testCase)
-            %APLACEHOLDERPAGEID  Any page still backed by a PlaceholderPage.
-            %   The lazy-build and refresh-on-visit contracts are asserted
-            %   through PlaceholderPage's buildCount/refreshCount counters,
-            %   which only it carries. Naming a page directly meant these
-            %   tests broke the moment that page became real - which is what
-            %   happened when Results landed. Finding one dynamically means
-            %   the contract stays covered for as long as ANY page is still
-            %   a placeholder, and skips honestly once none is.
-            id = "";
-            for pid = testCase.App.pageIds()
-                if isa(testCase.App.page(pid), 'gui2.PlaceholderPage')
-                    id = pid;
-                    return
-                end
-            end
-            testCase.assumeNotEmpty(char(id), ...
-                ['Every page is now real, so the shell''s build/refresh ' ...
-                 'contracts need a different probe than PlaceholderPage''s ' ...
-                 'counters.']);
         end
     end
 

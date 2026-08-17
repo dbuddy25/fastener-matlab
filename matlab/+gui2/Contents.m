@@ -17,7 +17,10 @@
 %                          refresh / railStatus, plus the bindEdit funnel
 %                          that makes it impossible for a page to forget the
 %                          dirty flag.
-%   gui2.PlaceholderPage — a page naming the step that replaces it.
+%   gui2.HardwareLibraryPage — Materials & Hardware: the six data.Library
+%                        sections, read-only, with their source citations.
+%   gui2.PlaceholderPage — a page naming the step that replaces it. No
+%                        longer instantiated anywhere (step 9 took the last).
 %   gui2.ProjectPage     — project metadata (never analyzed). Backed by
 %                          AppState.Project, fires ProjectChanged.
 %   gui2.FactorsPage     — the fitting factor and the four factors of
@@ -96,10 +99,16 @@
 %     - Step 8: Bulk Analysis — gui2.BulkAnalysisPage. The bulk workflow
 %       now runs end to end.
 %
-%   NOT BUILT YET — every remaining rail entry is a PlaceholderPage naming
-%   its step:
-%     step 9  Materials & Hardware
+%     - Step 9: Materials & Hardware — gui2.HardwareLibraryPage. Browses
+%       all six data.Library sections read-only, with an origin filter and
+%       every entry's source citation on screen. Add and Duplicate as
+%       Custom arrive in 9c.
+%
+%   NOT BUILT YET
 %     step 10 Help menu documents; delete +gui
+%
+%   gui2.PlaceholderPage now has no remaining instantiation — step 9 took
+%   the last one. It is kept until step 10 rather than deleted mid-step.
 %
 %   THE RULES THIS PACKAGE IS BOUND BY
 %     - Pure GUI. +engine, +model, +data and +report are frozen: this layer
