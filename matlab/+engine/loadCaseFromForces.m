@@ -27,7 +27,7 @@ function lc = loadCaseFromForces(F, axis, opts)
 %
 %   Call graph:
 %       Precedents (calls)      engine.resolveForces.
-%       Dependents (called by)  engine.analyzeBulk, gui.FastenerApp
+%       Dependents (called by)  engine.analyzeBulk, gui2 pages
 %                               (Element Mapping / bulk resolution path).
 %       Tests                   tests/tForces.m loadCaseTensionOnly (the
 %                               Reversible / ScaleFactor / non-reversible

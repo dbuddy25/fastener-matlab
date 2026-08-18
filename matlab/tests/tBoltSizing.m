@@ -738,7 +738,7 @@ classdef tBoltSizing < matlab.unittest.TestCase
             % Library.insertFor overwrite only fires when a Library was
             % supplied AND that row's size matches. A template arriving
             % with StiPitchDiameter already set -- e.g. a ThreadedMember
-            % lifted off a Joint that gui.FastenerApp.buildJoint had
+            % lifted off a Joint that the first-pass GUI's buildJoint had
             % already resolved -- was otherwise reused for EVERY candidate
             % size, with Detail affirmatively labelling it the NASM33537
             % value for that row. Non-conservative whenever the template's

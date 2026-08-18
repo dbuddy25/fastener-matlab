@@ -227,7 +227,7 @@ end
 % ---- Local helpers ----------------------------------------------------------
 function c = severityColor(severity)
 %SEVERITYCOLOR  Warning-row text color -- Critical red, Warning amber.
-%   Mirrors the GUI's palette semantics (gui.palette: amber = warning, red
+%   Mirrors the GUI's palette semantics (gui2.palette: amber = warning, red
 %   = failure/critical) using literal CSS color names, the same convention
 %   marginsTable already uses for its own Color("red") Fail-row styling
 %   (this report layer has no shared palette() of its own).

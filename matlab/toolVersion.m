@@ -5,7 +5,7 @@ function v = toolVersion()
 %
 %   WHY A FUNCTION AT THE PATH ROOT rather than a constant on a class.
 %   The version is needed by three unrelated layers — the command-line
-%   entry point (fastenerTool), the GUI shells (gui.FastenerApp,
+%   entry point (fastenerTool), the GUI shell (gui2.FastenerApp,
 %   gui2.AppState) and the report layer — and it had been copy-pasted
 %   into each of them. Three literals, no rule saying they must agree,
 %   and nothing that would fail if they drifted: a report could then

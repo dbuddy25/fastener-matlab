@@ -109,7 +109,7 @@ function T = boltSizingSweep(bolts, material, PtL, PsL, factors, shearPlane, opt
 %       different library rows with two different Height/BearingDiameter/
 %       RatedUltimateLoad values). The resolved nut is turned into a
 %       model.ThreadedMember exactly the way Joint Config's nut-spec
-%       picker does it (gui.FastenerApp's applyNutSpec: Material =
+%       picker does it (the first-pass GUI's applyNutSpec: Material =
 %       Library.material(n.Material), RatedUltimateLoad = n.RatedUltimateLoad,
 %       EngagementLength = n.Height, BearingDiameter = n.BearingDiameter)
 %       — one resolution recipe, so this screen and Joint Config can never
@@ -435,7 +435,7 @@ if haveTemplate && ~isnan(opts.ThreadedMember.StiPitchDiameter)
     % across many sizes. StiPitchDiameter is STI tapped-hole geometry
     % keyed by thread size (NASM33537 Rev 4 Table IV), resolved per row
     % below from opts.Library.insertFor. A pre-populated one -- e.g. a
-    % ThreadedMember lifted off a Joint that gui.FastenerApp.buildJoint
+    % ThreadedMember lifted off a Joint that the first-pass GUI's buildJoint
     % already resolved -- would otherwise be reused for EVERY candidate
     % size whenever the per-row lookup does not overwrite it (no Library
     % supplied, or that row's size not catalogued), and the Detail string
@@ -514,7 +514,7 @@ for i = 1:n
                 unresolvedReason = sprintf("no %s nut entry matches this thread size in the library", ...
                     opts.NutSpec);
             else
-                % SAME recipe as gui.FastenerApp's applyNutSpec (Joint
+                % SAME recipe as the first-pass GUI's applyNutSpec (Joint
                 % Config's nut-spec picker) -- one resolution, so this
                 % screen and Joint Config can never silently disagree
                 % about which nut a given bolt+spec resolves to.

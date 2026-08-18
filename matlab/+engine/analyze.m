@@ -20,10 +20,10 @@ function r = analyze(joint, loadCase, factors)
 %       Bearing-under-head engine.marginBearingUnderHead   NASA TM-106943 Eq. 74/75 + 5020B Eq. 8 (Pb)
 %       Shear-tearout      engine.marginShearTearout       NASA TM-106943 Eq. 69-71 (required by 5020B §4.4.2)
 %       Bolt-thread shear  engine.marginBoltThreadShear    TM-106943 Eq. 63/64/65 as printed, As = 5·pi·Le·D_minor,int/8; Pb per 5020B Eq. 8
-%       Nut strength       engine.marginNutStrength        TM-106943 Eq. 76/77 + Eq. 65, same As form, ult/yld pair; spec rating as ultimate ceiling per 5020B §4.4.1 (Nut config only)
+%       Nut strength       engine.marginNutStrength        TM-106943 Eq. 76/77 + Eq. 65, same As form, ult/yld pair; a spec rating IS the ultimate allowable per 5020B §4.4.1 p26 (Nut config only)
 %       Insert internal    engine.marginInsertInternal     Allowable SPECIFIED for the procured insert (ThreadedMember.RatedUltimateLoad), ultimate only, 5020B §4.4.1 p26-27 (Insert config only)
 %       Insert external    engine.marginInsert             Pull-out from the parent: shear-engagement area x parent shear strength, ult/yld pair, 5020B §4.4.1 (Insert config only)
-%       Tapped parent      engine.marginTappedParentThread TM-106943 Eq. 79 + Eq. 65, same As form (TappedHole config only)
+%       Tapped parent      engine.marginTappedParentThread TM-106943 Eq. 76/77 + Eq. 65, same As form (TappedHole config only)
 %   plus the Separation-before-rupture gate (NASA-STD-5020B Fig. 8), a
 %   boolean check reported as its own Margins row (Pass = assured) and as
 %   Result.Narrative.
@@ -52,8 +52,7 @@ function r = analyze(joint, loadCase, factors)
 %   WARNINGS (Result.Warnings, zero or more rows, NOT margins -- they never
 %   affect WorstMargin/GoverningCheck and carry no Margins row of their
 %   own): two pure, never-throwing queries are run on every analyze() call,
-%   bolt length first then preload, matching the GUI's banner order
-%   (GUI_PORT_SPEC.md Section 4):
+%   bolt length first then preload, matching the GUI's banner order:
 %     engine.boltLengthCheck  -> "BoltLengthShort" (Warning) when
 %       Shortfall > 0 (NaN Shortfall, i.e. not evaluated, never fires) --
 %       its own Method/Detail are reused verbatim, no re-derivation here.
@@ -108,7 +107,7 @@ function r = analyze(joint, loadCase, factors)
 %                               marginInsert, marginTappedParentThread;
 %                               boltLengthCheck, preloadWatchdog; and the
 %                               engine.Result constructor.
-%       Dependents (called by)  engine.analyzeBulk, gui.FastenerApp
+%       Dependents (called by)  engine.analyzeBulk, gui2 pages
 %                               (single-joint Results tab and the per-row
 %                               bulk path), report.singleJointReport.
 %       Tests                   tests/tDabjCase.m

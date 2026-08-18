@@ -52,7 +52,8 @@ function c = palette(name)
 %   Unknown names error immediately — a typo must fail loudly at development
 %   time, not silently render the wrong color.
 %
-%   Values carried forward verbatim from gui.palette so the two builds
+%   Values carried forward verbatim from the first-pass gui.palette (that
+%   package was deleted at GUI step 10) so the two builds
 %   cannot drift while both are launchable (GUI2_SPEC.md Section 1 rule 2).
 %   They assume a light background; R2026a apps are theme-aware, so if dark
 %   mode is taken up this function becomes theme-aware and stays the single

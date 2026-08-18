@@ -322,10 +322,12 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             % setting exactly one of the pair and NaNing the other on EVERY
             % commit, keyed on the type.
             %
-            % Drives the real dropdown callback. The predicate this used to
-            % be checked through (gui.FastenerApp.engagementModeCrossed) is
-            % a +gui concept with no gui2 equivalent; see the note in
-            % tests/tMemberTypeCrossing.m for what was removed and why.
+            % Drives the real dropdown callback. This used to be checked
+            % through a pure predicate on the first-pass GUI class
+            % (engagementModeCrossed), which GUI step 10 deleted along with
+            % that class: the rule survives HERE, against the real page,
+            % which is why the predicate and its own test file were not
+            % worth carrying forward.
             p = testCase.Page;
             testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
             testCase.type(p.engagementRatioField(), '1.5');

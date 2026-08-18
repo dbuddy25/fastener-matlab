@@ -291,7 +291,7 @@ classdef tBulkParsers < matlab.unittest.TestCase
             % returns [] for this thread size, which must land on the
             % model's NaN "unknown" sentinel WITHOUT loadJointLibrary
             % throwing -- a catalogue miss is a legitimate state (see
-            % data.Library.insertFor / gui.FastenerApp.buildJoint), not an
+            % data.Library.insertFor / the GUI's buildJoint), not an
             % error, and must never silently fall back to the bolt's own
             % PitchDiameter.
             lib = data.Library.load();

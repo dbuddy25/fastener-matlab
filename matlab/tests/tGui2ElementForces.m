@@ -562,7 +562,8 @@ classdef tGui2ElementForces < matlab.uitest.TestCase
         end
 
         function aCaseFileCarryingTheOldRowFieldsStillOpens(testCase)
-            % patternId / jointName used to live on a force row and +gui
+            % patternId / jointName used to live on a force row and the
+            % first-pass GUI
             % still writes them. They are ignored, not rejected.
             f = testCase.tempFile(".json");
             tGui2ElementForces.writeRaw(f, ...

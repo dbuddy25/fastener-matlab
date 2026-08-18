@@ -94,7 +94,7 @@ function s = stiffness(joint)
 %                               engine.marginTensionUlt,
 %                               engine.marginTensionYield,
 %                               engine.marginBearingUnderHead. NOT
-%                               gui.FastenerApp — the GUI's only engine
+%                               gui2 pages — the GUI's only engine
 %                               entry point is engine.analyze; its several
 %                               "engine.stiffness" mentions are tooltip
 %                               text, not calls.

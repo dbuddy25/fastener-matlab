@@ -30,7 +30,7 @@ function r = resolveForces(F, axis)
 %       Dependents (called by)  engine.analyzeBulk (directly, in the local
 %                               groupTotals helper, for joint-mode pattern
 %                               totals), engine.loadCaseFromForces. NOT
-%                               called directly by gui.FastenerApp — the
+%                               called directly by gui2 pages — the
 %                               GUI reaches it only through
 %                               engine.loadCaseFromForces.
 %       Tests                   tests/tForces.m resolvesAlongZ,

@@ -1,9 +1,16 @@
 % +GUI2  The rebuilt GUI — a thin shell over the frozen engine API.
 %
-%   Second pass at the GUI (GUI2_SPEC.md). Built alongside +gui; BOTH stay
-%   launchable until the last page lands, so there is never a window with no
-%   working tool. Case files interchange: both read and write the same
-%   "fastener-analysis-matlab-v1" container.
+%   Second pass at the GUI (GUI2_SPEC.md), and since GUI step 10 the only
+%   one. It was built alongside a first-pass +gui package, with both kept
+%   launchable until the last page landed so there was never a window with
+%   no working tool; +gui was deleted once that condition was met.
+%
+%   CITATIONS TO GUI_PORT_SPEC.md, which several files here carry, point at
+%   the FIRST-PASS spec. It was deleted 2026-08-17 once its two live
+%   sections had moved into GUI2_SPEC.md (sections 16 and 17); the rest was
+%   superseded layout advice. The citations are kept as provenance for the
+%   rules they justify -- git holds the document -- but nothing in it should
+%   be treated as current guidance.
 %
 %   gui2.launch          — entry point: opens the app (app = gui2.launch();)
 %   gui2.FastenerApp     — the shell: rail, cards, menus, status, title.
@@ -19,8 +26,6 @@
 %                          dirty flag.
 %   gui2.HardwareLibraryPage — Materials & Hardware: the six data.Library
 %                        sections, read-only, with their source citations.
-%   gui2.PlaceholderPage — a page naming the step that replaces it. No
-%                        longer instantiated anywhere (step 9 took the last).
 %   gui2.ProjectPage     — project metadata (never analyzed). Backed by
 %                          AppState.Project, fires ProjectChanged.
 %   gui2.FactorsPage     — the fitting factor and the four factors of
@@ -104,11 +109,11 @@
 %       every entry's source citation on screen. Add and Duplicate as
 %       Custom arrive in 9c.
 %
-%   NOT BUILT YET
-%     step 10 Help menu documents; delete +gui
+%     - Step 10: Help menu (User Guide, References) and the deletion of
+%       +gui. gui2.PlaceholderPage went with it -- step 9 removed its last
+%       instantiation and step 10 removed the class.
 %
-%   gui2.PlaceholderPage now has no remaining instantiation — step 9 took
-%   the last one. It is kept until step 10 rather than deleted mid-step.
+%   ALL TEN PAGES ARE BUILT. Phase 4 is complete; Phase 5 is packaging.
 %
 %   THE RULES THIS PACKAGE IS BOUND BY
 %     - Pure GUI. +engine, +model, +data and +report are frozen: this layer

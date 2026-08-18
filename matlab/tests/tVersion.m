@@ -5,7 +5,7 @@ classdef tVersion < matlab.unittest.TestCase
     %       results = runtests("tests")
     %
     %   WHY THIS EXISTS. The version string was copy-pasted into three
-    %   unrelated layers - fastenerTool, gui.FastenerApp and
+    %   unrelated layers - fastenerTool, gui2.FastenerApp and
     %   gui2.AppState - with a comment asking a human to keep them in
     %   sync and nothing that would fail if one drifted. A report could
     %   then claim a different version from the window title, and the
