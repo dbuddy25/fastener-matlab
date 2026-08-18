@@ -123,7 +123,7 @@ stamping is done — `toolVersion` reaches the PDF and the exports.
 
 ## 8. Non-functional requirements
 
-- **Architecture:** `+engine/`, `+data/`, `+report/`, `+gui/`, `tests/`. Engine MUST run headless from the console with zero GUI dependency.
+- **Architecture:** `+model/`, `+engine/`, `+data/`, `+report/`, `+gui2/`, `+validation/`, `tests/`. Engine MUST run headless from the console with zero GUI dependency.
 - **Data format:** JSON for library and cases (SQLite via Database Toolbox is an acceptable later alternative; JSON keeps packaging simple).
 - **Licensing (confirmed available):** MATLAB Compiler (standalone `.exe`), Report Generator (PDF), Database Toolbox (optional).
 - **Deployment:** standalone Windows `.exe`; bundle the library JSON. End users install the free MATLAB Runtime (~1 GB, one-time) — two installs, not one.

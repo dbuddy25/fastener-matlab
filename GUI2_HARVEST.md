@@ -8,6 +8,18 @@ code.
 **Sources:** the 322 rationale-bearing comments in `+gui/FastenerApp.m`, plus
 `GUI_PORT_SPEC.md` §11 (hard-won UX details), §12 (units) and §14 (known traps).
 
+> **BOTH SOURCES ARE GONE, AND THAT IS WHY THIS FILE MATTERS.**
+> `GUI_PORT_SPEC.md` was deleted 2026-08-17 and `+gui` at GUI step 10 — 12,588
+> lines, including the 11,945-line class this was harvested from. Git holds
+> both. This document is the surviving record of what that code had learned,
+> which is the whole reason step 0 existed before anything was deleted: the
+> layout was cheap to rebuild and the edge cases were not.
+>
+> The requirements here are still requirements on `+gui2`. Where a section has
+> been overtaken by a later decision it is marked in place (see §F on check
+> scope and §G on the seeded catalogue) rather than quietly edited, so the
+> reasoning stays legible.
+
 **Confidence note:** §A–§C below are drawn from in-code rationale comments and
 the superseded spec, not from a line-by-line read of all 229 functions. They are
 the *load-bearing* rules. Pages marked ⚠ in §B need a deeper read of the

@@ -31,16 +31,10 @@ matlab/
 ├── +engine/           analysis math — the core (Phases 2–3); bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook, Step 2c)
 ├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`, Phase 3.7); factor presets (`factorPreset`/`saveFactorPreset`, Phase 3.7)
 ├── +report/           XLSX export (`report.exportResults`, Phase 3.6); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
-├── +gui/              FIRST-PASS programmatic uifigure app (`gui.launch`) — a thin
-│                      shell over the engine, deliberately plain .m rather than a
-│                      binary .mlapp so it diffs in git (Phase 4). LEGACY and now
-│                      fully superseded -- its Materials & Hardware DB tab was the
-│                      last thing it still had, and step 9 rebuilt it. Deleted at
-│                      step 10; do not build against it
-├── +gui2/             the rebuilt GUI (`gui2.launch`, GUI2_SPEC.md) — what
-│                      `fastenerTool` opens. Adds the bulk workflow, the joint
-│                      cross-section view and the gate/allowables panels; nothing
-│                      in it may call into `+gui`
+├── +gui2/             THE GUI (`gui2.launch`, GUI2_SPEC.md) — what `fastenerTool`
+│                      opens. Programmatic uifigure, rail + card over AppState,
+│                      ten pages. A superseded first-pass `+gui` package ran
+│                      alongside it through the rebuild and was deleted at step 10
 ├── examples/          runnable reference scripts (`run_bulk_example.m`)
 └── tests/             validation + smoke tests (checked vs the worked example)
 ```
@@ -147,15 +141,20 @@ Launch it with `cd matlab; fastenerTool`.
 **What's left**, in the order it matters — see `MATLAB_BUILD_GUIDE.md`,
 *"What remains"*, for the detail:
 
-1. **Help menu, and delete `+gui`** (GUI step 10) — the last GUI step.
+1. **Phase 5 packaging** — MATLAB Compiler to a standalone Windows `.exe`.
+   Two things it must pick up: `USER_GUIDE.md` has to be added to the build
+   for `Help → User Guide` to resolve, and `data.Library.defaultPath` needs
+   the same `ctfroot` treatment `gui2.docPath` already has.
 2. **UN vs UNJ thread form** — seeded stress areas may be ~8% conservative;
    see `VALIDATION.md`. Conservative, but it matters for sizing.
-3. **Phase 5 packaging.**
 
-Materials & Hardware (GUI step 9) landed 2026-08-17: all six library sections
-browsable with their source citations visible, custom entries added or
-duplicated from a baseline row, and persisted to a per-installation library
-file. See `GUI2_SPEC.md` §16.
+**Phase 4 is complete.** Step 9 landed Materials & Hardware — all six library
+sections browsable with their source citations visible, custom entries added or
+duplicated from a baseline row, persisted per installation (`GUI2_SPEC.md` §16).
+Step 10 added the Help menu and deleted the superseded `+gui` package, 12,588
+lines of it. `Help → References` lists every document the tool's numbers rest
+on; most are copyrighted and are **not** shipped, so it carries the citations
+and opens your own local copies (`GUI2_SPEC.md` §3).
 
 Separation-before-rupture on the threaded member — once listed here as the last
 real engineering gap — is done: all three thread rows take their design load

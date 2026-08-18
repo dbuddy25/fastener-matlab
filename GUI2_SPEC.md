@@ -166,10 +166,31 @@ with different numbers.
 **Not built:** Bolt Sizing. `engine.boltSizingSweep` stays in the engine,
 untouched and re-addable.
 
-**User Guide / References are not pages.** `Help → User Guide | Equation
-Reference` on the menu bar, opening the bundled PDFs. Resolve paths via
-`fileparts(mfilename('fullpath'))`, or `ctfroot` when `isdeployed` — never
-`pwd`, which is what breaks in the `.exe`.
+**User Guide / References are not pages.** They live on the menu bar. Path
+resolution is `fileparts(mfilename('fullpath'))`, or `ctfroot` when
+`isdeployed` — never `pwd`, which is what breaks in the `.exe`. Built as
+`gui2.docPath`, the first deployment-aware resolver in the codebase.
+
+**CHANGED — nothing is bundled, because nothing can be.** This section said
+Help opens *"the bundled PDFs"*. Nine of the fifteen documents the tool cites
+are not ours to redistribute: every NAS/NASM sheet carries *"COPYRIGHT …
+Aerospace Industries Association … ALL RIGHTS RESERVED"*, the DABJ course book
+carries a copyright notice and restrictions, and the Heli-Coil bulletin is
+vendor material. `references/` is gitignored twice over precisely so none of
+them can be published by accident, and those nine are exactly the sheets the
+hardware catalogue is transcribed from.
+
+So the tool ships the **citations** — which are facts, and are the part that
+carries traceability — and opens a local copy only where the analyst already
+has one. `data.referenceDocuments` is the list (title, publisher, year, role in
+the document hierarchy, what this tool takes from it, and a redistributable
+flag); `gui2.ReferencesView` renders it; `gui2.referencesFolder` remembers
+where this machine keeps its copies. A row with no local file says *"not on
+this machine"* rather than going blank — "you do not have this" and "the tool
+does not cite one" are different facts.
+
+`Help → User Guide` opens `USER_GUIDE.md` externally: one source of truth, and
+MATLAB has no markdown renderer, so an in-app window would show raw markup.
 
 ### The rail is a button rail, not a `uitabgroup`
 
@@ -221,7 +242,7 @@ the file path when a case is open, prefixed `* ` when dirty. One
 File   New | Open... | Open Recent > | Save | Save As...
        Import Joints from File...          (step 5 — needs Defined Joints)
 Help   About                               (built)
-       User Guide | Equation Reference     (step 10 — needs the bundled PDFs)
+       User Guide | References...          (built)
 ```
 
 > **No keyboard shortcut for Analyze.** `GUI_PORT_SPEC.md` §11 claimed the
@@ -694,7 +715,7 @@ Each step lands complete — spec section, class, test, run — before the next.
 | 7 | Element Forces |
 | 8 | Bulk Analysis |
 | 9 | Materials & Hardware — **DONE** (see §16) |
-| 10 | Help menu + bundled PDFs; delete `+gui` — the only step left |
+| 10 | Help menu + References window; delete `+gui` — **DONE**. Phase 4 complete. |
 
 ---
 

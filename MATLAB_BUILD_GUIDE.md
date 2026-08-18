@@ -32,7 +32,6 @@ The code is organized into five **areas** (the MATLAB packages). The build proce
 +data/      library + case save/load, table import (JSON / Excel workbook)
 +report/    PDF (Report Generator) + XLSX export
 +gui2/      programmatic uifigure app (rail + card over AppState)
-+gui/       superseded first-pass app, deleted at step 10
 tests/      validation cases + unit tests
 ```
 
@@ -204,7 +203,9 @@ Two structural decisions worth carrying here because they changed the shape of t
 
 **Steps 1–8 · DONE** — app shell + rail, and the nine built pages: Project, Factors, Temp Loads, Joint Config, Results, Defined Joints, Element Mapping, Element Forces, Bulk Analysis.
 **Step 9 · Materials & Hardware** — the last unbuilt page; a `PlaceholderPage` today. Design in `GUI2_SPEC.md` §16.
-**Step 10 · Help menu, and delete `+gui`** — User Guide and References live on the menu bar, not as pages.
+**Step 10 · Help menu, and delete `+gui`** — DONE. User Guide and References live on the menu bar, not as pages. Nothing is bundled: nine of the fifteen cited documents are copyrighted and cannot ship, so `Help → References` carries the citations and opens the analyst's own copies. `+gui` deleted, 12,588 lines.
+
+**Phase 4 is complete.**
 
 Deferred, not scheduled: °C/°F display toggle at the GUI boundary (engine stays °C), joint cross-section preview (`GUI2_SPEC.md` §17), dark mode.
 
