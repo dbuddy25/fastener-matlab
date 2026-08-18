@@ -57,6 +57,12 @@ classdef FastenerApp < handle
         SummaryLabel
         RecentMenu
 
+        % The References window (gui2.ReferencesView). Owns its own
+        % uifigure, which cannot be a child of app.Fig, so closing the app
+        % does not close it -- delete() below does, the same arrangement
+        % the pages' dialogs use.
+        ReferencesView
+
         % Pages, in rail order. Struct array:
         %   Section  string — rail section header ("" continues the previous)
         %   Prefix   string — bulk step number shown before the label
@@ -138,6 +144,16 @@ classdef FastenerApp < handle
             %   closed again.
             try
                 delete(app.Listeners(isvalid(app.Listeners)));
+            catch
+            end
+            % The References window, for the same reason the pages below
+            % need explicit deletion: it is a handle object owning a
+            % uifigure, not a child of app.Fig, so it would otherwise
+            % survive the app that opened it and stand there unclosable.
+            try
+                if ~isempty(app.ReferencesView) && isvalid(app.ReferencesView)
+                    delete(app.ReferencesView);
+                end
             catch
             end
             % Pages can own windows of their own — Element Mapping's paste
@@ -633,7 +649,11 @@ classdef FastenerApp < handle
             app.rebuildRecentMenu();
 
             mHelp = uimenu(app.Fig, 'Text', 'Help');
-            uimenu(mHelp, 'Text', 'About', ...
+            uimenu(mHelp, 'Text', 'User Guide', ...
+                'MenuSelectedFcn', @(~, ~) app.onHelpUserGuide());
+            uimenu(mHelp, 'Text', 'References...', ...
+                'MenuSelectedFcn', @(~, ~) app.onHelpReferences());
+            uimenu(mHelp, 'Text', 'About', 'Separator', 'on', ...
                 'MenuSelectedFcn', @(~, ~) app.onHelpAbout());
         end
 
@@ -660,18 +680,51 @@ classdef FastenerApp < handle
 
         function onHelpAbout(app)
             %ONHELPABOUT  Version and scope, as a plain info alert.
-            %   States the check scope explicitly: this build displays 9 of
-            %   the engine's 15 checks, and a user must never have to
-            %   discover that (GUI2_SPEC.md Section 2).
+            %   STATES THE CHECK SCOPE, and it used to state it wrongly:
+            %   "displays 9 of the 15 checks ... the other 6 are computed
+            %   and not displayed" was true of the first build and false
+            %   from the moment the results table showed all 15. A dialog
+            %   whose whole job is telling the analyst what the tool does
+            %   and does not cover is the worst place in the app for a
+            %   stale claim about coverage, so it is corrected here rather
+            %   than left for a reader to catch.
             msg = sprintf([ ...
                 'Fastener Analysis Tool (MATLAB) v%s\n' ...
                 'NASA-STD-5020B bolted-joint margins.\n\n' ...
-                'Displays 9 of the 15 checks the engine computes; the ' ...
-                'other 6 are computed and not displayed. Every results ' ...
-                'view and export names them.\n\n' ...
+                'Displays all 15 checks the engine computes: 14 margin ' ...
+                'rows plus the Fig. 8 separation-before-rupture gate, ' ...
+                'which selects a branch rather than carrying a margin.\n\n' ...
                 'Case files: JSON, format "%s".'], ...
                 toolVersion(), app.State.CaseFormat);
             uialert(app.Fig, msg, 'About — Fastener Analysis Tool', 'Icon', 'info');
+        end
+
+        function onHelpUserGuide(app)
+            %ONHELPUSERGUIDE  Open USER_GUIDE.md in the system viewer.
+            %   The repository's guide, opened where it lives, rather than
+            %   a second copy rendered in-app. One source of truth, nothing
+            %   to drift, and it stays readable outside the tool. MATLAB
+            %   has no markdown renderer, so an in-app window would show
+            %   raw markup anyway.
+            f = gui2.docPath("USER_GUIDE.md");
+            if ~isfile(f)
+                uialert(app.Fig, sprintf([ ...
+                    'The user guide is not installed with this build.\n\n' ...
+                    'Expected at:\n%s'], f), ...
+                    'User guide not found', 'Icon', 'info');
+                return
+            end
+            gui2.openExternal(f, app.Fig);
+        end
+
+        function onHelpReferences(app)
+            %ONHELPREFERENCES  The documents this tool's numbers rest on.
+            %   Create-or-focus: the view owns its own uifigure and raises
+            %   it rather than opening a second one.
+            if isempty(app.ReferencesView) || ~isvalid(app.ReferencesView)
+                app.ReferencesView = gui2.ReferencesView();
+            end
+            app.ReferencesView.show();
         end
     end
 
@@ -906,6 +959,34 @@ classdef FastenerApp < handle
     %   changed while the question is outstanding, and let the dialog die
     %   with the figure at teardown.
     methods
+        function v = openReferences(app)
+            %OPENREFERENCES  Help > References, without the menu gesture.
+            %   matlab.uitest cannot select a menu item, and cannot press a
+            %   control on the main window while a second uifigure holds
+            %   focus, so the window is opened and inspected through seams.
+            app.onHelpReferences();
+            v = app.ReferencesView;
+        end
+
+        function v = referencesView(app)
+            %REFERENCESVIEW  The window handle, or empty if never opened.
+            v = app.ReferencesView;
+        end
+
+        function items = helpMenuItems(app)
+            %HELPMENUITEMS  The Help menu's item labels, in order.
+            items = strings(1, 0);
+            for m = app.Fig.Children'
+                if isa(m, 'matlab.ui.container.Menu') && strcmp(m.Text, 'Help')
+                    % Children come back in reverse creation order.
+                    kids = flip(m.Children);
+                    for k = kids'
+                        items(end+1) = string(k.Text); %#ok<AGROW>
+                    end
+                end
+            end
+        end
+
         function requestFileNew(app)
             app.onFileNew();
         end
