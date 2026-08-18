@@ -234,23 +234,20 @@ validated packaged release (1.0.0).
 From the `matlab/` folder, with MATLAB Compiler licensed:
 
 ```matlab
-mcc -m fastenerTool.m ...
-    -a +data/library.json ...
-    -a ../USER_GUIDE.md ...
-    -o FastenerTool -d ../build
+mcc -m fastenerTool.m -a +data/library.json -o FastenerTool -d ../build
 ```
 
 or the same thing through **APPS → Application Compiler**, with `fastenerTool.m`
-as the main file and those two added as files-required-for-the-app.
+as the main file and `library.json` added as a file required for the app.
 
-The two `-a` entries are the whole trick, and each is there for a reason a
-failed build would not explain:
+**`library.json` is the one `-a` you must not forget**, and a failed build will
+not explain it: it is data rather than code, so dependency analysis never sees
+it — `data.Library.load` builds the path at runtime. Without it the app starts,
+reports that the hardware library failed to load, and disables saving.
 
-- **`library.json`** is data, not code, so the dependency analyser does not
-  find it — `data.Library.load` builds its path at runtime. Without it the app
-  starts, reports the library failed to load, and disables saving.
-- **`USER_GUIDE.md`** is what `Help → User Guide` opens. Without it that menu
-  item reports "not installed with this build", which is honest but useless.
+Nothing else needs adding by hand. The user guide is *generated* by
+`report.userGuide` on first open rather than shipped, so there is no document
+to include and none to keep in step with the build.
 
 *Done when:* the exe runs on a clean Windows box with only the MATLAB Runtime
 (free, ~1 GB, one-time — two installs for the end user, not one).
@@ -263,10 +260,10 @@ answer from source, so a difference is the build talking:
 1. **The library loads.** If the title bar or a startup alert says the hardware
    library failed, `library.json` did not make it into the bundle.
 2. **`Help → About`** shows a version. Proves `toolVersion` resolved.
-3. **`Help → User Guide`** opens the guide rather than saying it is not
-   installed. This is the one `gui2.docPath`'s `ctfroot` branch is for, and it
-   has never been executed — it is written from the documented behaviour, not
-   from a run.
+3. **`Help → User Guide`** builds the PDF (first open only, a few seconds
+   behind a progress dialog) and opens it. This exercises Report Generator
+   inside the deployed app and `prefdir()` as a writable location — both worth
+   proving early, since the margin report needs exactly the same two things.
 4. **Materials & Hardware → add a custom entry → Save Library → restart.** The
    entry must survive. This exercises `data.Library.userPath`, which falls back
    to `prefdir()` precisely because the install directory is not writable.
@@ -278,9 +275,6 @@ answer from source, so a difference is the build talking:
 Landed before the first build, because each would otherwise fail in a way that
 looks like a compiler problem rather than a path problem:
 
-- `gui2.docPath` resolves documents from `ctfroot` when `isdeployed` and from
-  the source tree otherwise — never from `pwd`, which is the thing that works
-  on every developer machine and breaks in the `.exe`.
 - `data.Library.userPath` and the factor-presets path fall back to `prefdir()`
   rather than to a file beside the source. A compiled standalone cannot write
   inside its own install directory — on Windows that is typically under
@@ -289,12 +283,14 @@ looks like a compiler problem rather than a path problem:
   baseline at load, so a corrected baseline in a later release still reaches a
   user who already has a saved library (`LIBRARY_PLAN.md` §3).
 
-**Known and NOT yet done:** `data.Library.defaultPath()` still resolves
+**Known and NOT yet done:** `data.Library.defaultPath()` resolves
 `library.json` from `fileparts(mfilename('fullpath'))` with no `isdeployed`
 branch. It is likely to work — files added with `-a` keep their relative
-position under `ctfroot` — but it is unverified, and rerouting a resolver the
-entire engine depends on was not a change worth making blind. **If check 1
-above fails, this is the first place to look.**
+position under `ctfroot` — but it is unverified. Rerouting a resolver the
+entire engine depends on was not worth doing blind on a machine that cannot run
+the compiled form; it wants writing against a real build, which is now
+possible. **If check 1 above fails, this is the first place to look, and
+`ctfroot` is the branch to add.**
 
 ## 5.3 · Final validation — read this before promising it
 

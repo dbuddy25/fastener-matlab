@@ -700,19 +700,36 @@ classdef FastenerApp < handle
         end
 
         function onHelpUserGuide(app)
-            %ONHELPUSERGUIDE  Open USER_GUIDE.md in the system viewer.
-            %   The repository's guide, opened where it lives, rather than
-            %   a second copy rendered in-app. One source of truth, nothing
-            %   to drift, and it stays readable outside the tool. MATLAB
-            %   has no markdown renderer, so an in-app window would show
-            %   raw markup anyway.
-            f = gui2.docPath("USER_GUIDE.md");
+            %ONHELPUSERGUIDE  Build the guide PDF if needed, then open it.
+            %   IT USED TO OPEN USER_GUIDE.md. Handing an analyst a .md
+            %   file is wrong twice over -- on Windows it opens in Notepad
+            %   or in nothing, and it reads as source rather than as a
+            %   document -- and the content was wrong too: that file's
+            %   workflows are typed at the Command Window, which someone
+            %   running the packaged app never sees. report.userGuide
+            %   writes a PDF about the application instead.
+            %
+            %   GENERATED, NOT SHIPPED. Report Generator is already a
+            %   dependency, so this costs the build nothing, removes a
+            %   file from the mcc line, and cannot go stale: the guide is
+            %   produced by the version that is running.
+            %
+            %   Cached per version, so only the first open waits.
+            f = report.userGuide();
             if ~isfile(f)
-                uialert(app.Fig, sprintf([ ...
-                    'The user guide is not installed with this build.\n\n' ...
-                    'Expected at:\n%s'], f), ...
-                    'User guide not found', 'Icon', 'info');
-                return
+                d = uiprogressdlg(app.Fig, 'Indeterminate', 'on', ...
+                    'Title', 'User guide', ...
+                    'Message', 'Building the guide (first open only)...');
+                closer = onCleanup(@() delete(d)); %#ok<NASGU>
+                try
+                    f = report.userGuide(f);
+                catch err
+                    clear closer
+                    uialert(app.Fig, sprintf([ ...
+                        'Could not build the user guide.\n\n%s'], ...
+                        err.message), 'User guide', 'Icon', 'warning');
+                    return
+                end
             end
             gui2.openExternal(f, app.Fig);
         end
