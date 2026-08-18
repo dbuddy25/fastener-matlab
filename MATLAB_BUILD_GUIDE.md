@@ -213,11 +213,99 @@ Deferred, not scheduled: °C/°F display toggle at the GUI boundary (engine stay
 
 # Phase 5 — Packaging & release
 
-**5.1 · Version/build stamping** — bake version + build info into the app.
-**5.2 · Compiler build** — MATLAB Compiler → standalone Windows `.exe`; bundle the library JSON. *Note:* end users install the free MATLAB Runtime (~1 GB, one-time).
-*Done when:* the exe runs on a clean Windows box with only the Runtime.
-**5.3 · Final validation** — re-run the full validation set against the packaged app.
-*Done when:* the full matrix matches the reference.
+**Built by hand, on the machine that has the toolbox.** There is no build
+script in this repository and no `.prj` checked in. That is deliberate: the
+compile happens on a Windows machine with MATLAB Compiler, by the person who
+needs to understand it, and a script written blind on a machine that cannot run
+it would be a guess wearing the clothes of a procedure.
+
+What this repo owes the build is that nothing in the code *fights* it. That
+part is done — see "What the code already does for deployment" below.
+
+## 5.1 · Version stamping — already satisfied
+
+`toolVersion()` is a single function read at every call site rather than cached,
+so the version is identical from source and from the `.exe` with no build step.
+It deliberately carries no commit hash: MAJOR is reserved for the first
+validated packaged release (1.0.0).
+
+## 5.2 · The build
+
+From the `matlab/` folder, with MATLAB Compiler licensed:
+
+```matlab
+mcc -m fastenerTool.m ...
+    -a +data/library.json ...
+    -a ../USER_GUIDE.md ...
+    -o FastenerTool -d ../build
+```
+
+or the same thing through **APPS → Application Compiler**, with `fastenerTool.m`
+as the main file and those two added as files-required-for-the-app.
+
+The two `-a` entries are the whole trick, and each is there for a reason a
+failed build would not explain:
+
+- **`library.json`** is data, not code, so the dependency analyser does not
+  find it — `data.Library.load` builds its path at runtime. Without it the app
+  starts, reports the library failed to load, and disables saving.
+- **`USER_GUIDE.md`** is what `Help → User Guide` opens. Without it that menu
+  item reports "not installed with this build", which is honest but useless.
+
+*Done when:* the exe runs on a clean Windows box with only the MATLAB Runtime
+(free, ~1 GB, one-time — two installs for the end user, not one).
+
+### What to check first on the packaged app
+
+These are the places source and deployed genuinely differ. Each has a known
+answer from source, so a difference is the build talking:
+
+1. **The library loads.** If the title bar or a startup alert says the hardware
+   library failed, `library.json` did not make it into the bundle.
+2. **`Help → About`** shows a version. Proves `toolVersion` resolved.
+3. **`Help → User Guide`** opens the guide rather than saying it is not
+   installed. This is the one `gui2.docPath`'s `ctfroot` branch is for, and it
+   has never been executed — it is written from the documented behaviour, not
+   from a run.
+4. **Materials & Hardware → add a custom entry → Save Library → restart.** The
+   entry must survive. This exercises `data.Library.userPath`, which falls back
+   to `prefdir()` precisely because the install directory is not writable.
+5. **Run a bulk workbook.** Confirms `data.makeTemplate` and `runWorkbook`
+   resolve the library the same way the GUI does.
+
+### What the code already does for deployment
+
+Landed before the first build, because each would otherwise fail in a way that
+looks like a compiler problem rather than a path problem:
+
+- `gui2.docPath` resolves documents from `ctfroot` when `isdeployed` and from
+  the source tree otherwise — never from `pwd`, which is the thing that works
+  on every developer machine and breaks in the `.exe`.
+- `data.Library.userPath` and the factor-presets path fall back to `prefdir()`
+  rather than to a file beside the source. A compiled standalone cannot write
+  inside its own install directory — on Windows that is typically under
+  `Program Files`, read-only for a normal user.
+- Custom library entries are written custom-only and re-merged over the shipped
+  baseline at load, so a corrected baseline in a later release still reaches a
+  user who already has a saved library (`LIBRARY_PLAN.md` §3).
+
+**Known and NOT yet done:** `data.Library.defaultPath()` still resolves
+`library.json` from `fileparts(mfilename('fullpath'))` with no `isdeployed`
+branch. It is likely to work — files added with `-a` keep their relative
+position under `ctfroot` — but it is unverified, and rerouting a resolver the
+entire engine depends on was not a change worth making blind. **If check 1
+above fails, this is the first place to look.**
+
+## 5.3 · Final validation — read this before promising it
+
+*"Re-run the full validation set against the packaged app"* cannot be done as
+written, and the reason is recorded rather than quietly dropped: the validation
+matrix now includes checks verified only locally against non-public data
+(Phase 3.4), which is not in this repository and will not be. What CAN be done
+on the packaged app is the DABJ §9 published example, which is the only
+external answer key here and the one that must never move.
+
+Decide what "validated packaged release" means before stamping 1.0.0.
 
 ---
 

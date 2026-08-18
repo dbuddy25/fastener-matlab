@@ -141,10 +141,12 @@ Launch it with `cd matlab; fastenerTool`.
 **What's left**, in the order it matters — see `MATLAB_BUILD_GUIDE.md`,
 *"What remains"*, for the detail:
 
-1. **Phase 5 packaging** — MATLAB Compiler to a standalone Windows `.exe`.
-   Two things it must pick up: `USER_GUIDE.md` has to be added to the build
-   for `Help → User Guide` to resolve, and `data.Library.defaultPath` needs
-   the same `ctfroot` treatment `gui2.docPath` already has.
+1. **Phase 5 packaging** — MATLAB Compiler to a standalone Windows `.exe`,
+   built by hand on a machine with the toolbox. `MATLAB_BUILD_GUIDE.md`
+   Phase 5 carries the `mcc` line, the two files that must be added by hand
+   (`library.json` and `USER_GUIDE.md` — neither is found by dependency
+   analysis), and the five checks that distinguish a packaging problem from
+   a code one.
 2. **UN vs UNJ thread form** — seeded stress areas may be ~8% conservative;
    see `VALIDATION.md`. Conservative, but it matters for sizing.
 

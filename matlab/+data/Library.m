@@ -203,8 +203,16 @@ classdef Library
             %   run can never read or write the real user's library.
             up = userpath();
             if isempty(up) || strlength(string(up)) == 0
-                p = string(fullfile(fileparts(mfilename("fullpath")), ...
-                    "user_library.json"));
+                % PREFDIR, NOT THE INSTALL DIRECTORY. This used to fall
+                % back to a file beside Library.m, which is wrong twice
+                % over: from source it writes a user's private data into
+                % the repository, and in the packaged .exe that folder is
+                % under ctfroot -- read-only under Program Files, or
+                % extracted fresh each run, so a saved custom library
+                % would either refuse to write or silently disappear.
+                % prefdir() is per-user and always writable, which is why
+                % gui2.recentFiles already uses it.
+                p = string(fullfile(prefdir(), "fastener_library.json"));
             else
                 p = string(fullfile(char(up), "fastener_library.json"));
             end
