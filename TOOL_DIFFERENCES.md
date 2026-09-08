@@ -650,6 +650,106 @@ simultaneously shrinking the thermal term
 
 ---
 
+## 8. Differences from the legacy spreadsheet
+
+**This section is a reconciliation log, NOT a validation record.** `CLAUDE.md` is
+explicit that margins are validated against a published worked example or an
+independent hand calculation, *never* against another implementation. Agreement
+with the spreadsheet is therefore not evidence the tool is right, and
+disagreement is not evidence it is wrong. What this section is for: when the two
+disagree, saying **which number differs and why**, so the same difference is not
+re-derived from scratch on the next joint.
+
+Every entry ends in one of three places — a decision (the tool is right and here
+is the argument), a bug (fixed, with the commit), or an unresolved item that is
+still open. Nothing sits here as "probably fine".
+
+**Status**
+
+| # | Row | Cause | Status |
+|---|---|---|---|
+| 8.1 | Interaction (Eq. 20–23) | which `Ptu_allow` goes in `Rt` | RESOLVED — decision, no change |
+| 8.2 | Tension-Ultimate / Tension-Yield | not yet localised | OPEN (2026-09-08) |
+
+### 8.1 Interaction: `Rt` divides by the BOLT's allowable, not the system minimum
+
+Found 2026-09-08 on a real joint, and it is a **decision, not a defect**. Same
+equation, same exponents, one different input.
+
+| | Spreadsheet | Tool |
+|---|---|---|
+| `Ptu` | 973.66 lbf | 973.658 lbf — agrees |
+| `Ptu_allow` | 3,796.5 lbf (insert ultimate pull-out) | 5,820 lbf (the bolt's own) |
+| `Rs` | 0.315817 | 0.319216 — agrees to ~1% |
+| `Rt` | 0.256463 | 0.167295 |
+| `R` | 0.316570 | 0.28203 |
+
+The whole gap is one number: `5820 / 3796.5 = 1.5330`, exactly the `Rt` ratio.
+Both sides evaluate `R = Rs^1.2 + (Rt + Rb)^2.0` (threads in shear), and the
+spreadsheet's `R` is reproduced to six decimals by that formula on its own
+ratios — so the criterion, the exponents and the shear-plane branch are all
+agreed.
+
+**Why the tool uses the bolt's.** §4.4.4 states the criterion as
+
+> `(Ptu/Ptu-allow + fbu/Ftu)^k`
+
+which adds a load ratio to `fbu/Ftu`, a **bolt cross-section stress** ratio. The
+two are commensurable only if the first is also a stress ratio *at that section*.
+An insert pull-out load has no bolt cross-section, so it cannot enter that
+bracket. This is the same adjudication recorded for §4.4.2 and Figure 8 going the
+other way (both SYSTEM): the rule is that the symbol is the **system's** where the
+quantity is the load at which the series load path fails, and the **bolt's**
+where it is a cross-section stress capacity combined with that bolt's own bending
+and shear. 5020B's where-clauses are inconsistent; its load-path physics is not.
+
+**The spreadsheet's choice is conservative, not wrong-headed.** It yields a
+higher `R`, so it fails earlier, never later. It traces to no reference — the
+program's documents do not state which allowable belongs in Eq. 20–23 — and is
+best understood as an inherited simplification.
+
+**The insert pull-out is not lost in the tool.** It reaches the margin set twice:
+as the §4.4.1 system minimum in Tension-Ultimate, and on its own
+Insert external-thread row. Only the Eq. 20–23 bracket excludes it. Folding it in
+there as well would not surface a new failure mode; it would make one row
+pessimistic for a risk already assessed elsewhere.
+
+**Not changed, and should not be.** Matching the spreadsheet here would align the
+tool to an undocumented choice, which is the one thing `CLAUDE.md` forbids. If a
+program ever requires the spreadsheet's convention, that belongs in this file as
+a recorded deviation — not as a hidden option.
+
+**Scope of the finding.** This difference appears **only when a non-bolt mode
+governs the system allowable**. On a joint where the bolt governs, `Ptu_allow` is
+the same number both ways and Interaction should agree to rounding. Confirming
+that on a bolt-governed joint is the cheap check that proves the divergence has
+exactly one cause.
+
+### 8.2 Tension-Ultimate and Tension-Yield — open
+
+Both differ by more than rounding on the same joint. Not yet localised.
+
+The working hypothesis, from 8.1: the tool divides these by the §4.4.1 **system**
+minimum, so if the insert governs they should show `Ptu_allow` = 3,796.5. If the
+spreadsheet instead uses the bolt's allowable there, the two implementations have
+the pair **swapped** relative to 5020B — bolt where system belongs and system
+where bolt belongs — which would account for all three rows with one inversion.
+
+### 8.3 How these were localised, for the next one
+
+The margin alone names nothing. What worked:
+
+1. Read the **individual terms** off both sides — the Results page prints them
+   under the governing equation (`Result.Margins(k).Inputs`).
+2. Take the **ratio of the differing term**. A clean constant (1.5330) means one
+   input differs; an untidy one means several, or a different formula.
+3. Test candidate **forms** against the other side's own ratios — but confirm
+   with the actual term values before concluding. In this case an
+   exponent-mixing form reproduced the spreadsheet's `R` from the *tool's*
+   ratios by coincidence, which sent the first pass down a false trail.
+
+---
+
 ## Feynman summary
 
 Every entry above is a place where the tool had a choice and took one side, so
