@@ -340,7 +340,11 @@
 %                      Wired so far: the six DABJ answer-key rows
 %                      (marginTensionUlt, marginTensionYield, marginShearUlt,
 %                      marginInteraction, marginSeparation, marginSlip) plus
-%                      marginNutStrength. The bearing / tear-out / insert /
-%                      tapped-hole / bolt-thread rows are NOT wired yet.
+%                      marginNutStrength and marginInsert (whose DERIVED area
+%                      also exposes D2/Le/p, since a pull-out disagreement is
+%                      almost always one of those rather than the product).
+%                      The bearing / tear-out / bearing-under-head /
+%                      tapped-hole / bolt-thread / insert-internal rows are
+%                      NOT wired yet.
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

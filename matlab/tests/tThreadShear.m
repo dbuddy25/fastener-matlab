@@ -810,6 +810,59 @@ classdef tThreadShear < matlab.unittest.TestCase
         % form, see engine.marginInsert / memberTensileUltAllowable headers.
         % ================================================================
 
+        function insertComputedAreaExposesTheGeometryBehindIt(testCase)
+            % A pull-out disagreement against another tool is almost always
+            % ONE of D2, Le or p -- not the product -- so the DERIVED area
+            % has to show its three inputs, not just its result. Same
+            % fixture as insertComputedAreaGovernsWhenUnspecified:
+            % D2 = 0.2000, Le = 0.3000, TPI = 32.
+            parent = model.Material(Name="Al 6061-T651", Ftu=42000, ...
+                Fty=36000, Fsu=27000, Fsy=20000);
+            [j, lc, fac] = insertJointSti(parent, 0.2000, 0.3000, 0, NaN);
+            r = engine.marginInsert(j, lc, fac, engine.preload(j));
+
+            sym = [r.Inputs.Symbol];
+            testCase.assertTrue(all(ismember( ...
+                ["D2", "Le", "p", "Le-1.125p", "As", "Fsu", "Fsy"], sym)), ...
+                'The derived-area geometry must be on the row.');
+            val = @(k) r.Inputs([r.Inputs.Symbol] == k).Value;
+            testCase.verifyEqual(val("D2"), 0.2000, "AbsTol", 1e-9);
+            testCase.verifyEqual(val("Le"), 0.3000, "AbsTol", 1e-9);
+            testCase.verifyEqual(val("p"),  1/32,   "AbsTol", 1e-9);
+
+            % The terms shown must be the terms used: rebuild As from them.
+            testCase.verifyEqual( ...
+                0.75 * pi * val("D2") * val("Le-1.125p"), val("As"), ...
+                "AbsTol", 1e-9, 'Reported geometry must reproduce As.');
+            testCase.verifyEqual(val("As"), r.As, "AbsTol", 1e-12);
+
+            % Fsu is the PARENT's, which is the single most misread input
+            % on this row.
+            testCase.verifyEqual(val("Fsu"), 27000, "AbsTol", 1e-9);
+        end
+
+        function insertSpecifiedAreaCarriesNoDerivedGeometry(testCase)
+            % COMPANION: when the area is SPECIFIED there is nothing
+            % underneath it, and printing D2/Le/p anyway would assert a
+            % basis that did not run. Without this, the test above would
+            % pass just as well if the geometry were emitted
+            % unconditionally.
+            parent = model.Material(Name="Al 6061-T651", Ftu=42000, ...
+                Fty=36000, Fsu=27000, Fsy=20000);
+            [j, lc, fac] = insertJointSti(parent, 0.2000, 0.3000, 0, NaN);
+            j.ThreadedMember.ShearEngagementArea = 0.1000;   % supplied wins
+            r = engine.marginInsert(j, lc, fac, engine.preload(j));
+
+            sym = [r.Inputs.Symbol];
+            testCase.verifyTrue(ismember("As", sym), ...
+                'The area itself is still reported.');
+            testCase.verifyFalse(any(ismember(["D2", "Le", "p"], sym)), ...
+                'A specified area has no derived geometry to show.');
+            testCase.verifyEqual( ...
+                r.Inputs([r.Inputs.Symbol] == "As").Value, 0.1000, ...
+                "AbsTol", 1e-12);
+        end
+
         function insertComputedAreaGovernsWhenUnspecified(testCase)
             % No ShearEngagementArea supplied, but StiPitchDiameter and the
             % engagement length both resolve -> the COMPUTED area governs
