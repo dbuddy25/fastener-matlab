@@ -337,6 +337,10 @@
 %                      function not yet wired for Inputs carries: empty means
 %                      "not recorded here", NEVER "this check used no
 %                      numbers", and never a zero.
-%                      Wired so far: marginSeparation, marginNutStrength.
+%                      Wired so far: the six DABJ answer-key rows
+%                      (marginTensionUlt, marginTensionYield, marginShearUlt,
+%                      marginInteraction, marginSeparation, marginSlip) plus
+%                      marginNutStrength. The bearing / tear-out / insert /
+%                      tapped-hole / bolt-thread rows are NOT wired yet.
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

@@ -245,13 +245,90 @@ classdef tDabjCase < matlab.unittest.TestCase
             % function at a time, so an empty Inputs array means "not
             % recorded here" -- and every row must still HAVE the field, or
             % a consumer indexing it errors on the un-wired ones.
+            %
+            % The NotEvaluated row is found BY STATUS rather than by name:
+            % naming one pins this test to which checks happen to be
+            % un-runnable in the DABJ joint, and wiring a new margin
+            % function would silently retarget it.
             c = validation.dabjSection9();
             r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
             testCase.verifyTrue(isfield(r.Margins, "Inputs"), ...
                 'Every row carries the field by construction.');
-            k = find([r.Margins.Name] == "Tension-Yield", 1);
+            k = find([r.Margins.Status] == "NotEvaluated", 1);
+            testCase.assertNotEmpty(k, ...
+                'The DABJ joint must still leave some check unevaluated.');
             testCase.verifyEmpty(r.Margins(k).Inputs, ...
-                'An un-wired row is empty, never a placeholder zero.');
+                'A check that did not run has NO terms, never a zero.');
+        end
+
+        function everyPublishedMarginRowCarriesItsInputs(testCase)
+            % The six margins the DABJ answer key prints are the six an
+            % analyst diffs against another tool first, so they are the six
+            % that must be re-derivable from the panel alone.
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            wired = ["Tension-Ultimate", "Tension-Yield", "Shear-Ultimate", ...
+                     "Interaction", "Separation", "Slip"];
+            for name = wired
+                k = find([r.Margins.Name] == name, 1);
+                testCase.assertNotEmpty(k, "Missing row: " + name);
+                testCase.verifyNotEmpty(r.Margins(k).Inputs, ...
+                    "No Inputs recorded on " + name + ".");
+                testCase.verifyTrue( ...
+                    all(strlength([r.Margins(k).Inputs.Source]) > 0), ...
+                    "A term on " + name + " does not say where it came from.");
+            end
+        end
+
+        function tensionUltInputsReproduceItsOwnMargin(testCase)
+            % The one failure mode that would make this feature WORSE than
+            % nothing: a row reporting terms that are not the terms its
+            % margin was computed from. Recompute Eq. 6 from the Inputs
+            % alone and require the published +0.69 back.
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            k = find([r.Margins.Name] == "Tension-Ultimate", 1);
+            in = r.Margins(k).Inputs;
+
+            % The DABJ joint takes the assured branch (Eq. 6), so the row
+            % carries exactly the two terms of Ptu_allow / Ptu - 1.
+            testCase.assertEqual([in.Symbol], ["Ptu_allow", "Ptu"]);
+            reMS = in(1).Value / in(2).Value - 1;
+            testCase.verifyEqual(reMS, r.Margins(k).MS, "AbsTol", 1e-12, ...
+                'The terms shown must be the terms used.');
+            testCase.verifyEqual(reMS, c.Expected.MS_TensionUlt, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+        end
+
+        function slipInputsReproduceItsOwnMargin(testCase)
+            % Same guard on the row with the most terms and the one
+            % NEGATIVE published margin (-0.65), where a sign or a factor
+            % dropped from the demand would be easy to miss.
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            k = find([r.Margins.Name] == "Slip", 1);
+            in = r.Margins(k).Inputs;
+
+            cap = in([in.Symbol] == "Capacity").Value;
+            dem = in([in.Symbol] == "Demand").Value;
+            testCase.verifyEqual(cap / dem - 1, r.Margins(k).MS, ...
+                "AbsTol", 1e-12);
+            testCase.verifyEqual(cap / dem - 1, c.Expected.MS_Slip, ...
+                "AbsTol", c.Tol.MarginAbsTol);
+        end
+
+        function interactionInputsReproduceItsOwnRatio(testCase)
+            % Interaction reports R, not MS, so its Inputs must rebuild the
+            % RATIO -- R = Rs^es + (Rt + Rb)^et -- not a margin.
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            k = find([r.Margins.Name] == "Interaction", 1);
+            in = r.Margins(k).Inputs;
+            val = @(sym) in([in.Symbol] == sym).Value;
+
+            reR = val("Rs")^val("es") + (val("Rt") + val("Rb"))^val("et");
+            testCase.verifyEqual(reR, r.Margins(k).R, "RelTol", 1e-10, ...
+                'The exponents and ratios shown must rebuild the reported R.');
         end
 
         function asTableStillDropsEverythingButTheFourColumns(testCase)

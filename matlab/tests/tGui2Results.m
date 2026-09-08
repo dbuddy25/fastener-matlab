@@ -898,7 +898,7 @@ classdef tGui2Results < matlab.uitest.TestCase
             % the section is absent entirely on an un-wired row.
             testCase.showSynthetic();
             p = testCase.Page;
-            p.selectRow(2);   % Tension-Yield - evaluated, but not wired
+            p.selectRow(2);   % Tension-Yield - evaluated; left empty here
 
             txt = strjoin(string(p.detailArea().Value), newline);
             testCase.verifyTrue(contains(txt, "-0.14"), ...
