@@ -56,6 +56,63 @@ classdef tBearing < matlab.unittest.TestCase
             testCase.verifySubstring(r.Method, "Eq. 72-74");
         end
 
+        function bearingSaysWhenTheYieldCriterionCouldNotRun(testCase)
+            % THE ROW USED TO GO QUIET. Method promises "both criteria", but
+            % with no Fbry the yield branch simply never appends a candidate
+            % and the Detail read "Governing: layer 1 (...), ultimate" - which
+            % is indistinguishable from a genuine both-criteria minimum where
+            % ultimate happened to win.
+            %
+            % Not hypothetical: NO material in the shipped library carries
+            % Fbry, so this was every bearing row ever produced. Caught by a
+            % legacy-spreadsheet comparison whose bearing YIELD margin had no
+            % counterpart here (TOOL_DIFFERENCES.md 8.6).
+            fm = model.Material(Name="Al 6061-T6 (no Fbry)", ...
+                Ftu=42000, Fty=35000, Fsu=27000, Fbru=67000, E=10.0e6);
+            b = model.Bolt(Designation="1/4-28", NominalDiameter=0.25, ...
+                ThreadsPerInch=28, TensileStressArea=0.0364, MinorDiameter=0.2036);
+            j = model.Joint(Name="No-Fbry joint", Bolt=b, ...
+                FlangeStack=model.FlangeLayer(Material=fm, Thickness=0.25));
+            lc = model.LoadCase(Name="shear", ...
+                BoltTensileLimitLoad=0, BoltShearLimitLoad=603);
+            r = engine.marginBearing(j, lc, model.Factors());
+
+            % The margin itself is unchanged - ultimate still governs.
+            testCase.verifyEqual(r.MS, 3.313, "AbsTol", 0.01, ...
+                'Disclosure must not move the number.');
+
+            % ...and now the row says what it could not assess, and when
+            % that could have mattered.
+            testCase.verifySubstring(r.Detail, "YIELD criterion not assessed");
+            testCase.verifySubstring(r.Detail, "Fbry unset");
+            testCase.verifySubstring(r.Detail, "OPTIMISTIC");
+            testCase.verifySubstring(r.Detail, "0.893");   % FFY*FSY/(FFU*FSU)
+        end
+
+        function bearingStaysSilentWhenBothCriteriaRan(testCase)
+            % COMPANION TO THE ABOVE, and the reason it is here: an assertion
+            % that a warning APPEARS proves nothing unless something proves it
+            % can also be ABSENT. Give the same layer an Fbry and the note
+            % must go away entirely - otherwise every row would carry a
+            % caveat and the caveat would stop meaning anything.
+            fm = model.Material(Name="Al 6061-T6 (with Fbry)", ...
+                Ftu=42000, Fty=35000, Fsu=27000, ...
+                Fbru=67000, Fbry=65300, E=10.0e6);
+            b = model.Bolt(Designation="1/4-28", NominalDiameter=0.25, ...
+                ThreadsPerInch=28, TensileStressArea=0.0364, MinorDiameter=0.2036);
+            j = model.Joint(Name="With-Fbry joint", Bolt=b, ...
+                FlangeStack=model.FlangeLayer(Material=fm, Thickness=0.25));
+            lc = model.LoadCase(Name="shear", ...
+                BoltTensileLimitLoad=0, BoltShearLimitLoad=603);
+            r = engine.marginBearing(j, lc, model.Factors());
+
+            testCase.verifyFalse(contains(r.Detail, "not assessed"), ...
+                'With both allowables present the row carries no caveat.');
+            % Fbry/Fbru = 0.975 > 0.893, so ultimate still governs - which is
+            % the case that made this bug invisible in the field.
+            testCase.verifySubstring(r.Detail, "ultimate");
+        end
+
         function shearTearoutHandDerived(testCase)
             % HAND-DERIVED pin (no public worked example): NASA TM-106943
             % Eq. 69-71 on a single layer, t = 0.320 in, e = 0.75 in,

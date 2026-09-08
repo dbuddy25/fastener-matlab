@@ -874,6 +874,41 @@ flange material at all. Whether to add a product-form axis is a schema decision
 for the materials pass, and it should be settled before real program data is
 loaded.
 
+### 8.6 Bearing: the tool checked ultimate only, and did not say so — FIXED (disclosure)
+
+Found by the comparison, and the most consequential thing it turned up.
+
+The spreadsheet reports a bearing **yield** margin (+3.71 on the joint
+examined). The tool reported +3.31 and named it "ultimate". `marginBearing`
+implements both criteria correctly and takes the worse — but **0 of the 28
+materials in `library.json` carry `fbry`**, while all 28 carry `fbru`. The yield
+branch has therefore never executed, on any joint, and the row said nothing
+about it while `Method` promised "both criteria".
+
+**When it matters.** The two criteria divide the same `Fbr*Abr` product by
+different factor pairs, so yield governs exactly when
+
+    Fbry/Fbru < (FFY*FSY)/(FFU*FSU)      = 0.893 at the default factors
+
+The joint examined back-solves to `Fbry` ~ 65,300 against `Fbru` = 67,000, a
+ratio of **0.975** — ultimate governs, the tool's +3.31 is correct, and that is
+precisely why this was invisible. On a material whose ratio falls below 0.893
+the tool would report the **higher** ultimate margin with nothing indicating a
+criterion was missing: silently optimistic.
+
+**Fixed (disclosure only).** `Detail` now names every layer/criterion that could
+not be formed and, for a missing `Fbry`, prints the threshold above. No margin
+changes value. Same principle as `systemTensileAllowable`'s `Complete` flag: a
+minimum taken over an incomplete set has to announce itself.
+
+**Still open (data).** `fbry` is absent library-wide and populating it belongs to
+the materials pass, with sources — see §8.3. Until then every bearing row
+carries the caveat, which is the honest state.
+
+**Also noted:** the spreadsheet computes **no shear tear-out at all**, so the
+tool's +3.37 has no counterpart to reconcile. A coverage difference in the
+tool's favour, nothing to fix.
+
 ### 8.4 What agrees exactly, and why that matters
 
 **Separation and Slip matched to the printed precision on two different cases**

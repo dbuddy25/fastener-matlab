@@ -20,7 +20,14 @@ function r = marginBearing(joint, loadCase, factors)
 %   V = loadCase.BoltShearLimitLoad (most-loaded bolt) and
 %   D = joint.Bolt.NominalDiameter. A layer whose material carries no
 %   bearing allowable for a criterion (Fbru/Fbry NaN or 0 — the Material
-%   default 0 means "not set") is skipped for that criterion. Guards:
+%   default 0 means "not set") is skipped for that criterion, AND THE ROW
+%   SAYS SO: Detail names every layer/criterion that could not be formed,
+%   and for a missing Fbry states the threshold below which the absent
+%   yield criterion would have governed (Fbry/Fbru < FFY*FSY/(FFU*FSU)).
+%   Without that, an ultimate-only answer is indistinguishable from a
+%   genuine both-criteria minimum -- and since NO material in the shipped
+%   library carries Fbry, that was every bearing row this tool has ever
+%   produced. Guards:
 %   V = NaN -> MS = NaN (NotEvaluated: no shear load defined); V = 0 ->
 %   MS = Inf (no applied shear means infinite bearing margin — falls out
 %   of the arithmetic); no checkable layer at all -> MS = NaN.
@@ -67,6 +74,16 @@ end
 msList     = [];
 pbrList    = [];
 detailList = strings(1, 0);
+
+% WHICH CRITERIA COULD NOT BE FORMED, and on which layer. Method promises
+% "both criteria"; without this the row silently delivers whichever ones the
+% material data happened to support, and a reader cannot tell an
+% ultimate-only answer from a genuine both-criteria minimum. As of the
+% library shipped with this tool NO material carries Fbry at all, so the
+% yield branch below never runs — which makes the silence total rather than
+% occasional, and is exactly why it went unnoticed.
+noYield = strings(1, 0);
+noUlt   = strings(1, 0);
 for k = 1:numel(joint.FlangeStack)
     fl = joint.FlangeStack(k);
     t  = fl.Thickness;                    % layer thickness, in
@@ -83,6 +100,8 @@ for k = 1:numel(joint.FlangeStack)
         msList(end+1)     = Pbr / (factors.FFU * factors.FSU * V) - 1; %#ok<AGROW>
         pbrList(end+1)    = Pbr;                              %#ok<AGROW>
         detailList(end+1) = layerName + ", ultimate";         %#ok<AGROW>
+    else
+        noUlt(end+1) = layerName;                             %#ok<AGROW>
     end
 
     % Yield: NASA TM-106943 Eq. 72-74 — Pbr = Fbry·D·t ; MS = Pbr/(FFY·FSY·V) − 1
@@ -92,6 +111,8 @@ for k = 1:numel(joint.FlangeStack)
         msList(end+1)     = Pbr / (factors.FFY * factors.FSY * V) - 1; %#ok<AGROW>
         pbrList(end+1)    = Pbr;                              %#ok<AGROW>
         detailList(end+1) = layerName + ", yield";            %#ok<AGROW>
+    else
+        noYield(end+1) = layerName;                           %#ok<AGROW>
     end
 end
 
@@ -103,10 +124,43 @@ if isempty(msList)
 end
 
 [MS, idx] = min(msList);   % worst layer/criterion governs
+detail = "Governing: " + detailList(idx) + ...
+         string(sprintf(" — Pbr = %.0f lbf vs V = %.0f lbf.", pbrList(idx), V));
+detail = detail + unassessedNote(noUlt, noYield, factors);
+
 r = struct( ...
     "MS",               MS, ...
     "Method",           method, ...
-    "Detail",           "Governing: " + detailList(idx) + ...
-                        string(sprintf(" — Pbr = %.0f lbf vs V = %.0f lbf.", pbrList(idx), V)), ...
+    "Detail",           detail, ...
     "BearingAllowable", pbrList(idx));
+end
+
+% ---- Local helpers --------------------------------------------------------
+
+function s = unassessedNote(noUlt, noYield, factors)
+%UNASSESSEDNOTE  Say which criterion did not run, and when that matters.
+%   A minimum taken over an incomplete set is OPTIMISTIC, and the direction
+%   is knowable: for a given layer the yield criterion produces the smaller
+%   margin exactly when
+%
+%       Fbry/Fbru < (FFY*FSY)/(FFU*FSU)
+%
+%   because the two criteria divide the same Abr*Fbr product by different
+%   factor pairs. Printing that threshold lets a reader decide whether a
+%   missing Fbry could have changed the answer, instead of being told only
+%   that something was missing. Same reasoning as
+%   systemTensileAllowable's Complete flag: an incomplete minimum has to
+%   announce itself.
+s = "";
+if ~isempty(noUlt)
+    s = s + " ULTIMATE criterion not assessed on " + ...
+        strjoin(noUlt, ", ") + " (Fbru unset).";
+end
+if ~isempty(noYield)
+    thr = (factors.FFY * factors.FSY) / (factors.FFU * factors.FSU);
+    s = s + " YIELD criterion not assessed on " + strjoin(noYield, ", ") + ...
+        " (Fbry unset) — the reported margin is ultimate-only and would be " + ...
+        "OPTIMISTIC on any layer whose " + ...
+        string(sprintf("Fbry/Fbru < %.3f (= FFY*FSY/(FFU*FSU)).", thr));
+end
 end
