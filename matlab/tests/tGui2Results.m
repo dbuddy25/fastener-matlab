@@ -453,9 +453,13 @@ classdef tGui2Results < matlab.uitest.TestCase
             %   that is deliberate: struct() with no fields is what
             %   engine.Result defaults to, so the readout's absent-field path
             %   is the one most of this file exercises.
+            % Inputs defaults EMPTY on every row -- the un-wired shape --
+            % and the Separation row is given real terms below, so the
+            % fixture exercises both branches of the panel.
             row = @(n, ms, rr, st, me, de) struct( ...
                 'Name', string(n), 'MS', ms, 'R', rr, 'Status', string(st), ...
-                'Method', string(me), 'Detail', string(de));
+                'Method', string(me), 'Detail', string(de), ...
+                'Inputs', engine.eqInput());
 
             % ONE SOURCE OF TRUTH FOR THE BRANCH. Result.Gate and the
             % gate row's Status are two views of the same determination,
@@ -503,6 +507,15 @@ classdef tGui2Results < matlab.uitest.TestCase
                 row("Insert internal-thread", NaN, NaN, "NotEvaluated", "", ""), ...
                 row("Insert external-thread", NaN, NaN, "NotEvaluated", "", ""), ...
                 row("Tapped-hole parent-thread", NaN, NaN, "NotEvaluated", "", "")];
+
+            % Separation is the wired row (engine.marginSeparation). The
+            % values are the DABJ Section 9 published pair so the fixture
+            % and the answer key cannot drift apart.
+            margins(5).Inputs = [ ...
+                engine.eqInput("PpMin", 6469.75, "lbf", ...
+                    "engine.preload - NASA-STD-5020B Eq. 2"), ...
+                engine.eqInput("Psep", 5590, "lbf", ...
+                    "engine.designLoads - Psep = FSSep*FFSep*PtL")];
 
             warnings = repmat(struct('Name', "", 'Severity', "Warning", ...
                 'Message', "", 'Method', "", 'Detail', ""), 1, 0);
@@ -857,6 +870,40 @@ classdef tGui2Results < matlab.uitest.TestCase
                 'The glued sentence must not reappear in Selected check.');
             testCase.verifyTrue(contains(txt, "Analysis decisions"), ...
                 'It must point at where those facts are laid out.');
+        end
+
+        function theSelectedCheckShowsTheNumbersSubstitutedIntoIt(testCase)
+            % THE WHOLE POINT OF THE PANEL. Method says what the equation
+            % is and the table says what came out; without the terms in
+            % between, a disagreement with another tool can be seen but
+            % not localised to a single input.
+            testCase.showSynthetic();
+            p = testCase.Page;
+            p.selectRow(4);   % Separation - the wired row in this fixture
+
+            txt = strjoin(string(p.detailArea().Value), newline);
+            testCase.verifyTrue(contains(txt, "Inputs (substituted"));
+            testCase.verifyTrue(contains(txt, "PpMin"));
+            testCase.verifyTrue(contains(txt, "6469.75"), ...
+                'Full precision, not the margin table two-decimal format.');
+            testCase.verifyTrue(contains(txt, "Psep"));
+            testCase.verifyTrue(contains(txt, "lbf"));
+            testCase.verifyTrue(contains(txt, "engine.preload"), ...
+                'Each term names its upstream source.');
+        end
+
+        function aRowWithNoRecordedInputsShowsNoInputsHeading(testCase)
+            % EMPTY IS NOT ZERO and it is not "this check used no numbers".
+            % A bare heading over an empty list would assert the latter, so
+            % the section is absent entirely on an un-wired row.
+            testCase.showSynthetic();
+            p = testCase.Page;
+            p.selectRow(2);   % Tension-Yield - evaluated, but not wired
+
+            txt = strjoin(string(p.detailArea().Value), newline);
+            testCase.verifyTrue(contains(txt, "-0.14"), ...
+                'The row is genuinely rendering, not blank.');
+            testCase.verifyFalse(contains(txt, "Inputs (substituted"));
         end
 
         function anOrdinaryRowStillShowsItsOwnDetail(testCase)

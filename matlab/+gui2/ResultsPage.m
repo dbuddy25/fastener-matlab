@@ -985,6 +985,8 @@ classdef ResultsPage < gui2.Page
                 lines{end+1} = sprintf('  %s', char(m.Method));
             end
 
+            lines = [lines, obj.inputLines(m)];
+
             detail = obj.rowDetail(m);
             if strlength(detail) > 0
                 lines{end+1} = '';
@@ -993,6 +995,43 @@ classdef ResultsPage < gui2.Page
             end
 
             obj.DetailArea.Value = lines;
+        end
+
+        function lines = inputLines(~, m)
+            %INPUTLINES  The numbers substituted into this row's equation.
+            %   THE POINT OF THE PANEL. Method says what the equation is and
+            %   the table says what came out; without this, the values that
+            %   went in are spread across the preload and design-load panels
+            %   or nowhere at all, so a disagreement with another tool can be
+            %   seen but not localised to a single input.
+            %
+            %   NOTHING IS COMPUTED HERE and nothing is inferred. An absent
+            %   Inputs array renders no section at all rather than a heading
+            %   over an empty list: empty means "not recorded on this row"
+            %   (a NotEvaluated check, or a margin function not yet wired),
+            %   which is not a statement that the check consumed no numbers.
+            %   Printing a bare "Inputs:" heading would imply the latter.
+            %
+            %   isfield guards a Result staged with the pre-Inputs Margins
+            %   shape, which the GUI tests build directly.
+            lines = {};
+            if ~isfield(m, 'Inputs') || isempty(m.Inputs)
+                return
+            end
+            in = m.Inputs;
+
+            % Pad symbols to a common width so the values form a column and
+            % the eye can run down them against a spreadsheet.
+            w = max(arrayfun(@(x) strlength(x.Symbol), in));
+
+            lines{end+1} = '';
+            lines{end+1} = 'Inputs (substituted into the equation above):';
+            for i = 1:numel(in)
+                lines{end+1} = sprintf('  %s = %s%s', ...
+                    char(pad(in(i).Symbol, w)), ...
+                    char(gui2.ResultsPage.inputValueText(in(i))), ...
+                    char(gui2.ResultsPage.inputSourceText(in(i))));  %#ok<AGROW>
+            end
         end
 
         function d = rowDetail(obj, m)
@@ -1175,6 +1214,38 @@ classdef ResultsPage < gui2.Page
             if neg
                 s = ['-' s];
             end
+        end
+
+        function s = inputValueText(term)
+            %INPUTVALUETEXT  One input's value and units.
+            %   %.6g, NOT the two-decimal margin format: these numbers are
+            %   here to be diffed against another tool's cell, and a
+            %   thread-shear area (0.0234 in^2) or a shear strength
+            %   (62000 psi) both have to survive the same formatter.
+            %
+            %   NaN renders as the same em dash the margin table uses for
+            %   an unevaluated check — a term that was genuinely absent must
+            %   never read as a zero that was used.
+            if isnan(term.Value)
+                s = string(gui2.MarginView.NotEvaluated);
+                return
+            end
+            s = string(sprintf('%.6g', term.Value));
+            if strlength(term.Units) > 0
+                s = s + " " + term.Units;
+            end
+        end
+
+        function s = inputSourceText(term)
+            %INPUTSOURCETEXT  Where the number came from, parenthesised.
+            %   Carried on every term because localising a disagreement
+            %   means naming the upstream function or model property, not
+            %   just the symbol.
+            if strlength(term.Source) == 0
+                s = "";
+                return
+            end
+            s = "   (" + term.Source + ")";
         end
 
         function s = statusText(status)

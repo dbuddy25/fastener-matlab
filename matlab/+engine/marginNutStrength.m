@@ -152,6 +152,15 @@ function r = marginNutStrength(joint, loadCase, factors, preload)
 %       Rating    spec-rated nut ultimate load participating in the check,
 %                 lbf (the supplied value whenever it is set — as the
 %                 flat basis or the ceiling; NaN when none is set)
+%       Inputs    struct array (engine.eqInput): the numbers substituted
+%                 into the criterion that governed, so the row can be
+%                 re-derived by hand or diffed against another tool. EMPTY
+%                 (1x0) on every not-evaluated path — a check that did not
+%                 run has no substituted values. The flat-rating path
+%                 records only the rating and Pb; the area form records the
+%                 area, both strengths, both allowables and both design
+%                 loads, because either criterion may be the one that
+%                 governed and a reader needs to see why the other did not.
 %
 %   Call graph:
 %       Precedents (calls)      engine.boltDesignLoad, engine.shearYieldStrength,
@@ -195,7 +204,7 @@ arguments
     preload  (1,1) struct
 end
 
-methodArea = "TM-106943 Eq. 76 (nut internal thread shear) via the As = 0.75·pi·E·Le pitch-diameter form + Eq. 77 allowable Pult = Fsu·As (yield counterpart Fsy·As vs PbYield with FFY·FSY), Eq. 65 MS; a spec rating, when set, IS the nut's ultimate allowable per NASA-STD-5020B §4.4.1 p26 (assessment based on the strength specified for the item rather than on thread-stripping analysis) and REPLACES the computed area form above, which then serves only as a comparison; Pb/PbYield per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
+methodArea = "TM-106943 Eq. 76 (nut internal thread shear) via the As = 0.75·pi·E·Le pitch-diameter form + Eq. 77 allowable Pult = Fsu·As (yield counterpart Pyld = Fsy·As vs PbYield with FFY·FSY), Eq. 65 MS; a spec rating, when set, IS the nut's ultimate allowable per NASA-STD-5020B §4.4.1 p26 (assessment based on the strength specified for the item rather than on thread-stripping analysis) and REPLACES the computed area form above, which then serves only as a comparison; Pb/PbYield per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
 methodRated = "Nut spec-rated ultimate load (NASA-STD-5020B §4.4.1 — nut limited to its load rating), Eq. 65 MS form; ultimate-only (a rating carries no yield information); Pb per NASA-STD-5020B Eq. 8 (clamped, PpMax+FF·FS·n·phi·PtL) or, when the Fig. 8 gate assures separation before rupture, Pb = FF·FS·PtL (Eq. 6 principle, no preload/n·phi — see Detail for which branch applied)";
 
 if joint.ThreadedMember.Type ~= model.ThreadedMemberType.Nut
@@ -253,7 +262,13 @@ if isnan(As)
     end
     r = struct("MS", MS, "Method", methodRated, "Detail", detail + ".", ...
         "As", NaN, "Pult", rating, "AllowYld", NaN, ...
-        "Pb", d.Pb, "PbYield", NaN, "Rating", rating);
+        "Pb", d.Pb, "PbYield", NaN, "Rating", rating, ...
+        "Inputs", [ ...
+            engine.eqInput("rating", rating, "lbf", ...
+                "Joint.ThreadedMember.RatedUltimateLoad - the spec-rated " + ...
+                "nut ultimate IS the allowable (NASA-STD-5020B 4.4.1 p26)"), ...
+            engine.eqInput("Pb", d.Pb, "lbf", ...
+                "engine.boltDesignLoad" + noteSuffix(d.Note))]);
     return
 end
 
@@ -366,15 +381,61 @@ else
 end
 r = struct("MS", MS, "Method", methodArea, "Detail", detail + ".", ...
     "As", As, "Pult", effUlt, "AllowYld", allowYld, ...
-    "Pb", d.Pb, "PbYield", d.PbYield, "Rating", ratingOut);
+    "Pb", d.Pb, "PbYield", d.PbYield, "Rating", ratingOut, ...
+    "Inputs", [ ...
+        engine.eqInput("As", As, "in^2", ...
+            "TM-106943 Eq. 76 - As = 0.75*pi*E*Le; " + areaSrc), ...
+        engine.eqInput("Fsu", Fsu, "psi", ...
+            "Joint.ThreadedMember.Material.Fsu (nut material)"), ...
+        engine.eqInput("Fsy", sy.Fsy, "psi", ...
+            "engine.shearYieldStrength - " + sy.Basis), ...
+        engine.eqInput("Pult", effUlt, "lbf", ...
+            "TM-106943 Eq. 77 - Pult = Fsu*As" + ratingBasisNote(ratingOut)), ...
+        engine.eqInput("Pyld", allowYld, "lbf", ...
+            "TM-106943 Eq. 77 yield counterpart - Pyld = Fsy*As"), ...
+        engine.eqInput("Pb", d.Pb, "lbf", ...
+            "engine.boltDesignLoad (ultimate)" + noteSuffix(d.Note)), ...
+        engine.eqInput("PbYield", d.PbYield, "lbf", ...
+            "engine.boltDesignLoad (yield, FFY*FSY pair)" + noteSuffix(d.Note))]);
 end
 
 % ---- Local helpers --------------------------------------------------------
+
+function s = noteSuffix(note)
+%NOTESUFFIX  " - <note>", or "" when there is no note.
+%   engine.boltDesignLoad's Note says WHICH branch set Pb (the clamped
+%   Eq. 8 form, or Eq. 6 when the Fig. 8 gate assured separation before
+%   rupture) — the single most useful thing to know when this row's Pb
+%   disagrees with another tool's. It is empty on the ordinary path, and
+%   concatenating it unconditionally would leave a dangling dash.
+if strlength(note) == 0
+    s = "";
+else
+    s = " - " + note;
+end
+end
+
+function s = ratingBasisNote(ratingOut)
+%RATINGBASISNOTE  Say so when a spec rating, not Fsu*As, set the ultimate.
+%   Pult is the EFFECTIVE allowable. When a rating is present it replaced
+%   the computed area form (NASA-STD-5020B 4.4.1 p26), so a reader
+%   comparing Fsu*As by hand against this number must be told why the two
+%   disagree rather than left to find the discrepancy.
+if isnan(ratingOut)
+    s = "";
+else
+    s = string(sprintf( ...
+        "; REPLACED by the spec rating %.0f lbf (NASA-STD-5020B 4.4.1 p26)", ...
+        ratingOut));
+end
+end
+
 function r = notEval(method, detail)
 %NOTEVAL  A full-field NotEvaluated result (every branch returns the same fields).
 r = struct("MS", NaN, "Method", method, "Detail", string(detail), ...
     "As", NaN, "Pult", NaN, "AllowYld", NaN, ...
-    "Pb", NaN, "PbYield", NaN, "Rating", NaN);
+    "Pb", NaN, "PbYield", NaN, "Rating", NaN, ...
+    "Inputs", engine.eqInput());
 end
 
 function s = num(v)

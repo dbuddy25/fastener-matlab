@@ -38,6 +38,26 @@ classdef Result
     %                                the future phase for unbuilt checks
     %                        Detail  string — free text (e.g. the Fig. 8
     %                                decision trace); "" when not needed
+    %                        Inputs  (1,:) struct — the numbers SUBSTITUTED
+    %                                into this row's equation, as data:
+    %                                Symbol / Value / Units / Source per term
+    %                                (see engine.eqInput). This is what makes
+    %                                a margin re-derivable by hand, or
+    %                                diffable against another tool, without
+    %                                hunting the inputs across the preload
+    %                                and design-load blocks.
+    %                                EMPTY (1x0) means NO INPUTS RECORDED,
+    %                                and that is NOT the same as "this check
+    %                                consumed no numbers": every NotEvaluated
+    %                                row is empty, and so is every row whose
+    %                                margin function has not been wired for
+    %                                it yet (they are wired one at a time —
+    %                                Separation and Nut strength first). A
+    %                                consumer therefore renders the section
+    %                                only when ~isempty(), and must never
+    %                                read an absent term as a zero.
+    %                                Symbols match the Method equation
+    %                                verbatim so the two read together.
     %                        Required logical — does NASA-STD-5020B require
     %                                this check? TRUE for all but
     %                                bolt-thread shear. Note this is NOT
@@ -109,8 +129,8 @@ classdef Result
     %   engine.analyze's INTERACTION IS NOT A MARGIN note.
     %
     %   asTable() returns a writetable-ready table (one row per margin, columns
-    %   Name, MS, Status, Method) for XLSX export and display. R (like
-    %   Detail) is dropped — a caller needing the Interaction ratio reads
+    %   Name, MS, Status, Method) for XLSX export and display. R and Inputs
+    %   (like Detail) are dropped — a caller needing the Interaction ratio reads
     %   Margins(k).R directly (see the Margins field list above and
     %   engine.analyze's INTERACTION IS NOT A MARGIN note). Warnings is not
     %   part of asTable() at all (it is a separate property, not a Margins
@@ -175,7 +195,8 @@ classdef Result
                            "Name", "", "MS", NaN, "R", NaN, ...
                            "Status", "NotEvaluated", ...
                            "Method", "", "Detail", "", ...
-                           "Required", true), 1, 0)
+                           "Required", true, ...
+                           "Inputs", engine.eqInput()), 1, 0)
         WorstMargin    (1,1) double = NaN
         GoverningCheck (1,1) string = ""
 
@@ -215,7 +236,16 @@ classdef Result
             %   t = r.asTable() returns one row per margin check with columns
             %   Name, MS, Status, Method (Detail is dropped — it is free text
             %   for the report layer, not the results table).
-            t = struct2table(obj.Margins(:));
+            %   Inputs is REMOVED before struct2table rather than after:
+            %   it is a struct array per row, which struct2table would have
+            %   to box into a cell column on its way to being discarded.
+            %   Guarded with isfield because a Result staged directly by a
+            %   test may carry the pre-Inputs Margins shape.
+            m = obj.Margins(:);
+            if isfield(m, "Inputs")
+                m = rmfield(m, "Inputs");
+            end
+            t = struct2table(m);
             t = t(:, ["Name", "MS", "Status", "Method"]);
         end
     end

@@ -325,5 +325,18 @@
 %                      Tension-Ultimate in a full analyze() run. Yield,
 %                      shear, and interaction stay bolt-only always.
 %                      ✍️ Phase 4.9 — hand-derived pins (tests/tBoltSizing.m).
+%   eqInput          - One EQUATION TERM as data: Symbol/Value/Units/Source.
+%                      The vocabulary a margin row's Result.Margins(k).Inputs
+%                      array is written in — the numbers actually substituted
+%                      into that row's Method equation, so a margin can be
+%                      re-derived by hand or diffed against another tool
+%                      without hunting its inputs across the preload and
+%                      design-load blocks. engine.eqInput() with no arguments
+%                      is the EMPTY 1x0 array, which is what every
+%                      NotEvaluated row carries and what every margin
+%                      function not yet wired for Inputs carries: empty means
+%                      "not recorded here", NEVER "this check used no
+%                      numbers", and never a zero.
+%                      Wired so far: marginSeparation, marginNutStrength.
 %
 %   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.

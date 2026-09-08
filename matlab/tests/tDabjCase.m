@@ -198,6 +198,72 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifySubstring(r.Method, "Eq. 19");
         end
 
+        function separationInputsCarryTheNumbersItDividedDABJ(testCase)
+            % The point of Inputs: MS alone cannot be checked against
+            % another tool. These are the two numbers Eq. 19 actually
+            % divided, and they are the published ones (Solutions-17):
+            % 6,469.75 / 5,590 - 1 = +0.16.
+            %
+            % Verified AGAINST THE PRELOAD AND DESIGN-LOAD STRUCTS rather
+            % than against literals, so the row can never drift into
+            % reporting one number while the margin used another -- which
+            % is the single failure mode that would make this feature
+            % worse than useless.
+            c = validation.dabjSection9();
+            p = engine.preload(c.Joint);
+            d = engine.designLoads(c.LoadCase, c.Factors);
+            r = engine.marginSeparation(p, d);
+
+            testCase.assertNumElements(r.Inputs, 2);
+            testCase.verifyEqual([r.Inputs.Symbol], ["PpMin", "Psep"], ...
+                'Symbols must match the Method equation verbatim.');
+            testCase.verifyEqual(r.Inputs(1).Value, p.PpMin);
+            testCase.verifyEqual(r.Inputs(2).Value, d.Psep);
+            testCase.verifyEqual(r.Inputs(2).Value, c.Expected.Psep, ...
+                "RelTol", c.Tol.LoadRelTol);
+            testCase.verifyEqual([r.Inputs.Units], ["lbf", "lbf"]);
+            testCase.verifyTrue(all(strlength([r.Inputs.Source]) > 0), ...
+                'Every term names where it came from.');
+        end
+
+        function analyzeCarriesSeparationInputsOntoTheMarginRow(testCase)
+            % engine.analyze historically dropped everything a margin
+            % function returned beyond MS/Method/Detail (that is why
+            % Result.Allowables had to be added later). Inputs must
+            % actually survive the entry() call, not just exist upstream.
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            k = find([r.Margins.Name] == "Separation", 1);
+            testCase.assertNotEmpty(k);
+            testCase.assertNumElements(r.Margins(k).Inputs, 2);
+            testCase.verifyEqual([r.Margins(k).Inputs.Symbol], ...
+                ["PpMin", "Psep"]);
+        end
+
+        function unwiredAndUnevaluatedRowsCarryNoInputs(testCase)
+            % EMPTY MUST NOT READ AS ZERO. Rows are wired one margin
+            % function at a time, so an empty Inputs array means "not
+            % recorded here" -- and every row must still HAVE the field, or
+            % a consumer indexing it errors on the un-wired ones.
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            testCase.verifyTrue(isfield(r.Margins, "Inputs"), ...
+                'Every row carries the field by construction.');
+            k = find([r.Margins.Name] == "Tension-Yield", 1);
+            testCase.verifyEmpty(r.Margins(k).Inputs, ...
+                'An un-wired row is empty, never a placeholder zero.');
+        end
+
+        function asTableStillDropsEverythingButTheFourColumns(testCase)
+            % Inputs is a struct array per row; struct2table would box it
+            % into a cell column on its way to being discarded.
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            t = r.asTable();
+            testCase.verifyEqual(string(t.Properties.VariableNames), ...
+                ["Name", "MS", "Status", "Method"]);
+        end
+
         function boltYieldMarginMatchesDABJ(testCase)
             % Phase 2.6: spec yield allowable vs the design yield load
             % (NASA-STD-5020B Eq. 15): MS = 11,400/6,987.5 - 1 = +0.63
