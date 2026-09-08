@@ -207,7 +207,7 @@ inputs  = engine.eqInput();
 if assured
     % NASA-STD-5020B Eq. 15 — MS = Pty_allow / (FF*FSy*PtL) - 1
     MS = PtyAllow / designLoads.Pty - 1;
-    Method = "NASA-STD-5020B Eq. 15 (yield tension, separation before yield)";
+    Method = "NASA-STD-5020B Eq. 15 (yield tension, separation before yield) - MS = Pty_allow/Pty - 1";
     Detail = gate.Trace + " -> Eq. 15.";
     inputs = [ ...
         engine.eqInput("Pty_allow", PtyAllow, "lbf", ...
@@ -223,7 +223,7 @@ else
         Pprime = (PtyAllow - preload.PpMax) / (n * phi);
         % NASA-STD-5020B Eq. 16 — MS = P'ty / (FF*FSy*PtL) - 1
         MS = Pprime / designLoads.Pty - 1;
-        Method = "NASA-STD-5020B Eq. 16 (yield tension, yield before separation)";
+        Method = "NASA-STD-5020B Eq. 16 (yield tension, yield before separation) - P'ty = (Pty_allow - PpMax)/(n*phi) per Eq. 17, MS = P'ty/Pty - 1";
         inputs = [ ...
             engine.eqInput("Pty_allow", PtyAllow, "lbf", ...
                 "engine.systemTensileYieldAllowable (5020B 4.4.1 system " + ...

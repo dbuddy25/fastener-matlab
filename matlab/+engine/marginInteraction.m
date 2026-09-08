@@ -384,7 +384,7 @@ switch joint.ShearPlane
         % NO-BENDING-TERM note above) -- criterion Rt^1.5 + Rs^2.5 <= 1
         et = 1.5;                               % tension exponent
         es = 2.5;                               % shear exponent
-        methodLabel = "NASA-STD-5020B Eq. 20/21 (body in shear, exp 1.5/2.5), R <= 1";
+        methodLabel = "NASA-STD-5020B Eq. 20/21 (body in shear, exp 1.5/2.5) - R = Rs^2.5 + (Rt + Rb)^1.5, PASS iff R <= 1";
     case model.ShearPlaneCondition.ThreadsInShear
         % NASA-STD-5020B Eq. 22/23 (threads in shear, fbu = 0 -- see the
         % NO-BENDING-TERM note above) -- criterion Rt^2.0 + Rs^1.2 <= 1.
@@ -394,7 +394,7 @@ switch joint.ShearPlane
         % the threads are in the shear plane, unlike the body-in-shear case.
         et = 2.0;                               % tension exponent
         es = 1.2;                               % shear exponent
-        methodLabel = "NASA-STD-5020B Eq. 22/23 (threads in shear, exp 2.0/1.2), R <= 1";
+        methodLabel = "NASA-STD-5020B Eq. 22/23 (threads in shear, exp 2.0/1.2) - R = Rs^1.2 + (Rt + Rb)^2.0, PASS iff R <= 1";
     otherwise
         error("engine:marginInteraction:unknownShearPlane", ...
             "Unsupported shear-plane condition: %s", string(joint.ShearPlane));

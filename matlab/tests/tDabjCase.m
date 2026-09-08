@@ -280,6 +280,33 @@ classdef tDabjCase < matlab.unittest.TestCase
             end
         end
 
+        function everyWiredRowWritesItsEquationOut(testCase)
+            % CLAUDE.md: no bare "Eq. 19" without the written formula. The
+            % Method string is what the Results panel prints under
+            % "Governing equation" and what the PDF's traceability section
+            % lists, so a citation with no formula leaves the reader with a
+            % number, an equation NUMBER, and nothing connecting them.
+            %
+            % Checked as "contains an = sign after the citation" rather
+            % than against exact text: the point is that a formula is
+            % present, not that it is spelled one particular way.
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            wired = ["Tension-Ultimate", "Tension-Yield", "Shear-Ultimate", ...
+                     "Interaction", "Separation", "Slip"];
+            for name = wired
+                k = find([r.Margins.Name] == name, 1);
+                m = r.Margins(k).Method;
+                testCase.verifySubstring(m, "NASA-STD-5020B", ...
+                    "Missing the governing document on " + name + ".");
+                testCase.verifyTrue(contains(m, "Eq."), ...
+                    "Missing the equation number on " + name + ".");
+                testCase.verifyTrue(contains(m, "="), ...
+                    "Method on " + name + " cites an equation but never " + ...
+                    "writes it out.");
+            end
+        end
+
         function tensionUltInputsReproduceItsOwnMargin(testCase)
             % The one failure mode that would make this feature WORSE than
             % nothing: a row reporting terms that are not the terms its

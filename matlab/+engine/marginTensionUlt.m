@@ -189,7 +189,7 @@ inputs  = engine.eqInput();
 if assured
     % NASA-STD-5020B Eq. 6 — MS = Ptu_allow / Ptu - 1
     MS = PtuAllow / designLoads.Ptu - 1;
-    Method = "NASA-STD-5020B Eq. 6 (separation before rupture)";
+    Method = "NASA-STD-5020B Eq. 6 (separation before rupture) - MS = Ptu_allow/Ptu - 1";
     Decision = gate.Trace + " -> Eq. 6.";
     eqRan = "NASA-STD-5020B Eq. 6";
     inputs = [ ...
@@ -206,7 +206,7 @@ else
         % MS = P'tu/Ptu - 1 (bolt carries the preload plus n·phi of the load)
         Pprime = (PtuAllow - preload.PpMax) / (n * phi);
         MS = Pprime / designLoads.Ptu - 1;
-        Method = "NASA-STD-5020B Eq. 7 (rupture — bolt sees preload + n·phi·load), with P'tu per Eq. 10";
+        Method = "NASA-STD-5020B Eq. 7 (rupture — bolt sees preload + n·phi·load), with P'tu per Eq. 10 - P'tu = (Ptu_allow - PpMax)/(n*phi), MS = P'tu/Ptu - 1";
         Decision = gate.Trace + string(sprintf( ...
             ". -> Eq. 10 for P'tu then Eq. 7, with phi = %.4g (NASA-STD-5020B Eq. 9), n = %.2f.", phi, n));
         eqRan   = "NASA-STD-5020B Eq. 7 (P'tu per Eq. 10)";

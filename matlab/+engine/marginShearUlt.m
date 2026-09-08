@@ -77,7 +77,7 @@ arguments
     designLoads (1,1) struct
 end
 
-method = "NASA-STD-5020B Eq. 12/13 allowable + Eq. 14 (ultimate shear, area by shear-plane condition)";
+method = "NASA-STD-5020B Eq. 12/13 allowable + Eq. 14 (ultimate shear, area by shear-plane condition) - Psu_allow = Fsu*A_shear, MS = Psu_allow/Psu - 1";
 
 switch joint.ShearPlane
     case model.ShearPlaneCondition.BodyInShear
