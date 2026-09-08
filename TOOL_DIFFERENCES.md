@@ -817,12 +817,29 @@ The only difference that may be a genuine defect rather than a decision.
 and — independently — the `Rs` ratio from §8.1 (1.06%). The shear AREA and the
 shear LOAD both agree; the entire difference is one material property.
 
-**The tool's number has weak provenance.** `+data/library.json`, the `A286`
-entry (`origin: baseline`): `fsu: 93400`, with `source` reading *"Seed material
-property table; values used as given."* No primary citation — the note says
-MIL-HDBK-5J was consulted for the CTE only. Neither value is a clean ratio of
-`Ftu = 160,000` (tool 0.584, sheet 0.590), so both are lookups and only one can
-name its table.
+**The tool's number matches no identifiable basis.** The spreadsheet turned out
+to carry TWO A286 entries, and each names where it came from:
+
+| Value | Basis |
+|---|---|
+| 92,376 | `Ftu/sqrt(3)` — the von Mises derivation (spreadsheet, flange table) |
+| **93,400** | **this tool** — matches neither |
+| 94,400 | **MIL-HDBK-5** (spreadsheet, bolt table) |
+
+`+data/library.json`, the `A286` entry (`origin: baseline`) reads `fsu: 93400`
+with `source`: *"Seed material property table; values used as given."* No primary
+citation; the note says MIL-HDBK-5J was consulted for the CTE only. So the tool's
+value sits between the two bases and is neither — it is not the derivation and it
+is not the handbook.
+
+**Replacing it with the handbook value would NOT be matching another
+implementation.** 94,400 cited to MIL-HDBK-5 is an upgrade in provenance: the
+handbook is the authority and the spreadsheet merely references it too. That is
+the distinction `CLAUDE.md` draws, and it is the one case in this section where a
+tool value should probably change. Two riders when it happens: record WHICH
+product form and condition the table gives (A286 bar, sheet and fastener stock
+differ — the same product-form issue as (b) below), and confirm the value against
+MMPDS, which supersedes MIL-HDBK-5.
 
 **Deferred by decision (2026-09-08): materials are a later pass, after the
 formulas are settled.** When it happens, the question is not which number is
