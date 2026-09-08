@@ -359,6 +359,48 @@ Both are per-part stack-up choices, not properties of a thread size.
 > fire. L1 must come from the body-length-in-grip input or `Bolt.Length`, or the
 > stiffness-dependent checks report NotEvaluated.
 
+### 6.4 The loading-plane factor `n` is an INPUT, defaults to 1.0, and silently changes which equation runs
+
+`Joint.LoadingPlaneFactor` is NASA-STD-5020B's load-introduction factor (LIF).
+The tool **takes it as a number** and derives it from nothing — there is no
+geometry behind it, and `engine.stiffness` returns no loading-plane dimension
+that could supply one.
+
+**5020B's own definition** is the geometric LIF, Eq. 37 (p. 52), inherited from
+NSTS 08307:
+
+> `n = Llp / L` — the thickness of the relieved joint material between
+> loading-plane locations, over the total thickness of the joint.
+
+`Llp` and `L` are dimensioned in **Figure 3, p. 53**, which shows three cases;
+case (a) is `n = 0.5` with *"loading planes assumed to be half way through local
+thicknesses of clamped parts."* Washers reduce `n` (§A.5 notes this explicitly).
+
+**5020B also states its limitation, and it applies here.** §A.4.2 (pp. 57–58)
+proves via Eq. 58 that `n = Llp/L` is exact only if `E(x)·A(x)` is constant —
+"a cylindrical compression zone made of a single material" — and concludes the
+geometric LIF "is inconsistent with the assumptions of a frustum-type
+compression zone geometry and with clamped members made of materials having
+different modulus of elasticity." **This tool computes `phi` from a frustum
+model** (`engine.stiffness`), so a geometric `n` multiplied by a frustum `phi`
+mixes two compression-zone assumptions. That is common practice and 5020B
+sanctions the geometric LIF anyway, but it is an approximation, not an identity.
+The stiffness-based alternative is 5020B Eq. 56; VDI 2230 and NASA TM-108377 are
+the other routes the standard names.
+
+**The default is 1.0, and that is a trap worth knowing.** `n` feeds five sites —
+`marginTensionUlt`, `marginTensionYield`, `marginBearingUnderHead`,
+`boltDesignLoad`, and the Figure 8 gate. At 1.0 it **fails the gate's `n <= 0.9`
+condition on its own**, which swaps Eq. 6 for Eq. 7/10 and switches
+`boltDesignLoad` from `FF*FS*PtL` to the preload-included clamped form. Every
+`Pb`-dependent row moves with it.
+
+1.0 is the conservative end and is the right default for a value nobody has
+supplied. What the tool cannot currently tell you is whether a given run is
+conservative **by choice or by accident** — nothing distinguishes "the analyst
+set n = 1.0" from "nobody touched it." A warning when the gate fails *only* on
+`n` and `n` is still the untouched default would close that, and is not built.
+
 ---
 
 ## 7. Open questions
@@ -664,89 +706,190 @@ Every entry ends in one of three places — a decision (the tool is right and he
 is the argument), a bug (fixed, with the commit), or an unresolved item that is
 still open. Nothing sits here as "probably fine".
 
-**Status**
+### Status, first pass complete (2026-09-08)
 
-| # | Row | Cause | Status |
-|---|---|---|---|
-| 8.1 | Interaction (Eq. 20–23) | which `Ptu_allow` goes in `Rt` | RESOLVED — decision, no change |
-| 8.2 | Tension-Ultimate / Tension-Yield | not yet localised | OPEN (2026-09-08) |
+One real joint, single-fastener and worst-of-set. **Every margin difference
+reduced to three causes**, and two whole rows agree exactly.
+
+| # | Row(s) | Cause | Size | Verdict |
+|---|---|---|---|---|
+| 8.1 | Interaction | bolt vs system `Ptu_allow` in `Rt` | R 0.28 vs 0.32 | DECISION — tool right, no change |
+| 8.2 | Tension-Ultimate, Tension-Yield | insert pull-out allowable | +4.0% / +4.1% | DOCUMENTED CONSERVATISM |
+| 8.3 | Shear-Ultimate (and `Rs`) | bolt `Fsu` library value | +1.07% | OPEN — data provenance |
+| 8.4 | Separation, Slip | — | 0.00% | AGREE EXACTLY |
+
+A separate INPUT difference — the loading-plane factor `n` — accounted for the
+whole Tension-Ultimate discrepancy before 8.2 was reachable. It is not a tool
+difference and is recorded as §6.4.
 
 ### 8.1 Interaction: `Rt` divides by the BOLT's allowable, not the system minimum
 
-Found 2026-09-08 on a real joint, and it is a **decision, not a defect**. Same
-equation, same exponents, one different input.
+A **decision, not a defect**. Same equation, same exponents, one different input.
 
 | | Spreadsheet | Tool |
 |---|---|---|
 | `Ptu` | 973.66 lbf | 973.658 lbf — agrees |
-| `Ptu_allow` | 3,796.5 lbf (insert ultimate pull-out) | 5,820 lbf (the bolt's own) |
-| `Rs` | 0.315817 | 0.319216 — agrees to ~1% |
+| `Ptu_allow` | 3,796.5 lbf (insert pull-out) | 5,820 lbf (the bolt's own) |
+| `Rs` | 0.315817 | 0.319216 |
 | `Rt` | 0.256463 | 0.167295 |
 | `R` | 0.316570 | 0.28203 |
 
-The whole gap is one number: `5820 / 3796.5 = 1.5330`, exactly the `Rt` ratio.
-Both sides evaluate `R = Rs^1.2 + (Rt + Rb)^2.0` (threads in shear), and the
-spreadsheet's `R` is reproduced to six decimals by that formula on its own
-ratios — so the criterion, the exponents and the shear-plane branch are all
-agreed.
+`5820 / 3796.5 = 1.5330`, exactly the `Rt` ratio. Both sides evaluate
+`R = Rs^1.2 + (Rt + Rb)^2.0` (threads in shear), and the spreadsheet's `R` is
+reproduced to six decimals by that formula on its own ratios — so the criterion,
+the exponents and the shear-plane branch are all agreed.
 
 **Why the tool uses the bolt's.** §4.4.4 states the criterion as
+`(Ptu/Ptu-allow + fbu/Ftu)^k`, which adds a load ratio to `fbu/Ftu`, a **bolt
+cross-section stress** ratio. The two are commensurable only if the first is also
+a stress ratio *at that section*. An insert pull-out load has no bolt
+cross-section, so it cannot enter that bracket. Same adjudication that sends
+§4.4.2 and Figure 8 the other way (both SYSTEM): the symbol is the **system's**
+where the quantity is the load at which the series load path fails, and the
+**bolt's** where it is a cross-section stress capacity combined with that bolt's
+own bending and shear. 5020B's where-clauses are inconsistent; its load-path
+physics is not.
 
-> `(Ptu/Ptu-allow + fbu/Ftu)^k`
-
-which adds a load ratio to `fbu/Ftu`, a **bolt cross-section stress** ratio. The
-two are commensurable only if the first is also a stress ratio *at that section*.
-An insert pull-out load has no bolt cross-section, so it cannot enter that
-bracket. This is the same adjudication recorded for §4.4.2 and Figure 8 going the
-other way (both SYSTEM): the rule is that the symbol is the **system's** where the
-quantity is the load at which the series load path fails, and the **bolt's**
-where it is a cross-section stress capacity combined with that bolt's own bending
-and shear. 5020B's where-clauses are inconsistent; its load-path physics is not.
-
-**The spreadsheet's choice is conservative, not wrong-headed.** It yields a
-higher `R`, so it fails earlier, never later. It traces to no reference — the
-program's documents do not state which allowable belongs in Eq. 20–23 — and is
-best understood as an inherited simplification.
+**The spreadsheet's choice is conservative**, yielding a higher `R`. It traces to
+no reference — the program's documents do not state which allowable belongs in
+Eq. 20-23 — and is best read as an inherited simplification.
 
 **The insert pull-out is not lost in the tool.** It reaches the margin set twice:
-as the §4.4.1 system minimum in Tension-Ultimate, and on its own
-Insert external-thread row. Only the Eq. 20–23 bracket excludes it. Folding it in
-there as well would not surface a new failure mode; it would make one row
-pessimistic for a risk already assessed elsewhere.
+as the §4.4.1 system minimum in Tension-Ultimate, and on its own Insert
+external-thread row. Only the Eq. 20-23 bracket excludes it.
 
-**Not changed, and should not be.** Matching the spreadsheet here would align the
-tool to an undocumented choice, which is the one thing `CLAUDE.md` forbids. If a
-program ever requires the spreadsheet's convention, that belongs in this file as
-a recorded deviation — not as a hidden option.
+**Not changed, and should not be.** Matching here would align the tool to an
+undocumented choice. If a program ever requires the spreadsheet's convention,
+that belongs in this file as a recorded deviation — not a hidden option.
 
-**Scope of the finding.** This difference appears **only when a non-bolt mode
-governs the system allowable**. On a joint where the bolt governs, `Ptu_allow` is
-the same number both ways and Interaction should agree to rounding. Confirming
-that on a bolt-governed joint is the cheap check that proves the divergence has
-exactly one cause.
+**Scope.** This appears **only when a non-bolt mode governs the system
+allowable**. Where the bolt governs, `Ptu_allow` is the same both ways and
+Interaction should agree to rounding — the cheap check that proves the divergence
+has exactly one cause. NOT YET RUN.
 
-### 8.2 Tension-Ultimate and Tension-Yield — open
+### 8.2 Tension-Ultimate and Tension-Yield: the insert pull-out allowable, 4.1%
 
-Both differ by more than rounding on the same joint. Not yet localised.
+Once `n` was matched (§6.4) both rows reduced to a single cause.
 
-The working hypothesis, from 8.1: the tool divides these by the §4.4.1 **system**
-minimum, so if the insert governs they should show `Ptu_allow` = 3,796.5. If the
-spreadsheet instead uses the bolt's allowable there, the two implementations have
-the pair **swapped** relative to 5020B — bolt where system belongs and system
-where bolt belongs — which would account for all three rows with one inversion.
+| Row | Tool | Sheet | Capacity ratio |
+|---|---|---|---|
+| Tension-Ultimate | +2.75 | +2.90 | **+4.00%** |
+| Tension-Yield | +2.14 | +2.27 | **+4.14%** |
 
-### 8.3 How these were localised, for the next one
+| | Tool | Sheet |
+|---|---|---|
+| insert pull-out | 3,646.75 lbf | 3,796.5 lbf |
+
+`3796.5 / 3646.75 = 1.04106` — matching both rows to rounding. One allowable,
+two rows.
+
+**Both sides take the §4.4.1 system minimum here**, which is what killed an
+earlier "swapped allowables" hypothesis: the spreadsheet's own tension-ultimate
+field reads *"Ptu-allow limited by"* and resolves to Bolt Tensile Rupture or
+Shear Pull-Out. Structurally the two implementations agree; only §8.1 differs.
+
+**The 4.1% is the tool's `- 1.125*p` term** in
+`As = 0.75*pi*D2*(Le - 1.125*p)` (`memberTensileUltAllowable/computeInsertArea`).
+That term is a DERIVED CONVENTION with no published equation: NASM33537 §11.1
+installs the insert's top edge 0.75p-1.5p below the tapped-hole surface
+(midpoint 1.125p), so that much of the parent thread carries no pull-out load.
+The resulting form was checked against 27 sizes x 5 length classes of
+manufacturer pull-out data and sits **1.6%-10.4% below every point**. 4.1% is
+inside that band.
+
+**Outstanding:** confirm the spreadsheet's 3,796.5 is a catalogue/manufacturer
+rated value rather than a computed one. If it is, this closes as
+"tool deliberately conservative against the manufacturer curve" and needs no
+change. NOT YET CONFIRMED.
+
+### 8.3 Shear-Ultimate: the bolt `Fsu` in the library — OPEN
+
+The only difference that may be a genuine defect rather than a decision.
+
+| | Tool | Sheet |
+|---|---|---|
+| `A_shear` | 0.0325571 in^2 | 0.03256 in^2 — agrees |
+| `Fsu` | 93,400 psi | 94,400 psi |
+| `Psu_allow` | 3,040.83 lbf | ~3,073.5 lbf |
+| `Psu` | 970.682 lbf | agrees |
+
+`94400 / 93400 = 1.0107`, matching the Shear-Ultimate capacity ratio (+1.07%)
+and — independently — the `Rs` ratio from §8.1 (1.06%). The shear AREA and the
+shear LOAD both agree; the entire difference is one material property.
+
+**The tool's number has weak provenance.** `+data/library.json`, the `A286`
+entry (`origin: baseline`): `fsu: 93400`, with `source` reading *"Seed material
+property table; values used as given."* No primary citation — the note says
+MIL-HDBK-5J was consulted for the CTE only. Neither value is a clean ratio of
+`Ftu = 160,000` (tool 0.584, sheet 0.590), so both are lookups and only one can
+name its table.
+
+**Deferred by decision (2026-09-08): materials are a later pass, after the
+formulas are settled.** When it happens, the question is not which number is
+bigger but which one can cite a source — MMPDS / MIL-HDBK-5 or a program
+allowables document. If the spreadsheet's 94,400 can, updating the library entry
+is an upgrade in provenance rather than a match to another tool, and the `source`
+field must carry the citation.
+
+**Do not edit the baseline entry to match the spreadsheet in the meantime.**
+That swaps one unsourced number for another while making it look settled. For a
+clean comparison run, duplicate A286 as a `custom` entry (the `origin` field
+exists precisely for this) and record why on it.
+
+**Two findings surfaced while chasing this, both for the materials pass:**
+
+**(a) 23 of the 27 library materials have `Fsu` = `Ftu/sqrt(3)` exactly** — a
+von Mises DERIVATION, not a measured shear allowable. Only four carry an
+independent value: `A286` (93,400), `Al 6061-T6` (27,000), `SupremEx 640XA`
+(48,000), `Ti6Al4V` (73,000). So the very number under dispute here is one of the
+few real ones in the table, while `Fsu` for the other 23 is a placeholder that
+happens to be close (`Ftu/sqrt(3)` = 0.577*Ftu, against a typical 0.55-0.65).
+Every shear-ultimate, bearing and interaction result on those 23 rests on it.
+
+**(b) The library cannot represent one material in two product forms.** The
+spreadsheet carries A286 with DIFFERENT properties in its flange table than in
+its bolt table. That is not necessarily an error on its side — MMPDS allowables
+are stated per product form, thickness and grain direction, so A286 fastener
+stock and A286 plate legitimately differ. This library keys a material by NAME
+alone: one `key`, one property set, no form or thickness dimension. `A286` also
+carries `roles: ['bolt','washer']`, so it cannot currently be selected as a
+flange material at all. Whether to add a product-form axis is a schema decision
+for the materials pass, and it should be settled before real program data is
+loaded.
+
+### 8.4 What agrees exactly, and why that matters
+
+**Separation and Slip matched to the printed precision on two different cases**
+(+0.54/+0.54 and -0.83/-0.83 worst-of-set; -0.82/-0.82 single-fastener).
+
+Those two rows ride on the entire front half of both tools: torque/K, preload
+uncertainty, thermal preload, relaxation, creep, `PpMin`, `PpMinSlip`, the design
+loads, every safety and fitting factor, and the friction coefficient. Exact
+agreement there is a stronger result than any of the differences above, and it
+means the remaining three causes are isolated to allowables, not to the preload
+chain.
+
+### 8.5 How these were localised, for the next one
 
 The margin alone names nothing. What worked:
 
 1. Read the **individual terms** off both sides — the Results page prints them
    under the governing equation (`Result.Margins(k).Inputs`).
-2. Take the **ratio of the differing term**. A clean constant (1.5330) means one
-   input differs; an untidy one means several, or a different formula.
-3. Test candidate **forms** against the other side's own ratios — but confirm
-   with the actual term values before concluding. In this case an
-   exponent-mixing form reproduced the spreadsheet's `R` from the *tool's*
-   ratios by coincidence, which sent the first pass down a false trail.
+2. Take the **capacity ratio** `(1 + MS_sheet)/(1 + MS_tool)`, not the margin
+   difference. A clean constant across two rows (4.00% / 4.14%) means ONE shared
+   input differs.
+3. Cross-check the ratio against a second, independently reported quantity. The
+   shear difference showed up as +1.07% in the margin and 1.06% in `Rs` — two
+   routes to the same number, which is what promoted it from noise to a finding.
+4. Prefer six-figure intermediates over two-decimal margins. At +/-0.005 on a
+   printed MS, a 1% difference is barely resolvable; `Rs` settled it immediately.
+5. Test candidate **forms** against the other side's own ratios — but confirm
+   with the actual term values before concluding. An exponent-mixing form
+   reproduced the spreadsheet's `R` from the *tool's* ratios by coincidence,
+   which sent the first pass down a false trail.
+6. **Match the inputs before comparing the outputs.** `n` differed (1.0 vs 0.5)
+   and changed which equation ran; every `Pb`-dependent row was incomparable
+   until it was aligned. See §6.4.
 
 ---
 
