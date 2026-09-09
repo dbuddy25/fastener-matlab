@@ -690,6 +690,39 @@ simultaneously shrinking the thermal term
 `(Kb*Kc/(Kb+Kc))*L*dT*(alphaJ - alphaB)` and so raising `PpMin`
 (UNCONSERVATIVE for separation and slip) — opposite directions in the same run.
 
+### 7.3 Should a manufacturer's rated insert PULL-OUT load be an input? — OPEN
+
+Raised 2026-09-09 by the spreadsheet comparison (§8.2).
+
+**Today:** insert pull-out is always DERIVED —
+`As = 0.75*pi*D2*(Le - 1.125*p)` times the parent's `Fsu` — with a supplied
+`ShearEngagementArea` able to replace the computed *area* but nothing able to
+supply the *load*. `RatedUltimateLoad` cannot serve: on an insert it means the
+internal-thread allowable, a different §4.4.1 quantity on its own row, and
+`model.ThreadedMember` documents it as "NOT pull-out".
+
+**The argument for adding it.** §4.4.1 p27 contemplates a specified allowable
+pull-out load directly: *"Such an allowable pull-out load applies when the
+insert is installed in a solid, homogenous material. For inserts installed in
+nonhomogeneous or nonmetallic materials or in sandwich panels, allowable
+pull-out loads should be derived from test."* That is the same shape of
+reasoning that settled the rated NUT question on 2026-08-14 — a procured item is
+assessed on its specified strength "rather than on" an analysis of it — and the
+derived form here is admittedly a convention, not a published equation, carrying
+a deliberate 1.6%-10.4% knock-down against the very catalogue data a rating
+would come from.
+
+**The argument against.** A catalogue pull-out rating is parent-material
+specific and quietly assumes an installation the tool cannot verify (p27's
+solid-homogeneous caveat), whereas the derived form at least makes the parent
+`Fsu` and the engagement geometry explicit and checkable. Preferring a rating
+would also mean the number stops moving when the parent material changes, which
+is a trap if the rating and the modelled parent ever disagree.
+
+**Not decided.** If it is added it needs its own field — never overloading
+`RatedUltimateLoad` — plus a precedence rule stated the way the nut path states
+its own, and the derived value kept visible for comparison.
+
 ---
 
 ## 8. Differences from the legacy spreadsheet
@@ -714,7 +747,7 @@ reduced to three causes**, and two whole rows agree exactly.
 | # | Row(s) | Cause | Size | Verdict |
 |---|---|---|---|---|
 | 8.1 | Interaction | bolt vs system `Ptu_allow` in `Rt` | R 0.28 vs 0.32 | DECISION — tool right, no change |
-| 8.2 | Tension-Ultimate, Tension-Yield | insert pull-out allowable | +4.0% / +4.1% | DOCUMENTED CONSERVATISM |
+| 8.2 | Tension-Ultimate, Tension-Yield | insert pull-out allowable | +4.0% / +4.1% | CLOSED — designed conservatism vs a catalogue rating |
 | 8.3 | Shear-Ultimate (and `Rs`) | bolt `Fsu` library value | +1.07% | OPEN — data provenance |
 | 8.4 | Separation, Slip | — | 0.00% | AGREE EXACTLY |
 
@@ -797,10 +830,19 @@ The resulting form was checked against 27 sizes x 5 length classes of
 manufacturer pull-out data and sits **1.6%-10.4% below every point**. 4.1% is
 inside that band.
 
-**Outstanding:** confirm the spreadsheet's 3,796.5 is a catalogue/manufacturer
-rated value rather than a computed one. If it is, this closes as
-"tool deliberately conservative against the manufacturer curve" and needs no
-change. NOT YET CONFIRMED.
+**CONFIRMED 2026-09-09, and this closes.** The spreadsheet carries **no shear
+area at all** — only a flat ultimate pull-out load of 3,796.5 lbf, a catalogue
+value. So the two are not two computations of the same thing: one is a
+manufacturer rating, the other is this tool deriving its own number from
+geometry, by a form built to sit below exactly that kind of rating. 4.1% is
+inside the 1.6%-10.4% band. **Working as designed; no change.**
+
+**What it exposes, though, is a gap worth deciding on (see §7.3).** The tool has
+nowhere to PUT a manufacturer's rated pull-out load. `ShearEngagementArea` takes
+an area, and `RatedUltimateLoad` on an insert is the internal-thread allowable —
+`model.ThreadedMember` says so explicitly, "NOT pull-out". A catalogue pull-out
+value can therefore only enter by being back-solved into an area, which launders
+a rated load as geometry and destroys its provenance. Do not do that.
 
 ### 8.3 Shear-Ultimate: the bolt `Fsu` in the library — OPEN
 
