@@ -75,7 +75,8 @@ classdef tBearing < matlab.unittest.TestCase
                 FlangeStack=model.FlangeLayer(Material=fm, Thickness=0.25));
             lc = model.LoadCase(Name="shear", ...
                 BoltTensileLimitLoad=0, BoltShearLimitLoad=603);
-            r = engine.marginBearing(j, lc, model.Factors());
+            fac = model.Factors();
+            r = engine.marginBearing(j, lc, fac);
 
             % The margin itself is unchanged - ultimate still governs.
             testCase.verifyEqual(r.MS, 3.313, "AbsTol", 0.01, ...
@@ -86,7 +87,17 @@ classdef tBearing < matlab.unittest.TestCase
             testCase.verifySubstring(r.Detail, "YIELD criterion not assessed");
             testCase.verifySubstring(r.Detail, "Fbry unset");
             testCase.verifySubstring(r.Detail, "OPTIMISTIC");
-            testCase.verifySubstring(r.Detail, "0.893");   % FFY*FSY/(FFU*FSU)
+
+            % The threshold is DERIVED FROM THE FACTORS IN USE, not a
+            % literal. Hardcoding one is what broke this test first time
+            % round: FFY defaults to 1.0 while FFU defaults to 1.15, so the
+            % ratio is 0.776 at model defaults and 0.893 on a joint that
+            % sets FFY = FFU = 1.15. A number pinned here would also rot
+            % silently the next time a default moves.
+            thr = (fac.FFY * fac.FSY) / (fac.FFU * fac.FSU);
+            testCase.verifySubstring(r.Detail, sprintf('%.3f', thr));
+            testCase.verifyEqual(thr, 0.776, "AbsTol", 0.001, ...
+                'Guards the default factor pair itself, in one place.');
         end
 
         function bearingStaysSilentWhenBothCriteriaRan(testCase)

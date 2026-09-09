@@ -888,13 +888,20 @@ about it while `Method` promised "both criteria".
 **When it matters.** The two criteria divide the same `Fbr*Abr` product by
 different factor pairs, so yield governs exactly when
 
-    Fbry/Fbru < (FFY*FSY)/(FFU*FSU)      = 0.893 at the default factors
+    Fbry/Fbru < (FFY*FSY)/(FFU*FSU)
+
+THE THRESHOLD IS NOT A CONSTANT — it moves with the factor set, and by more
+than is comfortable. `model.Factors` defaults `FFY = 1.0` against `FFU = 1.15`,
+giving **0.776**; the joint examined runs `FFY = FFU = 1.15`, giving **0.893**.
+So the same material can sit either side of it depending only on the fitting
+factors, which is why `Detail` prints the value in force rather than a literal.
 
 The joint examined back-solves to `Fbry` ~ 65,300 against `Fbru` = 67,000, a
-ratio of **0.975** — ultimate governs, the tool's +3.31 is correct, and that is
-precisely why this was invisible. On a material whose ratio falls below 0.893
-the tool would report the **higher** ultimate margin with nothing indicating a
-criterion was missing: silently optimistic.
+ratio of **0.975** — above the 0.893 in force there, so ultimate governs, the
+tool's +3.31 is correct, and that is precisely why this was invisible. On a
+material whose ratio falls below the threshold the tool would report the
+**higher** ultimate margin with nothing indicating a criterion was missing:
+silently optimistic.
 
 **Fixed (disclosure only).** `Detail` now names every layer/criterion that could
 not be formed and, for a missing `Fbry`, prints the threshold above. No margin
