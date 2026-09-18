@@ -534,7 +534,9 @@ classdef JointConfigPage < gui2.Page
             r = r + 1;
             w.Material = obj.addDropdown(b, r, 'Washer material', ...
                 obj.libraryItems('washerMaterial'), ...
-                'Washer material. Carried for completeness; washers are rigid in the engine.');
+                ['Washer material. Required when the washer is present: its ' ...
+                 'CTE enters the thermal preload term (TM-106943 Eq. 10). ' ...
+                 'Rigid in the frustum stiffness, so it does not affect Kc.']);
 
             r = r + 1;
             w.OD = obj.addLabelledText(b, r, 'Outer diameter (in)', ...
@@ -2134,6 +2136,18 @@ classdef JointConfigPage < gui2.Page
                     if isnan(obj.parsePositive(obj.FlangeEdge{i}))
                         missing(end + 1) = sprintf("Flange layer %d edge distance", i); %#ok<AGROW>
                     end
+                end
+            end
+
+            % A present washer sits in the clamped stack, so its CTE enters
+            % the thermal term; a blank material has none and engine.preload
+            % refuses as soon as there is a temperature excursion.
+            groups = {obj.HeadWasher, obj.NutWasher};
+            labels = ["Head washer material", "Nut washer material"];
+            for k = 1:2
+                g = groups{k};
+                if g.Present.Value && strlength(obj.selectedKey(g.Material)) == 0
+                    missing(end + 1) = labels(k); %#ok<AGROW>
                 end
             end
 

@@ -957,6 +957,24 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
                 contains(string(p.requiredLabel().Text), "Flange layer 1 material"));
         end
 
+        function aWasherMaterialIsRequiredOnlyWhileTheWasherIsPresent(testCase)
+            % A present washer is in the clamped stack, so its CTE enters
+            % the thermal term; left blank, engine.preload refuses with
+            % missingCTE the moment there is a temperature excursion.
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.verifyFalse( ...
+                contains(string(p.requiredLabel().Text), "Head washer material"));
+            testCase.press(h.Present);
+            testCase.verifyTrue( ...
+                contains(string(p.requiredLabel().Text), "Head washer material"));
+            mats = testCase.App.State.Library.materialKeys(Role = "washer");
+            testCase.assumeNotEmpty(mats);
+            testCase.choose(h.Material, char(mats(1)));
+            testCase.verifyFalse( ...
+                contains(string(p.requiredLabel().Text), "Head washer material"));
+        end
+
         function analyzeEnablesOnceTheFormIsComplete(testCase)
             % "Complete" now means what the ENGINE needs, not just the
             % hardware: a clamped layer, a preload and an applied load are

@@ -492,6 +492,14 @@ classdef tStiffness < matlab.unittest.TestCase
             testCase.verifyError(@() engine.preload(j), ...
                 "engine:preload:missingCTE");
 
+            % The message has to name the part the analyst would look for,
+            % not just a thickness that reads like any flange.
+            try
+                engine.preload(j);
+            catch err
+                testCase.verifySubstring(err.message, "washer (no material selected");
+            end
+
             % No excursion -> no thermal term -> no CTE needed, so the same
             % under-specified joint must still run. The guard has to sit
             % behind the excursion check, not in front of it.

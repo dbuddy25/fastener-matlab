@@ -205,10 +205,19 @@ else
         % clamp load, and expands with its own CTE.
         tMem   = [joint.FlangeStack.Thickness];
         cteMem = arrayfun(@(fl) fl.Material.CTE, joint.FlangeStack);
-        for w = [joint.HeadWasher, joint.NutWasher]
+        partMem = strings(1, numel(tMem));
+        for k = 1:numel(joint.FlangeStack)
+            partMem(k) = partLabel(sprintf("flange layer %d", k), ...
+                joint.FlangeStack(k).Name, joint.FlangeStack(k).Material, tMem(k));
+        end
+        washers = [joint.HeadWasher, joint.NutWasher];
+        washerNames = ["head washer", "nut washer"];
+        for k = 1:2
+            w = washers(k);
             if w.Thickness > 0
-                tMem(end+1)   = w.Thickness;   %#ok<AGROW>
-                cteMem(end+1) = w.Material.CTE; %#ok<AGROW>
+                tMem(end+1)    = w.Thickness;    %#ok<AGROW>
+                cteMem(end+1)  = w.Material.CTE; %#ok<AGROW>
+                partMem(end+1) = partLabel(washerNames(k), "", w.Material, w.Thickness); %#ok<AGROW>
             end
         end
         alphaB = joint.BoltMaterial.CTE;         % bolt CTE, 1/°C
@@ -224,7 +233,7 @@ else
         % reach Pth and then vanish anyway, because max([NaN NaN 0]) is 0
         % in MATLAB — the same silent failure by a quieter route. Refuse
         % instead, naming what to fix.
-        requireCTE(joint, tMem, cteMem, alphaB);
+        requireCTE(joint, partMem, cteMem, alphaB);
 
         alphaJ = sum(tMem .* cteMem) / sum(tMem);
         % NASA TM-106943 (Chambers) Eq. 10 — Pth = (Kb·Kc/(Kb+Kc))·L·ΔT·(αj − αb)
@@ -259,7 +268,7 @@ p = struct( ...
 end
 
 % ---- Local helpers --------------------------------------------------------
-function requireCTE(joint, tMem, cteMem, alphaB)
+function requireCTE(joint, partMem, cteMem, alphaB)
 %REQUIRECTE  Refuse a thermal calculation that is missing a coefficient.
 %   NASA-STD-5020B Table 1 (p22) defines P_dt as the change of preload with
 %   temperature, and TFSR 5 (§4.3.1, p21) REQUIRES max/min preload to
@@ -283,7 +292,7 @@ if isnan(alphaB)
 end
 for k = 1:numel(cteMem)
     if isnan(cteMem(k))
-        missing(end+1) = string(sprintf("a clamped member of %.4g in thickness", tMem(k))); %#ok<AGROW>
+        missing(end+1) = partMem(k); %#ok<AGROW>
     end
 end
 if isempty(missing)
@@ -297,4 +306,21 @@ error("engine:preload:missingCTE", ...
     "supply the preload change directly. Washers count: they sit in the " + ...
     "clamped stack and expand even though the frustum model treats them " + ...
     "as rigid.", strjoin(missing, "; "));
+end
+
+function s = partLabel(role, name, mat, t)
+%PARTLABEL  e.g. flange layer 2 ("Bracket", material "Al 6061-T6", 0.25 in).
+%   Names the part the analyst would look for on the form. A material with
+%   no Name is one nobody picked, and saying so is the likeliest fix.
+bits = strings(1, 0);
+if strlength(name) > 0
+    bits(end+1) = """" + name + """";
+end
+if strlength(mat.Name) > 0
+    bits(end+1) = "material """ + mat.Name + """";
+else
+    bits(end+1) = "no material selected";
+end
+bits(end+1) = string(sprintf("%.4g in", t));
+s = role + " (" + strjoin(bits, ", ") + ")";
 end
