@@ -193,25 +193,20 @@ function T = boltSizingSweep(bolts, material, PtL, PsL, factors, shearPlane, opt
 %   engine.marginInteraction, which "deliberately uses the BOLT's own
 %   allowable, not the system minimum" (see that function's header).
 %
-%   ⚠️ Tension-YIELD IS A KNOWN, ACCEPTED DIVERGENCE — no longer a mirror.
-%   MS_TensionYield below stays bolt-only (At*Fty, NASA-STD-5020B Eq. 18),
-%   but engine.marginTensionYield now takes Pty_allow from
-%   engine.systemTensileYieldAllowable — the §4.4.2 system minimum over the
-%   bolt AND the internally threaded part, which is the quantity p30 names
-%   when it introduces Eq. 17. So this screen can Pass a size on yield that
-%   a full engine.analyze run then fails on a nut/insert-governed
-%   Pty_allow, exactly the trap the Tension-ULTIMATE path above was
-%   reworked to close.
+%   Tension-YIELD TAKES THE SYSTEM MINIMUM TOO (closed 2026-09-18).
+%   With a member resolved for the row, MS_TensionYield uses
+%   engine.systemTensileYieldAllowable — the NASA-STD-5020B §4.4.2 minimum
+%   over the bolt AND the internally threaded part, the same function
+%   engine.marginTensionYield asks — and TensionYieldBasis says which
+%   governed. It stays bolt-only (At*Fty, Eq. 18), and says so, when no
+%   context is supplied, no member resolves, or the member has no yield
+%   mode (a RATING carries no yield information; yield needs area + Fsy).
+%   Until this was closed the screen could Pass a size on yield that a
+%   full engine.analyze run then failed; it was closed when gui2 gained a
+%   Bolt Sizing page, the first caller that made it matter.
 %
-%   IT IS LEFT DIVERGENT ON PURPOSE, not overlooked. Closing it means
-%   resolving each candidate size's member and calling the yield system
-%   allowable per row, the same rework Tension-Ultimate got; this screen is
-%   not exposed in gui2 (GUI2_SPEC §3 dropped the page), so the divergence
-%   gates nothing today, and the decision was to leave the tool alone until
-%   there is a caller that needs it. Anyone adding one must close this
-%   first. TOOL_DIFFERENCES.md carries the same record.
-%
-%   Pty_allow/MS_TensionYield (always bolt-only, unaffected by threaded-
+%   Pty_allow/MS_TensionYield (bolt-only value; see above for the system basis;
+%   the bolt-only number itself is unaffected by threaded-
 %   member context):
 %       Ptu_allow(bolt-only) = At * Ftu            (DERIVED CONVENTION, not
 %                                                   a numbered 5020B equation
@@ -457,6 +452,7 @@ NominalDiameter = zeros(n, 1);
 At              = zeros(n, 1);
 MS_TensionUlt   = zeros(n, 1);
 TensionUltBasis = strings(n, 1);
+TensionYieldBasis = strings(n, 1);
 MS_TensionYield = zeros(n, 1);
 MS_Shear        = zeros(n, 1);
 Status          = strings(n, 1);
@@ -494,15 +490,12 @@ for i = 1:n
     PtuAllowBoltOnly = b.TensileStressArea * Ftu;
     % Pty_allow = At * Fty -- NASA-STD-5020B Eq. 18, Pty_allow =
     % (Fty/Ftu)*Ptu_allow, reduces to At*Fty because Ptu_allow(bolt-only)
-    % above is itself At*Ftu (boltTensileAllowable). BOLT-ONLY, and that is
-    % now a DIVERGENCE from engine.marginTensionYield rather than a mirror
-    % of it: that function takes Pty_allow from
-    % engine.systemTensileYieldAllowable (the §4.4.2 minimum over the bolt
-    % and the internally threaded part). See the ⚠️ paragraph in this
-    % file's header for why the divergence is accepted and what closing it
-    % would take -- do not "fix" this line in isolation, the fix is the
-    % per-row member resolution the Tension-Ultimate path already does.
-    PtyAllow = b.TensileStressArea * Fty;
+    % above is itself At*Ftu (boltTensileAllowable). This is the BOLT-ONLY
+    % value: the row uses it when no threaded member is resolved or the
+    % member's yield mode cannot be assessed, and otherwise takes the
+    % NASA-STD-5020B §4.4.2 system minimum below, exactly as
+    % engine.marginTensionYield does (divergence closed 2026-09-18).
+    PtyAllowBoltOnly = b.TensileStressArea * Fty;
 
     % ---- Resolve a threaded member for THIS bolt size (if requested) -----
     resolvedMember = model.ThreadedMember.empty(1, 0);
@@ -557,8 +550,14 @@ for i = 1:n
     end
 
     % ---- Tension-ultimate allowable: bolt-only vs. system minimum --------
+    PtyAllowRow = PtyAllowBoltOnly;
     if isempty(resolvedMember)
         PtuAllowRow = PtuAllowBoltOnly;
+        if contextGiven
+            TensionYieldBasis(i) = "Bolt-only (" + unresolvedReason + ")";
+        else
+            TensionYieldBasis(i) = "Bolt-only (no threaded-member context supplied)";
+        end
         if contextGiven
             % Context WAS supplied but this row's member could not be
             % resolved (e.g. the family tops out below this thread size) --
@@ -605,13 +604,32 @@ for i = 1:n
             PtuAllowRow = sys.PtuAllow;
             TensionUltBasis(i) = "System (" + sys.GoverningMode + " governs)";
         end
+
+        % ---- Tension-yield allowable: the same question, at yield --------
+        % NASA-STD-5020B §4.4.2 — Pty_allow = min over the fastening
+        % system's tensile yield modes, from the SAME function
+        % engine.marginTensionYield asks. A RATED member has no yield mode
+        % (a rating carries no yield information), so a rated nut with no
+        % usable area leaves the bolt value standing — and says so.
+        sysY = engine.systemTensileYieldAllowable(tmpJoint);
+        memberY = sysY.Modes(2);   % bolt yield, then the internal-thread member
+        if isnan(sysY.PtyAllow)
+            PtyAllowRow = NaN;
+            TensionYieldBasis(i) = "NotEvaluated (" + sysY.Note + ")";
+        elseif ~memberY.Assessed
+            TensionYieldBasis(i) = "Bolt-only (" + memberY.Name + " not assessed: " + memberY.Note + ")";
+        else
+            PtyAllowRow = sysY.PtyAllow;
+            TensionYieldBasis(i) = "System (" + sysY.GoverningMode + " governs)";
+        end
     end
 
     % NASA-STD-5020B Eq. 6 -- MS = Ptu_allow / Ptu - 1 (Ptu_allow per the
     % basis just resolved above: bolt-only, or the system minimum).
     MS_TensionUlt(i)   = PtuAllowRow / Ptu - 1;
-    % NASA-STD-5020B Eq. 15 -- MS = Pty_allow / Pty - 1 (ALWAYS bolt-only).
-    MS_TensionYield(i) = PtyAllow / Pty - 1;
+    % NASA-STD-5020B Eq. 15 -- MS = Pty_allow / Pty - 1 (Pty_allow per the
+    % basis just resolved above: bolt-only, or the §4.4.2 system minimum).
+    MS_TensionYield(i) = PtyAllowRow / Pty - 1;
 
     % ---- Shear: mirrors engine.marginShearUlt's area-by-shear-plane choice
     switch shearPlane
@@ -669,8 +687,9 @@ for i = 1:n
     % this gate and then fail the real interaction check once a moment is
     % supplied -- so the screen is optimistic on exactly the joints
     % Sec 4.4.4 says to worry about (clearance or gapped shear transfer).
-    % Recorded rather than fixed, for the same reason: no caller is exposed
-    % in gui2, and closing it means giving the sweep a moment input.
+    % Recorded rather than fixed: closing it means giving the sweep a
+    % moment input, and no moment is known at sizing time. The gui2 Bolt
+    % Sizing page states this limit in its banner.
     R = Rt^et + Rs^es;
 
     % ---- Status: Pass only when the core margins AND the interaction ----
@@ -708,7 +727,7 @@ for i = 1:n
 end
 
 T = table(ThreadSize, Spec, NominalDiameter, At, MS_TensionUlt, TensionUltBasis, ...
-    MS_TensionYield, MS_Shear, Status, Notes);
+    MS_TensionYield, TensionYieldBasis, MS_Shear, Status, Notes);
 end
 
 % ---- Local helpers ---------------------------------------------------------

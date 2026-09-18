@@ -188,19 +188,23 @@ and avoids inventing a `Pb`-based yield criterion the standard never asks for.
 Printing a yield MS on that row is a separate decision; the allowable already
 exists, only the row is missing.
 
-### 2.4 Bolt Sizing screens yield bolt-only — a KNOWN divergence
-`engine.boltSizingSweep`'s `MS_TensionYield` is `At·Fty` (5020B Eq. 18), bolt-only,
-unconditionally. `engine.marginTensionYield` now takes `Pty-allow` from the §4.4.2
-system minimum. So the screen can Pass a size on yield that a full
-`engine.analyze()` run then fails on a nut- or insert-governed `Pty-allow` —
-exactly the trap the tension-ULTIMATE path of that same function was reworked to
-close (VALIDATION.md, "Bolt Sizing tension-ultimate: bolt-only defect CLOSED").
+### 2.4 Bolt Sizing yield now takes the system minimum — CLOSED 2026-09-18
+`engine.boltSizingSweep`'s `MS_TensionYield` used to be `At·Fty` (5020B Eq. 18),
+bolt-only, unconditionally, while `engine.marginTensionYield` takes `Pty-allow`
+from the §4.4.2 system minimum. The screen could therefore Pass a size on yield
+that a full `engine.analyze()` run then failed on a nut- or insert-governed
+`Pty-allow`. It was left that way on purpose while nothing called the sweep, with
+the rule that anyone adding a caller must close it first.
 
-Left divergent on purpose, not overlooked. Closing it means resolving each
-candidate size's own member and calling the yield system allowable per row — the
-same rework tension-ultimate got. The screen is not exposed in gui2 (`GUI2_SPEC`
-§3 dropped the page), so the divergence gates nothing today. **Anyone adding a
-caller must close this first.**
+The gui2 Bolt Sizing page is that caller, so it is closed: with a member resolved
+for the row the sweep asks `engine.systemTensileYieldAllowable`, the same function
+the margin asks, and a new `TensionYieldBasis` column says which mode governed.
+It stays bolt-only — and says so — with no context, no matching member, or a
+member with no yield mode (a rating carries no yield information).
+
+**Still open, and stated on the page:** the interaction gate has no bending term
+(`Rb`), because no moment is known at sizing time, so the screen is optimistic
+for clearance-fit or gapped shear joints. Closing it means a moment input.
 
 ---
 

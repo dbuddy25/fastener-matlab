@@ -461,10 +461,12 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %     have reported for this exact bolt/load pair)
             %   Pty = FSY*FFY*PtL = 1.25*1.0*3,000             = 3,750 lbf
             %   PtyAllowBolt = At*Fty = 0.03637*120,000         = 4,364.4 lbf
-            %   MS_TensionYield (ALWAYS bolt-only in this SCREEN -- an
-            %     accepted divergence from marginTensionYield, which now
-            %     uses the §4.4.2 system minimum; see boltSizingSweep's
-            %     header) = 4,364.4/3,750 - 1                  = +0.163840
+            %   Nut yield = As*Fsy = 0.11703030*69,282         = 8,108.09 lbf
+            %     (a rating carries no yield information; yield is area-based)
+            %   System Pty_allow = min(bolt 4,364.4, nut 8,108.09) = 4,364.4
+            %     -- the BOLT governs yield even though the nut governs
+            %     ultimate.
+            %   MS_TensionYield = 4,364.4/3,750 - 1            = +0.163840
             %   MinorArea = pi/4*0.2036^2                       = 0.03255708 in^2
             %   Psu = FSU*FFU*PsL = 1.4*1.15*300                = 483 lbf
             %   PsuAllow = 93,400*0.03255708                    = 3,040.831 lbf
@@ -495,6 +497,8 @@ classdef tBoltSizing < matlab.unittest.TestCase
 
             testCase.verifyEqual(T.MS_TensionUlt, -0.051760, "AbsTol", 1e-5);
             testCase.verifyEqual(T.MS_TensionYield, 0.163840, "AbsTol", 1e-5);
+            testCase.verifyTrue(contains(T.TensionYieldBasis, "System"));
+            testCase.verifyTrue(contains(T.TensionYieldBasis, "bolt yield"));
             testCase.verifyEqual(T.MS_Shear, 5.295717, "AbsTol", 1e-5);
             testCase.verifyTrue(contains(T.TensionUltBasis, "System"));
             testCase.verifyTrue(contains(T.TensionUltBasis, "nut thread shear"));
@@ -612,6 +616,52 @@ classdef tBoltSizing < matlab.unittest.TestCase
             % Not equal -- the whole point: one ratio, two different
             % Le/As/Pult, each scaled by that row's OWN NominalDiameter.
             testCase.verifyNotEqual(T.MS_TensionUlt(1), T.MS_TensionUlt(2));
+        end
+
+        function memberGovernedYieldLowersTheYieldMargin(testCase)
+            % Tension-YIELD takes the NASA-STD-5020B §4.4.2 system minimum,
+            % like engine.marginTensionYield. Until 2026-09-18 it was
+            % bolt-only, so this screen could Pass a size on yield that the
+            % full analysis then failed.
+            %
+            % HAND-DERIVED. Same fixture as
+            % engagementRatioResolvesPerRowNominalDiameter, with a parent
+            % Fsy = 12,000 psi added so the tapped hole HAS a yield mode:
+            %   #10-24: As = 0.75*pi*0.1629*0.285 = 0.1093899 in^2
+            %           member yield = As*Fsy       = 1,312.678 lbf
+            %           bolt yield   = At*Fty = 0.01753*120,000 = 2,103.6 lbf
+            %   1/4-28: As = 0.75*pi*0.2268*0.375 = 0.2003943 in^2
+            %           member yield = As*Fsy       = 2,404.732 lbf
+            %           bolt yield   = 0.03637*120,000          = 4,364.4 lbf
+            %   The member governs on both rows.
+            %   Pty = FSY*FFY*PtL = 1.25*1.0*500 = 625 lbf
+            %   MS_TensionYield: 1,312.678/625 - 1 = 1.100285
+            %                    2,404.732/625 - 1 = 2.847571
+            %   (bolt-only would have been 2.365760 and 5.983040)
+            lib = data.Library.load();
+            b1  = lib.bolt("NAS1352 #10-24");
+            b2  = lib.bolt("NAS1351 1/4-28");
+            m   = lib.material("A286");
+            tm = model.ThreadedMember( ...
+                Type = model.ThreadedMemberType.TappedHole, ...
+                Material = model.Material(Fsu = 20000, Fsy = 12000), ...
+                EngagementRatio = 1.5);
+
+            T = engine.boltSizingSweep([b1, b2], m, 500, 100, model.Factors(), ...
+                model.ShearPlaneCondition.ThreadsInShear, ThreadedMember = tm);
+
+            testCase.verifyEqual(T.MS_TensionYield(1), 1.100285, "AbsTol", 1e-5);
+            testCase.verifyEqual(T.MS_TensionYield(2), 2.847571, "AbsTol", 1e-5);
+            testCase.verifyTrue(all(contains(T.TensionYieldBasis, "System")));
+            testCase.verifyTrue(all(contains(T.TensionYieldBasis, "tapped-hole parent thread")));
+
+            % No Fsy and no Fty on the parent: the member has no yield mode,
+            % the bolt value stands, and the basis column says why.
+            tm.Material = model.Material(Fsu = 20000);
+            T2 = engine.boltSizingSweep(b1, m, 500, 100, model.Factors(), ...
+                model.ShearPlaneCondition.ThreadsInShear, ThreadedMember = tm);
+            testCase.verifyEqual(T2.MS_TensionYield, 2103.6/625 - 1, "AbsTol", 1e-6);
+            testCase.verifyTrue(contains(T2.TensionYieldBasis, "Bolt-only"));
         end
 
         function insertStiPitchDiameterResolvesPerRow(testCase)
