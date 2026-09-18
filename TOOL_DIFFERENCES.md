@@ -723,6 +723,16 @@ is a trap if the rating and the modelled parent ever disagree.
 `RatedUltimateLoad` — plus a precedence rule stated the way the nut path states
 its own, and the derived value kept visible for comparison.
 
+### 7.7 Eq. 84's eccentric-load disqualifier is not enforced — OPEN
+
+5020B's joint-slip Eq. 84 says that for an eccentric shear load *"these
+equations cannot be used"*. That is a disqualifier, not a modelling
+approximation, yet the engine applies Eq. 84 regardless. Bulk mode has per-bolt
+FE forces, so it could detect a net moment about the pattern centroid and
+refuse joint-mode slip, the same way the existing `nf` guard already refuses it
+(§3.1). Not built. Until it is, an eccentric pattern gets an Eq. 84 slip margin
+the standard says it should not have.
+
 ---
 
 ## 8. Differences from the legacy spreadsheet
@@ -747,7 +757,7 @@ reduced to three causes**, and two whole rows agree exactly.
 | # | Row(s) | Cause | Size | Verdict |
 |---|---|---|---|---|
 | 8.1 | Interaction | bolt vs system `Ptu_allow` in `Rt` | R 0.28 vs 0.32 | DECISION — tool right, no change |
-| 8.2 | Tension-Ultimate, Tension-Yield | insert pull-out allowable | +4.0% / +4.1% | CLOSED — designed conservatism vs a catalogue rating |
+| 8.2 | Tension-Ultimate, Tension-Yield | insert pull-out allowable | +4.0% / +4.1% | **REOPENED** — slope/intercept vs computed area; gap exceeds §1.5's stated spread |
 | 8.3 | Shear-Ultimate (and `Rs`) | bolt `Fsu` library value | +1.07% | OPEN — data provenance |
 | 8.4 | Separation, Slip | — | 0.00% | AGREE EXACTLY |
 
@@ -843,6 +853,20 @@ an area, and `RatedUltimateLoad` on an insert is the internal-thread allowable �
 `model.ThreadedMember` says so explicitly, "NOT pull-out". A catalogue pull-out
 value can therefore only enter by being back-solved into an area, which launders
 a rated load as geometry and destroys its provenance. Do not do that.
+
+**REOPENED — the "closes" above rests on a wrong reading.** The 3,796.5 lbf is
+not a flat catalogue rating: it is **parent pull-out computed by the Heli-Coil
+68-2 slope/intercept method**, `P = m*Fsu_parent + b` — the same failure mode as
+the tool's row, by the form §1.5 deliberately rejected. §1.5 predicts the two
+forms differ by "roughly 1-2%, in either direction"; observed is **4.1%**. §1.5
+bounds only the INTERCEPT (~2.2% at 30 ksi); it never bounds slope `m` against
+computed area `As`, which are independent quantities.
+
+**Next action — one number:** the spreadsheet's parent `Fsu` for Al 6061-T6
+(tool: 27,000 psi). If it differs, part of the 4.1% is materials data. If it
+matches, §1.5's stated spread is understated and §1.5 needs correcting. `m` and
+`b` would close it outright — keep the 68-2 values themselves out of the repo
+(vendor document).
 
 ### 8.3 Shear-Ultimate: the bolt `Fsu` in the library — OPEN
 
@@ -957,6 +981,10 @@ carries the caveat, which is the honest state.
 **Also noted:** the spreadsheet computes **no shear tear-out at all**, so the
 tool's +3.37 has no counterpart to reconcile. A coverage difference in the
 tool's favour, nothing to fix.
+
+**OPEN — the ultimate comparison was never made.** Only the spreadsheet's
+bearing YIELD margin (+3.71) has been supplied. Its bearing ULTIMATE margin is
+needed to reconcile against the tool's +3.31.
 
 ### 8.4 What agrees exactly, and why that matters
 
