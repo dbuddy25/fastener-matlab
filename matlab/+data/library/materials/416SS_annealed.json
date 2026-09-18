@@ -1,0 +1,16 @@
+{
+  "key": "416SS annealed",
+  "ftu": 75000,
+  "fty": 29000,
+  "fsu": 43301,
+  "fsy": 16743,
+  "fbru": 43301,
+  "e": 27000000.0,
+  "roles": [
+    "bolt",
+    "washer"
+  ],
+  "source": "Seed material property table; values used as given. Fsy in the source table is derived as Fty/sqrt(3) (von Mises) -- carried through here. NO CTE in the source table: cte is unset, so the thermal-preload path (TFSR 5) cannot run for this entry until a coefficient is supplied. No Fbry either, so the bearing YIELD criterion reports NotEvaluated. Annealed; Fbru equals Fsu in the source table CTE 9.9e-06 1/degC is a REPRESENTATIVE HANDBOOK VALUE, not from the seed table (which has no CTE column) -- replace with a program allowable. Thermal-preload margins (TFSR 5) computed from it are traceable to this placeholder.",
+  "origin": "baseline",
+  "cte": 9.9e-06
+}

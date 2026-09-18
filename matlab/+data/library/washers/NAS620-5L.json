@@ -1,0 +1,13 @@
+{
+  "key": "NAS620-5L",
+  "spec": "NAS620",
+  "name": "Reduced OD",
+  "sizeCode": "5L",
+  "thread": "NO.5",
+  "nominalDiameter": 0.125,
+  "innerDiameter": 0.128,
+  "outerDiameter": 0.238,
+  "thickness": 0.016,
+  "source": "NAS620 \"WASHER, FLAT, REDUCED OUTSIDE DIAMETER\", Table I, Rev 8 (2013-12-20), size code 5L. innerDiameter = dia A MIN (+.010/-.000), outerDiameter = dia D MAX (+.015/-.005), thickness = T. Size code ends 'L' -- note /a/ on the sheet -- the light series: same diameters as the same-number non-light entry, thinner. Part number: NAS620-5L is the bare/plain steel, cadmium-plated form seeded here; a material letter inserts before the size code with no hyphen for a non-steel washer (A aluminum, B brass, C corrosion-resistant steel, N wear/galling-resistant CRES) -- e.g. NAS620C10 -- material is chosen separately in the GUI's washer-material dropdown, not carried in this key. NAS620 covers #0 through 1/4 only; nothing larger exists in this standard.",
+  "origin": "baseline"
+}

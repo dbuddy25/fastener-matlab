@@ -1,0 +1,14 @@
+{
+  "key": "NASM21042-04",
+  "spec": "NASM21042",
+  "name": "reduced hex, ring base, steel",
+  "thread": "#4-40 UNJC",
+  "nominalDiameter": 0.112,
+  "tpi": 40,
+  "height": 0.125,
+  "bearingDiameter": 0.176,
+  "material": "Steel",
+  "ratedUltimateLoad": 1110,
+  "source": "NASM21042 'NUT, SELF-LOCKING, 450 F, REDUCED HEXAGON, REDUCED HEIGHT, RING BASE, NON-CORROSION RESISTANT STEEL', Table I, Rev 4 (2026-06-30), dash 04, procurement spec NASM25027. height = H MAX, bearingDiameter = OB MIN, ratedUltimateLoad = AXIAL STRENGTH LBF MIN (160 ksi steel basis). ESSENTIAL USAGE ADVISORY (spec sheet 2): susceptible to hydrogen assisted cracking (embrittlement / stress corrosion cracking); per NASM33588 -- cited by NASA-STD-5020B Appendix B.4.2.1d -- these nuts 'shall not be used ... where loss of the bolt would affect safety of flight.' material=\"Steel\" is a stand-in for the spec's non-corrosion-resistant alloy steel, chosen deliberately: the library's \"Steel\" entry (150 ksi Ftu / 86603 psi Fsu, Fsy=Fty/sqrt3) is the only non-CRES steel material in the library and understates this spec's 160 ksi basis, so using it for the computed thread-shear check is CONSERVATIVE (lower allowable), not unconservative. Replace with a matched NASM25027 alloy entry when one is added to the library.",
+  "origin": "baseline"
+}

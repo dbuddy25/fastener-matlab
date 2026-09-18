@@ -1,0 +1,14 @@
+{
+  "key": "NAS1291C9M",
+  "spec": "NAS1291",
+  "name": "low height, light weight",
+  "thread": "9/16-18 UNJF",
+  "nominalDiameter": 0.5625,
+  "tpi": 18,
+  "height": 0.48,
+  "bearingDiameter": 0.874,
+  "material": "A286",
+  "ratedUltimateLoad": 26810,
+  "source": "NAS1291 'NUT, SELF-LOCKING, HEXAGON, LOW HEIGHT, LIGHT WEIGHT', Table I, Rev 16 (2025-03-31), dash 9, A286 CRES 450F finish (key suffix M). height = A MAX, bearingDiameter = OF MIN, ratedUltimateLoad = AXIAL TENSILE STRENGTH LBF MIN / A286 CRES (note /1/: based on 125,000 psi per NASM25027). Rev 16 struck out every steel variant -- the -NN/XNN dash numbers, the entire 160 ksi STEEL strength column, and the steel material/hardness/finish callouts -- so only A286 CRES is seeded here. The A286 450F (C<dash>M), 800F (C<dash>) and 850F (C<dash>J) finish variants share one strength rating; 450F (M) is seeded as canonical. material=\"A286\" (existing library key, 160 ksi Ftu / 93400 psi Fsu MIL-HDBK-5J).",
+  "origin": "baseline"
+}

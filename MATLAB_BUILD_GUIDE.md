@@ -234,13 +234,13 @@ validated packaged release (1.0.0).
 From the `matlab/` folder, with MATLAB Compiler licensed:
 
 ```matlab
-mcc -m fastenerTool.m -a +data/library.json -o FastenerTool -d ../build
+mcc -m fastenerTool.m -a +data/library -o FastenerTool -d ../build
 ```
 
 or the same thing through **APPS → Application Compiler**, with `fastenerTool.m`
-as the main file and `library.json` added as a file required for the app.
+as the main file and the `+data/library` **folder** (one JSON per part) added as files required for the app.
 
-**`library.json` is the one `-a` you must not forget**, and a failed build will
+**The `+data/library` folder is the one `-a` you must not forget**, and a failed build will
 not explain it: it is data rather than code, so dependency analysis never sees
 it — `data.Library.load` builds the path at runtime. Without it the app starts,
 reports that the hardware library failed to load, and disables saving.
@@ -258,7 +258,7 @@ These are the places source and deployed genuinely differ. Each has a known
 answer from source, so a difference is the build talking:
 
 1. **The library loads.** If the title bar or a startup alert says the hardware
-   library failed, `library.json` did not make it into the bundle.
+   library failed, the `+data/library` folder did not make it into the bundle.
 2. **`Help → About`** shows a version. Proves `toolVersion` resolved.
 3. **`Help → User Guide`** builds the PDF (first open only, a few seconds
    behind a progress dialog) and opens it. This exercises Report Generator
@@ -284,7 +284,7 @@ looks like a compiler problem rather than a path problem:
   user who already has a saved library (`LIBRARY_PLAN.md` §3).
 
 **Known and NOT yet done:** `data.Library.defaultPath()` resolves
-`library.json` from `fileparts(mfilename('fullpath'))` with no `isdeployed`
+the `library/` folder from `fileparts(mfilename('fullpath'))` with no `isdeployed`
 branch. It is likely to work — files added with `-a` keep their relative
 position under `ctfroot` — but it is unverified. Rerouting a resolver the
 entire engine depends on was not worth doing blind on a machine that cannot run

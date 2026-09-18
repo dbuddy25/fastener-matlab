@@ -1,0 +1,17 @@
+{
+  "key": "NASM33537-0990-48",
+  "spec": "NASM33537",
+  "name": "helical coil insert, free-running, tanged",
+  "thread": "#3-48 UNC",
+  "nominalDiameter": 0.099,
+  "tpi": 48,
+  "stiPitchDiameterMin": 0.1126,
+  "stiPitchDiameterMax": 0.114,
+  "stiMinorDiameterMin": 0.1036,
+  "stiMinorDiameterMax": 0.1104,
+  "tapMajorDiameterMax": 0.1289,
+  "countersinkDiameterMin": 0.11,
+  "countersinkDiameterMax": 0.14,
+  "source": "Stanley HELI-COIL Wire Insert Systems catalogue HC2000 Rev 12 (2016), Table VII 'INCH TAPPED HOLE DIMENSIONS', p.20, #3-48 row; the same values are printed in NASM33537 Rev 4 (2025-07-31) Table IV 'TAPPED HOLE' block (spot-verified on #10-32 and 1/4-20). stiPitchDiameterMin/Max = Pitch Diameter class 3B Min/Max -- this is the diameter at which the PARENT's internal thread shears, and is larger than the bolt's own pitch diameter. stiMinorDiameterMin/Max = Minor Diameter (after tapping). tapMajorDiameterMax = Tap Major Dia. Max, a TAP dimension rather than the tapped hole's own major diameter. countersinkDiameterMin/Max = 'M' Diameter, 120 deg +/- 5 included angle. THE KEY IS SYNTHETIC: NASM33537 assigns real part numbers in per-length-class blocks (MS122076-122275 free-running coarse, MS124651-124850 free-running fine, MS21209C/F screw-locking), none of them derivable from thread size, so this key is spec + diameter + tpi in the form the reference Python tool used. Insert nominal length is deliberately NOT stored: NASM33537 Sec 6.1 defines it as 1/1.5/2/2.5/3 x nominal diameter, supplied per joint as model.ThreadedMember.EngagementRatio. No strength data is seeded because none is published -- this catalogue defers to Technical Bulletin 68-2 (p.11), and 68-2 presents charts only, with no tabulated loads and no shear engagement area.",
+  "origin": "baseline"
+}

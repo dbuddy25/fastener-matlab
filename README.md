@@ -29,7 +29,7 @@ matlab/
 ├── fastenerTool.m     entry point — prints the version banner and opens the GUI (`+gui2`)
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
 ├── +engine/           analysis math — the core (Phases 2–3); bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook, Step 2c)
-├── +data/             library loader (`data.Library` + `library.json`, Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`, Phase 3.7); factor presets (`factorPreset`/`saveFactorPreset`, Phase 3.7)
+├── +data/             library loader (`data.Library` + `library/` — one JSON per part, plus user drop-in files; Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`, Phase 3.7); factor presets (`factorPreset`/`saveFactorPreset`, Phase 3.7)
 ├── +report/           XLSX export (`report.exportResults`, Phase 3.6); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
 ├── +gui2/             THE GUI (`gui2.launch`, GUI2_SPEC.md) — what `fastenerTool`
 │                      opens. Programmatic uifigure, rail + card over AppState,
@@ -144,7 +144,7 @@ Launch it with `cd matlab; fastenerTool`.
 1. **Phase 5 packaging** — MATLAB Compiler to a standalone Windows `.exe`,
    built by hand on a machine with the toolbox. `MATLAB_BUILD_GUIDE.md`
    Phase 5 carries the `mcc` line, the two files that must be added by hand
-   (`library.json` and `USER_GUIDE.md` — neither is found by dependency
+   (the `+data/library` folder and `USER_GUIDE.md` — neither is found by dependency
    analysis), and the five checks that distinguish a packaging problem from
    a code one.
 2. **UN vs UNJ thread form** — seeded stress areas may be ~8% conservative;

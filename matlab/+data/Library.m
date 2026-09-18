@@ -1,8 +1,14 @@
 classdef Library
-    %LIBRARY  Hardware/material catalog loaded from library.json (Phase 2.2).
+    %LIBRARY  Hardware/material catalog loaded from +data/library/ (Phase 2.2).
+    %   ONE JSON FILE PER PART: library/<category>/<part>.json, with
+    %   library/library.json as the header (schemaVersion, units, and the
+    %   curated per-category key order). Users add parts without touching it
+    %   by dropping JSON files into dropInPath()/<category>/ - loaded as
+    %   origin "dropin": read-only, never saved, and unable to shadow a
+    %   shipped key (see addDropIns; skipped ones land in LoadWarnings).
     %   Serves +model objects by key so joints can be built terse:
     %
-    %       lib = data.Library.load();          % bundled library.json
+    %       lib = data.Library.load();          % bundled +data/library/ folder
     %       b   = lib.bolt("NAS1351 3/8-24");   % -> model.Bolt
     %       m   = lib.material("A286");        % -> model.Material
     %       [L, c] = lib.boltLengths("NAS1351 3/8-24");  % Table III ladder
@@ -100,7 +106,7 @@ classdef Library
     %       user who has already saved a library — their stale copy cannot
     %       silently win forever. save() therefore refuses to overwrite the
     %       bundled seed file itself (id "data:Library:baselinePath"); the
-    %       shipped baseline is curated by editing +data/library.json
+    %       shipped baseline is curated by editing the files under +data/library/
     %       directly.
     %     - load(path) for any path OTHER than the bundled seed MERGES:
     %       it starts from the bundled baseline (header/units included),
@@ -124,6 +130,10 @@ classdef Library
         Path          (1,1) string = ""    % file this library was loaded from
     end
 
+    properties (SetAccess = private)
+        LoadWarnings  (1,:) string = strings(1, 0)  % drop-in files/entries skipped at load, and why
+    end
+
     properties (Access = private)
         Materials cell = {}   % cell of entry structs, in file order
         Bolts     cell = {}
@@ -135,31 +145,52 @@ classdef Library
     end
 
     methods (Static)
-        function obj = load(path)
-            %LOAD  Read a library JSON file. Default: the bundled library.json
-            %   that sits next to this class file (+data/library.json).
-            %   Any OTHER path is treated as a user library: the bundled
-            %   baseline is loaded first and the file's entries are overlaid
-            %   by key (see the class doc for the merge + collision rules).
+        function obj = load(path, opts)
+            %LOAD  Read a library. Default: the bundled baseline FOLDER that
+            %   sits next to this class file (+data/library/ - one JSON file
+            %   per part, see readFolder).
+            %   Any OTHER path is a user library FILE: the bundled baseline
+            %   is loaded first and the file's entries are overlaid by key
+            %   (see the class doc for the merge + collision rules).
             %   Entries without an origin field load as "baseline".
+            %
+            %   DropIn=folder additionally loads user drop-in files from
+            %   folder/<category>/*.json (see addDropIns). Default "" - no
+            %   drop-ins - so a test can never read the real user's folder;
+            %   loadInstalled() is the caller that passes dropInPath().
             arguments
-                path (1,1) string = data.Library.defaultPath()
+                path        (1,1) string = data.Library.defaultPath()
+                opts.DropIn (1,1) string = ""
             end
-            if ~isfile(path)
+            base = data.Library.defaultPath();
+            if isfolder(path)
+                raw = data.Library.readFolder(path);
+            elseif isfile(path)
+                raw = jsondecode(fileread(path));
+                if isfolder(base)
+                    raw = data.Library.mergeRaw(data.Library.readFolder(base), raw);
+                end
+            else
                 error("data:Library:fileNotFound", ...
                     "Library file not found: %s", path);
             end
-            raw = jsondecode(fileread(path));
-            base = data.Library.defaultPath();
-            if ~strcmp(path, base) && isfile(base)
-                raw = data.Library.mergeRaw(jsondecode(fileread(base)), raw);
-            end
             obj = data.Library(raw, path);
+            if strlength(opts.DropIn) > 0 && isfolder(opts.DropIn)
+                obj = obj.addDropIns(opts.DropIn);
+            end
         end
 
         function p = defaultPath()
-            %DEFAULTPATH  The bundled library.json, located next to Library.m.
-            p = string(fullfile(fileparts(mfilename("fullpath")), "library.json"));
+            %DEFAULTPATH  The bundled baseline folder, next to Library.m.
+            p = string(fullfile(fileparts(mfilename("fullpath")), "library"));
+        end
+
+        function p = dropInPath()
+            %DROPINPATH  Where this installation's DROP-IN files live.
+            %   A folder beside userPath()'s file, same userpath/prefdir
+            %   rule: <userpath>/fastener_library/<category>/*.json.
+            [folder, name] = fileparts(data.Library.userPath());
+            p = string(fullfile(folder, name));
         end
 
         function obj = loadInstalled()
@@ -177,10 +208,11 @@ classdef Library
             %   meant a material added and saved in the GUI was not found by
             %   runBulk, and was gone from the GUI itself after a restart.
             p = data.Library.userPath();
+            d = data.Library.dropInPath();
             if isfile(p)
-                obj = data.Library.load(p);
+                obj = data.Library.load(p, DropIn=d);
             else
-                obj = data.Library.load();
+                obj = data.Library.load(DropIn=d);
             end
         end
 
@@ -624,7 +656,7 @@ classdef Library
             %       lib.materialKeys("custom", Role="bolt")
             arguments
                 obj    (1,1) data.Library
-                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom"])} = ""
+                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom" "dropin"])} = ""
                 opts.Role (1,1) string ...
                     {mustBeMember(opts.Role, ["" "bolt" "washer" "flange"])} = ""
             end
@@ -646,7 +678,7 @@ classdef Library
             %   Optional origin filter as in materialKeys.
             arguments
                 obj    (1,1) data.Library
-                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom"])} = ""
+                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom" "dropin"])} = ""
             end
             keys = data.Library.keyList( ...
                 data.Library.filterOrigin(obj.Bolts, origin));
@@ -657,7 +689,7 @@ classdef Library
             %   Optional origin filter as in materialKeys.
             arguments
                 obj    (1,1) data.Library
-                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom"])} = ""
+                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom" "dropin"])} = ""
             end
             keys = data.Library.keyList( ...
                 data.Library.filterOrigin(obj.BoltSpecs, origin));
@@ -668,7 +700,7 @@ classdef Library
             %   Optional origin filter as in materialKeys.
             arguments
                 obj    (1,1) data.Library
-                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom"])} = ""
+                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom" "dropin"])} = ""
             end
             keys = data.Library.keyList( ...
                 data.Library.filterOrigin(obj.Nuts, origin));
@@ -729,7 +761,7 @@ classdef Library
             %   Optional origin filter as in materialKeys.
             arguments
                 obj    (1,1) data.Library
-                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom"])} = ""
+                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom" "dropin"])} = ""
             end
             keys = data.Library.keyList( ...
                 data.Library.filterOrigin(obj.Washers, origin));
@@ -740,7 +772,7 @@ classdef Library
             %   Optional origin filter as in materialKeys.
             arguments
                 obj    (1,1) data.Library
-                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom"])} = ""
+                origin (1,1) string {mustBeMember(origin, ["" "baseline" "custom" "dropin"])} = ""
             end
             keys = data.Library.keyList( ...
                 data.Library.filterOrigin(obj.Inserts, origin));
@@ -1049,7 +1081,7 @@ classdef Library
             %   Refuses to write the bundled seed file itself (id
             %   "data:Library:baselinePath") — writing custom-only content
             %   there would destroy the shipped baseline. Curate the
-            %   baseline by editing +data/library.json directly.
+            %   baseline by editing the files under +data/library/ directly.
             arguments
                 obj  (1,1) data.Library
                 path (1,1) string = obj.Path
@@ -1060,7 +1092,7 @@ classdef Library
             end
             if strcmp(path, data.Library.defaultPath())
                 error("data:Library:baselinePath", ...
-                    "Refusing to overwrite the bundled baseline library (%s): save() writes custom entries only. Save to a user path, or edit +data/library.json directly to curate the baseline.", ...
+                    "Refusing to overwrite the bundled baseline library (%s): save() writes custom entries only. Save to a user path, or edit the files under +data/library/ directly to curate the baseline.", ...
                     path);
             end
             out = obj.Raw;   % passes description/units through
@@ -1082,6 +1114,56 @@ classdef Library
     end
 
     methods (Access = private)
+        function obj = addDropIns(obj, folder)
+            %ADDDROPINS  Load folder/<category>/*.json as origin "dropin".
+            %   Each file holds ONE entry object or an ARRAY of entries, so a
+            %   whole spec can arrive as one file. The folder name is the
+            %   category. Every entry goes through the same add* method the
+            %   GUI uses, so it meets the same rules: required fields, a
+            %   cited source, known bolt/material references, and NO key
+            %   already in the library - a dropped file cannot shadow a
+            %   shipped part's numbers.
+            %
+            %   A BAD DROP-IN NEVER TAKES THE LIBRARY DOWN. The entry is
+            %   skipped and the reason lands in LoadWarnings, which the
+            %   Materials & Hardware page shows. Materials and bolts load
+            %   first so a dropped bolt spec or nut can reference them.
+            cats = ["materials" "bolts" "boltSpecs" "nuts" "washers" "inserts"];
+            for c = cats
+                files = dir(fullfile(folder, c, "*.json"));
+                [~, order] = sort(string({files.name}));
+                for f = files(order)'
+                    file = fullfile(f.folder, f.name);
+                    try
+                        holder = struct();
+                        holder.x = jsondecode(fileread(file));
+                        entries = data.Library.entryList(holder, "x");
+                    catch err
+                        obj.LoadWarnings(end+1) = sprintf( ...
+                            "%s/%s skipped - not valid JSON: %s", c, f.name, err.message);
+                        continue
+                    end
+                    for i = 1:numel(entries)
+                        try
+                            e = entries{i};
+                            e.origin = "dropin";
+                            switch c
+                                case "materials", obj = obj.addMaterial(e);
+                                case "bolts",     obj = obj.addBolt(e);
+                                case "boltSpecs", obj = obj.addBoltSpec(e);
+                                case "nuts",      obj = obj.addNut(e);
+                                case "washers",   obj = obj.addWasher(e);
+                                case "inserts",   obj = obj.addInsert(e);
+                            end
+                        catch err
+                            obj.LoadWarnings(end+1) = sprintf( ...
+                                "%s/%s entry %d skipped: %s", c, f.name, i, err.message);
+                        end
+                    end
+                end
+            end
+        end
+
         function e = findEntry(~, list, key, what)
             %FINDENTRY  Case-sensitive exact key match, or a clear error.
             for i = 1:numel(list)
@@ -1106,6 +1188,65 @@ classdef Library
     end
 
     methods (Static, Access = private)
+        function raw = readFolder(folder)
+            %READFOLDER  Baseline folder -> the raw struct one file used to give.
+            %   folder/library.json is the header (schemaVersion, description,
+            %   units, order); folder/<category>/*.json is ONE ENTRY PER FILE.
+            %   The "key" inside a file is authoritative - the filename is
+            %   cosmetic (keys contain "/" and cannot be filenames).
+            %
+            %   ORDER IS CURATED AND LOAD-BEARING (size order: dropdowns show
+            %   it and engine.boltSizingSweep relies on smallest-first), and a
+            %   directory listing would scramble it, so header.order lists
+            %   the keys per category. Unlisted entries follow, by filename.
+            %
+            %   Cached on the folder listing (names + dates): the GUI tests
+            %   build an app per method and would otherwise re-read ~190
+            %   files each time.
+            persistent cache
+            cats = ["materials" "bolts" "boltSpecs" "nuts" "inserts" "washers"];
+            header = fullfile(folder, "library.json");
+            if ~isfile(header)
+                error("data:Library:fileNotFound", ...
+                    "Library header not found: %s", header);
+            end
+            listing = dir(fullfile(folder, "**", "*.json"));
+            sig = strjoin(string({listing.folder}) + "/" + string({listing.name}) ...
+                + compose("@%.9f:%d", [listing.datenum]', [listing.bytes]')', "|");
+            if ~isempty(cache) && cache.sig == sig
+                raw = cache.raw;
+                return
+            end
+            raw = jsondecode(fileread(header));
+            for c = cats
+                files = dir(fullfile(folder, c, "*.json"));
+                [~, byName] = sort(string({files.name}));
+                files = files(byName);
+                list = cell(1, numel(files));
+                for i = 1:numel(files)
+                    list{i} = jsondecode(fileread( ...
+                        fullfile(files(i).folder, files(i).name)));
+                end
+                keys = data.Library.keyList(list);
+                if numel(unique(keys)) ~= numel(keys)
+                    error("data:Library:duplicateKey", ...
+                        "Two files under %s carry the same key.", fullfile(folder, c));
+                end
+                want = strings(1, 0);
+                if isfield(raw, "order") && isfield(raw.order, c)
+                    want = reshape(string(raw.order.(c)), 1, []);
+                end
+                [listed, pos] = ismember(keys, want);
+                [~, byOrder] = sort(pos(listed));
+                idxListed = find(listed);
+                raw.(c) = [list(idxListed(byOrder)), list(~listed)];
+            end
+            if isfield(raw, "order")
+                raw = rmfield(raw, "order");   % layout detail; keep it out of Raw/save()
+            end
+            cache = struct("sig", sig, "raw", raw);
+        end
+
         function list = entryList(raw, fieldName)
             %ENTRYLIST  Normalize a decoded JSON array to a cell of structs.
             %   jsondecode yields a struct array when every element has the
@@ -1186,7 +1327,9 @@ classdef Library
             %   the citation, then the provenance stamp.
             entry = data.Library.applyOrigin(entry, what);
             data.Library.requireSource(entry, what);
-            entry = data.Library.stampProvenance(entry);
+            if entry.origin ~= "dropin"   % a drop-in file is its own record; do not re-date it every load
+                entry = data.Library.stampProvenance(entry);
+            end
         end
 
         function requireSource(entry, what)
@@ -1255,11 +1398,11 @@ classdef Library
         end
 
         function o = validOrigin(value, key, what)
-            %VALIDORIGIN  "baseline"/"custom" as a string scalar, or error.
+            %VALIDORIGIN  "baseline"/"custom"/"dropin" as a string scalar, or error.
             o = string(value);
-            if ~(isscalar(o) && any(o == ["baseline" "custom"]))
+            if ~(isscalar(o) && any(o == ["baseline" "custom" "dropin"]))
                 error("data:Library:badOrigin", ...
-                    "Invalid origin ""%s"" on %s ""%s"" — expected ""baseline"" or ""custom"".", ...
+                    "Invalid origin ""%s"" on %s ""%s"" — expected ""baseline"", ""custom"" or ""dropin"".", ...
                     strjoin(string(value), ","), what, string(key));
             end
         end

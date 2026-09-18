@@ -12,7 +12,8 @@
 %                      only, MANY matches), insert(key)/insertFor(diameter,
 %                      tpi) (tapped-hole geometry only, no spec filter --
 %                      one insert spec is seeded). Phase 2.2.
-%   library.json     - the bundled hardware/material catalog (bolts, nuts,
+%   library/         - one JSON file per part (library.json there is the
+%                      header + curated order); the bundled hardware/material catalog (bolts, nuts,
 %                      inserts, washers, materials); self-describing
 %                      (schemaVersion + units block: in, lbf, psi, degC,
 %                      1/degC). No longer carries the DABJ Section 9

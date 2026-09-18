@@ -231,7 +231,7 @@ Error paths are written blind and read by an analyst on a deadline.
 **Then build, expecting the first one to fail.** `MATLAB_BUILD_GUIDE.md` §5.2
 has the `mcc` line and its five post-build checks.
 
-`library.json` is the one `-a` you must not forget — it is data, so dependency
+The `+data/library` folder (one JSON per part) is the one `-a` you must not forget — it is data, so dependency
 analysis never sees it. If the library fails to load in the `.exe`, the first
 suspect is already documented: `data.Library.defaultPath()` resolves it from
 `mfilename` with no `isdeployed` branch, and `ctfroot` is the branch to add.

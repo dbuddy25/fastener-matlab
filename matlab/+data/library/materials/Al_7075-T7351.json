@@ -1,0 +1,12 @@
+{
+  "key": "Al 7075-T7351",
+  "ftu": 63000,
+  "fty": 49000,
+  "fsu": 36373,
+  "fbru": 76000,
+  "e": 10300000,
+  "cte": 2.32e-05,
+  "source": "Seed material property table; values used as given. Fsy derived as Fty/sqrt(3) (von Mises) in the source table. No Fbry column, so the bearing YIELD criterion reports NotEvaluated. The DABJ book's differing values for this alloy (Ftu 68000 / Fty 57000 / Fbru 121000) are built inline in validation.dabjSection9 (as \"Al 7075-T7351 (DABJ)\"), not seeded here.",
+  "origin": "baseline",
+  "fsy": 28290
+}

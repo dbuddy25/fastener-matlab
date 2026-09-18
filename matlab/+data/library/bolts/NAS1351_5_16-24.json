@@ -1,0 +1,30 @@
+{
+  "key": "NAS1351 5/16-24",
+  "type": "SHCS",
+  "spec": "NAS1351",
+  "nominalDiameter": 0.3125,
+  "series": "UNF",
+  "tpi": 24,
+  "tensileStressArea": 0.05807,
+  "minorDiameter": 0.2584,
+  "threadLength": 1.125,
+  "lengths": [
+    0.375,
+    0.5,
+    0.625,
+    0.75,
+    0.875,
+    1.0,
+    1.25,
+    1.5,
+    1.75,
+    2.0,
+    2.25,
+    2.5
+  ],
+  "pitchDiameter": 0.2854,
+  "bodyDiameter": 0.3125,
+  "headBearingDiameter": 0.46875,
+  "source": "NAS1351 socket head cap screw (UNF). Thread geometry computed per ASME B1.1 UN thread formulas: minor dia = D - 1.299038P, pitch dia E = D - 0.649519P, At = (pi/4)*((E + minor)/2)^2. THREAD FORM RESOLVED 2026-07-29: NAS1351/NAS1352 specify UNRF/UNF (procurement drawings call UNRF-3A), NOT UNJ. UNR mandates a rounded external-thread root but keeps UN basic major/pitch/minor diameters, so the UN stress area applies and these values are correct. (UNJ per MIL-S-8879 has an enlarged controlled root radius and a ~8% larger At; DABJ Appendix B assumes UNJF, which is why its design tables and rated loads imply At = 0.0951 for 3/8 rather than 0.0878.) Head bearing dia = SHCS head OD (1.5 x D for fractional sizes); full shank, bodyDiameter = nominal. threadLength is Lt, the MINIMUM BASIC THREAD LENGTH from NAS1351/NAS1352 Table II - a per-SIZE value, identical in both standards because Lt follows the ASME B18.3 body size rather than the thread pitch. Note (c): screws shorter than Lt are threaded as close to the head as practicable, so Lt is the threaded length only for screws longer than it. Every size at D >= 0.25 satisfies Lt = 2D + 0.500, which is how the transcription was checked. AVAILABLE LENGTHS from NAS1351 Table III, dash size 5: the L column of that grid, restricted to the rows this size actually lists. Table III keys on the ASME B18.3 BODY size rather than the thread pitch, so NAS1351 and NAS1352 print the same ladder for the same dash size -- the same reason Lt is shared. Each grid cell holds the full dash number whose second field is the length code, and that code is exactly length x 16 at every rung (-5-6 = 0.3750 in ... -5-40 = 2.500 in); the identity is how the transcription was checked. THE LADDER IS NOT EXHAUSTIVE -- Table III's own note reads \"SEE CODE FOR ADDITIONAL LENGTHS\", so a length absent from this list is still procurable and must never be reported as invalid. Note (c) also means a screw SHORTER than threadLength is threaded as close to the head as practicable, so unthreaded body length = max(0, length - threadLength) -- a subtraction that must not be allowed to go negative.",
+  "origin": "baseline"
+}

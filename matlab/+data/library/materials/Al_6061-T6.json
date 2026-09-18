@@ -1,0 +1,12 @@
+{
+  "key": "Al 6061-T6",
+  "ftu": 42000,
+  "fty": 35000,
+  "fsu": 27000,
+  "fsy": 20207,
+  "fbru": 67000,
+  "e": 10000000.0,
+  "source": "Seed material property table; values used as given. Fsy in the source table is derived as Fty/sqrt(3) (von Mises) -- carried through here. NO CTE in the source table: cte is unset, so the thermal-preload path (TFSR 5) cannot run for this entry until a coefficient is supplied. No Fbry either, so the bearing YIELD criterion reports NotEvaluated. CTE 2.36e-05 1/degC is a REPRESENTATIVE HANDBOOK VALUE, not from the seed table (which has no CTE column) -- replace with a program allowable. Thermal-preload margins (TFSR 5) computed from it are traceable to this placeholder.",
+  "origin": "baseline",
+  "cte": 2.36e-05
+}

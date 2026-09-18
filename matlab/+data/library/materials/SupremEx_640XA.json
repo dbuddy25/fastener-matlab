@@ -1,0 +1,12 @@
+{
+  "key": "SupremEx 640XA",
+  "ftu": 83000,
+  "fty": 70000,
+  "fsu": 48000,
+  "fsy": 40000,
+  "fbru": 124500,
+  "e": 20300000.0,
+  "source": "Seed material property table; values used as given. Fsy in the source table is derived as Fty/sqrt(3) (von Mises) -- carried through here. NO CTE in the source table: cte is unset, so the thermal-preload path (TFSR 5) cannot run for this entry until a coefficient is supplied. No Fbry either, so the bearing YIELD criterion reports NotEvaluated. Fbru flagged in the source table CTE 1.3e-05 1/degC is a REPRESENTATIVE HANDBOOK VALUE, not from the seed table (which has no CTE column) -- replace with a program allowable. Thermal-preload margins (TFSR 5) computed from it are traceable to this placeholder.",
+  "origin": "baseline",
+  "cte": 1.3e-05
+}

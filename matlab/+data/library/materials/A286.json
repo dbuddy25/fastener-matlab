@@ -1,0 +1,16 @@
+{
+  "key": "A286",
+  "ftu": 160000,
+  "fty": 120000,
+  "fsu": 93400,
+  "fsy": 69282,
+  "fbru": 120000,
+  "e": 29100000.0,
+  "roles": [
+    "bolt",
+    "washer"
+  ],
+  "source": "Seed material property table; values used as given. Fsy in the source table is derived as Fty/sqrt(3) (von Mises) -- carried through here. NO CTE in the source table: cte is unset, so the thermal-preload path (TFSR 5) cannot run for this entry until a coefficient is supplied. No Fbry either, so the bearing YIELD criterion reports NotEvaluated. MIL-HDBK-5J for Fsu CTE 1.65e-05 1/degC is a REPRESENTATIVE HANDBOOK VALUE, not from the seed table (which has no CTE column) -- replace with a program allowable. Thermal-preload margins (TFSR 5) computed from it are traceable to this placeholder.",
+  "origin": "baseline",
+  "cte": 1.65e-05
+}

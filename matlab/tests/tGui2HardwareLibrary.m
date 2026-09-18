@@ -217,6 +217,32 @@ classdef tGui2HardwareLibrary < matlab.uitest.TestCase
             testCase.verifyEqual(string(filtered{1, 2}), "Test alloy");
         end
 
+        function aDropInAppearsUnderItsOwnFilterAndASkippedOneIsReported(testCase)
+            % data.Library skips a bad drop-in rather than failing the load,
+            % so this page is the only place the analyst learns a file they
+            % placed is NOT in the library.
+            fx = testCase.applyFixture( ...
+                matlab.unittest.fixtures.TemporaryFolderFixture);
+            mkdir(fullfile(fx.Folder, "materials"));
+            good = struct("key", "Dropped alloy", "ftu", 100000, "fty", 90000, ...
+                "fsu", 60000, "source", "tGui2HardwareLibrary drop-in");
+            bad = rmfield(good, "source");  bad.key = "No source alloy";
+            files = ["good.json" "bad.json"];  entries = {good, bad};
+            for i = 1:2
+                fid = fopen(fullfile(fx.Folder, "materials", files(i)), "w");
+                fprintf(fid, "%s", jsonencode(entries{i}));
+                fclose(fid);
+            end
+            testCase.App.State.Library = data.Library.load(DropIn=string(fx.Folder));
+
+            testCase.choose(testCase.Page.filterDropDown(), 'Drop-in');
+            filtered = testCase.Page.sectionTable("material").Data;
+            testCase.verifyEqual(size(filtered, 1), 1);
+            testCase.verifyEqual(string(filtered{1, 2}), "Dropped alloy");
+            testCase.verifySubstring(char(strjoin(string(testCase.Page.detailText()), " ")), ...
+                'bad.json');
+        end
+
         function aLibraryChangeRefreshesThePageWithoutRenavigating(testCase)
             % Nothing in +gui2 listened to LibraryChanged before step 9 —
             % the event was declared and fired and had no subscribers at

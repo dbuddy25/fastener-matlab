@@ -1,0 +1,12 @@
+{
+  "key": "BeCu UNS C17200",
+  "ftu": 194000,
+  "fty": 149000,
+  "fsu": 112006,
+  "fsy": 86025,
+  "fbru": 112006,
+  "e": 18400000.0,
+  "source": "Seed material property table. E CORRECTED 2026-07-29 with the analyst's approval: the source table read 1.84e8 psi (184 Msi), which is a factor-of-ten error -- beryllium copper is ~18.4 Msi, and modulus feeds stiffness feeds phi feeds margins. Bearing strength estimated in the source table. Fsy derived as Fty/sqrt(3) (von Mises). CTE 1.78e-05 1/degC is a REPRESENTATIVE HANDBOOK VALUE, not from the seed table (which has no CTE column) -- replace with a program allowable. Thermal-preload margins (TFSR 5) computed from it are traceable to this placeholder.",
+  "origin": "baseline",
+  "cte": 1.78e-05
+}

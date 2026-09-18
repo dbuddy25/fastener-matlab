@@ -269,11 +269,29 @@ SepBeforeRupture, TappedParent`) **+ `InteractionR`**`, WorstMargin, GoverningCh
 
 ## 6. The built-in library (and its limits)
 
-`data.Library.load()` currently seeds only what the validation case needs:
-bolt `3/8-24 UNF`, materials `A-286` and `Al 7075-T7351`, spec `3/8 A-286 160ksi`.
-To analyze other hardware you must add entries to `matlab/+data/library.json`
-(same fields as the existing rows). **This is a data gap, not a code gap** — the library
-is meant to grow.
+The shipped library is one JSON file per part under `matlab/+data/library/`
+(`materials/`, `bolts/`, `boltSpecs/`, `nuts/`, `inserts/`, `washers/`). It is
+read-only in the app. There are two ways to add hardware without touching it:
+
+1. **Materials & Hardware page → Add / Duplicate, then Save.** Writes to this
+   installation's `fastener_library.json`.
+2. **Drop in a JSON file.** Put it in
+   `<MATLAB userpath>/fastener_library/<category>/` — e.g.
+   `Documents/MATLAB/fastener_library/materials/my-alloy.json` — and restart.
+   (`data.Library.dropInPath()` prints the exact folder.) A file holds one
+   entry, or an array of entries, with the same fields as a shipped file of that
+   category. Copy one from `+data/library/` as a starting point:
+
+   ```json
+   { "key": "My alloy", "ftu": 130000, "fty": 120000, "fsu": 76000,
+     "e": 16000000, "cte": 8.8e-06,
+     "source": "MMPDS-2023 Table x.x, A-basis" }
+   ```
+
+   Drop-in entries show under the **Drop-in** filter and are read-only there.
+   `source` is required. A drop-in **cannot reuse a shipped key** — it is
+   skipped, not substituted. Any skipped file or entry is listed, with the
+   reason, at the bottom of the Materials & Hardware page; the rest still load.
 
 ---
 

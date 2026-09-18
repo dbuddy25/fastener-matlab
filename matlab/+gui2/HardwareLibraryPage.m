@@ -144,6 +144,7 @@ classdef HardwareLibraryPage < gui2.Page
                 obj.renderSection(spec);
             end
             obj.updateButtons();
+            obj.showLoadWarnings();
         end
     end
 
@@ -165,10 +166,13 @@ classdef HardwareLibraryPage < gui2.Page
             % Items are what a user reads; ItemsData is the token
             % data.Library's origin filters actually take ("" = all).
             obj.FilterDropDown = uidropdown(bar, ...
-                'Items',     {'All', 'Baseline', 'Custom'}, ...
-                'ItemsData', {'', 'baseline', 'custom'}, ...
+                'Items',     {'All', 'Baseline', 'Drop-in', 'Custom'}, ...
+                'ItemsData', {'', 'baseline', 'dropin', 'custom'}, ...
                 'Tooltip',   ['Baseline entries ship with the tool and are ' ...
-                              'read-only. Custom entries were added here.']);
+                              'read-only. Drop-in entries come from JSON ' ...
+                              'files placed in this installation''s ' ...
+                              'fastener_library folder, and are read-only ' ...
+                              'here too. Custom entries were added here.']);
             obj.FilterDropDown.Layout.Row    = 1;
             obj.FilterDropDown.Layout.Column = 2;
             obj.FilterDropDown.ValueChangedFcn = @(~, ~) obj.refresh();
@@ -341,6 +345,25 @@ classdef HardwareLibraryPage < gui2.Page
             % write. A Save that writes a file containing nothing but the
             % header reads as "saved" and has saved nothing.
             obj.SaveButton.Enable = ok && obj.customCount() > 0;
+        end
+
+        function showLoadWarnings(obj)
+            %SHOWLOADWARNINGS  A skipped drop-in must not be silent.
+            %   data.Library skips a bad drop-in rather than failing the
+            %   load, so this is the only place the analyst learns that a
+            %   file they placed is NOT in the library.
+            if isempty(obj.DetailArea) || ~isvalid(obj.DetailArea) || ...
+                    ~obj.State.LibraryOK || isempty(obj.State.Library)
+                return
+            end
+            w = obj.State.Library.LoadWarnings;
+            if isempty(w)
+                return
+            end
+            obj.DetailArea.Value = [ ...
+                {sprintf('%d drop-in problem(s) - these were NOT loaded:', numel(w))}, ...
+                cellstr(w)];
+            obj.DetailArea.FontColor = gui2.palette('statusWarn');
         end
 
         function n = customCount(obj)

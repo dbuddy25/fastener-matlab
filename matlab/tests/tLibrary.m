@@ -18,7 +18,7 @@ classdef tLibrary < matlab.unittest.TestCase
         function loadsDefaultLibrary(testCase)
             lib = data.Library.load();
             testCase.verifyClass(lib, "data.Library");
-            testCase.verifyEqual(lib.SchemaVersion, 1);
+            testCase.verifyEqual(lib.SchemaVersion, 2);
         end
 
         function pullsBoltByKey(testCase)
@@ -514,7 +514,7 @@ classdef tLibrary < matlab.unittest.TestCase
             % managed like materials/bolts/boltSpecs -- this fixture
             % library added no custom nuts, washers, or inserts, so
             % save() (custom entries only) writes all three empty.
-            testCase.verifyEqual(re.SchemaVersion, 1);
+            testCase.verifyEqual(re.SchemaVersion, 2);
             testCase.verifyEqual(string(re.Units.temperature), "degC");
             raw = jsondecode(fileread(path));
             testCase.verifyEmpty(raw.nuts);
@@ -719,6 +719,111 @@ classdef tLibrary < matlab.unittest.TestCase
                 'Adding an entry must not imply anyone approved it.');
         end
 
+        function baselineFolderKeepsTheCuratedOrder(testCase)
+            % One file per part means a directory listing decides nothing:
+            % the header's order list does. Size order is what the
+            % dropdowns show and what boltSizingSweep's smallest-first
+            % relies on; alphabetical would put #10-32 before #2-64.
+            lib = data.Library.load();
+            b = lib.boltKeys();
+            testCase.verifyEqual(b(1), "NAS1351 #0-80");
+            testCase.verifyLessThan(find(b == "NAS1351 #2-64"), ...
+                                    find(b == "NAS1351 #10-32"));
+            w = lib.washerKeys();
+            testCase.verifyLessThan(find(w == "NAS620-3L"), find(w == "NAS620-3"));
+        end
+
+        function everyBaselineFileIsListedInTheOrder(testCase)
+            % An unlisted part still loads (appended), so nothing else
+            % would notice a forgotten order entry.
+            folder = data.Library.defaultPath();
+            hdr = jsondecode(fileread(fullfile(folder, "library.json")));
+            for c = ["materials" "bolts" "boltSpecs" "nuts" "inserts" "washers"]
+                files = dir(fullfile(folder, c, "*.json"));
+                testCase.verifyNumElements(files, numel(hdr.order.(c)), ...
+                    sprintf('%s: file count and order list disagree.', c));
+                for f = files'
+                    e = jsondecode(fileread(fullfile(f.folder, f.name)));
+                    testCase.verifyTrue(any(string(hdr.order.(c)) == string(e.key)), ...
+                        sprintf('%s/%s is not in the order list.', c, f.name));
+                end
+            end
+        end
+
+        function aDropInFileLoadsAsReadOnlyDropIn(testCase)
+            d = testCase.dropInFolder();
+            testCase.writeJson(fullfile(d, "materials", "ti.json"), ...
+                testCase.sampleMaterial());
+
+            lib = data.Library.load(DropIn=d);
+            testCase.verifyEmpty(lib.LoadWarnings);
+            testCase.verifyEqual(lib.materialKeys("dropin"), "Ti-6Al-4V");
+            testCase.verifyEqual(lib.material("Ti-6Al-4V").Ftu, 130000);
+            testCase.verifyEmpty(lib.materialKeys("custom"));
+        end
+
+        function oneDropInFileMayCarryManyEntriesAndReferenceAnother(testCase)
+            % A whole spec arrives as one file, and a dropped bolt spec may
+            % reference a dropped bolt and a dropped material.
+            d = testCase.dropInFolder();
+            m2 = testCase.sampleMaterial();  m2.key = "Ti-6Al-4V STA";
+            testCase.writeJson(fullfile(d, "materials", "ti.json"), ...
+                [testCase.sampleMaterial(), m2]);
+            testCase.writeJson(fullfile(d, "bolts", "b.json"), testCase.sampleBolt());
+            testCase.writeJson(fullfile(d, "boltSpecs", "s.json"), testCase.sampleBoltSpec());
+
+            lib = data.Library.load(DropIn=d);
+            testCase.verifyEmpty(lib.LoadWarnings);
+            testCase.verifyNumElements(lib.materialKeys("dropin"), 2);
+            testCase.verifyEqual(lib.boltSpec("1/4 Ti 160ksi").RatedUltimateLoad, 5800);
+        end
+
+        function aDropInCannotShadowAShippedPart(testCase)
+            % A dropped file silently replacing A286's allowables is the
+            % wrong default for a margins tool.
+            d = testCase.dropInFolder();
+            e = testCase.sampleMaterial();  e.key = "A286";  e.ftu = 1;
+            testCase.writeJson(fullfile(d, "materials", "a286.json"), e);
+
+            lib = data.Library.load(DropIn=d);
+            testCase.verifyEqual(lib.material("A286").Ftu, 160000);
+            testCase.verifyNumElements(lib.LoadWarnings, 1);
+            testCase.verifySubstring(lib.LoadWarnings(1), "a286.json");
+        end
+
+        function aBadDropInIsSkippedAndTheGoodOneBesideItStillLoads(testCase)
+            % The companion matters: "the bad file did not load" is also
+            % true of a loader that reads nothing at all.
+            d = testCase.dropInFolder();
+            fid = fopen(fullfile(d, "materials", "broken.json"), "w");
+            fprintf(fid, "{ not json");  fclose(fid);
+            testCase.writeJson(fullfile(d, "materials", "nosource.json"), ...
+                rmfield(testCase.sampleMaterial(), "source"));
+            good = testCase.sampleMaterial();  good.key = "Good Ti";
+            testCase.writeJson(fullfile(d, "materials", "good.json"), good);
+
+            lib = data.Library.load(DropIn=d);
+            testCase.verifyEqual(lib.materialKeys("dropin"), "Good Ti");
+            testCase.verifyNumElements(lib.LoadWarnings, 2);
+            testCase.verifyTrue(any(contains(lib.LoadWarnings, "broken.json")));
+            testCase.verifyTrue(any(contains(lib.LoadWarnings, "nosource.json")));
+        end
+
+        function saveNeverWritesADropIn(testCase)
+            % Otherwise Save would copy it into the user file, and deleting
+            % the dropped file would no longer remove the part.
+            d = testCase.dropInFolder();
+            testCase.writeJson(fullfile(d, "materials", "ti.json"), ...
+                testCase.sampleMaterial());
+            lib = data.Library.load(DropIn=d);
+            path = string(fullfile(d, "user.json"));
+            lib.save(path);
+
+            raw = jsondecode(fileread(path));
+            testCase.verifyEmpty(raw.materials);
+            testCase.verifyFalse(isfield(raw, "order"));
+        end
+
         function loadInstalledFallsBackToTheBaseline(testCase)
             % With no user library present, loadInstalled must be exactly
             % load(). The GUI, runBulk, runWorkbook and makeTemplate all go
@@ -730,6 +835,8 @@ classdef tLibrary < matlab.unittest.TestCase
             % overlay path and quietly passing for the wrong reason.
             testCase.assumeFalse(isfile(data.Library.userPath()), ...
                 'This machine has a real user library; the fallback path is not reachable here.');
+            testCase.assumeFalse(isfolder(data.Library.dropInPath()), ...
+                'This machine has a real drop-in folder; the fallback path is not reachable here.');
 
             lib = data.Library.loadInstalled();
             testCase.verifyEqual(numel(lib.boltKeys()), ...
@@ -1364,6 +1471,16 @@ classdef tLibrary < matlab.unittest.TestCase
     end
 
     methods (Access = private)
+        function d = dropInFolder(testCase)
+            %A temp drop-in root with the six category folders in it.
+            fx = testCase.applyFixture( ...
+                matlab.unittest.fixtures.TemporaryFolderFixture);
+            d = string(fx.Folder);
+            for c = ["materials" "bolts" "boltSpecs" "nuts" "inserts" "washers"]
+                mkdir(fullfile(d, c));
+            end
+        end
+
         function e = sampleMaterial(~)
             e = struct("key", "Ti-6Al-4V", ...
                        "ftu", 130000, "fty", 120000, "fsu", 76000, ...

@@ -33,7 +33,8 @@
 
 | Tier | Writable by | Lives | Ships |
 |---|---|---|---|
-| **Seed** | nobody | install directory, read-only | in the repo (`+data/library.json`) |
+| **Seed** | nobody | install directory, read-only | in the repo (`+data/library/`, one JSON per part) |
+| **Drop-in** | the user / a site | `<userpath>/fastener_library/<category>/*.json`, read-only in the app | never — built 2026-09-18; the file-based first step toward Admin (no checksum or version stamp yet) |
 | **Admin** | admin only | shared/network path, read-only to users | per program |
 | **Custom** | the user | user-writable app-data path | never |
 
@@ -99,7 +100,7 @@ a normal user. So:
 
 This is the same shape as the overlay design above, so building it this way now
 costs nothing extra. Discovering it after the GUI writes directly to
-`+data/library.json` means reworking the data layer under a shipped tool.
+`+data/library/` means reworking the data layer under a shipped tool.
 
 ---
 

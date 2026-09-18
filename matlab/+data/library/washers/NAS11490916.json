@@ -1,0 +1,13 @@
+{
+  "key": "NAS11490916",
+  "spec": "NAS1149",
+  "name": "Standard OD",
+  "sizeCode": "0916",
+  "thread": "9/16",
+  "nominalDiameter": 0.5625,
+  "innerDiameter": 0.578,
+  "outerDiameter": 1.062,
+  "thickness": 0.016,
+  "source": "NAS1149 \"WASHER, FLAT\", Table I, Rev 4 (2008-02), size-and-thickness code 0916. innerDiameter = dia A (+/-.010), outerDiameter = dia D (+.020/-.005), thickness = T. Table I is a matrix (each thread size offers only certain thicknesses; cells not listed are explicitly prohibited -- 'overcoding of part numbers to specify washer sizes not listed in this standard is prohibited'). Part number assembles as NAS1149<material code><size-and-thickness code><finish code> with NO separators or hyphens (confirmed against sheet 3's 'EXAMPLE OF PART NUMBER' block, e.g. NAS1149D0432K = aluminum, anodized, .250 nominal dia, .032 thick); the key here uses the bare NAS11490916 form (document number + size-and-thickness code, no material/finish letters, no hyphen -- consistent with the standard's own no-separator assembly), material chosen separately in the GUI's washer-material dropdown. DELIBERATE OMISSION: Table I also lists NO.9, NO.11 and NO.12 rows, and sizes from .875 up to 2.500 -- none are seeded because the bolt catalog stops at 3/4 and has no #9/#11/#12, so they could never be resolved by washersFor().",
+  "origin": "baseline"
+}
