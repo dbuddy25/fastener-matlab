@@ -44,7 +44,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 12 | 4.4.5 | Preload included when rupture precedes separation | IMPLEMENTED | `separationBeforeRuptureGate`, `boltDesignLoad` |
 | 13 | 4.4.6a | Friction credited only at limit/yield | IMPLEMENTED (structurally) | µ appears only in `marginSlip`; no ultimate check calls it |
 | 14 | 4.4.6b | µ ≤ 0.20 / ≤ 0.10 absent test substantiation | IMPLEMENTED (warning) | `engine.frictionCheck` — `Result.Warnings` above each cap; see below |
-| 15 | 4.5 | Fatigue life | OMITTED-BY-DECISION | `MATLAB_TOOL_PRD.md` §4, "Out of scope (v1)" |
+| 15 | 4.5 | Fatigue life | OMITTED-BY-DECISION | out of scope — `README.md` |
 | 16 | 4.6.1 | Preload-independent locking feature | OUT-OF-SCOPE | Hardware selection |
 | 17 | 4.6.2 | Mechanical locking feature on rotating bolts | OUT-OF-SCOPE | Hardware selection |
 | 18 | 4.6.3 | Liquid locking compound process control | OUT-OF-SCOPE | Process validation |
@@ -624,8 +624,7 @@ no moment was supplied. Supplying one includes bending on any determination —
 
 ### TFSR 15 — fatigue
 
-No fatigue analysis. Recorded in `MATLAB_TOOL_PRD.md` §4 as out of scope for
-v1.
+No fatigue analysis. Out of scope (`README.md`).
 
 Appendix C offers a similarity route for justifying low likelihood of fatigue
 failure, and four of its six bullets reuse quantities the tool already

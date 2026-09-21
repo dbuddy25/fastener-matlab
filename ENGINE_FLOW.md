@@ -182,7 +182,7 @@ flowchart LR
 `stiffness` no longer refuses any CONFIGURATION outright. Insert and
 tapped-hole joints compute via the shortened grip `L = t1 + D/2`; a
 mixed-modulus flange stack computes via the thickness-weighted harmonic-mean
-member modulus `Ebar` (NASA TM-106943 Eq. 34 — see `STIFFNESS_PLAN.md` §3 and
+member modulus `Ebar` (NASA TM-106943 Eq. 34 — see TOOL_DIFFERENCES.md Section 7.5 and
 `TOOL_DIFFERENCES.md` §7.5 for the approximation's measured error bound).
 `stiffness` still errors on missing DATA (e.g. no `HeadBearingDiameter`, no
 `BodyLengthInGrip`/fallback inputs, an empty `FlangeStack`); a joint reaches

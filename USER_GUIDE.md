@@ -335,6 +335,6 @@ read-only in the app. There are two ways to add hardware without touching it:
   hand-derived ✍️ / pending ⏳.
 - **`ARCHITECTURE.md`** — how the pieces fit together.
 - **`UNITS.md`** — the unit contract (inch, lbf, psi, °C).
-- **`MATLAB_BUILD_GUIDE.md`** — the development roadmap.
+- **`COMPLIANCE.md`** — requirement-by-requirement status against NASA-STD-5020B.
 - Every engine function cites its governing equation (NASA-STD-5020B / TM-106943) in its
   header and in the `Method` field of each result — so any number is traceable to the standard.

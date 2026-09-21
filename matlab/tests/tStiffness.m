@@ -5,7 +5,7 @@ classdef tStiffness < matlab.unittest.TestCase
     %   Kc = 4.73e6 lbf/in, Phi = 0.336. Insert/tapped-hole joints are
     %   covered against a SECOND answer key, DABJ Table 8-3 (slide 8-26),
     %   via the shortened grip L = t1 + D/2. MIXED FLANGE MODULI (Job B,
-    %   STIFFNESS_PLAN.md Section 3) are covered by self-checks only --
+    %   TOOL_DIFFERENCES.md Section 7.5) are covered by self-checks only --
     %   no external fixture exists -- via the thickness-weighted
     %   harmonic-mean member modulus Ebar (NASA TM-106943 Eq. 34):
     %   mixedModulusReducesToUniform, mixedModulusSplitInvariance,

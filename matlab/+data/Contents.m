@@ -110,4 +110,4 @@
 %                      is empty); refuses to overwrite a built-in name.
 %                      Phase 3.7.
 %
-%   Reference: MATLAB_BUILD_GUIDE.md, Phases 2-3.
+%   Reference: ARCHITECTURE.md.

@@ -9,7 +9,7 @@ of decisions. Anything *not* here is either an accident or a gap in this
 document — both worth reporting.
 
 Section numbers are stable: other documents (`COMPLIANCE.md`, `ENGINE_CHECKS.md`,
-`ARCHITECTURE.md`, `STIFFNESS_PLAN.md`) and several `+engine` headers cite them.
+`ARCHITECTURE.md`) and several `+engine` headers cite them.
 
 ---
 
@@ -637,7 +637,7 @@ panel) used to error outright with `engine:stiffness:mixedModulusDeferred` —
 no `phi`, no Eq. 10 rupture branch, no stiffness-dependent thread design load,
 and with any temperature excursion `engine.preload` threw and the whole
 analysis failed. That joint is ordinary, not exotic. It now computes via a
-thickness-weighted harmonic-mean member modulus (`STIFFNESS_PLAN.md` §3;
+thickness-weighted harmonic-mean member modulus (
 NASA TM-106943 Eq. 34, cited because NASA-STD-5020B Eq. 9 takes `kc` as a given
 input and never prints how to compute it for a mixed stack):
 
@@ -652,7 +652,7 @@ characterised error:
   reduces identically to a single `E` there.
 - **Errs up to +23% on `kc` / −14% on `phi`** for stacks with soft layers at
   BOTH bearing faces (measured, per-layer-exact vs. `Ebar`-collapsed
-  cross-check; see `STIFFNESS_PLAN.md` §3.2). The error is in the
+  cross-check). The error is in the
   **UNCONSERVATIVE** direction for bolt tension (`kc` reads high, so `phi`
   reads low, so the bolt is credited a smaller share of the applied load than
   it actually carries).
@@ -662,7 +662,7 @@ characterised error:
   face-reversed twin, even though the exact result can differ by ~20%+ between
   them.
 - No mixed-modulus answer-key fixture exists in any reference document
-  (`STIFFNESS_PLAN.md` §3.4); `tests/tStiffness.m` covers it with self-checks
+; `tests/tStiffness.m` covers it with self-checks
   only — reduction to the uniform case, split invariance, bounding between the
   all-`E_min`/all-`E_max` uniform results, and monotonicity in each layer's
   `E`.
@@ -736,6 +736,51 @@ FE forces, so it could detect a net moment about the pattern centroid and
 refuse joint-mode slip, the same way the existing `nf` guard already refuses it
 (§3.1). Not built. Until it is, an eccentric pattern gets an Eq. 84 slip margin
 the standard says it should not have.
+
+### 7.8 Library admin tier — designed, not built
+
+Today there are three sources: the shipped baseline (`+data/library/`), user
+drop-in files, and the user's saved custom entries. A program-controlled **admin**
+library (shared path, read-only to users, precedence over the baseline) is
+designed but not built. The rules it must meet:
+
+- **A custom or drop-in entry must never shadow an approved entry.** Block the
+  name collision at entry. The failure this prevents: two engineers run the same
+  case and get different margins with nothing in either output explaining why.
+  (Drop-ins already obey this; the saved custom file still follows "the file wins".)
+- **The tier must travel into the result.** A margin computed from a user-entered
+  allowable is not the same evidence as one from an approved allowable; `Result`,
+  the reports and the GUI must say which, the way `boltTensileAllowable` already
+  reports rated vs derived.
+- **The admin library needs a version stamp and a checksum**, recorded in every
+  case file and report. In a standalone `.exe` "admin-controlled" is a convention
+  backed by file permissions, not access control, so the achievable goal is making
+  a changed library *detectable*: checksum at load, surface a mismatch loudly.
+- The admin library is read from a configured path and never written by the app.
+- **Case files embed the full joint, materials included**, so a case opened on a
+  machine without a given custom material still runs with the numbers it was
+  saved with — never a different material carrying the same name.
+
+**Undecided:** whether a tool upgrade may overwrite a site-approved value.
+
+### 7.9 Insert pull-out geometry — three open points
+
+- **The coefficient family is wide.** RP-1228 gives a tapped-hole pull-out
+  coefficient of 0.333, TM-106943 gives 0.625, this tool uses 0.75 (§1.5),
+  checked against 135 digitized points of manufacturer pull-out data.
+- **The install offset assumes a countersunk hole.** `Le − 1.125p` uses the
+  NASM33537 §11.1 midpoint unconditionally; §11.2 (no countersink) has a midpoint
+  of 0.375p. 1.125p is the conservative one. Left as is, to revisit.
+- **Tabular shear-engagement-area data has been requested from the vendor.** If it
+  arrives it enters as the *specified* area, which already takes precedence over
+  the computed form — no rework needed.
+
+### 7.10 Shear tear-out: ultimate and yield nearly coincide on Al 7075-T7351
+
+At the template factors, `Fsu/(FFU·FSU)` = 22,592 and `Fsy/(FFY·FSY)` = 22,632
+per unit shear area: ultimate governs by 0.18%. A modest change to the factor set
+flips which criterion governs on the most common flange alloy. Both are computed
+and the worse is taken, so nothing is wrong — but do not be surprised by it.
 
 ---
 

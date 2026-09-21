@@ -2,8 +2,8 @@ classdef Result
     %RESULT  Standard output of engine.analyze — ONE shape every consumer reads.
     %   r = engine.Result(Name=Value, ...) holds the complete outcome of a
     %   single-joint analysis. The report layer, GUI, and bulk table all read
-    %   THIS object, so nothing re-derives numbers (the "Engine interface
-    %   contract" in MATLAB_BUILD_GUIDE.md). All loads in lbf (see UNITS.md).
+    %   THIS object, so nothing re-derives numbers (ARCHITECTURE.md).
+    %   All loads in lbf (see UNITS.md).
     %
     %   Properties (the contract):
     %       JointName      string — Joint.Name

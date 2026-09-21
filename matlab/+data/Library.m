@@ -228,7 +228,7 @@ classdef Library
             %   bundled seed, and a compiled standalone cannot reliably
             %   write inside its own install directory anyway — on Windows
             %   that is typically under Program Files, read-only for a
-            %   normal user. LIBRARY_PLAN.md section 3.
+            %   normal user.
             %
             %   NOT USED AS A DEFAULT ARGUMENT ANYWHERE. Callers pass it
             %   explicitly, and tests pass a temp path instead, so a test

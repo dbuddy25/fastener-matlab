@@ -95,8 +95,8 @@ function c = dabjSection9()
 %   -------------------------------------------------------------------------
 
 % ---- Bolt / materials / spec allowables, built INLINE (not from the ------
-% shared library -- see the module-level rationale in this file's header
-% and MATLAB_BUILD_GUIDE.md's "Carrying debt" section: this fixture used to
+% shared library -- see the module-level rationale in this file's header:
+% this fixture used to
 % pull a temporary "3/8-24 UNF" / "A-286 (DABJ)" / "Al 7075-T7351 (DABJ)" /
 % "3/8 A-286 160ksi" boltSpec set out of library.json; those four entries
 % have been REMOVED from the shipped library so the answer key no longer

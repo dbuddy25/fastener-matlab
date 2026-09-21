@@ -7,9 +7,8 @@ analysis tool, deployable as a standalone Windows executable.
 
 - **`USER_GUIDE.md`** — ⭐ **start here to actually use the tool** — a from-scratch
   walkthrough: setup, single-joint analysis, and the bulk workbook workflow.
-- **`MATLAB_BUILD_GUIDE.md`** — the build sequence: five phases (1–5), each a
-  chain of small steps with a "Done when" acceptance test.
-- **`MATLAB_TOOL_PRD.md`** — the requirements spec (what to build + the rules).
+- **`CONVENTIONS.md`** — the rules the code follows: equation traceability, the
+  document hierarchy, the engineering ground rules, the GUI invariants.
 - **`ARCHITECTURE.md`** — how the pieces fit together (layers, data flow, design
   decisions); a living doc, updated as each phase step lands.
 - **`UNITS.md`** — the unit contract: English units (in, lbf, psi) with
@@ -17,10 +16,11 @@ analysis tool, deployable as a standalone Windows executable.
 - **`VALIDATION.md`** — the validation coverage matrix: every check/scenario, its
   answer-key source, and whether it's validated ✅ / hand-derived ✍️ / pending ⏳.
   A living doc — every new check adds a row.
-- **`MARGIN_REVIEW.md`** — the row-by-row review of all fifteen margins against
-  NASA-STD-5020B, walked with the engineer of record (complete, 2026-08-17).
-  Records what changed, what was confirmed correct, and the open assumptions
-  that are decisions rather than gaps.
+- **`COMPLIANCE.md`** — requirement-by-requirement status against NASA-STD-5020B.
+- **`TOOL_DIFFERENCES.md`** — design decisions and open questions.
+
+**Out of scope:** fatigue analysis, non-Windows packaging, and a multi-user or
+networked database (the library is local JSON files).
 
 ## Source layout
 
@@ -137,15 +137,13 @@ batch and export a formatted workbook.
 
 Launch it with `cd matlab; fastenerTool`.
 
-**What's left**, in the order it matters — see `MATLAB_BUILD_GUIDE.md`,
-*"What remains"*, for the detail:
+**What's left**, in the order it matters:
 
 1. **Phase 5 packaging** — MATLAB Compiler to a standalone Windows `.exe`,
-   built by hand on a machine with the toolbox. `MATLAB_BUILD_GUIDE.md`
-   Phase 5 carries the `mcc` line, the two files that must be added by hand
-   (the `+data/library` folder and `USER_GUIDE.md` — neither is found by dependency
-   analysis), and the five checks that distinguish a packaging problem from
-   a code one.
+   built by hand on a machine with the toolbox. `PRECOMPILE_CHECKLIST.md`
+   carries the manual pre-compile pass, the `mcc` line (the `+data/library`
+   folder must be added by hand — dependency analysis cannot see data), and the
+   five checks that distinguish a packaging problem from a code one.
 2. **UN vs UNJ thread form** — seeded stress areas may be ~8% conservative;
    see `VALIDATION.md`. Conservative, but it matters for sizing.
 
@@ -176,6 +174,4 @@ The phase-by-phase build history used to be restated here in full. It is not
 any more: `ARCHITECTURE.md` owns that narrative and is updated as each step
 lands, and keeping a second copy in the front door meant two places to update
 and one of them silently rotting — which is exactly what happened to the launch
-command above. For the per-package detail see `ARCHITECTURE.md`; for the phase
-sequence see `MATLAB_BUILD_GUIDE.md`; for the margin-by-margin review of the
-engine against the standard see `MARGIN_REVIEW.md`.
+command above. For the per-package detail see `ARCHITECTURE.md`.

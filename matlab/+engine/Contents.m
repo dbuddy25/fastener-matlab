@@ -347,4 +347,4 @@
 %                      tapped-hole / bolt-thread / insert-internal rows are
 %                      NOT wired yet.
 %
-%   Reference for structure: MATLAB_BUILD_GUIDE.md, Phases 2-3.
+%   Reference: ARCHITECTURE.md.

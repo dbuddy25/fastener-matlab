@@ -47,7 +47,7 @@ function s = stiffness(joint)
 %
 %   MIXED-MODULUS flange stacks are supported via a thickness-weighted
 %   harmonic-mean member modulus Ebar (NASA TM-106943 Eq. 34; see
-%   STIFFNESS_PLAN.md Section 3). Ebar is a property of the CLAMPED STACK
+%   TOOL_DIFFERENCES.md Section 7.5). Ebar is a property of the CLAMPED STACK
 %   (denominator sums flange-layer t_i/E_i; numerator is tFit), so on the
 %   threaded-in branch the D/2 extension into the tapped/insert member
 %   inherits the clamped-stack Ebar rather than the tapped member's own
@@ -235,15 +235,14 @@ end
 % mixed-modulus member's effective modulus, so citing the supplement here
 % is legitimate per CONVENTIONS.md's document-hierarchy rule. The frustum
 % expression below is UNCHANGED (Shigley geometry, d1 = d2 = Dc per
-% STIFFNESS_PLAN.md Section 3.1 — a general asymmetric d1/d2 form was
+% TOOL_DIFFERENCES.md Section 7.5 — a general asymmetric d1/d2 form was
 % considered and rejected: DABJ Example 8-b uses an AVERAGED contact
 % diameter from different head/nut washers and would move off the answer
 % key under separate d1/d2). Ebar reduces to a single E exactly for a
 % uniform stack (tFit/sum(t_i/E) = tFit/(tFit/E) = E), is exact whenever
 % material boundaries coincide with the frustum knee, and is unconservative
 % (kc high / phi low) by up to 23%/14% for stacks with soft layers at both
-% bearing faces — see STIFFNESS_PLAN.md Section 3.2 and TOOL_DIFFERENCES.md
-% Section 7.5.
+% bearing faces — see TOOL_DIFFERENCES.md Section 7.5.
 memberT = [joint.FlangeStack.Thickness];                    % in
 memberE = arrayfun(@(fl) fl.Material.E, joint.FlangeStack);  % psi
 Ec = tFit / sum(memberT ./ memberE);   % Ebar, member modulus, psi

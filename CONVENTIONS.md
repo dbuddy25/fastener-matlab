@@ -6,24 +6,16 @@ governs the GUI (`+gui2`), and its A-numbers are cited from code comments.
 ## Project
 
 Ground-up MATLAB build of a NASA-STD-5020B bolted-joint margin-of-safety tool,
-packaged as a standalone Windows `.exe`. See `MATLAB_BUILD_GUIDE.md` (sequence),
-`MATLAB_TOOL_PRD.md` (requirements).
+packaged as a standalone Windows `.exe`.
 
 ## Critical rules
 
-- **Two references, different jobs:** the requirements docs (`MATLAB_TOOL_PRD.md`,
-  `MATLAB_BUILD_GUIDE.md`) define *what to build*; a validation "answer key" is the
-  *source of truth for the numbers*. Primary key: the **DABJ course book §9 public
-  worked example**. A second-wave cross-check against independently worked joint
-  cases follows in Phase 3.4 (the repo goes private before real data lands).
-  Margins are only ever validated against a published worked example or an
+- **The answer key is the source of truth for the numbers.** Primary key: the
+  **DABJ course book §9 public worked example**. Margins are only ever validated against a published worked example or an
   independent hand calculation — never against another implementation, whose
   numbers carry no traceable authority.
-- **Build in phase order (1→5).** 1 Foundation → 2 Validated single-joint engine →
-  3 Headless Release → 4 GUI → 5 Packaging. Reach a usable Headless Release
-  (Phase 3) before building the GUI; the GUI (Phase 4) is committed, built as a
-  thin shell over the engine API.
 - **Engine is GUI-independent** and must run headless from the Command Window.
+  The GUI is a thin shell over the engine API.
 
 ## Code conventions
 
@@ -55,6 +47,9 @@ packaged as a standalone Windows `.exe`. See `MATLAB_BUILD_GUIDE.md` (sequence),
   3. **The DABJ course book is VALIDATION ONLY** — the worked-example "answer
      key." Never cite DABJ as a governing equation; use it only in
      "Validated against DABJ §N (Solutions-NN)" provenance notes.
+  4. **Open:** `engine.stiffness` cites Shigley (frustum) and
+     `tools/kc_exact_crosscheck.py` leans on SAND2008-0371; neither is in this
+     hierarchy yet. Decide whether to admit them.
 
 ## Engineering ground rules (must be exactly right)
 

@@ -2,7 +2,7 @@
 """Exact per-layer member stiffness, as a cross-check on the Ebar collapse.
 
 WHY THIS EXISTS
-    Job B (STIFFNESS_PLAN.md section 3) adopts the general asymmetric frustum
+    Job B (TOOL_DIFFERENCES.md Section 7.5) adopts the general asymmetric frustum
     form, which collapses a multi-material stack to a single harmonic mean
     modulus Ebar = L / sum(t_i/E_i). That is EXACT whenever every material
     boundary lands on the frustum knee plane -- the canonical two-plate joint --
@@ -42,7 +42,7 @@ USAGE
 
 import math
 
-ALPHA_DEG = 30.0  # frustum half-angle; see STIFFNESS_PLAN.md section 5 on why not 45
+ALPHA_DEG = 30.0  # frustum half-angle; see TOOL_DIFFERENCES.md Section 7.5 on why not 45
 
 
 def _f(d, D):

@@ -27,4 +27,4 @@
 %                         ✅ Phase 3.8 (tests/tPdfReport.m, skip-guarded
 %                         when Report Generator is absent).
 %
-%   Reference for structure: MATLAB_BUILD_GUIDE.md, Phase 3.
+%   Reference: ARCHITECTURE.md.
