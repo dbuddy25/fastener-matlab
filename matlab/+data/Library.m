@@ -243,7 +243,7 @@ classdef Library
                 % extracted fresh each run, so a saved custom library
                 % would either refuse to write or silently disappear.
                 % prefdir() is per-user and always writable, which is why
-                % gui2.recentFiles already uses it.
+                % gui.recentFiles already uses it.
                 p = string(fullfile(prefdir(), "fastener_library.json"));
             else
                 p = string(fullfile(char(up), "fastener_library.json"));

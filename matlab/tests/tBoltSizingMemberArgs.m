@@ -2,7 +2,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
     %TBOLTSIZINGMEMBERARGS  A threaded-member picker selection -> the
     %   engine.boltSizingSweep name-value args it drives.
     %
-    %   gui2.BoltSizingPage is bolt-only and offers no such picker; these
+    %   gui.BoltSizingPage is bolt-only and offers no such picker; these
     %   helpers are kept for a caller that does. The mapping is the part
     %   that is easy to get wrong -- a Nut routed
     %   through the ThreadedMember template is rejected by the engine, and

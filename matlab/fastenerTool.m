@@ -5,7 +5,7 @@ function app = fastenerTool()
 %       fastenerTool             % open the window
 %       app = fastenerTool();    % open and keep the app handle
 %
-%   It launches +gui2.
+%   It launches +gui.
 %
 %   WHAT THIS USED TO BE, because the gap is worth recording rather than
 %   quietly closing: it was a Phase 1 stub that printed a version banner,
@@ -21,5 +21,5 @@ function app = fastenerTool()
 
     v = toolVersion();   % THE one definition -- see toolVersion.m
     fprintf("Fastener Analysis Tool (MATLAB) v%s\n", v);
-    app = gui2.launch();
+    app = gui.launch();
 end

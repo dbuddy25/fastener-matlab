@@ -402,22 +402,20 @@ the bolt's own diameter and TPI, so a match genuinely cannot pair a
 mismatched thread size. Where each runs, as of today:
 
 - **Nut** — `Library.nutFor` still runs from exactly two places: the GUI's
-  nut-spec picker (`gui.FastenerApp.applyNutSpec`, only when `NutSpecDropDown`
+  nut-spec picker (`gui.JointConfigPage`, only when the nut-spec dropdown
   is off `Custom`) and `engine.boltSizingSweep`'s Nut mode (Library+NutSpec).
   Neither changed today. It still does **not** run when the picker sits on
   `Custom` (its default), and it still does **not** run anywhere in the
   bulk/headless path — `data.loadJointLibrary` never calls `nutFor`.
-- **Insert** — `Library.insertFor` now runs from four places:
-  `gui.FastenerApp.buildJoint` (the FIRST GUI's Joint Config tab;
-  unconditionally whenever the member type is Insert — Insert has no separate
-  Custom/picker toggle the way Nut does, so this is not opt-out),
-  `gui2.JointConfigPage.stiPitchDiameterFor` (the REBUILT GUI, added
-  2026-08-12), `data.loadJointLibrary` (the bulk/CSV path, per Insert row,
+- **Insert** — `Library.insertFor` runs from three places:
+  `gui.JointConfigPage.stiPitchDiameterFor` (unconditionally whenever the
+  member type is Insert — Insert has no Custom/picker toggle the way Nut does,
+  so this is not opt-out), `data.loadJointLibrary` (the bulk/CSV path, per Insert row,
   `+data/loadJointLibrary.m:250`), and per candidate row inside
   `engine.boltSizingSweep`, which resolves each swept size's own
   `StiPitchDiameter` whenever a `Library` accompanies the Insert template.
 
-  > ⚠️ **The rebuilt GUI lost this and ran without it.** `+gui2` carried no
+  > ⚠️ **The rebuilt GUI lost this and ran without it.** `+gui` carried no
   > `insertFor` call from the day Joint Config was rebuilt until 2026-08-12,
   > so every insert joint built there had `StiPitchDiameter` NaN, no control
   > existed for `RatedUltimateLoad` either, and BOTH §4.4.1 insert allowables
@@ -427,7 +425,7 @@ mismatched thread size. Where each runs, as of today:
   > the first GUI resolved it correctly, so nothing wrong was ever shipped
   > from that path. Wiring it back also re-enters the insert mode into
   > `systemTensileAllowable`, which can lower `Ptu_allow` and flip the Fig. 8
-  > gate — so gui2 Heli-Coil margins move, and move less optimistic. The third only became so while this
+  > gate — so gui Heli-Coil margins move, and move less optimistic. The third only became so while this
   audit was being written: `boltSizingMemberArgs` built Insert's sweep
   arguments as `{'ThreadedMember', member}` with no `Library`, and
   `collectBoltSizingMemberSelection` populated `library` only for Nut, so the
@@ -585,7 +583,7 @@ above in hand. The reasoning, so it does not have to be rebuilt:
   worked example or an independent hand calculation, and neither exists for
   these two. A guessed convention is worse than a declared gap.
 - **The gap is disclosed everywhere it could mislead** and that must stay true:
-  `gui2.ResultsPage` and `gui2.BulkAnalysisPage` both print that yield and
+  `gui.ResultsPage` and `gui.BulkAnalysisPage` both print that yield and
   separation under combined loading are required and not implemented, and the
   scope statement rides into every export via `report.exportResults`. If those
   strings are ever removed, this decision is void.

@@ -1,7 +1,7 @@
 # Conventions — Fastener Analysis Tool (MATLAB)
 
 The rules the code and docs cite. Sections 1-5 govern everything; Section A
-governs the GUI (`+gui2`), and its A-numbers are cited from code comments.
+governs the GUI (`+gui`), and its A-numbers are cited from code comments.
 
 ## Project
 
@@ -86,8 +86,8 @@ packaged as a standalone Windows `.exe`.
 - Run: open MATLAB, `cd matlab`, then `fastenerTool` / `runTests`.
 - **Tests: `runTests` for the full suite (required before every push);
   `runTests("engine")` while iterating on `+engine`/`+model`/`+data`/`+report`
-  (seconds), `runTests("gui")` or `runTests("<PageName>")` for `+gui2`.** The
-  nine `tGui2*` files build a real app per test method and are essentially the
+  (seconds), `runTests("gui")` or `runTests("<PageName>")` for `+gui`.** The
+  nine `tGui*` files build a real app per test method and are essentially the
   whole runtime. A green subset proves only what it ran — the suite has caught
   GUI tests broken by engine changes and vice versa, so neither half predicts
   the other.
@@ -116,7 +116,7 @@ and computes nothing.
 
 **`Interaction` is the trap.** It reports `R`, passing iff `R ≤ 1` — the
 *opposite direction* from `MS ≥ 0`. Every consumer must route it through the
-ratio-aware helpers (`gui2.MarginView.isRatio` / `envelope` / `passFail`), never a plain `< 0` test. Two specific consequences:
+ratio-aware helpers (`gui.MarginView.isRatio` / `envelope` / `passFail`), never a plain `< 0` test. Two specific consequences:
 
 - A failing interaction (`R > 1`) must still visibly fail the 5020B summary
   count, even though it never governs the worst margin.

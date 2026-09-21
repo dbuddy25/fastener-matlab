@@ -86,7 +86,7 @@ classdef tPdfReport < matlab.unittest.TestCase
         end
 
         function reportColoursMatchTheGuiPalette(testCase)
-            % THE DRIFT GUARD. report.reportStyle restates gui2.palette's
+            % THE DRIFT GUARD. report.reportStyle restates gui.palette's
             % result colours instead of importing them, because +report is
             % callable headless and must not depend on a GUI package. Two
             % copies need a test, or a margin drifts to reading green on
@@ -108,9 +108,9 @@ classdef tPdfReport < matlab.unittest.TestCase
                 rgb = tPdfReport.hex2rgb(pairs{k, 1});
                 % AbsTol of 1/255: hex is 8-bit, the palette is double, so
                 % 0.78 and 0xC7 are the same colour quantised differently.
-                testCase.verifyEqual(rgb, gui2.palette(pairs{k, 2}), ...
+                testCase.verifyEqual(rgb, gui.palette(pairs{k, 2}), ...
                     "AbsTol", 1/255, sprintf( ...
-                        'Report colour %s has drifted from gui2.palette(''%s'').', ...
+                        'Report colour %s has drifted from gui.palette(''%s'').', ...
                         pairs{k, 1}, pairs{k, 2}));
             end
         end

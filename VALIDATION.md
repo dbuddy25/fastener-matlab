@@ -221,7 +221,7 @@ This is a **living document** — every new check adds a row.
   stays bolt-only, so that screen can Pass a size on yield that a full
   `analyze()` then fails on a member-governed `Pty_allow` — the same trap
   the tension-ULTIMATE rework above closed. Left open deliberately (the
-  screen is not exposed in gui2, so it gates nothing today); recorded in
+  screen is not exposed in gui, so it gates nothing today); recorded in
   that function's header and in `TOOL_DIFFERENCES.md`. Hand-derived pin:
   VALIDATION row 2s, `tSystemAllowable/memberGovernedYieldRuptureBranchHandDerived`.
 
@@ -368,25 +368,10 @@ This is a **living document** — every new check adds a row.
   carries geometry only — no insert strength data is seeded, since none is
   published (the catalogue defers to Technical Bulletin 68-2, 68-2 is charts
   only, and NASM33537 gives no strengths).
-  **GUI wired (this change):** the Bolt Sizing tab's Threaded member picker
-  (`gui.FastenerApp`'s `BsMemberTypeDD`/`BsNutSpecDD`/`BsMemberMaterialDD`/
-  `BsMemberRatedField`/`BsMemberEngagementField` — None/Nut/Helical
-  Insert/Tapped Hole, mirroring Joint Config's own nut-spec picker) now
-  feeds these same `Library`+`NutSpec`/`ThreadedMember` args through to
-  `engine.boltSizingSweep`, so the tab is no longer permanently bolt-only.
-  The UI-state -> engine-args translation is factored into two PURE, public
-  Static helpers (`gui.FastenerApp.boltSizingMemberArgs`/
-  `.boltSizingMemberSelectionReady`) pinned in `tests/tBoltSizingMemberArgs.m`
-  — including an integration check that splicing their output into
-  `engine.boltSizingSweep` reproduces `nutGovernsBelowBoltFlipsPassToFail`'s
-  already-pinned result exactly. **Not verifiable without MATLAB:** the
-  GUI callbacks themselves (`onBoltSizingMemberTypeChanged`,
-  `collectBoltSizingMemberSelection`, the Enable/gray-out wiring, and the
-  new `uistyle` cell-coloring of the `TensionUltBasis` column) were written
-  correct-by-construction against this file's own established
-  patterns/precedent, matching `tDefinedJointsOrder.m`'s note that no test
-  in this suite instantiates `gui.FastenerApp` (it builds a real uifigure) —
-  they have not been run.
+  The GUI's Bolt Sizing page (`gui.BoltSizingPage`) is bolt-only by design and
+  passes no threaded-member context; the two pure helpers
+  (`engine.boltSizingMemberArgs` / `engine.boltSizingMemberSelectionReady`,
+  pinned in `tests/tBoltSizingMemberArgs.m`) remain for a caller that does.
 - **Interaction is now a CRITERION (R <= 1), not a margin — and R is fully
   carried through to every surface.** NASA-STD-5020B states Eq. 20-23 as
   pass/fail, never as a margin equation, so `engine.marginInteraction` returns a
@@ -408,8 +393,7 @@ This is a **living document** — every new check adds a row.
   grid (Tiers 1-3, on screen AND in the XLSX export), and the PDF
   (`report.singleJointReport`) all render `R = <value> (<=1)` on this row
   instead of the ordinary signed-MS text, and key pass/fail/envelope
-  aggregation off `R <= 1` (`gui.FastenerApp.isRatioColumn`/
-  `envelopeAcrossRows`/`passFailMask`), never the `MS >= 0` sign test.
+  aggregation off `R <= 1` (`gui.MarginView.isRatio`/`envelope`/`passFail`), never the `MS >= 0` sign test.
   `tests/tBulk.m`/`tests/tWorkbook.m`/`tests/tExport.m` assert the bulk table's
   `InteractionR` column carries the real ratio, cross-checked against
   `engine.marginInteraction` directly.

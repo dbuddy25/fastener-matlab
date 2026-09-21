@@ -151,7 +151,7 @@ function T = analyzeBulk(jointLibrary, elements, factors)
 %                               pattern aggregation), engine.analyze
 %                               (per element).
 %       Dependents (called by)  engine.runBulk, engine.runWorkbook,
-%                               gui2.BulkAnalysisPage (per-row path).
+%                               gui.BulkAnalysisPage (per-row path).
 %       Tests                   tests/tBulk.m
 %                               bulkRunsTemplateJointWithoutCrashing,
 %                               bulkJointSlipFromPatternAggregation,

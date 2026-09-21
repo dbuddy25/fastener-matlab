@@ -4,11 +4,11 @@ function s = reportStyle()
 %   form mlreportgen.dom.Color takes) and type sizes used by every table
 %   and heading report.singleJointReport builds.
 %
-%   WHY NOT gui2.palette. The values below are deliberately the SAME as
+%   WHY NOT gui.palette. The values below are deliberately the SAME as
 %   that palette's result colours — a margin that reads green on screen
 %   must read green on paper, or a reviewer holding the PDF and an analyst
 %   holding the screen are looking at what appears to be two different
-%   answers. But +report must not depend on +gui2: the report layer is
+%   answers. But +report must not depend on +gui: the report layer is
 %   callable headless, from the command window and from the bulk runners,
 %   and reaching into a GUI package for a colour would drag the whole
 %   shell into a path that has no window in it. So the values are restated
@@ -18,13 +18,13 @@ function s = reportStyle()
 %
 %   RESULT COLOURS ARE SEMANTIC, not decorative: Pass / Fail /
 %   NotEvaluated come straight off the engine's Status, and nothing in the
-%   report re-thresholds a margin to pick one (GUI2_SPEC.md Section 2's
+%   report re-thresholds a margin to pick one (GUI_SPEC.md Section 2's
 %   rule, which applies to paper for the same reason it applies to
 %   screen).
 
 s = struct();
 
-% ---- Result colours — identical to gui2.palette's table colours --------
+% ---- Result colours — identical to gui.palette's table colours --------
 s.PassBg        = "C7F0C7";   % [0.78 0.94 0.78]
 s.FailBg        = "FFC7C7";   % [1.00 0.78 0.78]
 s.NotEvalBg     = "FFF3CD";   % amber — "did not run" is NOT "nothing to report"

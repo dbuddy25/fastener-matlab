@@ -196,7 +196,7 @@ that a full `engine.analyze()` run then failed on a nut- or insert-governed
 `Pty-allow`. It was left that way on purpose while nothing called the sweep, with
 the rule that anyone adding a caller must close it first.
 
-The gui2 Bolt Sizing page is that caller, so it is closed: with a member resolved
+The gui Bolt Sizing page is that caller, so it is closed: with a member resolved
 for the row the sweep asks `engine.systemTensileYieldAllowable`, the same function
 the margin asks, and a new `TensionYieldBasis` column says which mode governed.
 It stays bolt-only — and says so — with no context, no matching member, or a
@@ -306,8 +306,7 @@ reports.
 > else — the Results table, PDF, Bulk grid) like an ordinary `MS ≥ 0` margin
 > would silently invert it, since `R = 1.2` is a FAILURE while `MS = 1.2` would
 > be a comfortable pass. Every surface that renders this row now keys pass/fail
-> off `R ≤ 1` explicitly (`gui.FastenerApp.isRatioColumn`/`passFailMask`/
-> `envelopeAcrossRows`, `report.singleJointReport`'s `rowValueText`) rather than
+> off `R ≤ 1` explicitly (`gui.MarginView.isRatio`/`passFail`/`envelope`, `report.singleJointReport`'s `rowValueText`) rather than
 > reusing the generic `MS`-scale logic. The lesson from both directions: verify
 > what a quantity *is*, and which direction "pass" runs, before reusing a rule
 > about it.
@@ -339,13 +338,9 @@ reports.
 > own bolt-only rules. See `engine.boltSizingSweep`'s header and
 > `VALIDATION.md`'s coverage-gaps note for the hand-derived pins.
 >
-> The GUI's Bolt Sizing tab now wires this through (a "Threaded member"
-> picker mirroring Joint Config's own nut-spec picker: None/Nut/Helical
-> Insert/Tapped Hole — see `gui.FastenerApp`'s `BsMemberTypeDD` and
-> `GUI_PORT_SPEC.md`). "None" (the default) still calls
-> `engine.boltSizingSweep` with today's original 6 positional args, so the
-> plain bolt-only screen keeps working unchanged; it is one legitimate
-> screening mode among several, not a placeholder being phased out.
+> The GUI's Bolt Sizing page calls `engine.boltSizingSweep` bolt-only (the six
+> positional args, no threaded-member context). That is one legitimate screening
+> mode, and the simple one the page is for.
 
 ### 6.2 Temperatures are global, not per joint
 Temperature lives on Project & Factors, not on each joint — analyses are
@@ -562,9 +557,9 @@ span stay on record:
 | `engine.designLoads` / `marginInteraction` | no `fbu` term |
 
 So the forces pipeline already computes the quantity and drops it one step later.
-(That old note claimed gui2's Applied Loads group already had a Bending row per
+(That old note claimed gui's Applied Loads group already had a Bending row per
 `GUI_PORT_SPEC.md` §3. **It did not** — `buildLoadsGroup` had exactly five rows,
-none of them bending, and gui2 had no `ShearTransferCondition` control either, so
+none of them bending, and gui had no `ShearTransferCondition` control either, so
 the `ClearanceOrGapped` path was unreachable from the new GUI entirely. Both are
 addressed with this work.)
 

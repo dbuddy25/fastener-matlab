@@ -227,7 +227,7 @@ end
 % ---- Local helpers ----------------------------------------------------------
 function c = severityColor(severity)
 %SEVERITYCOLOR  Warning-row text color -- Critical red, Warning amber.
-%   Mirrors the GUI's palette semantics (gui2.palette: amber = warning, red
+%   Mirrors the GUI's palette semantics (gui.palette: amber = warning, red
 %   = failure/critical) using literal CSS color names, the same convention
 %   marginsTable already uses for its own Color("red") Fail-row styling
 %   (this report layer has no shared palette() of its own).
@@ -410,8 +410,8 @@ for i = 1:height(T)
 
     % COLOUR COMES FROM Status, NEVER FROM RE-READING MS. The report does
     % not re-threshold a margin any more than the Results page does
-    % (GUI2_SPEC.md Section 2) -- the engine decided, and paper and screen
-    % have to agree about what it decided. These are gui2.palette's own
+    % (GUI_SPEC.md Section 2) -- the engine decided, and paper and screen
+    % have to agree about what it decided. These are gui.palette's own
     % result colours, restated in report.reportStyle.
     rowStyle = {};
     switch T.Status(i)

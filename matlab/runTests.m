@@ -3,10 +3,10 @@ function results = runTests(scope)
 %
 %   runTests            every test (what a push must be green on)
 %   runTests("engine")  everything EXCEPT the GUI tests — seconds, not minutes
-%   runTests("gui")     the gui2 page tests only
+%   runTests("gui")     the gui page tests only
 %   runTests("Results") any test file whose name contains "Results"
 %
-%   WHY A SUBSET EXISTS. Six gui2 files build and tear down a real
+%   WHY A SUBSET EXISTS. Six gui files build and tear down a real
 %   FastenerApp for every single test method, and that is essentially the
 %   whole runtime — the other 27 files are arithmetic against fixtures and
 %   cost almost nothing. So "did I break the engine" is a question that can
@@ -23,17 +23,17 @@ function results = runTests(scope)
 %
 %   Which subset matches what:
 %       +engine, +model, +data, +report changes   -> runTests("engine")
-%       one page in +gui2                          -> runTests("<PageName>")
-%       +gui2/Page.m or FastenerApp.m              -> runTests("gui")
+%       one page in +gui                          -> runTests("<PageName>")
+%       +gui/Page.m or FastenerApp.m              -> runTests("gui")
 %       anything else, or before pushing           -> runTests
 %
 %   Scope matching is case-insensitive and by substring, so
 %   runTests("jointconfig"), runTests("JointConfig") and
-%   runTests("tGui2JointConfig") all select the same file.
+%   runTests("tGuiJointConfig") all select the same file.
 %
 %   LIVE PROGRESS, one line per test (testing.ProgressCounter):
 %
-%      143/770  tGui2Bulk/theRunButtonGatesOnAnEmptyCase
+%      143/770  tGuiBulk/theRunButtonGatesOnAnEmptyCase
 %
 %   The framework's default output is a row of identical dots, which says
 %   the run is alive but not how far along it is — and the full suite takes
@@ -66,9 +66,9 @@ end
 names = string({d.name});
 
 % The split is by FILE NAME PREFIX rather than by a hand-kept list: a new
-% tGui2 page file joins the slow set automatically, and a list would be one
+% tGui page file joins the slow set automatically, and a list would be one
 % more thing to forget to update.
-isGui = startsWith(names, "tGui2");
+isGui = startsWith(names, "tGui");
 
 switch lower(scope)
     case "all"

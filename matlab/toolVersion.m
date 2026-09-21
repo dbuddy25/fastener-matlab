@@ -5,8 +5,8 @@ function v = toolVersion()
 %
 %   WHY A FUNCTION AT THE PATH ROOT rather than a constant on a class.
 %   The version is needed by three unrelated layers — the command-line
-%   entry point (fastenerTool), the GUI shell (gui2.FastenerApp,
-%   gui2.AppState) and the report layer — and it had been copy-pasted
+%   entry point (fastenerTool), the GUI shell (gui.FastenerApp,
+%   gui.AppState) and the report layer — and it had been copy-pasted
 %   into each of them. Three literals, no rule saying they must agree,
 %   and nothing that would fail if they drifted: a report could then
 %   claim one version while the window title claimed another. Root
@@ -70,7 +70,7 @@ function v = toolVersion()
 %            The rows are now the right way round, the pull-out row is no
 %            longer capped by the rating (the rating is the OTHER
 %            allowable), and "the lower value should be used" is applied
-%            across the two rather than hidden inside one. gui2 also could
+%            across the two rather than hidden inside one. gui also could
 %            not reach either check until this line — it never resolved the
 %            insert catalogue — so Heli-Coil joints read differently, and
 %            less optimistically, from here on.
@@ -113,13 +113,13 @@ function v = toolVersion()
 %            both correct as shipped; see COMPLIANCE.md.
 %
 %   THIS IS NOT THE CASE-FILE FORMAT VERSION, and the two must never be
-%   tied together. gui2.AppState.CaseFormat
+%   tied together. gui.AppState.CaseFormat
 %   ("fastener-analysis-matlab-v1") changes only when the saved-case
 %   schema breaks, which is rare and unrelated to tool releases; the
 %   hardware library's own schemaVersion is independent again. Bumping
 %   this string must never invalidate a user's saved cases.
 %
-%   Consumers: fastenerTool, gui2.AppState,
+%   Consumers: fastenerTool, gui.AppState,
 %   report.singleJointReport, report.exportResults.
 
 v = "0.6.0";

@@ -52,7 +52,7 @@ factors = s.Factors;
 model.Joint.checkTemperatureOrder(s.ColdTempC, s.NominalTempC, s.HotTempC);
 
 % Delegated per joint. The settings -> joint MAPPING lives in exactly one
-% place (engine.applyTemperatures), because the gui2 single-joint Analyze
+% place (engine.applyTemperatures), because the gui single-joint Analyze
 % path needs the same mapping and this function is private to +engine —
 % unreachable from the GUI, which is how single-joint runs ended up
 % silently using model.Joint's 20/20/20 degC defaults.

@@ -128,7 +128,7 @@ function r = marginTensionUlt(joint, preload, designLoads)
 %   would read as "not applicable" rather than "not configured".
 %
 %   Reviewed 2026-08-14 and left as a throw, because neither entry path can
-%   reach it: gui2.JointConfigPage's Analyze gate (missingRequired) lists
+%   reach it: gui.JointConfigPage's Analyze gate (missingRequired) lists
 %   "A flange layer thickness" among the selections Analyze cannot run
 %   without, and engine.analyzeBulk catches per row and puts the message in
 %   that row's Error column. Dan: "user will always fill the flange stack."

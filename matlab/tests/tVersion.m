@@ -5,8 +5,8 @@ classdef tVersion < matlab.unittest.TestCase
     %       results = runtests("tests")
     %
     %   WHY THIS EXISTS. The version string was copy-pasted into three
-    %   unrelated layers - fastenerTool, gui2.FastenerApp and
-    %   gui2.AppState - with a comment asking a human to keep them in
+    %   unrelated layers - fastenerTool, gui.FastenerApp and
+    %   gui.AppState - with a comment asking a human to keep them in
     %   sync and nothing that would fail if one drifted. A report could
     %   then claim a different version from the window title, and the
     %   only symptom would be on a PDF nobody re-reads.
@@ -41,10 +41,10 @@ classdef tVersion < matlab.unittest.TestCase
             % So the guard is no longer "do the copies agree" - there are no
             % copies. It is "does anything still keep one".
             src = fileread(fullfile(fileparts(fileparts( ...
-                which("tVersion"))), "+gui2", "AppState.m"));
+                which("tVersion"))), "+gui", "AppState.m"));
             testCase.verifyEmpty( ...
                 regexp(src, '^\s*ToolVersion\s*=', 'once', 'lineanchors'), ...
-                'gui2.AppState must not cache its own copy of the version.');
+                'gui.AppState must not cache its own copy of the version.');
         end
 
 
@@ -53,7 +53,7 @@ classdef tVersion < matlab.unittest.TestCase
             % cases, so the case-file tag has to be independent of - and
             % must not contain - the version string.
             testCase.verifyFalse( ...
-                contains(gui2.AppState.CaseFormat, toolVersion()), ...
+                contains(gui.AppState.CaseFormat, toolVersion()), ...
                 'The case format must not embed the tool version.');
         end
     end

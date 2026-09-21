@@ -108,7 +108,7 @@ classdef tReferenceDocuments < matlab.unittest.TestCase
             % a document permanently "not on this machine" even when it is.
             % Only checkable where the folder exists -- it is gitignored,
             % so a clean checkout has nothing to compare against.
-            folder = gui2.referencesFolder();
+            folder = gui.referencesFolder();
             testCase.assumeTrue(strlength(folder) > 0 && isfolder(folder), ...
                 'No references folder on this machine; nothing to check against.');
 
@@ -134,11 +134,11 @@ classdef tReferenceDocuments < matlab.unittest.TestCase
             folder = string(fullfile(fx.Folder, "docs"));
             mkdir(char(folder));
 
-            testCase.verifyEqual(gui2.referencesFolder("", store), "", ...
+            testCase.verifyEqual(gui.referencesFolder("", store), "", ...
                 'An unwritten store reads as unset, not as an error.');
 
-            gui2.referencesFolder(folder, store);
-            testCase.verifyEqual(gui2.referencesFolder("", store), folder);
+            gui.referencesFolder(folder, store);
+            testCase.verifyEqual(gui.referencesFolder("", store), folder);
         end
     end
 end

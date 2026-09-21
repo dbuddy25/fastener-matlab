@@ -7,7 +7,7 @@ function nvArgs = boltSizingMemberArgs(memberType, library, nutSpec, member)
 %   orchestration call that cannot drift from what this returns.
 %
 %   Pure (model and data types in, no app state), so it is testable
-%   without building a GUI. gui2.BoltSizingPage is bolt-only and does not
+%   without building a GUI. gui.BoltSizingPage is bolt-only and does not
 %   use it; it is kept for a caller that offers a threaded-member picker.
 %
 %   memberType empty (model.ThreadedMemberType.empty(1,0), the picker's
@@ -26,7 +26,7 @@ function nvArgs = boltSizingMemberArgs(memberType, library, nutSpec, member)
 %
 %   Call graph:
 %       Precedents (calls)      none (pure).
-%       Dependents (called by)  none today (gui2.BoltSizingPage is bolt-only).
+%       Dependents (called by)  none today (gui.BoltSizingPage is bolt-only).
 %       Tests                   tests/tBoltSizingMemberArgs.m.
 
 arguments

@@ -2,8 +2,8 @@ classdef ProgressCounter < matlab.unittest.plugins.TestRunnerPlugin
     %PROGRESSCOUNTER  Live "n of N" progress while the suite runs.
     %   Replaces the framework's row of dots with one line per test:
     %
-    %      142/770  tGui2Bulk/theRunButtonGatesOnAnEmptyCase
-    %      143/770  tGui2Bulk/aCancelledRunKeepsTheOldTable    ** FAILED
+    %      142/770  tGuiBulk/theRunButtonGatesOnAnEmptyCase
+    %      143/770  tGuiBulk/aCancelledRunKeepsTheOldTable    ** FAILED
     %
     %   WHY. The full suite takes ~12 minutes on the machine that runs it,
     %   which is not the machine it is written on. A row of identical dots

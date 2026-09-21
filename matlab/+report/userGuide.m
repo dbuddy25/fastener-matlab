@@ -32,7 +32,7 @@ function file = userGuide(file)
 %
 %   Call graph:
 %       Precedents (calls)      toolVersion.
-%       Dependents (called by)  gui2.FastenerApp (Help > User Guide).
+%       Dependents (called by)  gui.FastenerApp (Help > User Guide).
 %       Tests                   tests/tUserGuide.m.
 
 arguments

@@ -54,7 +54,7 @@ classdef tSourceStructure < matlab.unittest.TestCase
         end
 
         function everyGuiTestClassCanDriveAGesture(testCase)
-            %   A tGui2* file that extends matlab.unittest.TestCase instead
+            %   A tGui* file that extends matlab.unittest.TestCase instead
             %   of matlab.uitest.TestCase looks completely normal until it
             %   runs, and then every test in it ERRORS with "Unrecognized
             %   method, property, or field 'press'". The file is about
@@ -64,7 +64,7 @@ classdef tSourceStructure < matlab.unittest.TestCase
             wrong = string.empty(1, 0);
             for i = 1:numel(files)
                 [~, name] = fileparts(files(i));
-                if ~startsWith(name, "tGui2")
+                if ~startsWith(name, "tGui")
                     continue
                 end
                 txt = string(fileread(files(i)));
@@ -73,7 +73,7 @@ classdef tSourceStructure < matlab.unittest.TestCase
                 end
             end
             testCase.verifyEmpty(wrong, sprintf( ...
-                ['These tGui2* classes cannot drive a gesture (they need ' ...
+                ['These tGui* classes cannot drive a gesture (they need ' ...
                  'matlab.uitest.TestCase, not matlab.unittest.TestCase): ' ...
                  '%s'], strjoin(wrong, ", ")));
         end

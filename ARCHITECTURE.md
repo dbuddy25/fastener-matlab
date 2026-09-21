@@ -241,7 +241,7 @@ kept in separate layers so each can be built and tested on its own:
 
 ```
    ┌──────────┐      ┌───────────┐      ┌──────────────┐
-   │  +model  │ ───▶ │  +engine  │ ───▶ │+report/+gui2 │
+   │  +model  │ ───▶ │  +engine  │ ───▶ │+report/+gui │
    │  (nouns) │      │  (math)   │      │  (present)   │
    └──────────┘      └───────────┘      └──────────────┘
    describe a joint   compute margins    show the answer
@@ -348,13 +348,13 @@ export (Phase 3). The GUI wraps exactly these calls later.
 
 ```
 matlab/
-├── fastenerTool.m   ✅ entry point: version banner + gui2.launch
+├── fastenerTool.m   ✅ entry point: version banner + gui.launch
 ├── +model/          ✅ domain types (the "nouns")           — Phase 1 (+2.1 additions)
 ├── +engine/         ✅ `preload` (2.4), `designLoads` + `marginTensionUlt` (2.5), `marginSeparation` + `marginTensionYield` (2.6), `marginShearUlt` + `marginInteraction` (2.7), `marginSlip` (2.8), `analyze` + `Result` (2.9), `stiffness` (3.1a) + wiring into thermal preload & tension rupture (3.1b), `marginBearing` + `marginShearTearout` + `marginBearingUnderHead` (3.2), `marginBoltThreadShear` + `marginNutStrength` + `marginInsert` + `marginTappedParentThread` + `boltDesignLoad` (3.3) — all 15 checks; `resolveForces` + `loadCaseFromForces` (3.5a); `analyzeBulk` (3.5c) — the bulk orchestrator; `runBulk` (3.6) — the one-call headless workflow; `runWorkbook` (Step 2c) — the single-workbook entry point (shared settings-apply helper with `runBulk`)
 ├── +data/           ✅ library loader (`Library` + `library/` — one JSON per part, plus user drop-in files; 2.2); bulk parsers (`loadJointLibrary` + `loadElements` + `templates/`, 3.5b — Step 2a joint-table layout); global settings (`loadSettings` — temps + factors, Step 2a); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields sheets, Step 2b); generic model↔struct serialization (`toStruct`/`fromStruct`, 3.7); case save/load (`saveCase`/`loadCase`, 3.7); factor presets (`factorPresets`/`factorPreset`/`saveFactorPreset`, 3.7)
 ├── +validation/     ✅ DABJ §9 answer-key case (`dabjSection9`, 2.3) + Example 8-b stiffness case (`dabjExample8b`, 3.1a)
 ├── +report/         ✅ XLSX export (`exportResults`, 3.6); single-joint PDF report (`singleJointReport`, 3.8, via MATLAB Report Generator)
-├── +gui2/           ✅ THE GUI — programmatic uifigure app, `classdef < handle` on
+├── +gui/           ✅ THE GUI — programmatic uifigure app, `classdef < handle` on
 │                    `uigridlayout`; rail + card shell over `AppState`. All 10
 │                    pages built (step 9 landed Materials & Hardware) — Phase 4
 ├── examples/        ✅ runnable headless reference (`run_bulk_example.m`, 3.6)
@@ -367,7 +367,7 @@ Package classes reference each other with the `model.` / `engine.` prefix.
 
 Generated from source (comments stripped, so documentation mentions do not count
 as calls). File counts (2026-08-17): `+model` 16 · `+engine` 39 · `+engine/private` 8 ·
-`+data` 16 · `+report` 5 · `+gui2` 23 · `+validation` 2.
+`+data` 16 · `+report` 5 · `+gui` 23 · `+validation` 2.
 
 **The single-joint chain.** `analyze` is the only orchestrator — it calls 18
 things and nothing calls back into it:
@@ -396,7 +396,7 @@ analyze
 **Above and below.** `runBulk` / `runWorkbook` → `analyzeBulk` → `analyze`, with
 `resolveForces` → `loadCaseFromForces` turning FE output into a `LoadCase`, and
 `data.*` loaders plus `report.exportResults` at the edges. The GUI calls the same
-entry points; no analysis logic lives in `+gui2`.
+entry points; no analysis logic lives in `+gui`.
 
 **Shared primitives** (`+engine/private`, called bare), each existing so its
 callers cannot disagree:
@@ -557,7 +557,7 @@ Phase 2.2), not a type.
 | Single-workbook bulk run (`engine.runWorkbook` over the `data.makeTemplate` workbook; header-tolerant `data.loadElements`; optional `sheet` arg on all three loaders) | Step 2c | ✅ |
 | Case save/load, factor presets | 3.7 | ⏳ |
 | Single-joint PDF report (`report.singleJointReport`, via MATLAB Report Generator) | 3.8 | ✅ |
-| GUI (`+gui2`) | 4 | ✅ **complete** — eleven pages, Help menu |
+| GUI (`+gui`) | 4 | ✅ **complete** — eleven pages, Help menu |
 | Packaging (`.exe`) | 5 | ⏳ |
 
 ---

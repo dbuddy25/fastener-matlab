@@ -6,7 +6,7 @@ function [ok, reason] = boltSizingMemberSelectionReady(memberType, nutSpec, memb
 %   when it is not.
 %
 %   Pure (model and data types in, no app state), so it is testable
-%   without building a GUI. gui2.BoltSizingPage is bolt-only and does not
+%   without building a GUI. gui.BoltSizingPage is bolt-only and does not
 %   use it; it is kept for a caller that offers a threaded-member picker.
 %
 %   memberType empty ("None (bolt-only)") is always ready -- the bolt-only

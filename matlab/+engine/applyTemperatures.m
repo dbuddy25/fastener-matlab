@@ -14,7 +14,7 @@ function j = applyTemperatures(j, s)
 %
 %   THE ONE PLACE THE settings -> joint MAPPING LIVES. It used to live
 %   only inside the private applyGlobalSettings, which is reachable from
-%   the bulk runners and nothing else, so the gui2 single-joint Analyze
+%   the bulk runners and nothing else, so the gui single-joint Analyze
 %   path never applied the temperatures at all: every single-joint run
 %   used model.Joint's 20/20/20 °C defaults and produced a thermal
 %   preload term of exactly zero no matter what the Temp & Loads page
@@ -34,7 +34,7 @@ function j = applyTemperatures(j, s)
 %                               shared invariant. Otherwise a leaf.
 %       Dependents (called by)  engine/private/applyGlobalSettings (and so
 %                               engine.runBulk / engine.runWorkbook), and
-%                               gui2.JointConfigPage's Analyze path.
+%                               gui.JointConfigPage's Analyze path.
 %       Tests                   tests/tApplyGlobalSettings.m
 %
 %   Validation status/coverage: no dedicated VALIDATION.md row — exercised

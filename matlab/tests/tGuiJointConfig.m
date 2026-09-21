@@ -1,0 +1,1920 @@
+classdef tGuiJointConfig < matlab.uitest.TestCase
+    %TGUIJOINTCONFIG  Joint Config: shell, Bolt, washers, flanges, member.
+    %
+    %   Run from the matlab/ folder with:
+    %       results = runtests("tests")
+    %
+    %   NOTE ON .Enable / .Visible: these read back as
+    %   matlab.lang.OnOffSwitchState, never char, so a bare
+    %   verifyEqual(x.Enable, 'on') fails on class mismatch while the values
+    %   agree. Compare char(...) or logical(...). This cost a full round of
+    %   false failures on the first attempt at this page.
+    %
+    %   NOTE ON choose(): it matches a dropdown's Items - the display text a
+    %   user clicks - not its ItemsData. Pass the label.
+
+    properties
+        App
+        Page
+    end
+
+    methods (TestClassSetup)
+        function addSourceToPath(testCase)
+            testDir = fileparts(mfilename("fullpath"));   % .../matlab/tests
+            srcDir  = fileparts(testDir);                 % .../matlab
+            testCase.applyFixture( ...
+                matlab.unittest.fixtures.PathFixture(srcDir));
+        end
+    end
+
+    methods (TestMethodSetup)
+        function launchApp(testCase)
+            testCase.App = gui.FastenerApp();
+            testCase.addTeardown(@() delete(testCase.App));
+            testCase.App.navigateTo("JointConfig");
+            testCase.Page = testCase.App.page("JointConfig");
+        end
+    end
+
+    % ---- The page exists and is wired into the rail -----------------------
+    methods (Test)
+        function pageBuildsAndIsTheActivePage(testCase)
+            testCase.verifyEqual(testCase.App.activePageId(), "JointConfig");
+            testCase.verifyTrue(testCase.Page.IsBuilt);
+        end
+
+        function railKeepsJointConfigRightAfterBoltSizing(testCase)
+            ids = testCase.App.pageIds();
+            testCase.verifyEqual(ids(find(ids == "BoltSizing") + 1), "JointConfig");
+        end
+    end
+
+    % ---- A6: required dropdowns start blank -------------------------------
+    methods (Test)
+        function boltAndMaterialStartOnTheBlankSentinel(testCase)
+            % Landing on whatever sorts first in the catalogue analyses
+            % hardware nobody chose, and looks deliberate doing it.
+            p = testCase.Page;
+            testCase.verifyEqual(strtrim(char(p.boltDropDown().Value)), '', ...
+                'The bolt dropdown must start blank (A6).');
+            testCase.verifyEqual(strtrim(char(p.boltMaterialDropDown().Value)), '', ...
+                'The bolt material dropdown must start blank (A6).');
+        end
+
+        function theBlankSentinelIsTheFirstItemNotAnAbsentValue(testCase)
+            p = testCase.Page;
+            testCase.verifyEqual(strtrim(p.boltDropDown().Items{1}), '');
+            testCase.verifyEqual(strtrim(p.boltMaterialDropDown().Items{1}), '');
+        end
+    end
+
+    % ---- Edits reach AppState ---------------------------------------------
+    methods (Test)
+        function editingJointNamePropagatesAndFiresJointChanged(testCase)
+            p = testCase.Page;
+            fired = false;
+            lh = event.listener(testCase.App.State, 'JointChanged', ...
+                @(~, ~) setFired());
+            testCase.addTeardown(@() delete(lh));
+
+            testCase.type(p.jointNameField(), "Bracket to bulkhead");
+
+            testCase.verifyEqual(testCase.App.State.Joint.Name, ...
+                "Bracket to bulkhead");
+            testCase.verifyTrue(fired, 'Editing the joint name did not fire JointChanged.');
+            testCase.verifyTrue(testCase.App.State.IsDirty, ...
+                'A joint edit must mark the case dirty (A4).');
+
+            function setFired()
+                fired = true;
+            end
+        end
+
+        function editingBoltCountPropagates(testCase)
+            testCase.type(testCase.Page.boltCountField(), 4);
+            testCase.verifyEqual(testCase.App.State.Joint.BoltCount, 4);
+        end
+
+        function choosingABoltMarshalsTheLibraryEntry(testCase)
+            p    = testCase.Page;
+            keys = testCase.App.State.Library.boltKeys();
+            testCase.assumeNotEmpty(keys, 'No bolts in the library.');
+
+            testCase.choose(p.boltDropDown(), char(keys(1)));
+
+            testCase.verifyEqual(testCase.App.State.Joint.Bolt.Designation, ...
+                keys(1), 'The chosen bolt must reach model.Joint.Bolt.');
+        end
+
+        function choosingABoltMaterialMarshalsTheLibraryEntry(testCase)
+            p    = testCase.Page;
+            mats = testCase.App.State.Library.materialKeys(Role = "bolt");
+            testCase.assumeNotEmpty(mats, 'No bolt materials in the library.');
+
+            testCase.choose(p.boltMaterialDropDown(), char(mats(1)));
+
+            testCase.verifyEqual(testCase.App.State.Joint.BoltMaterial.Name, ...
+                mats(1));
+        end
+    end
+
+    % ---- buildJoint is TOTAL ----------------------------------------------
+    methods (Test)
+        function commitSucceedsWithEveryRequiredSelectionStillBlank(testCase)
+            % THE defect that sank the first attempt: buildJoint asserted
+            % required selections and threw, so on an incomplete form no
+            % commit ever succeeded - State.Joint stayed blank, Save wrote
+            % that blank, and repopulation wiped the form. An incomplete
+            % form is the normal state while working.
+            p = testCase.Page;
+            testCase.type(p.jointNameField(), "Partially filled");
+
+            testCase.verifyEqual(testCase.App.State.Joint.Name, ...
+                "Partially filled", ...
+                'A commit must succeed while required dropdowns are blank.');
+            testCase.verifyEqual(testCase.App.State.Joint.Bolt.Designation, "", ...
+                'A blank bolt marshals as the model default, not an error.');
+        end
+
+        function typedInputSurvivesNavigatingAwayAndBack(testCase)
+            % The user-visible consequence of the above.
+            p = testCase.Page;
+            testCase.type(p.jointNameField(), "Survives navigation");
+            testCase.type(p.boltCountField(), 6);
+
+            testCase.App.navigateTo("Factors");
+            testCase.App.navigateTo("JointConfig");
+
+            testCase.verifyEqual(char(p.jointNameField().Value), ...
+                'Survives navigation', ...
+                'Navigating away and back must not discard typed input.');
+            testCase.verifyEqual(p.boltCountField().Value, 6);
+        end
+    end
+
+    % ---- Refresh reads state without claiming an edit ---------------------
+    methods (Test)
+        function refreshFromAnExternalJointNeverMarksDirty(testCase)
+            j = model.Joint(Name = "Loaded from a case", BoltCount = 3);
+            testCase.App.State.Joint = j;
+
+            testCase.verifyEqual(char(testCase.Page.jointNameField().Value), ...
+                'Loaded from a case', ...
+                'An external Joint assignment must repopulate the controls.');
+            testCase.verifyFalse(testCase.App.State.IsDirty, ...
+                'Repopulating from state must never mark dirty (A4).');
+        end
+
+        function aBoltKeyTheLibraryLacksFallsBackToBlank(testCase)
+            % Never silently land on a neighbouring entry: an unknown key
+            % must read as "choose one", not as a real selection.
+            testCase.App.State.Joint = model.Joint( ...
+                Bolt = model.Bolt(Designation = "NOT-IN-LIBRARY-XYZ"));
+            testCase.verifyEqual( ...
+                strtrim(char(testCase.Page.boltDropDown().Value)), '');
+        end
+    end
+    % ---- Flange stack -----------------------------------------------------
+    methods (Test)
+        function activeRowWithAThicknessReachesTheStack(testCase)
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), '0.25');
+            stack = testCase.App.State.Joint.FlangeStack;
+            testCase.verifyNumElements(stack, 1);
+            testCase.verifyEqual(stack(1).Thickness, 0.25);
+        end
+
+        function aRowWithNoMaterialYetStillCountsTowardTheGrip(testCase)
+            % The reverted build dropped a row until its material was
+            % chosen, so the grip read zero while the analyst was still
+            % picking materials. The thickness is real; the layer belongs
+            % in the grip. Missing allowables are the engine's to report.
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1);
+            testCase.verifyTrue( ...
+                contains(string(p.gripLabel().Text), "0.2500"), ...
+                'A row with a thickness but no material must still be in the grip.');
+        end
+
+        function anEmptyStackReportsUnknownRatherThanZero(testCase)
+            % A1: unknown must never look like fine. Every row starts with
+            % zero thickness, so the stack is empty at first paint.
+            txt = string(testCase.Page.gripLabel().Text);
+            testCase.verifyFalse(contains(txt, "0.0000"), ...
+                'An empty stack must not render as a grip of zero.');
+            testCase.verifyTrue(contains(txt, char(8212)), ...
+                'An unevaluated grip shows an em dash (A1).');
+        end
+
+        function aLayerLeavesTheStackWhenItsThicknessIsCleared(testCase)
+            % Thickness is the ONLY thing that puts a layer in the stack -
+            % there is no separate Active state that can disagree with it.
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(2), '0.5');
+            testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1);
+
+            testCase.type(p.flangeThickness(2), '0');
+            testCase.verifyEmpty(testCase.App.State.Joint.FlangeStack, ...
+                'Clearing a thickness must remove the layer from the stack.');
+        end
+
+        function aBlankEdgeDistanceMarshalsAsNaNNotZero(testCase)
+            % NaN is the model's "not supplied"; zero would be a real edge
+            % distance and would make tear-out evaluate against nothing.
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), '0.25');
+            stack = testCase.App.State.Joint.FlangeStack;
+            testCase.verifyTrue(isnan(stack(1).EdgeDistance));
+        end
+
+        function aTypedZeroInFlangeGeometryDoesNotTakeTheCommitDown(testCase)
+            % model.FlangeLayer's HoleDiameter and EdgeDistance are
+            % mustBePositiveOrNaN, so a typed 0 THROWS - which would abort
+            % the commit and silently drop every edit after it, breaking
+            % the guarantee that buildJoint is total. Zero means "not
+            % supplied", same as blank.
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.type(p.flangeEdge(1), '0');
+            testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1, ...
+                'A typed zero must not abort the commit.');
+            testCase.verifyTrue( ...
+                isnan(testCase.App.State.Joint.FlangeStack(1).EdgeDistance));
+        end
+
+        function aTypoInEdgeDistanceDoesNotTakeTheCommitDown(testCase)
+            % buildJoint is total: a junk optional value becomes NaN.
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.type(p.flangeEdge(1), 'half an inch');
+            testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1, ...
+                'A typo in an optional field must not abort the commit.');
+            testCase.verifyTrue(isnan(testCase.App.State.Joint.FlangeStack(1).EdgeDistance));
+        end
+    end
+    % ---- Threaded member ---------------------------------------------------
+    methods (Test)
+        function memberTypeOffersExactlyTheThreeEnumMembers(testCase)
+            % There is no None. The reverted build had a case for one, which
+            % threw on every switch away from Nut because MATLAB evaluates a
+            % case expression only when it is reached.
+            items = testCase.Page.memberTypeDropDown().Items;
+            testCase.verifyNumElements(items, 3);
+            testCase.verifyTrue(all(ismember( ...
+                {'Nut', 'Helical Insert', 'Tapped Hole'}, items)));
+        end
+
+        function materialLabelFollowsTheRoleTheDropdownIsPlaying(testCase)
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifyEqual(string(p.memberMaterialLabel().Text), ...
+                "Nut material");
+
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyEqual(string(p.memberMaterialLabel().Text), ...
+                "Parent (host) material");
+
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.verifyEqual(string(p.memberMaterialLabel().Text), ...
+                "Parent (host) material");
+        end
+
+        function anInsertResolvesItsStiGeometryFromTheCatalogue(testCase)
+            % THE reason insert pull-out read as "no data" on every GUI
+            % analysis: the STI lookup lived only in data.loadJointLibrary,
+            % so a joint built here carried a NaN STI diameter,
+            % engine.marginInsert had no area to work from, and the check
+            % came back NotEvaluated while library.json held the entry all
+            % along. 0.2825 in is NASM33537-2500-20's class-3B pitch
+            % diameter minimum.
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1352 1/4-20');
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+
+            tm = testCase.App.State.Joint.ThreadedMember;
+
+            testCase.verifyEqual(tm.StiPitchDiameter, 0.2825, 'AbsTol', 1e-6);
+        end
+
+        function aNonInsertMemberCarriesNoStiGeometry(testCase)
+            % Cleared with the type, like the engagement properties: an STI
+            % diameter left behind by a former Insert would be read as this
+            % member's geometry (A9).
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1352 1/4-20');
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.assertFalse(isnan( ...
+                testCase.App.State.Joint.ThreadedMember.StiPitchDiameter));
+
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+
+            testCase.verifyTrue(isnan( ...
+                testCase.App.State.Joint.ThreadedMember.StiPitchDiameter));
+        end
+
+        function crossingEngagementModesDoesNotStrandTheOldValue(testCase)
+            % engine.resolveEngagementLength is TYPE-AGNOSTIC — a ratio
+            % wins whenever it is set, whatever the member type — so a
+            % ratio typed for an Insert that survived a switch to Nut would
+            % be read as this member's geometry and silently govern the
+            % thread-shear area. commitJoint prevents it structurally by
+            % setting exactly one of the pair and NaNing the other on EVERY
+            % commit, keyed on the type.
+            %
+            % Drives the real dropdown callback.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.engagementRatioField(), '1.5');
+            testCase.assertEqual( ...
+                testCase.App.State.Joint.ThreadedMember.EngagementRatio, 1.5, ...
+                'Fixture must actually hold a ratio, or this proves nothing.');
+
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+
+            testCase.verifyTrue(isnan( ...
+                testCase.App.State.Joint.ThreadedMember.EngagementRatio), ...
+                'The Insert ratio must not survive into a Nut.');
+        end
+
+        function crossingBackDoesNotStrandTheEngagementLength(testCase)
+            % The other direction, for the same reason: a length typed for
+            % a Nut must not be left on an Insert, whose engagement is
+            % expressed as a multiple of diameter.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.type(p.engagementLengthField(), '0.30');
+            testCase.assertEqual( ...
+                testCase.App.State.Joint.ThreadedMember.EngagementLength, 0.30, ...
+                'Fixture must actually hold a length, or this proves nothing.');
+
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+
+            testCase.verifyTrue(isnan( ...
+                testCase.App.State.Joint.ThreadedMember.EngagementLength), ...
+                'The Nut length must not survive into an Insert.');
+        end
+
+        function theMemberRatedLoadReachesTheModel(testCase)
+            % 5020B Sec. 4.4.1 caps the computed allowable at the load
+            % rating, and until now that rating was reachable from the bulk
+            % CSV and from nowhere in the app.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.memberRatedField(), '1350');
+
+            testCase.verifyEqual( ...
+                testCase.App.State.Joint.ThreadedMember.RatedUltimateLoad, ...
+                1350);
+        end
+
+        function aBlankRatedLoadMeansNoneClaimedNotUnknown(testCase)
+            % RatedUltimateLoad is mustBeNonnegative with a 0 default, and 0
+            % is how the engine spells "no rating" — so blank marshals to 0,
+            % not to the NaN the other optional numbers use.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.memberRatedField(), '');
+
+            testCase.verifyEqual( ...
+                testCase.App.State.Joint.ThreadedMember.RatedUltimateLoad, 0);
+        end
+
+        function theRatedLoadIsNamedForTheMemberInFront(testCase)
+            % One property, two meanings. The analyst should not have to
+            % know that.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.verifySubstring(string(p.memberRatedLabel().Text), ...
+                "pull-out");
+
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifySubstring(string(p.memberRatedLabel().Text), "Nut");
+
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyEqual(char(p.memberRatedField().Enable), 'off', ...
+                'A tapped hole has no manufacturer and so no rating.');
+        end
+
+        function engagementControlsGreyOutByType(testCase)
+            % Disabled, never hidden and never read-only (A5). Enable reads
+            % back as OnOffSwitchState, so compare char().
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.verifyEqual(char(p.engagementRatioField().Enable), 'on');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'off');
+
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyEqual(char(p.engagementRatioField().Enable), 'off');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on');
+        end
+
+        function eachEngagementQuantityKeepsItsOwnValueAcrossACrossing(testCase)
+            % A9 dissolved rather than defended against: 0.25 in and 1.5 x D
+            % each have their own home, so neither can be read as the other
+            % and nothing needs clearing on a type change.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.type(p.engagementLengthField(), '0.25');
+
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.engagementRatioField(), '1.5');
+            testCase.verifyEqual(strtrim(char(p.engagementLengthField().Value)), ...
+                '0.25', 'The inches value must survive a crossing into Insert.');
+
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifyEqual(strtrim(char(p.engagementRatioField().Value)), ...
+                '1.5', 'The ratio value must survive a crossing back to Nut.');
+        end
+
+        function onlyTheTypesOwnEngagementPropertyIsMarshalled(testCase)
+            % Each value has to be entered while ITS OWN type is selected -
+            % the other control is disabled, and matlab.uitest refuses to
+            % type into a disabled component exactly as a user cannot. That
+            % refusal is the greying working, not a limitation to route
+            % around.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.engagementRatioField(), '1.5');
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.type(p.engagementLengthField(), '0.25');
+
+            % Nut is selected: inches marshal, the ratio must not.
+            m = testCase.App.State.Joint.ThreadedMember;
+            testCase.verifyEqual(m.EngagementLength, 0.25);
+            testCase.verifyTrue(isnan(m.EngagementRatio), ...
+                'A Nut must not marshal a ratio, even with one on screen.');
+
+            % Insert selected: the reverse, and both values are still there.
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            m = testCase.App.State.Joint.ThreadedMember;
+            testCase.verifyEqual(m.EngagementRatio, 1.5);
+            testCase.verifyTrue(isnan(m.EngagementLength), ...
+                'An Insert must not marshal an inch length.');
+        end
+
+        function aDisabledEngagementControlRefusesInput(testCase)
+            % A5: greyed means Enable='off', which genuinely blocks input -
+            % not a read-only-looking field that silently accepts it.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifyError( ...
+                @() testCase.type(p.engagementRatioField(), '1.5'), ...
+                'MATLAB:uiautomation:Driver:MustBeEditableAndEnabled');
+        end
+
+        function memberTypeReachesTheModel(testCase)
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyEqual(testCase.App.State.Joint.ThreadedMember.Type, ...
+                model.ThreadedMemberType.TappedHole, ...
+                'Tapped Hole must resolve through the enumeration, not a string compare (C1).');
+        end
+    end
+    % ---- Washers -----------------------------------------------------------
+    methods (Test)
+        function bothWasherGroupsBuild(testCase)
+            p = testCase.Page;
+            testCase.verifyNotEmpty(p.headWasher().Present);
+            testCase.verifyNotEmpty(p.nutWasher().Present);
+            testCase.verifyNotEmpty(p.sameAsHeadCheck());
+        end
+
+        function washerFieldsAreDisabledUntilTheWasherIsPresent(testCase)
+            % A5: Enable='off', never a read-only-looking field. Enable
+            % reads back as OnOffSwitchState, so compare char().
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.verifyEqual(char(h.Thk.Enable), 'off', ...
+                'An absent washer has nothing to configure.');
+
+            testCase.press(h.Present);
+            testCase.verifyEqual(char(h.Thk.Enable), 'on');
+            testCase.verifyEqual(char(h.OD.Enable),  'on');
+        end
+
+        function anAbsentWasherMarshalsTheModelDefaultNotTheTypedValues(testCase)
+            % "No washer" and "a washer of zero thickness" are different
+            % joints. Unticking Present must produce the former even though
+            % the fields still show what was typed.
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.06);
+            testCase.verifyEqual(testCase.App.State.Joint.HeadWasher.Thickness, 0.06);
+
+            testCase.press(h.Present);   % back off
+            w = testCase.App.State.Joint.HeadWasher;
+            testCase.verifyEqual(w.Thickness, 0, ...
+                'An absent washer marshals the model default.');
+            testCase.verifyTrue(isnan(w.OuterDiameter));
+            testCase.verifyEqual(h.Thk.Value, 0.06, ...
+                'Unticking Present must not blank the field.');
+        end
+
+        function washerEditsReachAppState(testCase)
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.078);
+            testCase.type(h.OD, '0.687');
+
+            w = testCase.App.State.Joint.HeadWasher;
+            testCase.verifyEqual(w.Thickness, 0.078);
+            testCase.verifyEqual(w.OuterDiameter, 0.687);
+            testCase.verifyTrue(testCase.App.State.IsDirty);
+        end
+
+        function sameAsHeadMirrorsTheHeadWasherAndGreysTheNutGroup(testCase)
+            % The head values must be entered BEFORE ticking: Same as Head
+            % greys the nut group, and matlab.uitest refuses to type into a
+            % disabled component exactly as a user cannot.
+            p = testCase.Page;
+            % The nut washer group starts FOLDED (Section 7.5) and
+            % matlab.uitest will not drive a control inside one.
+            p.expandGroup("Washer under nut");
+            h = p.headWasher();
+            n = p.nutWasher();
+
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.078);
+            testCase.type(h.OD, '0.687');
+            testCase.press(n.Present);
+
+            testCase.press(p.sameAsHeadCheck());
+
+            testCase.verifyEqual(n.Thk.Value, 0.078, ...
+                'Ticking Same as Head must mirror the head washer.');
+            testCase.verifyEqual(strtrim(char(n.OD.Value)), '0.687');
+            testCase.verifyEqual(char(n.Thk.Enable), 'off', ...
+                'A mirrored group has nothing left to choose (A5).');
+            testCase.verifyEqual(testCase.App.State.Joint.NutWasher.Thickness, ...
+                0.078, 'The mirrored values must reach the model.');
+        end
+
+        function headEditsPropagateLiveWhileSameAsHeadIsTicked(testCase)
+            p = testCase.Page;
+            % The nut washer group starts FOLDED (Section 7.5) and
+            % matlab.uitest will not drive a control inside one.
+            p.expandGroup("Washer under nut");
+            h = p.headWasher();
+            n = p.nutWasher();
+            testCase.press(h.Present);
+            testCase.press(n.Present);
+            testCase.press(p.sameAsHeadCheck());
+
+            testCase.type(h.Thk, 0.125);
+
+            testCase.verifyEqual(n.Thk.Value, 0.125, ...
+                'Mirroring is live, not a one-shot copy at tick time.');
+        end
+
+        function untickingSameAsHeadKeepsTheMirroredValues(testCase)
+            p = testCase.Page;
+            % The nut washer group starts FOLDED (Section 7.5) and
+            % matlab.uitest will not drive a control inside one.
+            p.expandGroup("Washer under nut");
+            h = p.headWasher();
+            n = p.nutWasher();
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.078);
+            testCase.press(n.Present);
+            testCase.press(p.sameAsHeadCheck());
+            testCase.press(p.sameAsHeadCheck());   % back off
+
+            testCase.verifyEqual(n.Thk.Value, 0.078, ...
+                'Unticking keeps the mirrored values - it never blanks them.');
+            testCase.verifyEqual(char(n.Thk.Enable), 'on', ...
+                'Unticking hands editing back.');
+        end
+
+        function sameAsHeadIsOnlyOfferedOnceThereIsANutWasher(testCase)
+            p = testCase.Page;
+            % The nut washer group starts FOLDED (Section 7.5) and
+            % matlab.uitest will not drive a control inside one.
+            p.expandGroup("Washer under nut");
+            testCase.verifyEqual(char(p.sameAsHeadCheck().Enable), 'off', ...
+                'Nothing to mirror onto while there is no nut washer.');
+            testCase.press(p.nutWasher().Present);
+            testCase.verifyEqual(char(p.sameAsHeadCheck().Enable), 'on');
+        end
+
+        function aBlankWasherDiameterMarshalsAsNaNAndKeepsTheCommit(testCase)
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.078);
+
+            w = testCase.App.State.Joint.HeadWasher;
+            testCase.verifyEqual(w.Thickness, 0.078, ...
+                'A blank diameter must not abort the commit.');
+            testCase.verifyTrue(isnan(w.OuterDiameter));
+            testCase.verifyTrue(isnan(w.InnerDiameter));
+        end
+
+        function aNonPositiveOuterDiameterDoesNotAbortTheCommit(testCase)
+            % model.Washer's OD is mustBePositiveOrNaN, so a typed zero
+            % would throw and take the whole commit down with it. buildJoint
+            % is total: it becomes NaN instead.
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.press(h.Present);
+            testCase.type(h.Thk, 0.078);
+            testCase.type(h.OD, '0');
+
+            w = testCase.App.State.Joint.HeadWasher;
+            testCase.verifyEqual(w.Thickness, 0.078, ...
+                'A typed zero diameter must not abort the commit.');
+            testCase.verifyTrue(isnan(w.OuterDiameter));
+        end
+    end
+    % ---- Bolt length readout -----------------------------------------------
+    methods (Test)
+        function readoutCarriesItsFixedLinesAndNeverBlanks(testCase)
+            % NO LONGER A FIXED LINE COUNT. The readout itemises the minimum
+            % bolt length, so a washer present or absent changes the number
+            % of lines. What is invariant is that the four fixed lines are
+            % always there - grip, the minimum, the verdict, and L1 - and
+            % that none of them renders blank.
+            txt = testCase.Page.boltLengthLabel().Text;
+            testCase.verifyFalse(any(cellfun(@isempty, txt)), ...
+                'No line may render blank; unknown shows an em dash (A1).');
+
+            for needle = ["Grip (stack", "Minimum bolt length", "Body length L1"]
+                testCase.verifyNotEqual(testCase.readoutLine(needle), "", ...
+                    sprintf('The "%s" line must always be present.', needle));
+            end
+        end
+
+        function theReadoutSaysWhenStiffnessCannotRun(testCase)
+            % THE line that predicts whether tension margins will evaluate.
+            % A blank form cannot resolve L1, and the analyst needs to know
+            % that here rather than from a NotEvaluated row after Analyze.
+            testCase.verifyTrue( ...
+                contains(testCase.readoutLine("Body length L1"), ...
+                         "stiffness cannot run"), ...
+                'A form that cannot resolve L1 must say so before Analyze.');
+        end
+
+        function aCataloguedBoltAndLengthDeriveL1WithoutAnOverride(testCase)
+            % REGRESSION for the whole point of seeding Table II's minimum
+            % basic thread length: engine.stiffness has always derived L1
+            % from Bolt.Length - ThreadLength, and only ever lacked the
+            % input. A real single-joint run used to lose its tension
+            % margins to this.
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltMaterialDropDown(), 'A286');
+            testCase.type(p.flangeThickness(1), '0.375');
+            testCase.choose(p.boltLengthField(), '1.25');
+
+            testCase.verifyTrue(isnan(testCase.App.State.Joint.BodyLengthInGrip), ...
+                'No override is typed - the derivation must stand alone.');
+            l1 = testCase.readoutLine("Body length L1");
+            testCase.verifyTrue(contains(l1, "derived"), ...
+                'L1 must come from the catalogue thread length, not a dash.');
+            testCase.verifyFalse(contains(l1, "cannot run"));
+        end
+
+        function aTypedL1IsReportedAsTheOverrideItIs(testCase)
+            p = testCase.Page;
+            % Advanced starts COLLAPSED (Section 7.5), and matlab.uitest
+            % refuses a control in an invisible hierarchy - so open it
+            % first, exactly as the user would have to.
+            p.expandGroup("Advanced");
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltMaterialDropDown(), 'A286');
+            testCase.type(p.flangeThickness(1), '0.375');
+            testCase.choose(p.boltLengthField(), '1.25');
+            testCase.type(p.bodyLengthField(), '0.2');
+
+            testCase.verifyTrue( ...
+                contains(testCase.readoutLine("Body length L1"), "your override"), ...
+                ['A typed L1 wins, and the readout must not call it ' ...
+                 'derived - which also means typing one has to REFRESH ' ...
+                 'that readout, not just commit the model.']);
+        end
+
+        function anUnevaluatedCheckNamesItsCauseInAmber(testCase)
+            % A1: a check that CANNOT RUN is amber and says why. Muted grey
+            % would read as "nothing to report", which is the opposite.
+            p = testCase.Page;
+            testCase.verifyNotEqual(testCase.readoutLine("Not evaluated"), "", ...
+                'A blank form cannot evaluate bolt length and must say so.');
+            testCase.verifyEqual(p.boltLengthLabel().FontColor, ...
+                gui.palette('statusWarn'), ...
+                'An unevaluated check is amber, not muted (A1).');
+        end
+
+        function anEmptyGripRendersAsAnEmDashNotZero(testCase)
+            testCase.verifyTrue( ...
+                contains(testCase.readoutLine("Grip (stack"), char(8212)), ...
+                'An undefined grip shows an em dash, never 0.0000.');
+        end
+
+        function overallBoltLengthReachesTheModel(testCase)
+            testCase.type(testCase.Page.boltLengthField(), '1.25');
+            testCase.verifyEqual(testCase.App.State.Joint.Bolt.Length, 1.25);
+        end
+
+        function aBlankBoltLengthMarshalsAsNaNNotZero(testCase)
+            % NaN is "not supplied", and the engine estimates a length from
+            % the joint geometry. Zero would be a real, absurd length.
+            testCase.verifyTrue(isnan(testCase.App.State.Joint.Bolt.Length));
+        end
+
+        function theLengthPickerOffersThisBoltsCataloguedLadder(testCase)
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            key = "NAS1351 3/8-24";
+            testCase.choose(p.boltDropDown(), char(key));
+
+            expected = arrayfun(@(x) sprintf('%g', x), lib.boltLengths(key), ...
+                'UniformOutput', false);
+            items = p.boltLengthField().Items;
+            testCase.verifyEqual(items(2:end), expected, ...
+                'The picker must offer exactly the Table III ladder.');
+            testCase.verifyEqual(strtrim(items{1}), '', ...
+                'A blank first item is how "let the engine estimate" is chosen.');
+        end
+
+        function choosingACataloguedLengthReachesTheModel(testCase)
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltLengthField(), '1.25');
+            testCase.verifyEqual(testCase.App.State.Joint.Bolt.Length, 1.25);
+        end
+
+        function anOffCatalogueLengthIsAcceptedNotRejected(testCase)
+            % Table III's own note reads "see code for additional lengths",
+            % so a length outside the ladder is procurable. The picker must
+            % take it rather than snapping to a listed value or blanking.
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.type(p.boltLengthField(), '1.31');
+            testCase.verifyEqual(testCase.App.State.Joint.Bolt.Length, 1.31);
+        end
+
+        function changingBoltRepopulatesTheLadderButKeepsTheLength(testCase)
+            % A 1.000 in screw is still 1.000 in after switching thread
+            % series. Blanking it would look like the tool deciding.
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 #10-32');
+            testCase.type(p.boltLengthField(), '1');
+            before = p.boltLengthField().Items;
+
+            testCase.choose(p.boltDropDown(), 'NAS1352 3/4-10');
+
+            testCase.verifyEqual(testCase.App.State.Joint.Bolt.Length, 1, ...
+                'Changing bolts must not retract the length asked for.');
+            testCase.verifyNotEqual(numel(p.boltLengthField().Items), ...
+                numel(before), 'The ladder must follow the bolt.');
+        end
+
+        function aTypedZeroBoltLengthDoesNotTakeTheCommitDown(testCase)
+            % model.Bolt.Length is mustBePositiveOrNaN - the same trap that
+            % the flange geometry hit. buildJoint stays total.
+            p = testCase.Page;
+            testCase.type(p.jointNameField(), "Zero length probe");
+            testCase.type(p.boltLengthField(), '0');
+            testCase.verifyEqual(testCase.App.State.Joint.Name, ...
+                "Zero length probe", ...
+                'A typed zero must not abort the commit.');
+            testCase.verifyTrue(isnan(testCase.App.State.Joint.Bolt.Length));
+        end
+    end
+    % ---- Advanced / overrides ----------------------------------------------
+    methods (Test)
+        function overridesStartBlankAndMarshalAsNaN(testCase)
+            % Blank means "the engine derives it", which is NaN in the
+            % model. Zero would be a real value and a wrong one.
+            j = testCase.App.State.Joint;
+            testCase.verifyTrue(isnan(j.BodyLengthInGrip));
+            testCase.verifyTrue(isnan(j.BoltRatedUltimateLoad));
+            testCase.verifyTrue(isnan(j.BoltRatedYieldLoad));
+        end
+
+        function bodyLengthAndRatedLoadsReachTheModel(testCase)
+            p = testCase.Page;
+            p.expandGroup("Advanced");
+            testCase.type(p.bodyLengthField(), '0.70');
+            testCase.type(p.ratedUltField(), '4210');
+            j = testCase.App.State.Joint;
+            testCase.verifyEqual(j.BodyLengthInGrip, 0.70);
+            testCase.verifyEqual(j.BoltRatedUltimateLoad, 4210);
+        end
+
+        function aRatedLoadOfZeroIsKeptNotDiscarded(testCase)
+            % BoltRatedUltimateLoad is mustBeNONNEGATIVEOrNaN, unlike the
+            % geometry fields: zero is a legitimate rating, so it must not
+            % be silently converted to "not supplied".
+            testCase.Page.expandGroup("Advanced");
+            testCase.type(testCase.Page.ratedUltField(), '0');
+            testCase.verifyEqual(testCase.App.State.Joint.BoltRatedUltimateLoad, 0);
+        end
+
+        function aTypedZeroBodyLengthDoesNotTakeTheCommitDown(testCase)
+            % BodyLengthInGrip is mustBePositiveOrNaN - the same trap as
+            % the flange geometry, the washer diameters and bolt length.
+            p = testCase.Page;
+            p.expandGroup("Advanced");
+            testCase.type(p.jointNameField(), "Zero L1 probe");
+            testCase.type(p.bodyLengthField(), '0');
+            testCase.verifyEqual(testCase.App.State.Joint.Name, "Zero L1 probe");
+            testCase.verifyTrue(isnan(testCase.App.State.Joint.BodyLengthInGrip));
+        end
+
+        function frustumAngleDefaultsToThirtyAndRefusesInvalidValues(testCase)
+            % The one property here with NO NaN state: model.Joint requires
+            % 0 < angle < 90 always, so the widget refuses out-of-range
+            % input rather than letting marshalling be handed something the
+            % model will reject.
+            p = testCase.Page;
+            p.expandGroup("Advanced");
+            testCase.verifyEqual(p.frustumAngleField().Value, 30);
+            testCase.verifyEqual(testCase.App.State.Joint.FrustumAngle, 30);
+
+            testCase.type(p.frustumAngleField(), 45);
+            testCase.verifyEqual(testCase.App.State.Joint.FrustumAngle, 45);
+
+            testCase.type(p.frustumAngleField(), 95);
+            testCase.verifyNotEqual(testCase.App.State.Joint.FrustumAngle, 95, ...
+                'An angle outside (0, 90) must never reach the model.');
+        end
+    end
+    % ---- Right column: preload, loads, assumptions --------------------------
+    methods (Test)
+        function preloadDefaultsMatchTheModel(testCase)
+            p  = testCase.Page;
+            ps = testCase.App.State.Joint.PreloadSpec;
+            testCase.verifyEqual(p.nutFactorField().Value, 0.2);
+            testCase.verifyEqual(ps.NutFactor, 0.2);
+            testCase.verifyEqual(ps.Method, model.PreloadMethod.TorqueControl, ...
+                'This workflow is always torque-controlled - there is no selector.');
+        end
+
+        function preloadEditsReachTheModel(testCase)
+            p = testCase.Page;
+            testCase.type(p.nominalTorqueField(), '55');
+            testCase.press(p.separationCriticalCheck());
+            ps = testCase.App.State.Joint.PreloadSpec;
+            testCase.verifyEqual(ps.NominalTorque, 55);
+            testCase.verifyTrue(ps.SeparationCritical);
+        end
+
+        function loadCaseEditsFireLoadCaseChanged(testCase)
+            fired = false;
+            lh = event.listener(testCase.App.State, 'LoadCaseChanged', ...
+                @(~, ~) setFired());
+            testCase.addTeardown(@() delete(lh));
+
+            testCase.type(testCase.Page.boltTensileField(), '1200');
+
+            testCase.verifyEqual(testCase.App.State.LoadCase.BoltTensileLimitLoad, 1200);
+            testCase.verifyTrue(fired);
+
+            function setFired()
+                fired = true;
+            end
+        end
+
+        function jointTotalsAppearOnlyInJointSlipMode(testCase)
+            % 5020B Eq. 84 needs them; the single-fastener default (Eq. 86)
+            % does not, and showing them always made them read as required.
+            p = testCase.Page;
+            testCase.verifyEqual(char(p.jointTensileField().Visible), 'off', ...
+                'Joint totals are hidden in single-fastener mode.');
+
+            testCase.choose(p.slipModeDropDown(), 'Joint');
+            testCase.verifyEqual(char(p.jointTensileField().Visible), 'on');
+
+            testCase.choose(p.slipModeDropDown(), 'SingleFastener');
+            testCase.verifyEqual(char(p.jointTensileField().Visible), 'off');
+        end
+
+        function assumptionEnumsResolveThroughTheEnumeration(testCase)
+            % Never a string compare against a hard-coded member name (C1).
+            p = testCase.Page;
+            testCase.choose(p.shearPlaneDropDown(), 'BodyInShear');
+            testCase.verifyEqual(testCase.App.State.Joint.ShearPlane, ...
+                model.ShearPlaneCondition.BodyInShear);
+
+            testCase.choose(p.boltAxisDropDown(), 'Y');
+            testCase.verifyEqual(testCase.App.State.Joint.BoltAxis, ...
+                model.BoltAxis.Y);
+        end
+
+        function boltAxisDefaultsToXOnABlankCase(testCase)
+            % A GUI default, not a model one: model.Joint defaults to Z and
+            % the model is frozen, so AppState.blankCaseState carries this.
+            testCase.verifyEqual(testCase.App.State.Joint.BoltAxis, ...
+                model.BoltAxis.X);
+        end
+
+        function shearTransferStaysNotDeclaredWithItsNoteShown(testCase)
+            % GUI_SPEC.md 7.2f: no control, and the model keeps NotDeclared
+            % so the 4.4.4 exemption is recorded as ASSUMED. Hard-setting
+            % the verified member would claim a verification nobody did.
+            testCase.verifyEqual( ...
+                testCase.App.State.Joint.ShearTransferCondition, ...
+                model.ShearTransferCondition.NotDeclared);
+        end
+    end
+    % ---- Actions: required-field gating, Analyze, Save ----------------------
+    methods (Test)
+        function analyzeIsHeldUntilEveryRequiredSelectionIsMade(testCase)
+            % The gate lives HERE, not in buildJoint - which is exactly why
+            % an incomplete form still commits without complaint.
+            p = testCase.Page;
+            testCase.verifyEqual(char(p.analyzeButton().Enable), 'off', ...
+                'A blank form cannot be analysed.');
+            testCase.verifyTrue(contains(string(p.requiredLabel().Text), "Bolt"), ...
+                'The gate must NAME what is missing, not just refuse.');
+        end
+
+        function theRequiredListNamesTheMemberMaterialByItsCurrentRole(testCase)
+            % The same dropdown is "Nut material" or "Parent (host)
+            % material" depending on type; the gate must say which.
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Tapped Hole');
+            testCase.verifyTrue( ...
+                contains(string(p.requiredLabel().Text), "Parent (host) material"));
+        end
+
+        function aFlangeMaterialIsRequiredOnlyOnceTheRowHasAThickness(testCase)
+            % A row with no thickness is not part of this joint, so its
+            % material cannot be required.
+            p = testCase.Page;
+            testCase.verifyFalse( ...
+                contains(string(p.requiredLabel().Text), "Flange layer 1"));
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.verifyTrue( ...
+                contains(string(p.requiredLabel().Text), "Flange layer 1 material"));
+        end
+
+        function aWasherMaterialIsRequiredOnlyWhileTheWasherIsPresent(testCase)
+            % A present washer is in the clamped stack, so its CTE enters
+            % the thermal term; left blank, engine.preload refuses with
+            % missingCTE the moment there is a temperature excursion.
+            p = testCase.Page;
+            h = p.headWasher();
+            testCase.verifyFalse( ...
+                contains(string(p.requiredLabel().Text), "Head washer material"));
+            testCase.press(h.Present);
+            testCase.verifyTrue( ...
+                contains(string(p.requiredLabel().Text), "Head washer material"));
+            mats = testCase.App.State.Library.materialKeys(Role = "washer");
+            testCase.assumeNotEmpty(mats);
+            testCase.choose(h.Material, char(mats(1)));
+            testCase.verifyFalse( ...
+                contains(string(p.requiredLabel().Text), "Head washer material"));
+        end
+
+        function analyzeEnablesOnceTheFormIsComplete(testCase)
+            % "Complete" now means what the ENGINE needs, not just the
+            % hardware: a clamped layer, a preload and an applied load are
+            % each required before a run can say anything.
+            p = testCase.Page;
+            testCase.fillRunnableJoint();
+
+            testCase.verifyEqual(char(p.analyzeButton().Enable), 'on', ...
+                'A complete form must enable Analyze.');
+            testCase.verifyEmpty(char(p.requiredLabel().Text));
+        end
+
+        function hardwareAloneNoLongerEnablesAnalyze(testCase)
+            % REGRESSION. The gate used to pass on hardware alone, so
+            % Analyze enabled and the run came back with every margin
+            % NotEvaluated -- a button that promised an answer and
+            % delivered a page of dashes.
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            mats = lib.materialKeys();
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltMaterialDropDown(), 'A286');
+            testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.choose(p.flangeMaterial(1), char(mats(1)));
+
+            testCase.verifyEqual(char(p.analyzeButton().Enable), 'off', ...
+                'Hardware alone cannot produce a margin.');
+            txt = string(p.requiredLabel().Text);
+            testCase.verifyTrue(contains(txt, "Nominal torque"), ...
+                'Every 5020B check is written in terms of the preload.');
+            testCase.verifyTrue(contains(txt, "applied limit load"), ...
+                'Margins are computed AGAINST loads.');
+        end
+
+        function anEmptyFlangeStackIsReportedAsMissing(testCase)
+            p = testCase.Page;
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.verifyTrue( ...
+                contains(string(p.requiredLabel().Text), "flange layer thickness"), ...
+                'No clamped stack means no grip, and grip is upstream of everything.');
+        end
+
+        function aMaterialAddedToTheLibraryAppearsWithoutARestart(testCase)
+            % Until step 9 NOTHING in +gui listened to LibraryChanged --
+            % the event was declared, fired, and had no subscribers at all.
+            % These dropdowns are populated once at build, so a material
+            % added on the Materials & Hardware page was invisible here
+            % until the app was restarted.
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            before = numel(p.boltMaterialDropDown().Items);
+
+            lib = lib.addMaterial(struct("key", "Late alloy", ...
+                "ftu", 100000, "fty", 90000, "fsu", 60000, ...
+                "roles", {{'bolt'}}, ...
+                "source", "tGuiJointConfig test entry"));
+            testCase.App.State.Library = lib;    % fires LibraryChanged
+
+            items = string(p.boltMaterialDropDown().Items);
+            testCase.verifyEqual(numel(items), before + 1, ...
+                'The bolt-material picker did not pick up the new material.');
+            testCase.verifyTrue(any(items == "Late alloy"));
+        end
+
+        function repopulatingTheDropdownsKeepsTheCurrentSelection(testCase)
+            % Setting Items can drop the current Value, and MATLAB fires no
+            % callback when it does -- so a naive repopulation silently
+            % reselects whatever sorts first and the joint changes material
+            % underneath the analyst. THIS is the reason for save/restore.
+            p    = testCase.Page;
+            mats = testCase.App.State.Library.materialKeys(Role = "bolt");
+            testCase.assumeGreaterThan(numel(mats), 0);
+            chosen = char(mats(end));
+            testCase.choose(p.boltMaterialDropDown(), chosen);
+            testCase.assertEqual(p.boltMaterialDropDown().Value, chosen);
+
+            lib = testCase.App.State.Library;
+            lib = lib.addMaterial(struct("key", "Another alloy", ...
+                "ftu", 1, "fty", 1, "fsu", 1, "roles", {{'bolt'}}, ...
+                "source", "tGuiJointConfig test entry"));
+            testCase.App.State.Library = lib;
+
+            testCase.verifyEqual(p.boltMaterialDropDown().Value, chosen, ...
+                'The repopulation moved the analyst''s selection.');
+        end
+
+        function aLibraryChangeReachesEveryLibraryBackedPicker(testCase)
+            % One listener, five picker families. A refresh that updated
+            % only the one dropdown a test happened to check would pass a
+            % narrower test and still leave the flange and member pickers
+            % stale.
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            counts = @() [numel(p.boltMaterialDropDown().Items), ...
+                          numel(p.memberMaterialDropDown().Items), ...
+                          numel(p.flangeMaterial(1).Items)];
+            before = counts();
+
+            % No roles tag: flange and member take any material, the
+            % role-filtered bolt picker does not. So this proves the
+            % unfiltered pickers refreshed AND that the role filter still
+            % applies after a refresh.
+            lib = lib.addMaterial(struct("key", "Flange-only alloy", ...
+                "ftu", 1, "fty", 1, "fsu", 1, ...
+                "source", "tGuiJointConfig test entry"));
+            testCase.App.State.Library = lib;
+
+            after = counts();
+            testCase.verifyEqual(after(1), before(1), ...
+                'An untagged material is not a bolt material.');
+            testCase.verifyEqual(after(2), before(2) + 1, ...
+                'The member-material picker did not refresh.');
+            testCase.verifyEqual(after(3), before(3) + 1, ...
+                'The flange-material picker did not refresh.');
+        end
+
+        function analyzeIsGatedOnEdgeDistance(testCase)
+            % NASA-STD-5020B Figure 8's first decision box needs e/D, and
+            % with no edge distance the engine's gate treats that condition
+            % as passing and marks it ASSUMED. Assumed-pass is NOT neutral:
+            % an assured gate selects the SEPARATED design bolt load, which
+            % is normally smaller than the clamped form, so nine rows'
+            % margins come out higher on no evidence.
+            %
+            % The engine cannot refuse -- neither validation fixture supplies
+            % an edge distance, DABJ §9 included, and making it mandatory
+            % there would destroy the published +0.69/+0.63. So the entry
+            % path enforces it instead, and this pins that split.
+            p = testCase.Page;
+            testCase.fillRunnableJoint();
+            testCase.assertTrue(p.analyzeButton().Enable == "on" || ...
+                p.analyzeButton().Enable == 1, ...
+                'Fixture must be runnable before removing the edge distance.');
+
+            testCase.type(p.flangeEdge(1), '');
+
+            testCase.verifyFalse(p.analyzeButton().Enable == "on" || ...
+                p.analyzeButton().Enable == 1);
+            testCase.verifyTrue( ...
+                contains(string(p.requiredLabel().Text), "edge distance"), ...
+                'And the label must name what is missing.');
+        end
+
+        function typingTheLastLoadEnablesAnalyzeImmediately(testCase)
+            % The load case is a SECOND commit funnel, and only the joint
+            % one used to re-run the gate. Without the gate on both,
+            % typing the load that completes the form would leave Analyze
+            % disabled until an unrelated joint edit happened to run it.
+            p   = testCase.Page;
+            lib = testCase.App.State.Library;
+            mats = lib.materialKeys();
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltMaterialDropDown(), 'A286');
+            testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.choose(p.flangeMaterial(1), char(mats(1)));
+            % Edge distance is a required joint input (analyze gates on it,
+            % per analyzeIsGatedOnEdgeDistance) — this test fills the form
+            % by hand rather than through fillMinimalJoint, so it has to
+            % supply it too or the gate never gets as far as the loads.
+            testCase.type(p.flangeEdge(1), '0.75');
+            testCase.type(p.nominalTorqueField(), '50');
+            testCase.assertEqual(char(p.analyzeButton().Enable), 'off');
+
+            testCase.type(p.boltTensileField(), '400');
+
+            testCase.verifyEqual(char(p.analyzeButton().Enable), 'on', ...
+                'The load edit must re-run the gate, not wait for a joint edit.');
+        end
+
+        function analyzeHandsAResultToAppState(testCase)
+            % The gate's required set and the ENGINE's have converged --
+            % what enables the button is now what a run needs.
+            p = testCase.Page;
+            testCase.fillRunnableJoint();
+
+            testCase.press(p.analyzeButton());
+
+            testCase.verifyClass(testCase.App.State.Result, 'engine.Result', ...
+                'Analyze must hand a Result to AppState.');
+            testCase.verifyFalse(testCase.App.State.ResultStale);
+            testCase.verifyEqual(testCase.App.activePageId(), "Results", ...
+                'Analyze must land on the answer - an analyst should never have to go find it.');
+        end
+
+        function savingWithNoNameIsRefused(testCase)
+            % The refusal is a non-blocking uialert, so nothing needs
+            % dismissing - the teardown's figure delete takes it with the
+            % window. Asserting the LIBRARY rather than driving the dialog
+            % keeps this testing the behaviour that matters.
+            testCase.press(testCase.Page.saveJointButton());
+            testCase.verifyEmpty(testCase.App.State.JointLibrary, ...
+                'A nameless joint must not enter the library - it is the key.');
+        end
+
+        function savingRoundTripsThroughTheJointLibrary(testCase)
+            p = testCase.Page;
+            testCase.type(p.jointNameField(), "JT-A");
+            testCase.type(p.boltCountField(), 4);
+
+            testCase.press(p.saveJointButton());
+
+            lib = testCase.App.State.JointLibrary;
+            testCase.verifyNumElements(lib, 1);
+            testCase.verifyEqual(lib(1).Name, "JT-A");
+            testCase.verifyEqual(lib(1).Joint.BoltCount, 4);
+        end
+
+        function aNameCollidingOnlyByCaseIsNotSilentlyDuplicated(testCase)
+            % A13: letting "JT-A" and "jt-a" coexist is a mapping trap,
+            % because element mapping keys on the name.
+            %
+            % This asserts the DETECTION, not the dialog. The confirm is
+            % non-blocking, so the second save opens it and returns without
+            % writing anything - the library must still hold one entry. The
+            % answer path is exercised by commitSavedJoint directly rather
+            % than through a dialog gesture, whose argument order has been
+            % a repeated source of false failures.
+            p = testCase.Page;
+            testCase.type(p.jointNameField(), "JT-A");
+            testCase.press(p.saveJointButton());
+            testCase.verifyNumElements(testCase.App.State.JointLibrary, 1);
+
+            testCase.type(p.jointNameField(), "jt-a");
+            testCase.press(p.saveJointButton());
+
+            testCase.verifyNumElements(testCase.App.State.JointLibrary, 1, ...
+                'A case-only collision must ask, never silently duplicate.');
+            testCase.verifyEqual(testCase.App.State.JointLibrary(1).Name, "JT-A", ...
+                'Nothing may be written until the overwrite is confirmed.');
+        end
+    end
+    % ---- Live readouts follow their inputs ---------------------------------
+    methods (Test)
+        function theBoltLengthReadoutFollowsAnInsertEngagementRatio(testCase)
+            % The ratio field was bound straight to commitJoint, so the
+            % four-line readout sat stale while an insert's engagement
+            % changed under it. Engagement feeds the required bolt length -
+            % every control that does must refresh the readout.
+            % A bolt FIRST. An insert's Le is EngagementRatio x the bolt's
+            % nominal diameter, so with no bolt chosen the diameter is NaN
+            % and the readout correctly reports unknown however the ratio
+            % changes - the em dash is right, not stale. That distinction
+            % is the whole of A1, so the test has to give the readout
+            % something it can actually evaluate.
+            p     = testCase.Page;
+            bolts = testCase.App.State.Library.boltKeys();
+            testCase.assumeNotEmpty(bolts, 'No bolts in the library.');
+
+            testCase.choose(p.boltDropDown(), char(bolts(1)));
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.type(p.engagementRatioField(), '1.5');
+            % The engagement ADDEND, found by name. It is shown whenever it
+            % is known, even on a form whose total is not computable yet,
+            % which is what makes this assertable without a full joint.
+            before = testCase.readoutLine("Thread engagement Le");
+            testCase.assumeNotEqual(before, "", ...
+                'The readout must show an engagement before this test means anything.');
+
+            testCase.type(p.engagementRatioField(), '2.5');
+            after = testCase.readoutLine("Thread engagement Le");
+
+            testCase.verifyNotEqual(after, before, ...
+                'Changing the insert engagement must update the readout.');
+        end
+
+        function theBoltLengthReadoutFollowsANutEngagementLength(testCase)
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            before = testCase.readoutLine("Thread engagement Le");
+
+            testCase.type(p.engagementLengthField(), '0.31');
+            after = testCase.readoutLine("Thread engagement Le");
+
+            testCase.verifyNotEqual(after, before, ...
+                'Changing the nut engagement must update the readout.');
+            testCase.verifyTrue(contains(after, "0.3100"), ...
+                'The engagement addend must show the value just typed.');
+        end
+    end
+    % ---- Library cascades ---------------------------------------------------
+    %   choose() matches Items - the display LABEL a user clicks - while the
+    %   pickers carry bare tokens in ItemsData. Every choose below therefore
+    %   passes a label, and the helpers return labels for that reason.
+    methods (Test)
+        function aResolvedBoltSpecFillsTheRatedLoads(testCase)
+            p = testCase.Page;
+            [boltKey, matKey, spec] = testCase.firstBoltSpecPair();
+            testCase.assumeNotEmpty(boltKey, ...
+                'No bolt + material pair in the library has a boltSpec.');
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.boltMaterialDropDown(), matKey);
+
+            testCase.verifyEqual(str2double(p.ratedUltField().Value), ...
+                spec.RatedUltimateLoad, ...
+                'A resolved bolt spec must fill the rated ultimate load.');
+            testCase.verifyEqual(testCase.App.State.Joint.BoltRatedUltimateLoad, ...
+                spec.RatedUltimateLoad, ...
+                'The filled value must reach the model, not just the field.');
+        end
+
+        function anUnmatchedBoltPairingBlanksTheRatedLoadsRatherThanKeepingThem(testCase)
+            % Carrying the previous pairing forward would analyse the new
+            % pairing with the old one's ratings - and they would look like
+            % a deliberate override rather than a leftover.
+            p = testCase.Page;
+            [boltKey, matKey] = testCase.firstBoltSpecPair();
+            testCase.assumeNotEmpty(boltKey);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.boltMaterialDropDown(), matKey);
+            testCase.assumeNotEmpty(strtrim(p.ratedUltField().Value), ...
+                'This test needs a filled field before it can test blanking.');
+
+            other = testCase.aMaterialWithNoSpecFor(boltKey, matKey);
+            testCase.assumeNotEmpty(other, ...
+                'Every bolt material in the library has a spec for this bolt.');
+            testCase.choose(p.boltMaterialDropDown(), other);
+
+            testCase.verifyEmpty(strtrim(p.ratedUltField().Value), ...
+                'An unmatched pairing must blank the rated loads.');
+            testCase.verifyTrue( ...
+                isnan(testCase.App.State.Joint.BoltRatedUltimateLoad));
+        end
+
+        function aLoadedCaseKeepsItsNutFamilyInsteadOfDowngradingToCustom(testCase)
+            % REGRESSION, the nut half of the washer round-trip defect.
+            % model.ThreadedMember records the nut's material and
+            % engagement length but not which catalogue nut supplied them,
+            % so a reload used to come back on Custom with the fields
+            % unlocked.
+            p = testCase.Page;
+            [boltKey, specLabel, nut] = testCase.firstResolvableNutSpec();
+            testCase.assumeNotEmpty(specLabel);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+            testCase.assertEqual(char(p.engagementLengthField().Enable), 'off');
+
+            saved = testCase.App.State.Joint;
+            testCase.App.State.Joint = model.Joint();
+            testCase.assertEqual(char(p.nutSpecDropDown().Value), 'Custom', ...
+                'A blank joint must not claim a nut family.');
+            testCase.App.State.Joint = saved;
+
+            testCase.verifyNotEqual(char(p.nutSpecDropDown().Value), 'Custom', ...
+                'The nut family must survive a reload.');
+            testCase.verifyEqual(str2double(p.engagementLengthField().Value), ...
+                nut.Height, "AbsTol", 1e-12);
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'off', ...
+                'A reselected family owns the engagement length again (A5).');
+        end
+
+        function aHandEnteredNutStaysCustomOnReload(testCase)
+            % The reselect must recognise catalogue values, not adopt any
+            % nut whose height happens to be nearby.
+            p = testCase.Page;
+            bolts = testCase.App.State.Library.boltKeys();
+            testCase.choose(p.boltDropDown(), char(bolts(1)));
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.type(p.engagementLengthField(), '0.0917');
+
+            saved = testCase.App.State.Joint;
+            testCase.App.State.Joint = model.Joint();
+            testCase.App.State.Joint = saved;
+
+            testCase.verifyEqual(char(p.nutSpecDropDown().Value), 'Custom');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on');
+        end
+
+        function aResolvedNutSpecFillsAndLocksAndCustomReleases(testCase)
+            p = testCase.Page;
+            [boltKey, specLabel, nut] = testCase.firstResolvableNutSpec();
+            testCase.assumeNotEmpty(specLabel, ...
+                'No nut family in the library resolves at any seeded bolt.');
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+
+            testCase.verifyEqual(str2double(p.engagementLengthField().Value), ...
+                nut.Height, 'A resolved nut must fill the engagement length.');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'off', ...
+                'What the catalogue filled must be LOCKED (A5).');
+            testCase.verifyEqual(char(p.memberMaterialDropDown().Enable), 'off');
+
+            testCase.choose(p.nutSpecDropDown(), 'Custom');
+
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on', ...
+                'Custom must always release - the manual path is permanent.');
+            testCase.verifyEqual(char(p.memberMaterialDropDown().Enable), 'on');
+        end
+
+        function aNutFamilyThatDoesNotResolveRevertsToCustomAndSaysSo(testCase)
+            % Never leave a family selected that resolved nothing: it would
+            % read as governing while the fields it claims to own are
+            % whatever was there before.
+            p = testCase.Page;
+            [boltKey, specLabel] = testCase.aNutSpecThatMissesAtSomeBolt();
+            testCase.assumeNotEmpty(specLabel, ...
+                'No bolt in the library misses every nut family.');
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+
+            testCase.verifyEqual(char(p.nutSpecDropDown().Value), 'Custom', ...
+                'A family that resolves nothing must revert to Custom.');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on', ...
+                'Reverting must re-enable the fields it would have locked.');
+        end
+
+        function theNutPickerIsLiveOnlyForANutMemberType(testCase)
+            p = testCase.Page;
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.verifyEqual(char(p.nutSpecDropDown().Enable), 'on');
+
+            testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
+            testCase.verifyEqual(char(p.nutSpecDropDown().Enable), 'off', ...
+                'An insert resolves through NASM33537 geometry, not a nut family.');
+            testCase.verifyEqual(char(p.nutSpecDropDown().Value), 'Custom', ...
+                'A family left selected from another type would look governing.');
+        end
+
+        function aWasherFamilyListsItsSizesAndTheChosenOneFillsTheGeometry(testCase)
+            % washersFor returns MANY matches at one bolt size - that is the
+            % difference from the nut cascade, and why a second picker
+            % exists at all.
+            p = testCase.Page;
+            [boltKey, specLabel, matches] = testCase.firstMultiSizeWasherSpec();
+            testCase.assumeNotEmpty(specLabel, ...
+                'No washer family offers more than one size at a seeded bolt.');
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            w = p.headWasher();
+            testCase.press(w.Present);
+            testCase.choose(w.Spec, specLabel);
+
+            testCase.verifyNumElements(w.Size.Items, numel(matches), ...
+                'Every catalogued size at this bolt must be offered.');
+            testCase.verifyEqual(str2double(w.OD.Value), matches(1).OuterDiameter, ...
+                'The thinnest match fills the geometry by default.');
+            testCase.verifyEqual(w.Thk.Value, matches(1).Thickness);
+            testCase.verifyEqual(char(w.OD.Enable), 'off', ...
+                'Catalogue geometry is LOCKED (A5).');
+            testCase.verifyEqual(char(w.Material.Enable), 'on', ...
+                ['Washer material is NOT in the catalogue - library ' ...
+                 'washers are geometry only, so a family cannot speak for it.']);
+        end
+
+        function aLoadedCaseKeepsItsWasherFamilyInsteadOfDowngradingToCustom(testCase)
+            % REGRESSION. Saving a case and reloading it used to downgrade
+            % every washer to Custom: model.Washer records geometry only,
+            % with no catalogue key, and the load path reset the pickers
+            % and stopped there. The family is now re-derived by asking
+            % the catalogue which part has exactly this geometry.
+            p = testCase.Page;
+            [boltKey, specLabel, matches] = testCase.firstMultiSizeWasherSpec();
+            testCase.assumeNotEmpty(specLabel);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            w = p.headWasher();
+            testCase.press(w.Present);
+            testCase.choose(w.Spec, specLabel);
+            testCase.assertEqual(char(w.OD.Enable), 'off');
+
+            % An EXTERNAL joint assignment is exactly what loading a case
+            % file does -- it is the path that was losing the family.
+            saved = testCase.App.State.Joint;
+            testCase.App.State.Joint = model.Joint();
+            testCase.assertEqual(string(w.Spec.Value), "Custom", ...
+                'A blank joint must not claim a family.');
+            testCase.App.State.Joint = saved;
+
+            testCase.verifyNotEqual(string(w.Spec.Value), "Custom", ...
+                'The washer family must survive a reload.');
+            testCase.verifyEqual(str2double(w.OD.Value), ...
+                matches(1).OuterDiameter, "AbsTol", 1e-12);
+            testCase.verifyEqual(char(w.OD.Enable), 'off', ...
+                'A reselected family owns the geometry again (A5).');
+        end
+
+        function handTypedWasherGeometryStaysCustomOnReload(testCase)
+            % The reselect must RECOGNISE catalogue geometry, not snap
+            % nearby numbers onto a part. Geometry that matches nothing
+            % has to come back as what it is.
+            p = testCase.Page;
+            bolts = testCase.App.State.Library.boltKeys();
+            testCase.choose(p.boltDropDown(), char(bolts(1)));
+            w = p.headWasher();
+            testCase.press(w.Present);
+            % Deliberately off-catalogue to four decimals.
+            testCase.type(w.OD, '0.8123');
+            testCase.type(w.ID, '0.3771');
+            testCase.type(w.Thk, 0.0399);
+
+            saved = testCase.App.State.Joint;
+            testCase.App.State.Joint = model.Joint();
+            testCase.App.State.Joint = saved;
+
+            testCase.verifyEqual(string(w.Spec.Value), "Custom");
+            testCase.verifyEqual(char(w.OD.Enable), 'on', ...
+                'Nothing owns hand-typed geometry, so it stays editable.');
+        end
+
+        function aWasherFamilyReleasesOnCustomKeepingItsValues(testCase)
+            p = testCase.Page;
+            [boltKey, specLabel] = testCase.firstMultiSizeWasherSpec();
+            testCase.assumeNotEmpty(specLabel);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            w = p.headWasher();
+            testCase.press(w.Present);
+            testCase.choose(w.Spec, specLabel);
+            filled = w.OD.Value;
+
+            testCase.choose(w.Spec, 'Custom');
+
+            testCase.verifyEqual(char(w.OD.Enable), 'on', ...
+                'Custom must release the geometry.');
+            testCase.verifyEqual(w.OD.Value, filled, ...
+                ['Releasing must KEEP what was filled - it is a reasonable ' ...
+                 'starting point, and blanking punishes changing your mind.']);
+        end
+
+        function changingTheBoltReResolvesEveryPicker(testCase)
+            % One bolt change invalidates all three cascades at once,
+            % because every one of them is keyed on the thread size.
+            p = testCase.Page;
+            [boltKey, specLabel] = testCase.firstResolvableNutSpec();
+            testCase.assumeNotEmpty(specLabel);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+            testCase.assumeEqual(char(p.engagementLengthField().Enable), 'off', ...
+                'This test needs a locked field before it can test re-resolution.');
+
+            other = testCase.aBoltOfADifferentThreadSize(boltKey);
+            testCase.assumeNotEmpty(other, 'The library has one thread size.');
+            testCase.choose(p.boltDropDown(), other);
+
+            % Either the family still resolves at the new size, or it
+            % reverted to Custom - what must NOT happen is the old nut's
+            % numbers sitting there locked under a different bolt.
+            if strcmp(char(p.nutSpecDropDown().Value), 'Custom')
+                testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on', ...
+                    'A family that stopped resolving must release its lock.');
+            else
+                nut = testCase.App.State.Library.nutFor( ...
+                    testCase.App.State.Joint.Bolt.NominalDiameter, ...
+                    testCase.App.State.Joint.Bolt.ThreadsPerInch, ...
+                    string(p.nutSpecDropDown().Value));
+                testCase.verifyEqual(str2double(p.engagementLengthField().Value), ...
+                    nut.Height, ...
+                    'A still-resolving family must re-fill from the NEW bolt.');
+            end
+        end
+
+        function loadingACaseResetsThePickersToCustom(testCase)
+            % The pickers are page state: model.Joint records the resolved
+            % numbers, not which family produced them. A picker still
+            % claiming ownership after a load asserts a provenance the file
+            % never carried.
+            p = testCase.Page;
+            [boltKey, specLabel] = testCase.firstResolvableNutSpec();
+            testCase.assumeNotEmpty(specLabel);
+
+            testCase.choose(p.boltDropDown(), boltKey);
+            testCase.choose(p.memberTypeDropDown(), 'Nut');
+            testCase.choose(p.nutSpecDropDown(), specLabel);
+
+            testCase.App.State.Joint = model.Joint(Name = "Loaded elsewhere");
+
+            testCase.verifyEqual(char(p.nutSpecDropDown().Value), 'Custom');
+            testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on', ...
+                'A load must not leave fields locked by a picker it reset.');
+        end
+    end
+
+    % ---- Cascade helpers ----------------------------------------------------
+    %   All of these return DISPLAY LABELS for choose(), never tokens.
+    % ---- Collapsible groups (GUI_SPEC.md Section 7.5) ---------------------
+    methods (Test)
+        function advancedAndTheNutWasherStartFolded(testCase)
+            % The two groups that earn their space least: Advanced is
+            % overrides most joints never set, and the nut washer mirrors
+            % the head washer by default.
+            folded = testCase.Page.collapsedGroups();
+
+            testCase.verifyTrue(any(contains(folded, "Advanced")));
+            testCase.verifyTrue(any(contains(folded, "Washer under nut")));
+        end
+
+        function thePhysicalStackGroupsStartOpen(testCase)
+            % Collapsing the joint itself by default would hide the form.
+            folded = testCase.Page.collapsedGroups();
+
+            for open = ["Bolt", "Flange stack", "Threaded member", "Actions"]
+                testCase.verifyFalse(any(contains(folded, open)), ...
+                    sprintf('"%s" must start open.', open));
+            end
+        end
+
+        function expandingAGroupRevealsIt(testCase)
+            p = testCase.Page;
+            testCase.verifyTrue(any(contains(p.collapsedGroups(), "Advanced")));
+
+            p.expandGroup("Advanced");
+
+            testCase.verifyFalse(any(contains(p.collapsedGroups(), "Advanced")));
+        end
+
+        function anUnknownGroupNameErrorsRatherThanDoingNothing(testCase)
+            % A silent no-op here would surface much later as a test that
+            % cannot type into a field, with nothing pointing back here.
+            testCase.verifyError(@() testCase.Page.expandGroup("No Such Group"), ...
+                'gui:Page:noSuchGroup');
+        end
+
+        function aCollapsedGroupStillMarshalsIntoTheJoint(testCase)
+            % SECTION 7.5's whole reason for building bodies eagerly:
+            % buildJoint reads EVERY control, so a folded group must still
+            % contribute its value. If collapsing ever became lazy building,
+            % this is the test that catches it.
+            p = testCase.Page;
+            p.expandGroup("Advanced");
+            testCase.type(p.bodyLengthField(), '0.70');
+
+            % Fold it back up - the value must survive being hidden.
+            testCase.press(p.groupHeader("Advanced"));
+
+            testCase.verifyTrue(any(contains(p.collapsedGroups(), "Advanced")), ...
+                'The header press must have folded the group.');
+            testCase.verifyEqual(testCase.App.State.Joint.BodyLengthInGrip, 0.70, ...
+                'A collapsed group must still marshal into the joint.');
+        end
+    end
+
+    % ---- Bolt bending inputs (NASA-STD-5020B §4.4.4) ------------------------
+    methods (Test)
+        function theBendingMomentReachesTheModel(testCase)
+            p = testCase.Page;
+
+            testCase.type(p.boltBendingField(), '250');
+
+            testCase.verifyEqual( ...
+                testCase.App.State.LoadCase.BoltBendingLimitMoment, 250);
+        end
+
+        function theShearTransferDeterminationReachesTheModel(testCase)
+            % gui had NO control for this at all, so NotDeclared was the
+            % only value it could produce and the ClearanceOrGapped path --
+            % the whole reason the enum exists -- was unreachable from this
+            % GUI.
+            p = testCase.Page;
+            testCase.verifyEqual(testCase.App.State.Joint.ShearTransferCondition, ...
+                model.ShearTransferCondition.NotDeclared, ...
+                'The default must stay NotDeclared - nothing claims a verification by accident.');
+
+            % choose() matches the ITEM a user clicks, which is now plain
+            % language; the enum name rides in ItemsData.
+            testCase.choose(p.shearTransferDropDown(), ...
+                'Required - clearance or gap');
+
+            testCase.verifyEqual(testCase.App.State.Joint.ShearTransferCondition, ...
+                model.ShearTransferCondition.ClearanceOrGapped);
+        end
+
+        function everyBendingStateIsReachableFromTheDropdown(testCase)
+            % The bug this control was added to fix was a state the GUI
+            % could not produce. A label map that quietly missed a member
+            % would recreate it, so every enum member must appear in
+            % ItemsData and every item must carry a readable label.
+            d = testCase.Page.shearTransferDropDown();
+            members = string(enumeration('model.ShearTransferCondition'))';
+
+            testCase.verifyEqual(sort(string(d.ItemsData)), sort(members), ...
+                'Every determination must be selectable.');
+            testCase.verifyEqual(numel(d.Items), numel(d.ItemsData));
+            testCase.verifyFalse(any(strcmp(d.Items, "")), ...
+                'A blank item is a state nobody can knowingly pick.');
+        end
+
+        function theBendingControlDefaultsToOff(testCase)
+            d = testCase.Page.shearTransferDropDown();
+
+            testCase.verifyEqual(string(d.Value), "NotDeclared");
+            testCase.verifyTrue(contains(d.Items{ ...
+                strcmp(d.ItemsData, 'NotDeclared')}, "Not determined"), ...
+                'The default must read as no determination having been made.');
+        end
+
+        function aBendingMomentCountsAsAnAppliedLoad(testCase)
+            % The Analyze gate asks for "at least one applied limit load".
+            % A typed moment is one - reporting it missing while it sits
+            % filled in on the same panel would be the form arguing with
+            % itself.
+            p = testCase.Page;
+            testCase.type(p.boltBendingField(), '250');
+
+            testCase.verifyFalse( ...
+                contains(string(p.requiredLabel().Text), "applied limit load"), ...
+                'A supplied bending moment is an applied load.');
+        end
+
+        function theBendingMomentRoundTripsThroughTheForm(testCase)
+            % A4: repopulating from the model must not mark dirty, and the
+            % value must survive the trip.
+            lc = testCase.App.State.LoadCase;
+            lc.BoltBendingLimitMoment = 175;
+            testCase.App.State.LoadCase = lc;
+
+            testCase.verifyEqual( ...
+                str2double(testCase.Page.boltBendingField().Value), 175);
+        end
+    end
+
+    % ---- Global temperatures reach the engine ------------------------------
+    %   REGRESSION. Service temperatures are project-level and live on Temp
+    %   & Loads, so buildJoint cannot know them; nothing stamped them onto
+    %   the single-joint run, and every Analyze used model.Joint's 20/20/20
+    %   degC defaults. The run succeeded and the margins looked plausible -
+    %   only the thermal preload term was silently zero.
+    methods (Test)
+        function analyzeUsesTheGlobalServiceTemperatures(testCase)
+            testCase.App.State.Settings = struct( ...
+                'NominalTempC', 22, 'HotTempC', 71, 'ColdTempC', -54);
+
+            j = testCase.Page.analysisJoint();
+
+            testCase.verifyEqual(j.ReferenceTemperature, 22, ...
+                'Nominal is the reference temperature.');
+            testCase.verifyEqual(j.MaxTemperature, 71, ...
+                'Hot is the maximum service temperature.');
+            testCase.verifyEqual(j.MinTemperature, -54, ...
+                'Cold is the minimum service temperature.');
+        end
+
+        function changingTheTemperaturesChangesTheNextRun(testCase)
+            % The trickle itself: edit the global temps, and the joint the
+            % engine is handed must follow. It used to keep the defaults
+            % however the Temp & Loads page was edited.
+            testCase.App.State.Settings = struct( ...
+                'NominalTempC', 20, 'HotTempC', 20, 'ColdTempC', 20);
+            before = testCase.Page.analysisJoint().MaxTemperature;
+
+            testCase.App.State.Settings = struct( ...
+                'NominalTempC', 20, 'HotTempC', 90, 'ColdTempC', 20);
+            after = testCase.Page.analysisJoint().MaxTemperature;
+
+            testCase.verifyEqual(before, 20);
+            testCase.verifyEqual(after, 90, ...
+                'A changed service temperature must reach the analysis.');
+        end
+
+        function anEditedTemperatureStalesTheShownResult(testCase)
+            % The other half of "it did not trickle": numbers computed at
+            % the old temperatures must stop reading as current.
+            testCase.App.State.setResult(engine.Result(JointName = "prior"));
+            testCase.verifyFalse(testCase.App.State.ResultStale);
+
+            testCase.App.navigateTo("TempLoads");
+            testCase.type(testCase.App.page("TempLoads").hotField(), 85);
+
+            testCase.verifyTrue(testCase.App.State.ResultStale, ...
+                'A temperature edit invalidates the result it preceded.');
+        end
+    end
+
+    methods (Access = private)
+        function s = readoutLine(testCase, needle)
+            %READOUTLINE  The first bolt-length readout line containing needle.
+            %   BY CONTENT, NEVER BY INDEX. The readout itemises the minimum
+            %   bolt length, so its length varies with the joint - a washer
+            %   present or absent adds or removes a line. Every assertion
+            %   here used to index a fixed position, and itemising the sum
+            %   broke six of them at once. Returns "" when absent, so a
+            %   contains() assertion fails rather than erroring on a bad
+            %   subscript.
+            txt = string(testCase.Page.boltLengthLabel().Text);
+            k   = find(contains(txt, needle), 1);
+            if isempty(k)
+                s = "";
+            else
+                s = txt(k);
+            end
+        end
+
+        function fillRunnableJoint(testCase)
+            %FILLRUNNABLEJOINT  The minimum form that can actually produce
+            %   a margin: hardware, a clamped layer, a preload and loads.
+            %   One definition, because the gate's required set and the
+            %   engine's are the same set now -- two copies of it would be
+            %   two places for them to drift apart again.
+            p    = testCase.Page;
+            lib  = testCase.App.State.Library;
+            mats = lib.materialKeys();
+            testCase.assumeNotEmpty(mats);
+
+            testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
+            testCase.choose(p.boltMaterialDropDown(), 'A286');
+            testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.choose(p.flangeMaterial(1), char(mats(1)));
+            % Required since 2026-08-14: without it the Fig. 8 gate assumes
+            % e/D >= 1.5 passes, which pushes margins up on no evidence.
+            testCase.type(p.flangeEdge(1), '0.75');
+            testCase.type(p.engagementLengthField(), '0.25');
+            testCase.type(p.nominalTorqueField(), '50');
+            testCase.type(p.boltTensileField(), '400');
+            testCase.type(p.boltShearField(), '200');
+        end
+
+        function [boltKey, matKey, spec] = firstBoltSpecPair(testCase)
+            boltKey = ''; matKey = ''; spec = [];
+            lib = testCase.App.State.Library;
+            bolts = lib.boltKeys();
+            mats  = lib.materialKeys(Role = "bolt");
+            for b = 1:numel(bolts)
+                for m = 1:numel(mats)
+                    s = lib.boltSpecFor(bolts(b), mats(m));
+                    if ~isempty(s)
+                        boltKey = char(bolts(b));
+                        matKey  = char(mats(m));
+                        spec    = s;
+                        return
+                    end
+                end
+            end
+        end
+
+        function key = aMaterialWithNoSpecFor(testCase, boltKey, excludeKey)
+            % The catalogue covers every shipped bolt in A286 (FF-S-86F
+            % Table VI/VII), so there is no BOLT that misses for that
+            % material -- the miss has to come from the other side of the
+            % pairing. updateSpecFields looks up (bolt, material) as a
+            % pair and blanks on any miss, so changing either one
+            % exercises the identical path.
+            key = '';
+            lib = testCase.App.State.Library;
+            for m = lib.materialKeys(Role = "bolt")
+                if strcmp(char(m), excludeKey)
+                    continue
+                end
+                if isempty(lib.boltSpecFor(string(boltKey), m))
+                    key = char(m);
+                    return
+                end
+            end
+        end
+
+        function [boltKey, specLabel, nut] = firstResolvableNutSpec(testCase)
+            boltKey = ''; specLabel = ''; nut = [];
+            lib = testCase.App.State.Library;
+            [specs, labels] = lib.nutSpecs();
+            bolts = lib.boltKeys();
+            for s = 1:numel(specs)
+                for b = 1:numel(bolts)
+                    bolt = lib.bolt(bolts(b));
+                    n = lib.nutFor(bolt.NominalDiameter, ...
+                        bolt.ThreadsPerInch, specs(s));
+                    if ~isempty(n)
+                        boltKey   = char(bolts(b));
+                        specLabel = char(labels(s));
+                        nut       = n;
+                        return
+                    end
+                end
+            end
+        end
+
+        function [boltKey, specLabel] = aNutSpecThatMissesAtSomeBolt(testCase)
+            boltKey = ''; specLabel = '';
+            lib = testCase.App.State.Library;
+            [specs, labels] = lib.nutSpecs();
+            for b = lib.boltKeys()
+                bolt = lib.bolt(b);
+                for s = 1:numel(specs)
+                    if isempty(lib.nutFor(bolt.NominalDiameter, ...
+                            bolt.ThreadsPerInch, specs(s)))
+                        boltKey   = char(b);
+                        specLabel = char(labels(s));
+                        return
+                    end
+                end
+            end
+        end
+
+        function [boltKey, specLabel, matches] = firstMultiSizeWasherSpec(testCase)
+            boltKey = ''; specLabel = ''; matches = [];
+            lib = testCase.App.State.Library;
+            [specs, labels] = lib.washerSpecs();
+            bolts = lib.boltKeys();
+            for s = 1:numel(specs)
+                for b = 1:numel(bolts)
+                    bolt = lib.bolt(bolts(b));
+                    m = lib.washersFor(bolt.NominalDiameter, specs(s));
+                    if numel(m) > 1
+                        boltKey   = char(bolts(b));
+                        specLabel = char(labels(s));
+                        matches   = m;
+                        return
+                    end
+                end
+            end
+        end
+
+        function key = aBoltOfADifferentThreadSize(testCase, excludeKey)
+            key = '';
+            lib = testCase.App.State.Library;
+            ref = lib.bolt(string(excludeKey));
+            for b = lib.boltKeys()
+                cand = lib.bolt(b);
+                if abs(cand.NominalDiameter - ref.NominalDiameter) > 1e-6
+                    key = char(b);
+                    return
+                end
+            end
+        end
+    end
+    % ---- Empty is empty ----------------------------------------------------
+    methods (Test)
+        function flangeThicknessStartsBlankNotZero(testCase)
+            % A numeric field renders 0.00000, which has to be cleared
+            % before a real thickness can be typed and reads as a layer of
+            % zero thickness rather than as no layer at all.
+            p = testCase.Page;
+            for i = 1:4
+                testCase.verifyEmpty(strtrim(char(p.flangeThickness(i).Value)), ...
+                    sprintf('Flange row %d must start blank, not 0.', i));
+            end
+        end
+
+        function clearingAThicknessEmptiesTheFieldRatherThanZeroingIt(testCase)
+            p = testCase.Page;
+            testCase.type(p.flangeThickness(1), '0.25');
+            testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1);
+
+            testCase.type(p.flangeThickness(1), '');
+            testCase.verifyEmpty(testCase.App.State.Joint.FlangeStack);
+            testCase.verifyEmpty(strtrim(char(p.flangeThickness(1).Value)));
+        end
+    end
+end

@@ -26,12 +26,12 @@ networked database (the library is local JSON files).
 
 ```
 matlab/
-├── fastenerTool.m     entry point — prints the version banner and opens the GUI (`+gui2`)
+├── fastenerTool.m     entry point — prints the version banner and opens the GUI (`+gui`)
 ├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
 ├── +engine/           analysis math — the core (Phases 2–3); bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook, Step 2c)
 ├── +data/             library loader (`data.Library` + `library/` — one JSON per part, plus user drop-in files; Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`, Phase 3.7); factor presets (`factorPreset`/`saveFactorPreset`, Phase 3.7)
 ├── +report/           XLSX export (`report.exportResults`, Phase 3.6); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
-├── +gui2/             THE GUI (`gui2.launch`, GUI2_SPEC.md) — what `fastenerTool`
+├── +gui/             THE GUI (`gui.launch`, GUI_SPEC.md) — what `fastenerTool`
 │                      opens. Programmatic uifigure, rail + card over AppState,
 │                      eleven pages.
 ├── examples/          runnable reference scripts (`run_bulk_example.m`)
@@ -149,10 +149,10 @@ Launch it with `cd matlab; fastenerTool`.
 
 **Phase 4 is complete.** Step 9 landed Materials & Hardware — all six library
 sections browsable with their source citations visible, custom entries added or
-duplicated from a baseline row, persisted per installation (`GUI2_SPEC.md` §16).
+duplicated from a baseline row, persisted per installation (`GUI_SPEC.md` §16).
 Step 10 added the Help menu. `Help → References` lists every document the tool's numbers rest
 on; most are copyrighted and are **not** shipped, so it carries the citations
-and opens your own local copies (`GUI2_SPEC.md` §3).
+and opens your own local copies (`GUI_SPEC.md` §3).
 
 Separation-before-rupture on the threaded member — once listed here as the last
 real engineering gap — is done: all three thread rows take their design load

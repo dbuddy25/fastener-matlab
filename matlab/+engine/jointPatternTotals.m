@@ -37,7 +37,7 @@ function [PtJ, PsJ] = jointPatternTotals(group, axis)
 %   Call graph:
 %       Precedents (calls)      engine.resolveForces.
 %       Dependents (called by)  engine.analyzeBulk (joint-mode slip),
-%                               gui2.BulkAnalysisPage (drill-down).
+%                               gui.BulkAnalysisPage (drill-down).
 %       Tests                   tests/tBulk.m
 %                               (bulkJointSlipFromPatternAggregation pins
 %                               the DABJ Sec. 9 number through this path).

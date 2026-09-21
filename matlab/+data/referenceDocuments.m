@@ -5,7 +5,7 @@ function docs = referenceDocuments()
 %   name a local copy would have.
 %
 %   WHY A LIST AND NOT A BUNDLE. The Help menu was specified as "opening
-%   the bundled PDFs" (GUI2_SPEC.md Sec. 3). It cannot be. Nine of these
+%   the bundled PDFs" (GUI_SPEC.md Sec. 3). It cannot be. Nine of these
 %   documents are not ours to redistribute -- every NAS/NASM sheet carries
 %   "COPYRIGHT ... Aerospace Industries Association ... ALL RIGHTS
 %   RESERVED", the DABJ course book carries a copyright notice and
@@ -21,7 +21,7 @@ function docs = referenceDocuments()
 %   from?" gets an answer either way; only the convenience of the click
 %   depends on the file being present.
 %
-%   HEADLESS ON PURPOSE. gui2.ReferencesView renders this, but the list is
+%   HEADLESS ON PURPOSE. gui.ReferencesView renders this, but the list is
 %   data rather than layout: it is the single place the citations live, it
 %   is testable without building a GUI, and a report could use it too.
 %

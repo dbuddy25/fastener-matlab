@@ -202,7 +202,7 @@ function T = boltSizingSweep(bolts, material, PtL, PsL, factors, shearPlane, opt
 %   context is supplied, no member resolves, or the member has no yield
 %   mode (a RATING carries no yield information; yield needs area + Fsy).
 %   Until this was closed the screen could Pass a size on yield that a
-%   full engine.analyze run then failed; it was closed when gui2 gained a
+%   full engine.analyze run then failed; it was closed when gui gained a
 %   Bolt Sizing page, the first caller that made it matter.
 %
 %   Pty_allow/MS_TensionYield (bolt-only value; see above for the system basis;
@@ -687,7 +687,7 @@ for i = 1:n
     % supplied -- so the screen is optimistic on exactly the joints
     % Sec 4.4.4 says to worry about (clearance or gapped shear transfer).
     % Recorded rather than fixed: closing it means giving the sweep a
-    % moment input, and no moment is known at sizing time. The gui2 Bolt
+    % moment input, and no moment is known at sizing time. The gui Bolt
     % Sizing page states this limit in its banner.
     R = Rt^et + Rs^es;
 

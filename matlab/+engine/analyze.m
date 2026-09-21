@@ -107,7 +107,7 @@ function r = analyze(joint, loadCase, factors)
 %                               marginInsert, marginTappedParentThread;
 %                               boltLengthCheck, preloadWatchdog; and the
 %                               engine.Result constructor.
-%       Dependents (called by)  engine.analyzeBulk, gui2 pages
+%       Dependents (called by)  engine.analyzeBulk, gui pages
 %                               (single-joint Results tab and the per-row
 %                               bulk path), report.singleJointReport.
 %       Tests                   tests/tDabjCase.m
@@ -266,9 +266,9 @@ sbr = entry("Separation-before-rupture", NaN, ...
 % nobody reached — the same error the unassessable case made until it was
 % changed to NotEvaluated, one branch over.
 %
-% "Assured" / "NotAssured" is not new vocabulary: gui2.ResultsPage's
+% "Assured" / "NotAssured" is not new vocabulary: gui.ResultsPage's
 % decision panel has always stated this branch as ASSURED / NOT ASSURED
-% (see tGui2Results' theGateStatesItsBranchRatherThanAPassOrFail), and the
+% (see tGuiResults' theGateStatesItsBranchRatherThanAPassOrFail), and the
 % gate struct itself carries Gate.Assured. The engine's Status string was
 % the last place still calling it a pass or a failure.
 if tu.Gate.Assessed

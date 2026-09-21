@@ -30,11 +30,11 @@ classdef tFastenerToolSmoke < matlab.unittest.TestCase
             % It now opens the real app, which means the handle MUST be
             % captured and torn down: discarding it would leave a window
             % open for the rest of the suite, the orphaned-figure problem
-            % gui2.FastenerApp.delete was extended to prevent.
+            % gui.FastenerApp.delete was extended to prevent.
             app = fastenerTool();
             testCase.addTeardown(@() delete(app));
 
-            testCase.verifyClass(app, "gui2.FastenerApp");
+            testCase.verifyClass(app, "gui.FastenerApp");
             testCase.verifyTrue(isvalid(app), ...
                 'The entry point must return a live app, not a stale handle.');
         end
