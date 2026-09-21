@@ -35,6 +35,10 @@
 %   gui2.TempLoadsPage   — GLOBAL service temperatures (one isothermal-soak
 %                          trio for every joint). Backed by AppState.Settings,
 %                          fires SettingsChanged.
+%   gui2.BoltSizingPage  — gut check on bolt size: material + one limit-load
+%                          pair, swept over every library bolt with
+%                          engine.boltSizingSweep (bolt capability only).
+%                          Scratch inputs, not saved in the case.
 %   gui2.JointConfigPage — one joint and its limit loads, left column in
 %                          physical stack order. Owns the library cascade
 %                          (bolt -> nut spec + both washer specs), the live

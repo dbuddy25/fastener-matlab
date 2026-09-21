@@ -89,7 +89,8 @@ earlier than the plan assumed.
 | 5a/5b | Element Mapping and Element Forces, cross-validated |
 | 6a/6b | Bulk Analysis — tiers, filtering, cancellable run, XLSX export |
 
-**Not built:** Bolt Sizing (4.8), and the User Guide / References tabs (4.11),
+**Bolt Sizing (4.8)** was built 2026-09-21 as a simple bolt-only gut check
+(`gui2.BoltSizingPage`). **Not built:** the User Guide / References tabs (4.11),
 which became Help-menu buttons opening shipped PDFs rather than in-app pages.
 
 ## Ground rules (the physics that must be exactly right)
@@ -348,8 +349,8 @@ strengths ksi→psi (×1000), CTE 1/°F→1/°C (×1.8).
 *Done when:* a joint can be defined entirely from dropdowns.
 
 ### 4 · Bolt Sizing tab (4.8)
-A sweep across sizes for the lightest that passes. Independent of everything
-else — which is why it waited. Gated on item 2 to be worth trusting.
+**DONE 2026-09-21** (`gui2.BoltSizingPage`). A sweep across sizes for the
+lightest that passes, bolt capability only. Item 2 resolved first.
 
 ### 5 · Phase 5 packaging
 As above. Note **5.3 cannot fully run**: the full validation matrix now includes

@@ -89,8 +89,8 @@ engine and independently usable. **As built** (`matlab/+gui2`, 10 pages):
 
 Differences from the 11-tab list this section carried until 2026-08-17, all
 deliberate: Project and Factors are separate pages; Temp Loads is its own page
-because it is global rather than per-joint; **Bolt Sizing is absent** (the
-engine's `boltSizingSweep` is headless-only for now); User Guide and References
+because it is global rather than per-joint; **Bolt Sizing** was absent until 2026-09-21 and is now a
+simple bolt-capability gut-check page over `boltSizingSweep`; User Guide and References
 moved from tabs to the **Help menu**; and the shell is a rail rather than a flat
 `uitabgroup` — the tab shell produced an 11,945-line class, which is the
 evidence it does not scale. See `GUI2_SPEC.md` for the live spec.

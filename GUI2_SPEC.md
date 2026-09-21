@@ -163,8 +163,10 @@ order → reference. The bulk steps are numbered **in the rail itself**, which i
 the one place the 1–4 scheme lives; no other page or status hint may restate it
 with different numbers.
 
-**Not built:** Bolt Sizing. `engine.boltSizingSweep` stays in the engine,
-untouched and re-addable.
+**Bolt Sizing (added 2026-09-21):** first page under SINGLE JOINT. Deliberately
+simple — bolt material, one limit-load pair, shear plane — a gut check on BOLT
+capability only over `engine.boltSizingSweep`. Inputs are page-local scratch, not
+saved in the case; "Use this size" hands the bolt and loads to Joint Config.
 
 **User Guide / References are not pages.** They live on the menu bar. Path
 resolution is `fileparts(mfilename('fullpath'))`, or `ctfroot` when

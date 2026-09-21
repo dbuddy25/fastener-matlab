@@ -267,6 +267,18 @@ SepBeforeRupture, TappedParent`) **+ `InteractionR`**`, WorstMargin, GoverningCh
 
 ---
 
+## 5a. Bolt Sizing — a first gut check
+
+The **Bolt Sizing** page answers "roughly what size bolt?" before a joint is
+defined. Pick a bolt material, enter the limit tension and shear on the
+most-loaded bolt, and press **Size bolts**: every bolt in the library is checked
+and the smallest passing size is named. It looks at the **bolt's own capability
+only** — no preload, no nut/insert, no separation, slip or bearing — so treat it
+as a starting point. **Use this size** carries the bolt and loads to Joint
+Config, where the real analysis runs.
+
+---
+
 ## 6. The built-in library (and its limits)
 
 The shipped library is one JSON file per part under `matlab/+data/library/`
