@@ -43,9 +43,9 @@ classdef tGui2JointConfig < matlab.uitest.TestCase
             testCase.verifyTrue(testCase.Page.IsBuilt);
         end
 
-        function railKeepsJointConfigInFourthPosition(testCase)
+        function railKeepsJointConfigRightAfterBoltSizing(testCase)
             ids = testCase.App.pageIds();
-            testCase.verifyEqual(ids(4), "JointConfig");
+            testCase.verifyEqual(ids(find(ids == "BoltSizing") + 1), "JointConfig");
         end
     end
 

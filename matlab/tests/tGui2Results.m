@@ -47,9 +47,9 @@ classdef tGui2Results < matlab.uitest.TestCase
             testCase.verifyTrue(testCase.Page.IsBuilt);
         end
 
-        function railKeepsResultsInFifthPosition(testCase)
+        function railKeepsResultsRightAfterJointConfig(testCase)
             ids = testCase.App.pageIds();
-            testCase.verifyEqual(ids(5), "Results");
+            testCase.verifyEqual(ids(find(ids == "JointConfig") + 1), "Results");
         end
     end
 

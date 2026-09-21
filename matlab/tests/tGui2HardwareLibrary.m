@@ -65,8 +65,8 @@ classdef tGui2HardwareLibrary < matlab.uitest.TestCase
 
         function railKeepsMaterialsAndHardwareLast(testCase)
             ids = testCase.App.pageIds();
-            testCase.verifyEqual(numel(ids), 10);
-            testCase.verifyEqual(string(ids(10)), "HardwareLibrary", ...
+            testCase.verifyEqual(numel(ids), 11);
+            testCase.verifyEqual(string(ids(end)), "HardwareLibrary", ...
                 'The id is the contract; renaming it breaks every navigateTo.');
         end
 
