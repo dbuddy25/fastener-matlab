@@ -5,8 +5,8 @@ classdef (Abstract) Page < handle
     %   and listens for the coarse AppState events it cares about.
     %
     %   PAGES NEVER TALK TO EACH OTHER. All cross-page effect goes through
-    %   AppState. A page that reaches for another page is the bug the first
-    %   build's 11,945-line class was made of.
+    %   AppState. A page that reaches for another page is how a GUI turns
+    %   into one unmaintainable class.
     %
     %   VIEWS ARE PLAIN HANDLE CLASSES, not
     %   matlab.ui.componentcontainer.ComponentContainer. That class exists
@@ -37,7 +37,7 @@ classdef (Abstract) Page < handle
     %   REFRESH MUST BE CHEAP AND IDEMPOTENT. It runs on every navigation to
     %   the page and on every event the page subscribes to. It must never
     %   call state.markDirty(): refreshing is reading, and a dirty flag set
-    %   by a refresh is a lie (GUI2_HARVEST.md A4).
+    %   by a refresh is a lie (CONVENTIONS.md A4).
 
     properties (Constant)
         % Header height of a collapsible group, px. A collapsed group is
@@ -401,8 +401,7 @@ classdef (Abstract) Page < handle
             %BINDEDIT  Wire an editable control so it CANNOT forget the dirty flag.
             %   The first build's hardest-won lesson: a dirty feed wired on
             %   only one page silently discards edits made on every other
-            %   page (GUI_PORT_SPEC.md Section 14 trap 2, GUI2_HARVEST.md
-            %   A4). The fix there was a funnel every field builder used
+            %   page (CONVENTIONS.md A4). The fix there was a funnel every field builder used
             %   unconditionally; this is that funnel, moved into the base
             %   class so a new page gets it by inheriting rather than by
             %   remembering.

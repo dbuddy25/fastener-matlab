@@ -15,7 +15,7 @@ classdef AppState < handle
     %
     %       state.Joint = j;        % fires JointChanged
     %
-    %   THE ONE RULE THAT MAKES THIS SAFE (GUI2_HARVEST.md A4): a data
+    %   THE ONE RULE THAT MAKES THIS SAFE (CONVENTIONS.md A4): a data
     %   setter NEVER touches IsDirty. Dirtiness is set only by markDirty()
     %   and cleared only by clearDirty(). That is what lets applyCaseStruct
     %   repopulate everything — firing every refresh event — without
@@ -49,19 +49,17 @@ classdef AppState < handle
     %   that owns it. See the class notes in GUI2_SPEC.md Section 5 when that
     %   list is next revised.
     %
-    %   SERIALIZATION (GUI2_HARVEST.md A7): toCaseStruct / applyCaseStruct
+    %   SERIALIZATION (CONVENTIONS.md A7): toCaseStruct / applyCaseStruct
     %   are the ONLY way state is captured and restored. File > New, File >
     %   Open and every reset go through applyCaseStruct, so a property added
     %   later cannot be handled by one path and forgotten by the other.
     %   Model objects convert via data.toStruct / data.fromStruct — the
     %   tested round-trip core — and are never hand-rolled here.
     %
-    %   The on-disk container is "fastener-analysis-matlab-v1", byte-for-byte
-    %   the format +gui writes, so cases move between the two builds while
-    %   both are launchable (GUI2_SPEC.md Section 1 rule 2).
+    %   The on-disk container is "fastener-analysis-matlab-v1".
 
     properties (Constant)
-        % Case-file format tag. Shared with +gui — do not fork it.
+        % Case-file format tag. Existing case files carry it — do not change it.
         CaseFormat = "fastener-analysis-matlab-v1"
 
         % NO ToolVersion CONSTANT. It was `ToolVersion = toolVersion()`,
@@ -131,7 +129,7 @@ classdef AppState < handle
         % ---- Derived / session state: NOT in the case file ---------------
         % Empty until an analysis runs. [] rather than a default Result, so
         % "no result yet" is distinguishable from "a result of all NaN"
-        % (GUI2_HARVEST.md A1 — unknown must never look like fine).
+        % (CONVENTIONS.md A1 — unknown must never look like fine).
         Result   = []
         BulkTable = []
 
@@ -150,7 +148,7 @@ classdef AppState < handle
 
         % A shown Result/BulkTable no longer matches the current inputs.
         % Set by markDirty and by the whole-case replacement paths; cleared
-        % only by a successful run (GUI2_HARVEST.md A3).
+        % only by a successful run (CONVENTIONS.md A3).
         ResultStale (1,1) logical = false
 
         % The joint / loadCase / factors that produced Result, or empty.
@@ -176,7 +174,7 @@ classdef AppState < handle
             %   Construction and File > New produce IDENTICAL state because
             %   both go through applyCaseStruct(blankCaseState) — there is
             %   no second "initial values" path that could drift from the
-            %   reset path (GUI2_HARVEST.md A7).
+            %   reset path (CONVENTIONS.md A7).
             obj.applyCaseStruct(gui2.AppState.blankCaseState());
         end
     end
@@ -247,7 +245,7 @@ classdef AppState < handle
             %   the signal for "the form no longer matches the shown
             %   result". Display-only interactions (navigation, row
             %   selection, library browsing) must NEVER call this — none of
-            %   them may falsely invalidate a result (GUI2_HARVEST.md A4).
+            %   them may falsely invalidate a result (CONVENTIONS.md A4).
             if ~obj.IsDirty
                 obj.IsDirty = true;
                 notify(obj, 'DirtyChanged');
@@ -275,7 +273,7 @@ classdef AppState < handle
             %   No-op before the first result: there is nothing to stale,
             %   and a stale flag with no result would put an amber banner
             %   over an empty page. Deliberately does NOT clear the Result —
-            %   it stays readable while the user edits (GUI2_HARVEST.md A3).
+            %   it stays readable while the user edits (CONVENTIONS.md A3).
             if isempty(obj.Result) || obj.ResultStale
                 return
             end
@@ -333,8 +331,7 @@ classdef AppState < handle
             %   A failure must never stop the app opening: LibraryOK goes
             %   false, the message is stored for the shell to surface
             %   non-blocking after the window is visible, and saving is
-            %   refused until it is fixed (GUI2_HARVEST.md, Shell / File
-            %   operations).
+            %   refused until it is fixed.
             try
                 obj.Library   = data.Library.loadInstalled();   % fires LibraryChanged
                 obj.LibraryOK = ~isempty(obj.Library.boltKeys()) && ...
@@ -355,13 +352,12 @@ classdef AppState < handle
             %TOCASESTRUCT  Whole state -> the v1 case container.
             %   EVERY key ships from day one, including mapping and forces
             %   even while empty. A container that omits them loses the
-            %   user's bulk setup on every save (GUI_PORT_SPEC.md Section 14
-            %   trap 1) — the keys are the format, not the payload.
+            %   user's bulk setup on every save — the keys are the format, not the payload.
             c = struct();
             c.format   = obj.CaseFormat;
             c.project  = obj.Project;
             % Global service temperatures — project-level, NOT per joint.
-            % Lower-camel JSON names match what +gui writes.
+            % Lower-camel JSON names are the file format.
             c.settings = struct( ...
                 'nominalTempC', obj.Settings.NominalTempC, ...
                 'hotTempC',     obj.Settings.HotTempC, ...
@@ -384,7 +380,7 @@ classdef AppState < handle
 
         function applyCaseStruct(obj, st)
             %APPLYCASESTRUCT  Restore whole state from a deserialized case.
-            %   THE deserializer path (GUI2_HARVEST.md A7). File > New,
+            %   THE deserializer path (CONVENTIONS.md A7). File > New,
             %   File > Open and every reset come through here, so no
             %   property can be restored by one path and forgotten by
             %   another.
@@ -608,7 +604,7 @@ classdef AppState < handle
             %BLANKCASESTATE  A genuinely blank case, as a deserializer struct.
             %   Bare model defaults: required material dropdowns will land
             %   on the blank sentinel and hold Analyze back
-            %   (GUI2_HARVEST.md A6) — the intended fresh-start state, not
+            %   (CONVENTIONS.md A6) — the intended fresh-start state, not
             %   an error.
             %
             %   The DABJ Section 9 fixture is deliberately NOT seeded here.
@@ -791,7 +787,7 @@ classdef AppState < handle
 
         function s = parseSettings(raw)
             %PARSESETTINGS  Decoded settings -> the Settings struct.
-            %   Accepts the lower-camel JSON names +gui writes. A missing
+            %   Accepts the lower-camel JSON names of the file format. A missing
             %   key keeps the default rather than erroring.
             s = gui2.AppState.defaultSettings();
             map = struct('NominalTempC', 'nominalTempC', ...
@@ -896,7 +892,7 @@ classdef AppState < handle
                 F = struct('FX', e.fx, 'FY', e.fy, 'FZ', e.fz, ...
                            'MX', e.mx, 'MY', e.my, 'MZ', e.mz);
                 % patternId / jointName are IGNORED if present. They used
-                % to live here, and +gui still writes them, so a file
+                % to live here, and older case files still carry them, so a file
                 % carrying them must open — but the mapping is the
                 % authority on both and this row does not get a say.
                 st.Rows(end + 1) = gui2.AppState.elementRow( ...

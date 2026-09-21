@@ -7,7 +7,7 @@ classdef tReferenceDocuments < matlab.unittest.TestCase
     %   WHY THIS IS TESTED AT ALL, given it is a list of constants: the
     %   list is a COMPLIANCE artifact, not decoration. It is the tool's own
     %   statement of which documents its numbers rest on and in what role,
-    %   and CLAUDE.md's document hierarchy is a rule with real
+    %   and CONVENTIONS.md's document hierarchy is a rule with real
     %   consequences -- the DABJ course book being marked Validation rather
     %   than Governing is the difference between an answer key and a source
     %   of equations. A silent edit that promoted it would be a serious
@@ -58,7 +58,7 @@ classdef tReferenceDocuments < matlab.unittest.TestCase
         end
 
         function exactlyOneDocumentGoverns(testCase)
-            % CLAUDE.md: "NASA-STD-5020B is the governing standard."
+            % CONVENTIONS.md: "NASA-STD-5020B is the governing standard."
             % Singular. A second Governing row would be a claim that two
             % documents can settle the same question.
             docs = data.referenceDocuments();
@@ -68,7 +68,7 @@ classdef tReferenceDocuments < matlab.unittest.TestCase
         end
 
         function theCourseBookIsValidationOnly(testCase)
-            % The rule this list most needs to keep. CLAUDE.md: "The DABJ
+            % The rule this list most needs to keep. CONVENTIONS.md: "The DABJ
             % course book is VALIDATION ONLY -- the worked-example answer
             % key. Never cite DABJ as a governing equation."
             docs = data.referenceDocuments();

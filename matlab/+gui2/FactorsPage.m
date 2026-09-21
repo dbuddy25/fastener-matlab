@@ -19,9 +19,7 @@ classdef FactorsPage < gui2.Page
     %   verbatim in LoadedFittingFactors (page-local, not case state — it is
     %   a view of what AppState.Factors already holds) until the analyst
     %   edits the FF field, at which point that one value governs all four
-    %   and the mixed set is dropped. This mirrors +gui's
-    %   applyFactors/buildFactors exactly (GUI2_HARVEST.md source: that
-    %   file's rationale comments).
+    %   and the mixed set is dropped.
     %
     %   NO PRESET UI YET. data.factorPreset / factorPresets /
     %   factorPresetNames / saveFactorPreset are all in place and tested
@@ -108,7 +106,7 @@ classdef FactorsPage < gui2.Page
             % NASA-STD-5020B 4.2.2 [TFSR 3] — one fitting factor multiplies
             % every factor of safety (FF is a program-level policy knob, not
             % an equation with a number to evaluate; the citation still
-            % names the governing section per CLAUDE.md's traceability rule).
+            % names the governing section per CONVENTIONS.md's traceability rule).
             ffTip = ['Fitting factor (FF), NASA-STD-5020B 4.2.2 [TFSR 3]: ' ...
                 'one factor multiplies every factor of safety — ultimate, ' ...
                 'yield, separation, slip. A minimum of 1.15 is recommended ' ...

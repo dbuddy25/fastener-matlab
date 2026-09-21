@@ -15,14 +15,14 @@ classdef TempLoadsPage < gui2.Page
     %   property block), fires SettingsChanged.
     %
     %   Temperatures are degC — engine-native (UNITS.md). There is no
-    %   unit-conversion layer in this app, deliberately (GUI2_HARVEST.md D).
+    %   unit-conversion layer in this app, deliberately.
     %
     %   VALIDATION AT ENTRY. model.Joint enforces MinTemperature <=
     %   ReferenceTemperature <= MaxTemperature at construction time (the one
     %   place further downstream that would throw); catching a bad ordering
     %   here, with a clear alert and a revert to the last valid trio, beats
     %   surfacing that as a raw constructor error when a joint is finally
-    %   analyzed. This mirrors +gui's onServiceTempEdited exactly.
+    %   analyzed.
 
     properties (Access = private)
         NominalField
@@ -63,7 +63,7 @@ classdef TempLoadsPage < gui2.Page
                  'in a bulk run; it is not scoped to whichever joint you last ' ...
                  'had open.']);
 
-            degC = [char(176) 'C'];   % matches +gui's own degree-symbol idiom
+            degC = [char(176) 'C'];
             % No unit in the title: every row now carries its own.
             panel = uipanel(g, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Service Temperatures');
             panel.Layout.Row    = 2;
@@ -138,7 +138,7 @@ classdef TempLoadsPage < gui2.Page
         function onTempEdited(obj)
             %ONTEMPEDITED  Validate Cold <= Nominal <= Hot at entry.
             %   bindEdit has already marked dirty by the time this runs
-            %   (GUI2_HARVEST.md A4's unconditional-dirty design) — even on
+            %   (CONVENTIONS.md A4's unconditional-dirty design) — even on
             %   the revert path below, where AppState.Settings ends up
             %   unchanged. That is a harmless false-positive dirty flag, not
             %   a correctness issue: it costs at most an unnecessary "save?"

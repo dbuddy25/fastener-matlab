@@ -1,16 +1,6 @@
 % +GUI2  The rebuilt GUI — a thin shell over the frozen engine API.
 %
-%   Second pass at the GUI (GUI2_SPEC.md), and since GUI step 10 the only
-%   one. It was built alongside a first-pass +gui package, with both kept
-%   launchable until the last page landed so there was never a window with
-%   no working tool; +gui was deleted once that condition was met.
-%
-%   CITATIONS TO GUI_PORT_SPEC.md, which several files here carry, point at
-%   the FIRST-PASS spec. It was deleted 2026-08-17 once its two live
-%   sections had moved into GUI2_SPEC.md (sections 16 and 17); the rest was
-%   superseded layout advice. The citations are kept as provenance for the
-%   rules they justify -- git holds the document -- but nothing in it should
-%   be treated as current guidance.
+%   Design spec: GUI2_SPEC.md. Rules cited as "A1".."A13": CONVENTIONS.md.
 %
 %   gui2.launch          — entry point: opens the app (app = gui2.launch();)
 %   gui2.FastenerApp     — the shell: rail, cards, menus, status, title.
@@ -113,9 +103,7 @@
 %       every entry's source citation on screen. Add and Duplicate as
 %       Custom arrive in 9c.
 %
-%     - Step 10: Help menu (User Guide, References) and the deletion of
-%       +gui. gui2.PlaceholderPage went with it -- step 9 removed its last
-%       instantiation and step 10 removed the class.
+%     - Step 10: Help menu (User Guide, References).
 %
 %   ALL TEN PAGES ARE BUILT. Phase 4 is complete; Phase 5 is packaging.
 %
@@ -133,4 +121,4 @@
 %       Tension-Ultimate. They do not: they use Pb = PpMax + FFU*FSU*n*phi
 %       *PtL where Tension-Ultimate uses Ptu = FSU*FFU*PtL.
 %     - Programmatic repopulation NEVER marks the case dirty
-%       (GUI2_HARVEST.md A4).
+%       (CONVENTIONS.md A4).

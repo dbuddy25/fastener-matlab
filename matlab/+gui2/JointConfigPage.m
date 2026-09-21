@@ -2746,7 +2746,7 @@ classdef JointConfigPage < gui2.Page
         function m = enumFromLabel(enumClass, label)
             %ENUMFROMLABEL  Item text -> enum member, via the ENUMERATION.
             %   Never a string comparison against a hard-coded member name
-            %   (GUI2_HARVEST.md C1). An unrecognised label falls back to
+            %   (it can silently never match). An unrecognised label falls back to
             %   the first member rather than throwing, keeping buildJoint
             %   total.
             members = enumeration(enumClass);
@@ -2811,9 +2811,9 @@ classdef JointConfigPage < gui2.Page
         function t = memberTypeFromLabel(txt)
             %MEMBERTYPEFROMLABEL  Label -> enum, resolved through the
             %   ENUMERATION rather than by string equality against member
-            %   names. GUI2_HARVEST.md C1 records the bug that came from
-            %   comparing against 'TappedHole', which could never match, so
-            %   the member silently behaved as bolt-only.
+            %   names. A comparison against 'TappedHole' can never match the
+            %   label 'Tapped Hole', and the member would silently behave as
+            %   bolt-only.
             want = strtrim(char(string(txt)));
             members = enumeration('model.ThreadedMemberType');
             for i = 1:numel(members)

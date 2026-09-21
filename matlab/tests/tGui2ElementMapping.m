@@ -16,8 +16,7 @@ classdef tGui2ElementMapping < matlab.uitest.TestCase
     %   once: the cell, the summary line, and (for unknown names) the warn
     %   bar.
     %
-    %   The named tests below trace to GUI2_HARVEST.md's "Element Mapping"
-    %   checklist, which is the harvested behaviour this page owes:
+    %   The behaviours this page owes:
     %     - Import IDs from Forces bootstraps from imported forces; a blank
     %       joint name is not allowed, so the user picks one.
     %     - Mapping 200 elements must survive one bad row.
@@ -191,7 +190,7 @@ classdef tGui2ElementMapping < matlab.uitest.TestCase
         end
 
         function dismissingTheWarnBarLeavesTheSummaryRed(testCase)
-            % GUI2_HARVEST: dismissing an error bar must not clear the red
+            % Dismissing an error bar must not clear the red
             % summary line. Hiding the bar is "I have read this", not "this
             % is resolved".
             testCase.setLibrary("Bracket");
@@ -456,7 +455,7 @@ classdef tGui2ElementMapping < matlab.uitest.TestCase
         end
 
         function bulkAddSurvivesOneBadRowInTwoHundred(testCase)
-            % GUI2_HARVEST: mapping 200 elements must survive one bad row.
+            % Mapping 200 elements must survive one bad row.
             %   Pairs mode, because that is where a line CAN be bad now:
             %   with string element IDs almost any token is a legal ID, so
             %   the recoverable failure is a line with no joint name.

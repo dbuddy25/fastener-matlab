@@ -96,7 +96,7 @@ classdef ResultsPage < gui2.Page
 
         % The readout rows: field name on Result.Preload, the gloss, and the
         % citation + written equation. Columns 2 and 3 become the tooltip, so
-        % the equation behind each number is one hover away (CLAUDE.md's
+        % the equation behind each number is one hover away (CONVENTIONS.md's
         % traceability rule: reference, number, and the equation written out).
         %
         % Field names are shown VERBATIM rather than prettified, because they
@@ -1150,7 +1150,7 @@ classdef ResultsPage < gui2.Page
             %
             %   The rendering itself lives in gui2.MarginView, shared with
             %   the bulk grids so the same number cannot acquire two
-            %   spellings in one application (GUI2_HARVEST.md A8). What
+            %   spellings in one application (CONVENTIONS.md A8). What
             %   stays here is picking WHICH of the two a row needs, which
             %   is a question about Result.Margins fields and belongs to
             %   this page.
@@ -1184,7 +1184,7 @@ classdef ResultsPage < gui2.Page
 
         function s = withThousands(v)
             %WITHTHOUSANDS  A force in lbf, 0 dp, comma-grouped.
-            %   Zero decimals per GUI2_HARVEST.md Section D. Forces here run
+            %   Zero decimals. Forces here run
             %   to five figures, and 15200 is materially harder to read
             %   against 1520 than 15,200 is.
             if isnan(v)

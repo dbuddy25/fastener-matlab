@@ -365,7 +365,7 @@ function tbl = marginsTable(r)
 %MARGINSTABLE  The 15-row margins table, governing row bold + Fail rows red.
 %   The "MS" column header stays generic -- it already reads as "Value"
 %   for every check, ordinary margin or not (mirrors the GUI Results
-%   table's "Value" column, GUI_PORT_SPEC.md Section 4). The Interaction
+%   table's "Value" column). The Interaction
 %   row's cell text is the one exception: since its MS is NaN by design
 %   (NASA-STD-5020B Eq. 20-23 is a pass/fail CRITERION on the ratio R, not
 %   a margin equation -- see engine.analyze's INTERACTION IS NOT A MARGIN

@@ -33,8 +33,7 @@ matlab/
 ├── +report/           XLSX export (`report.exportResults`, Phase 3.6); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
 ├── +gui2/             THE GUI (`gui2.launch`, GUI2_SPEC.md) — what `fastenerTool`
 │                      opens. Programmatic uifigure, rail + card over AppState,
-│                      ten pages. A superseded first-pass `+gui` package ran
-│                      alongside it through the rebuild and was deleted at step 10
+│                      eleven pages.
 ├── examples/          runnable reference scripts (`run_bulk_example.m`)
 └── tests/             validation + smoke tests (checked vs the worked example)
 ```
@@ -153,8 +152,7 @@ Launch it with `cd matlab; fastenerTool`.
 **Phase 4 is complete.** Step 9 landed Materials & Hardware — all six library
 sections browsable with their source citations visible, custom entries added or
 duplicated from a baseline row, persisted per installation (`GUI2_SPEC.md` §16).
-Step 10 added the Help menu and deleted the superseded `+gui` package, 12,588
-lines of it. `Help → References` lists every document the tool's numbers rest
+Step 10 added the Help menu. `Help → References` lists every document the tool's numbers rest
 on; most are copyrighted and are **not** shipped, so it carries the citations
 and opens your own local copies (`GUI2_SPEC.md` §3).
 

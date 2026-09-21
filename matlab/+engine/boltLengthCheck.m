@@ -8,7 +8,7 @@ function r = boltLengthCheck(joint)
 %   to a "BoltLengthShort" row on Result.Warnings (see engine.analyze's
 %   WARNINGS note), reusing this function's own Method/Detail verbatim.
 %   The GUI also calls it directly on every relevant edit to drive the live
-%   bolt-length label (GUI_PORT_SPEC.md Section 3), which is why it must
+%   bolt-length label, which is why it must
 %   tolerate a half-filled joint: ANY missing (NaN) input degrades to NaN
 %   outputs and an explanatory Detail — this function never errors on
 %   inputs. Lengths in inches (see UNITS.md).
@@ -111,7 +111,7 @@ function r = boltLengthCheck(joint)
 %                               result becomes Result.Warnings'
 %                               "BoltLengthShort" row, see that function's
 %                               WARNINGS note); the GUI, directly, on every
-%                               relevant edit (GUI_PORT_SPEC.md Section 3).
+%                               relevant edit.
 %       Tests                   tests/tBoltLength.m nutConfigAdequateAndShort,
 %                               threadedInConfig (Insert 2·pitch + TappedHole
 %                               no-allowance), nanInputsNeverThrow.

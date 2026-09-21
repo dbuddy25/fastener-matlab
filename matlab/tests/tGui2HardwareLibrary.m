@@ -71,10 +71,7 @@ classdef tGui2HardwareLibrary < matlab.uitest.TestCase
         end
 
         function allSixSectionsRender(testCase)
-            % Six MANAGED sections in data.Library, six tabs. The first-pass
-            % DB tab had three — nuts, washers and inserts never had a
-            % browse section at all, and the old file said each was one row
-            % of a spec table away.
+            % Six MANAGED sections in data.Library, six tabs.
             ids = testCase.Page.sectionIds();
             testCase.verifyEqual(sort(ids), ...
                 sort(["material", "bolt", "boltSpec", "nut", "washer", "insert"]));

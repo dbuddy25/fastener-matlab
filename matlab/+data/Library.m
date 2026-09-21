@@ -422,7 +422,7 @@ classdef Library
         end
 
         function n = nutFor(obj, nominalDiameter, tpi, spec)
-            %NUTFOR  Nut data resolved silently by thread size (GUI_PORT_SPEC.md).
+            %NUTFOR  Nut data resolved silently by thread size.
             %   n = lib.nutFor(nominalDiameter, tpi, spec) returns the same
             %   struct as nut() for the FIRST nut entry whose nominalDiameter
             %   matches within tolerance (abs difference < 1e-6) and whose
@@ -453,7 +453,7 @@ classdef Library
             %WASHER  Struct describing the washer entry for the given key.
             %   Returns Key/Spec/Name/SizeCode/Thread/NominalDiameter/
             %   InnerDiameter/OuterDiameter/Thickness. Washers are GEOMETRY
-            %   ONLY (GUI_PORT_SPEC.md) — no material, no rated load, unlike
+            %   ONLY — no material, no rated load, unlike
             %   nut(). Spec is the family token (e.g. "NAS1149", "NAS620")
             %   the GUI's family dropdown lists (see washerSpecs()); Name is
             %   the family's short descriptor ("Standard OD", "Reduced OD")
@@ -487,7 +487,7 @@ classdef Library
 
         function w = washersFor(obj, nominalDiameter, spec)
             %WASHERSFOR  ALL washer entries matching a nominal diameter, in
-            %   thickness order (GUI_PORT_SPEC.md). CRITICAL DIFFERENCE
+            %   thickness order. CRITICAL DIFFERENCE
             %   FROM NUTFOR: washers are geometry only, so a bolt size
             %   resolves to MANY washers, not one — 2-3 for NAS1149, 1-2 for
             %   NAS620 (a light + a standard thickness). Never take element

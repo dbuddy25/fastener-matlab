@@ -18,7 +18,7 @@ six confirmed correct. The answer key never moved. Suite: 793 green.
 
 | # | Row | Status | Outcome |
 |---|---|---|---|
-| 1 | Tension-Yield | ✅ reviewed | **No change.** `Pty_allow` = system minimum confirmed from three directions: p13's global symbol list, the fable adjudication, and Dan's spreadsheet (which includes Heli-Coil strengths in its `Pty-allow`). `n = 0.5` kept as a deliberate default. |
+| 1 | Tension-Yield | ✅ reviewed | **No change.** `Pty_allow` = system minimum confirmed from three directions: p13's global symbol list, an independent adjudication of the text, and Dan's spreadsheet (which includes Heli-Coil strengths in its `Pty-allow`). `n = 0.5` kept as a deliberate default. |
 | 2 | Insert external (pull-out) | ✅ reviewed | **No change.** The yield criterion — flagged as "the tool's own, no equation number" — is **algebraically identical to Dan's spreadsheet**: both scale the ultimate by `Fsy/Fsu` of the parent. Moves from unsupported to unnumbered-but-corroborated. |
 | 3 | Insert internal-thread | ✅ reviewed | **No change.** Will read NotEvaluated on every real Heli-Coil joint because the allowable is not published for wire inserts — NASM33537, Dan's tool and our library all agree it does not exist. §4.4.1 anticipates this ("one **or both** may be provided"). The row stays: key-locked inserts do publish one. |
 | 4 | Nut strength | ⚠️ **changed** | **`3db9797`** — a rated nut is assessed on its rating, not on thread-stripping. §4.4.1 p26 makes the specified strength the *basis*; the tool had it as a ceiling. Dan: "comply with 5020." |

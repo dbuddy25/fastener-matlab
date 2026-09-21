@@ -2,7 +2,7 @@ classdef MarginView
     %MARGINVIEW  How a margin is RENDERED and REDUCED, in one place.
     %   Pure statics, no state, no widgets. Results and Bulk both come
     %   through here so the two can never disagree about what a number
-    %   looks like or which direction "worse" runs (GUI2_HARVEST.md A8:
+    %   looks like or which direction "worse" runs (CONVENTIONS.md A8:
     %   "Formatting helpers are shared across Results and Bulk so the two
     %   can never drift").
     %
@@ -18,7 +18,7 @@ classdef MarginView
     %   OPPOSITE direction from MS >= 0. Every consumer that formats,
     %   colours or aggregates a margin MATRIX keys off isRatio rather than
     %   testing the name again, so a second ratio-type check some day is a
-    %   one-line change here and nowhere else (GUI2_HARVEST.md A2).
+    %   one-line change here and nowhere else (CONVENTIONS.md A2).
     %
     %   Nothing here re-thresholds anything the engine decided. passFail
     %   exists because a bulk TABLE carries raw numbers rather than the

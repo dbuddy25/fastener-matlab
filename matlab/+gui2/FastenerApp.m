@@ -220,8 +220,7 @@ classdef FastenerApp < handle
             %   While the hardware library is unavailable, that failure owns
             %   the status bar: no page message may overwrite the one
             %   explanation the user needs. Two independent disable reasons
-            %   must not clobber each other (GUI2_HARVEST.md, Shell / File
-            %   operations).
+            %   must not clobber each other.
             if ~app.State.LibraryOK && strlength(app.State.LibraryLoadError) > 0
                 return
             end
@@ -244,7 +243,7 @@ classdef FastenerApp < handle
 
             % Unequal fitting factors must NOT render as a single number —
             % that would state a value the case does not hold (the summary
-            % equivalent of GUI2_HARVEST.md A1). Name the mixed set instead.
+            % equivalent of CONVENTIONS.md A1). Name the mixed set instead.
             ff = [f.FFU, f.FFY, f.FFSep, f.FFSlip];
             if all(ff == ff(1))
                 ffTxt = sprintf('FF %g', ff(1));
@@ -293,7 +292,7 @@ classdef FastenerApp < handle
             %   rather than poking widgets (GUI2_SPEC.md Section 4).
             %
             %   Navigation is a DISPLAY action: it must never mark the case
-            %   dirty and never invalidate a result (GUI2_HARVEST.md A3/A4).
+            %   dirty and never invalidate a result (CONVENTIONS.md A3/A4).
             arguments
                 app    (1,1) gui2.FastenerApp
                 pageId (1,1) string
@@ -667,7 +666,7 @@ classdef FastenerApp < handle
             files = gui2.recentFiles();
             if isempty(files)
                 % Name the absence rather than showing an empty submenu
-                % (GUI2_HARVEST.md A12).
+                % (CONVENTIONS.md A12).
                 m = uimenu(app.RecentMenu, 'Text', '(no recent files)');
                 m.Enable = 'off';
                 return
@@ -821,8 +820,7 @@ classdef FastenerApp < handle
             % case referenced but the library does not have, leaving
             % required material dropdowns blank rather than substituting.
             % That check belongs to the pages that own those dropdowns and
-            % lands with Joint Config — see GUI2_HARVEST.md, Shell / File
-            % operations, "File > Open".
+            % lands with Joint Config.
         end
 
         function onFileSave(app)

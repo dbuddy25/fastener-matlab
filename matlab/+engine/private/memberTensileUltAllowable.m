@@ -127,7 +127,7 @@ switch joint.ThreadedMember.Type
         % figure p26 says not to base the assessment on, and in the
         % direction that costs margin. Changed 2026-08-14 on Dan's call
         % ("use the rating of nut if available... comply with 5020");
-        % CLAUDE.md and TOOL_DIFFERENCES.md §1.1 updated to match.
+        % CONVENTIONS.md and TOOL_DIFFERENCES.md §1.1 updated to match.
         %
         % A supplied rating therefore needs NO material data at all. Fsu is
         % required only for the fallback, when no rating was given. (The
@@ -372,7 +372,7 @@ reason  = "";
 
 D2 = joint.ThreadedMember.StiPitchDiameter;   % STI tapped-hole pitch diameter, in
 if isnan(D2)
-    reason = "ThreadedMember.StiPitchDiameter is not set, so no STI tapped-hole geometry is available — either no insert is catalogued for this thread size (#0-80 and #5-44 have none), or this joint was built without library resolution (gui.FastenerApp.buildJoint, data.loadJointLibrary and engine.boltSizingSweep each resolve it via data.Library.insertFor; a hand-built headless joint does not)";
+    reason = "ThreadedMember.StiPitchDiameter is not set, so no STI tapped-hole geometry is available — either no insert is catalogued for this thread size (#0-80 and #5-44 have none), or this joint was built without library resolution (Joint Config, data.loadJointLibrary and engine.boltSizingSweep each resolve it via data.Library.insertFor; a hand-built headless joint does not)";
     return
 end
 

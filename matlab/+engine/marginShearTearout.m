@@ -31,7 +31,7 @@ function r = marginShearTearout(joint, loadCase, factors)
 %   bearing section (Eq. 72-74, "These equations should be checked for
 %   both yield and ultimate conditions") it never mentions yield. But
 %   §4.4.2 p29 requires the yield assessment to address the clamped parts,
-%   and 5020B governs where the two differ (see CLAUDE.md's document
+%   and 5020B governs where the two differ (see CONVENTIONS.md's document
 %   hierarchy). So the same TM Eq. 70 area is taken against the member's
 %   SHEAR YIELD strength with the yield factors:
 %       Pyld = Fsy * As

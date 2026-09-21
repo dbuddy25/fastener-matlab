@@ -384,13 +384,9 @@ classdef ElementForcesPage < gui2.Page
             %   the wording and the escalation are testable without reading
             %   colours off a widget.
             %
-            %   ELEMENT IDS ARE COMPARED AS STRINGS. The old build split
-            %   force ids into numeric and non-numeric and called the
-            %   second group "can never be mapped", because the mapping
-            %   keyed on integers. Mapping ids are strings now, so that
-            %   category no longer exists — any id in a force file can be
-            %   mapped, and an id that appears in one and not the other is
-            %   just a gap.
+            %   ELEMENT IDS ARE COMPARED AS STRINGS. Any id in a force file
+            %   can be mapped, numeric or not, and an id that appears in one
+            %   and not the other is just a gap.
             mapIds = obj.mappedIds();
             fIds   = obj.forceIds();
             cases  = obj.cases();
@@ -625,7 +621,7 @@ classdef ElementForcesPage < gui2.Page
 
         function onSummarySelected(obj, evt)
             %ONSUMMARYSELECTED  Row selection -> the detail pane.
-            %   Selection must never dirty the case (GUI2_HARVEST A4), so
+            %   Selection must never dirty the case (CONVENTIONS.md A4), so
             %   this re-renders the detail only and does not commit.
             sel = evt.Selection;
             if isempty(sel)

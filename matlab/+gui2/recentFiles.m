@@ -13,7 +13,7 @@ function files = recentFiles(action, file)
 %
 %   Returns a string array; empty (0x1) when there is nothing to show, which
 %   is what makes the caller render the "(no recent files)" placeholder
-%   rather than an empty submenu (GUI2_HARVEST.md A12).
+%   rather than an empty submenu (CONVENTIONS.md A12).
 %
 %   NEW BUILD, not a port: Open Recent was specified in the first pass and
 %   deferred, so there is no earlier behavior to carry forward.

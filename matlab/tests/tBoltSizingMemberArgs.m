@@ -1,17 +1,10 @@
 classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
-    %TBOLTSIZINGMEMBERARGS  Bolt Sizing tab's Threaded member picker -> the
+    %TBOLTSIZINGMEMBERARGS  A threaded-member picker selection -> the
     %   engine.boltSizingSweep name-value args it drives.
     %
-    %   THERE IS NO BOLT SIZING TAB. There was one in the first-pass GUI,
-    %   whose picker these two helpers translated; +gui2 deliberately does
-    %   not rebuild it (GUI2_SPEC.md Sec. 3: the engine sweep "stays in the
-    %   engine, untouched and re-addable"), and GUI step 10 deleted +gui.
-    %
-    %   The helpers moved to +engine with this file's assertions rather than
-    %   being deleted alongside the tab, because they are what "re-addable"
-    %   means in practice: without them, rebuilding the tab means
-    %   rediscovering which selection maps to which sweep argument, and that
-    %   mapping is the part that is easy to get wrong -- a Nut routed
+    %   gui2.BoltSizingPage is bolt-only and offers no such picker; these
+    %   helpers are kept for a caller that does. The mapping is the part
+    %   that is easy to get wrong -- a Nut routed
     %   through the ThreadedMember template is rejected by the engine, and
     %   an Insert that loses its Library silently drops to a different
     %   allowable basis while reporting the wrong reason.
@@ -52,7 +45,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
         function nutReturnsLibraryAndNutSpecArgs(testCase)
             % Checked field-by-field (not a whole-nvArgs/whole-Library
             % isequal) -- data.Library carries library-wide NaN-default
-            % fields (e.g. unrated nut specs, per CLAUDE.md) that make a
+            % fields (e.g. unrated nut specs, per CONVENTIONS.md) that make a
             % blanket isequal comparison fragile for no real benefit here;
             % nutSpecs() is a lightweight, representative fingerprint that
             % the SAME lib object was passed through unchanged.

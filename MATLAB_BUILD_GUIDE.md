@@ -198,13 +198,13 @@ writetable(results, "margins.xlsx");                % answers out
 
 **Committed deliverable. The GUI is a thin shell over the engine's API** — every control calls an already-tested function; **no analysis logic lives in the GUI.** This is why headless-first pays off: the GUI just wires buttons to functions that already work.
 
-**`GUI2_SPEC.md` is the live specification — build against that, not this section.** The step list below is the plan of record; the detail moved to `GUI2_SPEC.md` §14 when the first-pass tab shell was replaced by the rail + card shell over `AppState`.
+**`GUI2_SPEC.md` is the live specification — build against that, not this section.** The step list below is the plan of record; the detail moved to `GUI2_SPEC.md` §14 (rail + card shell over `AppState`).
 
-Two structural decisions worth carrying here because they changed the shape of the phase: it is **not App Designer** (programmatic `.m` only — see `CLAUDE.md`, Tech), and it is **not 11 flat tabs** (the tab shell produced an 11,945-line class).
+Two structural decisions worth carrying here because they changed the shape of the phase: it is **not App Designer** (programmatic `.m` only — see `CONVENTIONS.md`, Tech), and it is **not flat tabs** (a tab shell does not scale).
 
 **Steps 1–8 · DONE** — app shell + rail, and the nine built pages: Project, Factors, Temp Loads, Joint Config, Results, Defined Joints, Element Mapping, Element Forces, Bulk Analysis.
 **Step 9 · Materials & Hardware** — the last unbuilt page; a `PlaceholderPage` today. Design in `GUI2_SPEC.md` §16.
-**Step 10 · Help menu, and delete `+gui`** — DONE. User Guide and References live on the menu bar, not as pages. Nothing is bundled: nine of the fifteen cited documents are copyrighted and cannot ship, so `Help → References` carries the citations and opens the analyst's own copies. `+gui` deleted, 12,588 lines.
+**Step 10 · Help menu** — DONE. User Guide and References live on the menu bar, not as pages. Nothing is bundled: nine of the fifteen cited documents are copyrighted and cannot ship, so `Help → References` carries the citations and opens the analyst's own copies.
 
 **Phase 4 is complete.**
 

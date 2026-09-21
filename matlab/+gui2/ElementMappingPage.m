@@ -23,7 +23,7 @@ classdef ElementMappingPage < gui2.Page
     %                 ids.
     %     Joint Name  the library key. Case-insensitive, because letting
     %                 "JT-A" and "jt-a" coexist is a mapping trap
-    %                 (GUI2_HARVEST.md A13).
+    %                 (CONVENTIONS.md A13).
     %     Pattern ID  the physical joint INSTANCE, optional. Blank is
     %                 meaningful rather than missing: engine.analyzeBulk
     %                 falls back to the joint name as the pattern key, so
@@ -83,8 +83,7 @@ classdef ElementMappingPage < gui2.Page
         % Row 2 of the grid: the warn bar's two heights.
         WarnBarH = 34
 
-        % Import error reports stop here and say how many were dropped
-        % (GUI_PORT_SPEC.md Section 7.4 point 3).
+        % Import error reports stop here and say how many were dropped.
         MaxReportedErrors = 20
     end
 
@@ -406,7 +405,7 @@ classdef ElementMappingPage < gui2.Page
         function renderSummary(obj, rows, dupMask, unknownMask, blankMask)
             %RENDERSUMMARY  Three visually distinct states.
             %   Empty, broken and clean must never look alike, and a
-            %   problem must never render muted (GUI2_HARVEST.md).
+            %   problem must never render muted (CONVENTIONS.md A1).
             n = numel(rows);
             if n == 0
                 obj.SummaryLabel.Text       = 'No elements mapped yet.';
@@ -1118,7 +1117,7 @@ classdef ElementMappingPage < gui2.Page
         end
 
         function reportImport(obj, what, nAdded, nUpdated, errs)
-            %REPORTIMPORT  The one import-report shape (GUI_PORT_SPEC S7.4).
+            %REPORTIMPORT  The one import-report shape.
             %   Counts first, then the individual failures with line
             %   numbers, truncated so a pathological file cannot produce a
             %   dialog nobody can read.

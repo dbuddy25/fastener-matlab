@@ -81,7 +81,7 @@ classdef ProjectPage < gui2.Page
             %REFRESH  AppState.Project -> controls. Never marks dirty — a
             %   File > Open landing on this page while it is active must
             %   repopulate without the app claiming an edit just happened
-            %   (GUI2_HARVEST.md A4).
+            %   (CONVENTIONS.md A4).
             if ~obj.IsBuilt
                 return
             end

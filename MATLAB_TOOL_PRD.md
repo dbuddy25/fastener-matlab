@@ -92,8 +92,7 @@ deliberate: Project and Factors are separate pages; Temp Loads is its own page
 because it is global rather than per-joint; **Bolt Sizing** was absent until 2026-09-21 and is now a
 simple bolt-capability gut-check page over `boltSizingSweep`; User Guide and References
 moved from tabs to the **Help menu**; and the shell is a rail rather than a flat
-`uitabgroup` — the tab shell produced an 11,945-line class, which is the
-evidence it does not scale. See `GUI2_SPEC.md` for the live spec.
+`uitabgroup`, which does not scale. See `GUI2_SPEC.md` for the live spec.
 
 Still wanted, not built: °C/°F unit toggle at the GUI boundary (engine stays
 °C), joint cross-section preview (`GUI2_SPEC.md` §17), dark mode. Version/build

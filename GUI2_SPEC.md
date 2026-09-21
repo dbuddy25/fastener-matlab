@@ -36,7 +36,7 @@ surfaced, and what the app refuses to do silently.
    its class is built, its `matlab.uitest` test passes, and it has been looked
    at running. No moving on at 80%.
 
-> `CLAUDE.md` currently says "MATLAB (App Designer GUI, Phase 4)". That is stale
+> `CONVENTIONS.md` currently says "MATLAB (App Designer GUI, Phase 4)". That is stale
 > and now misleading — correct it to "programmatic uifigure GUI".
 
 ---
@@ -112,7 +112,7 @@ gap.
 Every verdict is **scope-qualified, never unqualified**.
 *"All 9 displayed checks pass — 6 computed, not shown"* is honest.
 *"ALL CHECKS PASS"* is not, and is forbidden outright
-(`GUI2_HARVEST.md` A1).
+(`CONVENTIONS.md` A1).
 
 Three consequences:
 

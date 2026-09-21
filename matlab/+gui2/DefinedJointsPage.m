@@ -17,10 +17,9 @@ classdef DefinedJointsPage < gui2.Page
     %   naming collision; the scope difference still has to be stated
     %   in-page, because the rail labels alone do not carry it.
     %
-    %   THE SUMMARY IS DELIBERATELY PARTIAL, AND SAYS SO. GUI2_HARVEST.md
-    %   asks for a summary that mirrors the Joint Config panels field for
-    %   field, and warns that the two must change together or the summary
-    %   goes stale while still looking current. That warning is the reason
+    %   THE SUMMARY IS DELIBERATELY PARTIAL, AND SAYS SO. A summary that
+    %   mirrors the Joint Config panels field for field must change with
+    %   them or it goes stale while still looking current. That is the reason
     %   NOT to mirror all ~60 fields here: the job on this page is to
     %   confirm WHICH saved joint you are about to load or delete, not to
     %   audit one. So it shows the identifying fields, and the panel title

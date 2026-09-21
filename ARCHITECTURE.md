@@ -367,8 +367,7 @@ Package classes reference each other with the `model.` / `engine.` prefix.
 
 Generated from source (comments stripped, so documentation mentions do not count
 as calls). File counts (2026-08-17): `+model` 16 · `+engine` 39 · `+engine/private` 8 ·
-`+data` 16 · `+report` 5 · `+gui2` 23 · `+validation` 2. (`+gui`, the
-superseded first-pass app, was deleted at GUI step 10.)
+`+data` 16 · `+report` 5 · `+gui2` 23 · `+validation` 2.
 
 **The single-joint chain.** `analyze` is the only orchestrator — it calls 18
 things and nothing calls back into it:
@@ -558,7 +557,7 @@ Phase 2.2), not a type.
 | Single-workbook bulk run (`engine.runWorkbook` over the `data.makeTemplate` workbook; header-tolerant `data.loadElements`; optional `sheet` arg on all three loaders) | Step 2c | ✅ |
 | Case save/load, factor presets | 3.7 | ⏳ |
 | Single-joint PDF report (`report.singleJointReport`, via MATLAB Report Generator) | 3.8 | ✅ |
-| GUI (`+gui2`) | 4 | ✅ **complete** — ten pages, Help menu, `+gui` deleted |
+| GUI (`+gui2`) | 4 | ✅ **complete** — eleven pages, Help menu |
 | Packaging (`.exe`) | 5 | ⏳ |
 
 ---

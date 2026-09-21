@@ -62,7 +62,7 @@ function r = marginBoltThreadShear(joint, loadCase, factors, preload)
 %   NASA-STD-5020B prints no thread-shear-area equation of its own (full
 %   Eq. 1-87 inventory; Eq. 12/13 are the fastener CROSS-SECTION shear
 %   allowable, a different failure mode), so citing the supplement here is
-%   legitimate per CLAUDE.md's document-hierarchy rule.
+%   legitimate per CONVENTIONS.md's document-hierarchy rule.
 %   Then, per TM-106943 Eq. 64/65:
 %       Pult = Fsu·As            (Eq. 64)
 %       MS   = Pult/Pb - 1       (Eq. 65)

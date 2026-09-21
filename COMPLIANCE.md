@@ -561,7 +561,7 @@ independently.** Its separation margin compares the separation design load
 NASA-STD-5020B Eq. 19, axial-only, exactly what `engine.marginSeparation` does.
 
 **What this does and does not establish.** It carries NO numerical authority —
-another implementation is never a source of truth here (`CLAUDE.md`), and two
+another implementation is never a source of truth here (`CONVENTIONS.md`), and two
 tools agreeing proves only that they made the same choice. What it does settle
 is a scoping question the standard itself raises: §4.4.3 says Eq. 19 "is
 applicable to systems under axial loading only" and invites "other equations or
@@ -581,7 +581,7 @@ above in hand. The reasoning, so it does not have to be rebuilt:
   `tau/sigma = 0.2` is a 6% penalty and `0.5` is 32% — *and* yield or
   separation to be the governing margin. Most joints fail that conjunction.
 - Closing it means inventing a derived convention with nothing to validate it
-  against. `CLAUDE.md` allows a margin to be validated only against a published
+  against. `CONVENTIONS.md` allows a margin to be validated only against a published
   worked example or an independent hand calculation, and neither exists for
   these two. A guessed convention is worse than a declared gap.
 - **The gap is disclosed everywhere it could mislead** and that must stay true:
@@ -654,7 +654,7 @@ direction is safe — it can produce a false failure, never a false pass.
 band is treated as rupture-before-separation without evaluating the ductility
 criterion, because no δp/δe field exists for a user to supply test data
 through. Conservative in every case. Recorded in the gate's header,
-`Contents.m` and `CLAUDE.md`.
+`Contents.m` and `CONVENTIONS.md`.
 
 **An extra fitting factor in slip.** `marginSlip` applies `FFslip` where
 Eq. 84/86 carry only the factor of safety. Conservative, and documented.

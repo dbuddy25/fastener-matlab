@@ -13,7 +13,7 @@ classdef tGui2ElementForces < matlab.uitest.TestCase
     %   that is the units sanity check, and the cross-check against the
     %   mapping.
     %
-    %   The bullets these trace to (GUI2_HARVEST.md "Element Forces"):
+    %   The behaviours this page owes:
     %     - cross-validated against the mapping; unmapped IDs called out
     %     - ZERO USABLE ELEMENTS IS THE DANGEROUS CASE — it must not look
     %       like success
@@ -438,8 +438,6 @@ classdef tGui2ElementForces < matlab.uitest.TestCase
             % import. They cannot declare a load case — the reader returns
             % no rows to carry the sheet name — so the import REPORT is
             % where the emptiness surfaces, and it escalates the icon.
-            % (The old build's comment claimed the record was created; its
-            % code added cases inside the row loop, so it never was.)
             f = testCase.tempFile(".xlsx");
             tGui2ElementForces.writeWorkbook(f, ...
                 {"Liftoff", [1001 1 2 3 0 0 0]}, ...
@@ -562,9 +560,8 @@ classdef tGui2ElementForces < matlab.uitest.TestCase
         end
 
         function aCaseFileCarryingTheOldRowFieldsStillOpens(testCase)
-            % patternId / jointName used to live on a force row and the
-            % first-pass GUI
-            % still writes them. They are ignored, not rejected.
+            % patternId / jointName used to live on a force row and older
+            % case files still carry them. They are ignored, not rejected.
             f = testCase.tempFile(".json");
             tGui2ElementForces.writeRaw(f, ...
                 ['{"format":"fastener-analysis-matlab-v1","forces":{' ...

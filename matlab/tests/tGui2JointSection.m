@@ -1,5 +1,5 @@
 classdef tGui2JointSection < matlab.uitest.TestCase
-    %TGUI2JOINTSECTION  The joint cross-section view (GUI_PORT_SPEC.md Section 13).
+    %TGUI2JOINTSECTION  The joint cross-section view.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")

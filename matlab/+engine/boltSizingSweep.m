@@ -109,7 +109,7 @@ function T = boltSizingSweep(bolts, material, PtL, PsL, factors, shearPlane, opt
 %       different library rows with two different Height/BearingDiameter/
 %       RatedUltimateLoad values). The resolved nut is turned into a
 %       model.ThreadedMember exactly the way Joint Config's nut-spec
-%       picker does it (the first-pass GUI's applyNutSpec: Material =
+%       picker does it (Material =
 %       Library.material(n.Material), RatedUltimateLoad = n.RatedUltimateLoad,
 %       EngagementLength = n.Height, BearingDiameter = n.BearingDiameter)
 %       — one resolution recipe, so this screen and Joint Config can never
@@ -180,7 +180,7 @@ function T = boltSizingSweep(bolts, material, PtL, PsL, factors, shearPlane, opt
 %       plain bolt-only value — NOT the incomplete system minimum, and
 %       NEVER a stand-in rating invented for an unrated item (several nut
 %       specs in this library legitimately carry RatedUltimateLoad = 0 —
-%       see CLAUDE.md — and a member mode that cannot compute an AREA
+%       see CONVENTIONS.md — and a member mode that cannot compute an AREA
 %       allowable either is refused, not guessed).
 %     - Context supplied, member resolved, mode assessed: "System (<mode>
 %       governs)" and MS_TensionUlt IS engine.systemTensileAllowable's
@@ -246,7 +246,7 @@ function T = boltSizingSweep(bolts, material, PtL, PsL, factors, shearPlane, opt
 %   rather than calling marginInteraction (that function's signature takes
 %   a model.Joint + a preload struct and is wired into the Fig. 8 preload
 %   gate throughout — there is no preload-free entry point to factor
-%   without changing that function's behaviour, which CLAUDE.md and the
+%   without changing that function's behaviour, which CONVENTIONS.md and the
 %   task both forbid). engine.marginInteraction ITSELF is unchanged by
 %   this file — confirmed by inspection; this function only reads its
 %   approach, never calls or edits it. Unlike engine.marginInteraction's
@@ -430,7 +430,7 @@ if haveTemplate && ~isnan(opts.ThreadedMember.StiPitchDiameter)
     % across many sizes. StiPitchDiameter is STI tapped-hole geometry
     % keyed by thread size (NASM33537 Rev 4 Table IV), resolved per row
     % below from opts.Library.insertFor. A pre-populated one -- e.g. a
-    % ThreadedMember lifted off a Joint that the first-pass GUI's buildJoint
+    % ThreadedMember lifted off a Joint that Joint Config
     % already resolved -- would otherwise be reused for EVERY candidate
     % size whenever the per-row lookup does not overwrite it (no Library
     % supplied, or that row's size not catalogued), and the Detail string
@@ -507,8 +507,7 @@ for i = 1:n
                 unresolvedReason = sprintf("no %s nut entry matches this thread size in the library", ...
                     opts.NutSpec);
             else
-                % SAME recipe as the first-pass GUI's applyNutSpec (Joint
-                % Config's nut-spec picker) -- one resolution, so this
+                % SAME recipe as Joint Config's nut-spec picker -- one resolution, so this
                 % screen and Joint Config can never silently disagree
                 % about which nut a given bolt+spec resolves to.
                 resolvedMember = model.ThreadedMember( ...
@@ -590,7 +589,7 @@ for i = 1:n
             % Insert/TappedHole template) but its mode could not be
             % ASSESSED -- e.g. no shear-engagement area AND no usable
             % rating (RatedUltimateLoad = 0 is a legitimate, unrated
-            % library entry -- see CLAUDE.md). NEVER invent a rating or
+            % library entry -- see CONVENTIONS.md). NEVER invent a rating or
             % silently stand the bolt-only number in for the system
             % minimum without saying so.
             PtuAllowRow = PtuAllowBoltOnly;

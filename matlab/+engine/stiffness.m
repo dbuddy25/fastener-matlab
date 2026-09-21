@@ -213,7 +213,7 @@ if threadedIn
     % engaged threads:
     %   kb = Eb * [ (L1 + 0.4D)/As + (L2 + h)/At ]^-1,  h = min(D/2, t2/2)
     % t2 (tapped member thickness) is not carried by the model — the tapped
-    % parent is not a FlangeLayer (see CLAUDE.md) — so h = D/2 is assumed,
+    % parent is not a FlangeLayer (see CONVENTIONS.md) — so h = D/2 is assumed,
     % per DABJ's "usually, h = D/2". The assumption is surfaced in Method
     % below. h = D/2 is the larger of the two candidates, hence the LONGER
     % (more compliant, lower kb) bolt whenever t2 < D; low kb lowers phi,
@@ -233,7 +233,7 @@ end
 %   Ebar = tFit / sum(t_i / E_i)          (t_i, E_i over joint.FlangeStack)
 % 5020B Eq. 9 takes kc as a given input and never prints how to compute a
 % mixed-modulus member's effective modulus, so citing the supplement here
-% is legitimate per CLAUDE.md's document-hierarchy rule. The frustum
+% is legitimate per CONVENTIONS.md's document-hierarchy rule. The frustum
 % expression below is UNCHANGED (Shigley geometry, d1 = d2 = Dc per
 % STIFFNESS_PLAN.md Section 3.1 — a general asymmetric d1/d2 form was
 % considered and rejected: DABJ Example 8-b uses an AVERAGED contact

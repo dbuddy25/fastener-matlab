@@ -741,7 +741,7 @@ the standard says it should not have.
 
 ## 8. Differences from the legacy spreadsheet
 
-**This section is a reconciliation log, NOT a validation record.** `CLAUDE.md` is
+**This section is a reconciliation log, NOT a validation record.** `CONVENTIONS.md` is
 explicit that margins are validated against a published worked example or an
 independent hand calculation, *never* against another implementation. Agreement
 with the spreadsheet is therefore not evidence the tool is right, and
@@ -905,7 +905,7 @@ is not the handbook.
 **Replacing it with the handbook value would NOT be matching another
 implementation.** 94,400 cited to MIL-HDBK-5 is an upgrade in provenance: the
 handbook is the authority and the spreadsheet merely references it too. That is
-the distinction `CLAUDE.md` draws, and it is the one case in this section where a
+the distinction `CONVENTIONS.md` draws, and it is the one case in this section where a
 tool value should probably change. Two riders when it happens: record WHICH
 product form and condition the table gives (A286 bar, sheet and fastener stock
 differ — the same product-form issue as (b) below), and confirm the value against

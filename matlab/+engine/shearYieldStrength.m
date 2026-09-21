@@ -20,7 +20,7 @@ function r = shearYieldStrength(material)
 %   as though 5020B printed no equation for it, and three callers stated
 %   that no equation number was claimed. NASA-STD-5020B DOES print it, as
 %   Eq. 63 on p66, Appendix A.8 ("Theoretical Treatment of Interaction
-%   Equations"), derived there from Eq. 61 and Eq. 62. Under CLAUDE.md's
+%   Equations"), derived there from Eq. 61 and Eq. 62. Under CONVENTIONS.md's
 %   document hierarchy — "Where 5020B provides the equation, cite 5020B" —
 %   citing prose while the standard prints the equation is exactly the
 %   failure the rule exists to catch. Found by the 2026-08-13 equation

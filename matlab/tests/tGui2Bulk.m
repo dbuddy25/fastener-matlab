@@ -12,7 +12,7 @@ classdef tGui2Bulk < matlab.uitest.TestCase
     %   assembly takes from where, and every place a number could be made
     %   to look better than it is.
     %
-    %   Tracing GUI2_HARVEST.md's Bulk Analysis checklist:
+    %   The behaviours this page owes:
     %     - margin columns are DISCOVERED, never hardcoded
     %     - counts over the FULL result set, so a supplemental failure
     %       cannot read as a pass and a partial run never reads as clean

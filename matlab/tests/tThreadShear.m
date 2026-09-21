@@ -909,7 +909,7 @@ classdef tThreadShear < matlab.unittest.TestCase
             % Method is the check's STATIC description and deliberately
             % names BOTH area sources ("...SPECIFIED... else COMPUTED...");
             % which one actually ran is Detail's job, asserted above. So
-            % what Method owes is the CITATION, per CLAUDE.md's
+            % what Method owes is the CITATION, per CONVENTIONS.md's
             % traceability rule — assert that, not a per-run marker.
             testCase.verifySubstring(r.Method, "NASM33537 Rev 4 Table IV");
             testCase.verifySubstring(r.Method, "TM-106943 Eq. 78/79");

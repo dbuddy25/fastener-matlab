@@ -6,19 +6,9 @@ function nvArgs = boltSizingMemberArgs(memberType, library, nutSpec, member)
 %   ONE place that translation happens, so a caller stays a thin
 %   orchestration call that cannot drift from what this returns.
 %
-%   MOVED OUT OF gui.FastenerApp AT GUI STEP 10, logic unchanged. It was a
-%   static method on the first-pass GUI class, which step 10 deletes. Its
-%   inputs were always model and data types rather than widgets, its own
-%   docstring already called it "Pure (no app state) -- testable without
-%   building the GUI", and what it produces is consumed by
-%   engine.boltSizingSweep -- so the engine is where it belonged.
-%
-%   GUI2_SPEC.md Sec. 3 records that Bolt Sizing is deliberately NOT built in
-%   +gui2 and that the engine sweep "stays in the engine, untouched and
-%   re-addable". Keeping this mapping (and the assertions in
-%   tests/tBoltSizingMemberArgs.m) alive is most of what makes that true:
-%   without it, re-adding the tab means rediscovering which selection maps
-%   to which sweep argument, which is the part that is easy to get wrong.
+%   Pure (model and data types in, no app state), so it is testable
+%   without building a GUI. gui2.BoltSizingPage is bolt-only and does not
+%   use it; it is kept for a caller that offers a threaded-member picker.
 %
 %   memberType empty (model.ThreadedMemberType.empty(1,0), the picker's
 %   "None (bolt-only)" selection) -> {} : the bolt-only call shape.
@@ -36,8 +26,7 @@ function nvArgs = boltSizingMemberArgs(memberType, library, nutSpec, member)
 %
 %   Call graph:
 %       Precedents (calls)      none (pure).
-%       Dependents (called by)  a Bolt Sizing UI, when one exists. None
-%                               today -- +gui2 does not build that tab.
+%       Dependents (called by)  none today (gui2.BoltSizingPage is bolt-only).
 %       Tests                   tests/tBoltSizingMemberArgs.m.
 
 arguments

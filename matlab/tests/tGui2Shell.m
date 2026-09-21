@@ -125,7 +125,7 @@ classdef tGui2Shell < matlab.uitest.TestCase
         end
 
         function navigationNeverMarksDirty(testCase)
-            % GUI2_HARVEST.md A4/A3. Navigation is a display action: it must
+            % CONVENTIONS.md A4/A3. Navigation is a display action: it must
             % not claim the user edited anything, and must not invalidate a
             % result that is still valid.
             testCase.App.navigateTo("Factors");
@@ -139,7 +139,7 @@ classdef tGui2Shell < matlab.uitest.TestCase
     % ---- The rule that makes the deserializer safe ------------------------
     methods (Test)
         function programmaticRepopulationDoesNotMarkDirty(testCase)
-            % GUI2_HARVEST.md A4: a dirty flag set by repopulation is a lie.
+            % CONVENTIONS.md A4: a dirty flag set by repopulation is a lie.
             % This is what lets File > Open restore a case without the app
             % immediately claiming it has unsaved changes.
             st = gui2.AppState.blankCaseState();
@@ -210,7 +210,7 @@ classdef tGui2Shell < matlab.uitest.TestCase
         end
 
         function anEditStalesAShownResultWithoutClearingIt(testCase)
-            % GUI2_HARVEST.md A3: the result stays readable while the user
+            % CONVENTIONS.md A3: the result stays readable while the user
             % edits. Clearing it would take away the thing they are working
             % from.
             testCase.App.State.setResult(struct('marker', 42));
@@ -276,7 +276,7 @@ classdef tGui2Shell < matlab.uitest.TestCase
         end
 
         function caseContainerCarriesEveryKeyEvenWhenEmpty(testCase)
-            % GUI_PORT_SPEC.md Section 14 trap 1: a container that omits
+            % A container that omits
             % mapping/forces loses the user's bulk setup on every save. The
             % keys are the format, not the payload.
             c = testCase.App.State.toCaseStruct();

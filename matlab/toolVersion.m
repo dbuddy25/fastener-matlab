@@ -119,7 +119,7 @@ function v = toolVersion()
 %   hardware library's own schemaVersion is independent again. Bumping
 %   this string must never invalidate a user's saved cases.
 %
-%   Consumers: fastenerTool, gui.FastenerApp, gui2.AppState,
+%   Consumers: fastenerTool, gui2.AppState,
 %   report.singleJointReport, report.exportResults.
 
 v = "0.6.0";

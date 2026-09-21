@@ -12,7 +12,7 @@ function c = palette(name)
 %     red (bold)  = failure
 %     red border  = missing required input
 %
-%   GUI2_HARVEST.md A1 — "unknown must never look like fine". A check that
+%   CONVENTIONS.md A1 — "unknown must never look like fine". A check that
 %   could not run is amber, NOT muted gray: the check is not running, and
 %   that must never read as nothing to report. tableNaBg exists for that
 %   state and is deliberately distinct from both tablePassBg and
@@ -52,10 +52,7 @@ function c = palette(name)
 %   Unknown names error immediately — a typo must fail loudly at development
 %   time, not silently render the wrong color.
 %
-%   Values carried forward verbatim from the first-pass gui.palette (that
-%   package was deleted at GUI step 10) so the two builds
-%   cannot drift while both are launchable (GUI2_SPEC.md Section 1 rule 2).
-%   They assume a light background; R2026a apps are theme-aware, so if dark
+%   The values assume a light background; R2026a apps are theme-aware, so if dark
 %   mode is taken up this function becomes theme-aware and stays the single
 %   file that changes.
 %
@@ -81,7 +78,7 @@ switch char(name)
 
     % A check that could NOT RUN is amber, never the muted grey above.
     % Grey reads as "nothing to report", which is the opposite of what an
-    % unevaluated check means (GUI2_HARVEST.md A1). tableNaBg stays for
+    % unevaluated check means (CONVENTIONS.md A1). tableNaBg stays for
     % genuinely not-applicable cells and for muting a stale table.
     case 'tableNotEvalBg', c = [1.000 0.953 0.804];
 

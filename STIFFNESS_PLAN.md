@@ -8,7 +8,7 @@
 > general asymmetric d1/d2 frustum of Section 3.1 (that form was deliberately
 > NOT adopted — see the note at the top of Section 3).
 >
-> **Read `CLAUDE.md` first.** Conventions there govern — especially the
+> **Read `CONVENTIONS.md` first.** Conventions there govern — especially the
 > equation-traceability rule and the document hierarchy.
 
 ---
@@ -93,7 +93,7 @@ layers differ in modulus. Per the decision in Section 3.2, it computes the
 thickness-weighted harmonic mean `Ebar = tFit / sum(t_i / E_i)` over
 `joint.FlangeStack` and feeds it into the SAME (unchanged) frustum expression
 in place of the uniform `Ec` — cited to NASA TM-106943 Eq. 34, per
-`CLAUDE.md`'s document-hierarchy rule (5020B Eq. 9 takes `kc` as a given input
+`CONVENTIONS.md`'s document-hierarchy rule (5020B Eq. 9 takes `kc` as a given input
 and never prints how to compute it for a mixed stack). The general asymmetric
 d1/d2 frustum of Section 3.1 was NOT adopted (see the note there — it would
 move DABJ Example 8-b off the published answer key); `Dc` stays the existing
@@ -169,7 +169,7 @@ Adopt it anyway:
 
 - It is the form already familiar from the reference material in use.
 - **Citation is clean.** 5020B uses `kc` in Eq. 9 but never prints how to compute
-  it, so a supplement is legitimate here per `CLAUDE.md`'s hierarchy rule — you
+  it, so a supplement is legitimate here per `CONVENTIONS.md`'s hierarchy rule — you
   are not bypassing a 5020B equation. `Ē` cites **TM-106943 Eq. 34**; the frustum
   geometry cites Shigley, as `stiffness.m` already does.
 - It unblocks the configuration outright rather than leaving a hard refusal.
@@ -260,4 +260,4 @@ analysis."* The slip and separation checks consume the same `phi`.
 | **Manual GUI check never done:** Bolt Sizing tab, Threaded member = Helical Insert, confirm a computed area appears in the Insert row's `Detail` and reads `computed (DERIVED) As ... (NASM33537 Rev 4 Table IV STI pitch diameter)` | manual |
 | **Manual GUI check (new):** an Insert/Tapped Hole joint should now show a real `phi` and evaluated thread checks; confirm the Detail no longer claims stiffness is deferred | manual |
 | **`memberTypeLabel` / `memberTypeFromLabel` are private statics**, so the Tapped Hole label fix of 2026-08-03 has no automated test. Making them public would allow one | test gap |
-| **Is SAND2008-0371 admitted to `CLAUDE.md`'s hierarchy?** Job B as specified above does not need it (Shigley + TM-106943 Eq. 34 cover it), but neither Shigley nor Sandia currently appears in the hierarchy at all — while `stiffness.m` has cited Shigley since Phase 3.1 | decision |
+| **Is SAND2008-0371 admitted to `CONVENTIONS.md`'s hierarchy?** Job B as specified above does not need it (Shigley + TM-106943 Eq. 34 cover it), but neither Shigley nor Sandia currently appears in the hierarchy at all — while `stiffness.m` has cited Shigley since Phase 3.1 | decision |

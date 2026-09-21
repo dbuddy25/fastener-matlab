@@ -30,7 +30,7 @@ classdef HardwareLibraryPage < gui2.Page
     %   effect of navigation.
     %
     %   ORIGIN RENDERS AS ASCII, not as the lock/pencil glyphs GUI2_SPEC.md
-    %   §16 sketches. Deliberate, and inherited from the first-pass DB tab:
+    %   §16 sketches. Deliberate:
     %   the glyphs are non-ASCII (the lock is outside the Basic Multilingual
     %   Plane), this code is written on a machine that never runs it, and a
     %   font-fallback or file-encoding problem on the Windows target would
@@ -697,11 +697,6 @@ classdef HardwareLibraryPage < gui2.Page
             %   Refs    field -> either a fixed choice list, or a
             %           data.Library entity token whose keys are the
             %           choices. Renders as a dropdown.
-            %
-            %   Materials, bolts and bolt specs are ported from the
-            %   first-pass DB tab. Nuts, washers and inserts never had a
-            %   browse section — the old file says so and says each is one
-            %   row here when it lands. This is that.
             specs = [ ...
                 struct('Id', 'material', 'Title', 'Materials', 'Noun', 'materials', ...
                     'Fields',  {{'origin', 'key', 'ftu', 'fty', 'fsu', ...

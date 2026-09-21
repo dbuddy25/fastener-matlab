@@ -1,5 +1,5 @@
 classdef JointSectionView < handle
-    %JOINTSECTIONVIEW  To-scale axial cross-section of the joint (GUI_PORT_SPEC.md Section 13).
+    %JOINTSECTIONVIEW  To-scale axial cross-section of the joint.
     %
     %   A NON-MODAL window, opened from Joint Config and kept alive beside
     %   the app. It listens to JointChanged and repaints as the form is
@@ -17,8 +17,8 @@ classdef JointSectionView < handle
     %   JointChanged recovers what inline hosting was for.
     %
     %   IT DRAWS IN DATA COORDINATES, never pixels. Section 13 is explicit
-    %   that this is the point - the pixel-scaling layer it replaces was
-    %   ~170 lines in the original tool. x is RADIAL (0 on the centerline,
+    %   that this is the point - a pixel-scaling layer would be ~170 lines.
+    %   x is RADIAL (0 on the centerline,
     %   symmetric), y is AXIAL in inches measured DOWN from the under-head
     %   bearing plane, with the axis YDir reversed so the head sits at the
     %   top and the stack reads head-to-tail like Joint Config's left column.

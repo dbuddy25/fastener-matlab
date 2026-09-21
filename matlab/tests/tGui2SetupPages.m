@@ -86,7 +86,7 @@ classdef tGui2SetupPages < matlab.uitest.TestCase
                 'Repopulated Analyst', ...
                 'refresh() (via the ProjectChanged listener) did not repopulate the field.');
             testCase.verifyFalse(testCase.App.State.IsDirty, ...
-                'refresh() must never mark the case dirty (GUI2_HARVEST.md A4).');
+                'refresh() must never mark the case dirty (CONVENTIONS.md A4).');
         end
     end
 
@@ -172,7 +172,7 @@ classdef tGui2SetupPages < matlab.uitest.TestCase
         function summaryBarNamesAMixedFittingSetRatherThanOneNumber(testCase)
             % Rendering one FF value while the case holds four unequal ones
             % would state something the case does not hold - the summary
-            % equivalent of GUI2_HARVEST.md A1.
+            % equivalent of CONVENTIONS.md A1.
             testCase.App.State.Factors = model.Factors( ...
                 FFU=1.15, FFY=1.0, FFSep=1.0, FFSlip=1.0);
             txt = string(testCase.App.summaryText());

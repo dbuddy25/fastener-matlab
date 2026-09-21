@@ -609,7 +609,7 @@ classdef tGui2Results < matlab.uitest.TestCase
         end
 
         function theReadoutFrameStaysVisibleWithNoAnalysisAtAll(testCase)
-            % GUI2_HARVEST.md Section B: the frame stays visible when empty,
+            % The frame stays visible when empty,
             % so the layout does not jump once a result arrives.
             p = testCase.Page;
             testCase.verifyEqual(numel(p.preloadValues()), 5);
@@ -661,7 +661,7 @@ classdef tGui2Results < matlab.uitest.TestCase
         end
 
         function theReadoutNamesTheEquationBehindEachNumber(testCase)
-            % CLAUDE.md's traceability rule: reference, equation number and
+            % CONVENTIONS.md's traceability rule: reference, equation number and
             % the equation written out, at the point of use.
             p = testCase.Page;
             testCase.showResult(tGui2Results.syntheticResult("withPreload"));

@@ -281,7 +281,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function everyWiredRowWritesItsEquationOut(testCase)
-            % CLAUDE.md: no bare "Eq. 19" without the written formula. The
+            % CONVENTIONS.md: no bare "Eq. 19" without the written formula. The
             % Method string is what the Results panel prints under
             % "Governing equation" and what the PDF's traceability section
             % lists, so a citation with no formula leaves the reader with a

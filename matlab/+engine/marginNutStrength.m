@@ -85,7 +85,7 @@ function r = marginNutStrength(joint, loadCase, factors, preload)
 %       plainly, that does not say "compute an area and cap it with the
 %       rating" — it says a procured nut's allowable IS its rating and the
 %       thread-stripping computation should not be the basis at all. This
-%       tool deliberately diverges: CLAUDE.md specifies a COMPUTED
+%       tool deliberately diverges: CONVENTIONS.md specifies a COMPUTED
 %       ultimate/yield pair with the rating as a ceiling, which keeps a
 %       yield criterion available (a rating carries no yield information)
 %       and degrades safely when no rating is supplied. The divergence is

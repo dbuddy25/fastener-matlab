@@ -5,19 +5,9 @@ function [ok, reason] = boltSizingMemberSelectionReady(memberType, nutSpec, memb
 %   threaded-member picker is complete enough to sweep on, and says why not
 %   when it is not.
 %
-%   MOVED OUT OF gui.FastenerApp AT GUI STEP 10, logic unchanged. It was a
-%   static method on the first-pass GUI class, which step 10 deletes. Its
-%   inputs were always model and data types rather than widgets, its own
-%   docstring already called it "Pure (no app state) -- testable without
-%   building the GUI", and what it produces is consumed by
-%   engine.boltSizingSweep -- so the engine is where it belonged.
-%
-%   GUI2_SPEC.md Sec. 3 records that Bolt Sizing is deliberately NOT built in
-%   +gui2 and that the engine sweep "stays in the engine, untouched and
-%   re-addable". Keeping this mapping (and the assertions in
-%   tests/tBoltSizingMemberArgs.m) alive is most of what makes that true:
-%   without it, re-adding the tab means rediscovering which selection maps
-%   to which sweep argument, which is the part that is easy to get wrong.
+%   Pure (model and data types in, no app state), so it is testable
+%   without building a GUI. gui2.BoltSizingPage is bolt-only and does not
+%   use it; it is kept for a caller that offers a threaded-member picker.
 %
 %   memberType empty ("None (bolt-only)") is always ready -- the bolt-only
 %   screen is a supported result, not an incomplete one.
