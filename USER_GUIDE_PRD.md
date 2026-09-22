@@ -1,6 +1,6 @@
 # PRD — In-App User Guide
 
-Status: **approved 2026-09-22; phases (a) and (b) built, (c) next.** Delete this file once phase (d) ships;
+Status: **approved 2026-09-22; phases (a)–(c) built, (d) prose pass next.** Delete this file once phase (d) ships;
 live rules move into `GUI_SPEC.md` and `CONVENTIONS.md`.
 
 ## 1. Problem
@@ -179,7 +179,7 @@ Nothing generated on Windows comes back to the repo (Dan, 2026-09-22), so:
 | Item | Spec |
 |---|---|
 | Help > User Guide | Opens `index.html` |
-| "?" on every page | One helper on `gui.Page` puts a "?" button in the page header, opening `<pageId>.html`. Pages get it by inheritance, not per-page code |
+| "?" on every page | One **"? Help for this page"** button at the right of the status bar (`FastenerApp.PageHelpButton`), opening `<activePageId>.html`. Pages have no header strip, so one shell control replaces eleven per-page ones |
 | Opening | `gui.openExternal(gui.userGuidePath(...))`, the same path Help > References uses. One file per page means no `#fragment` has to survive the hand-off to the OS |
 | Locating files | `gui.userGuidePath(name)` resolves from its own file, like `data.Library.defaultPath`. If the packaged app can't find it, both need a `ctfroot` branch; fix them together |
 | Packaging | `mcc ... -a userguide`, next to the existing `-a +data/library` (`PRECOMPILE_CHECKLIST.md`) |
@@ -233,7 +233,7 @@ One push per phase, and a green `runTests` before the next one.
 |---|---|---|
 | **(a) Skeleton** | `matlab/userguide/` with CSS, `index.html`, `limits.html`, `sources.html`, `Results.html` (hand-written, including the 15-check table); `gui.userGuidePath`; Help menu rewired; old PDF code deleted, `tUserGuide` rewritten; link/image/offline/15-row tests | Dan opens it from Help in MATLAB **and** in a test `.exe` |
 | **(b) All pages + drift test** | Every rail page written (purpose, fields, what you'll see, import formats); `gui.harvestFields`; `tGuiUserGuide`; `tools/captureUserGuideScreens.m` | Full `runTests` green |
-| **(c) "?" links** | `gui.Page` helper opening `<pageId>.html`, and its test | `runTests` green; every "?" opens its page |
+| **(c) "?" links** | Status-bar "? Help for this page" button, and its tests in `tGuiHelp` | `runTests` green; every "?" opens its page |
 | **(d) Prose pass** | "Purpose" and "What you'll see" for each page, written with Dan one page at a time | Dan signs off each page |
 
 ## 12. Resolved decisions (2026-09-22)

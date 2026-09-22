@@ -178,7 +178,7 @@ does not cite one" are different facts.
 
 `Help → User Guide` opens `matlab/userguide/index.html` in the system browser
 (`gui.userGuidePath` + `gui.openExternal`): static HTML bundled with the app,
-one file per rail page, keyed by `pageId`. `USER_GUIDE_PRD.md` is the spec.
+one file per rail page, keyed by `pageId`. **? Help for this page**, at the right of the status bar, opens the active page's file. `USER_GUIDE_PRD.md` is the spec.
 
 ### The rail is a button rail, not a `uitabgroup`
 

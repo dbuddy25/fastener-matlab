@@ -65,6 +65,29 @@ classdef tGuiHelp < matlab.uitest.TestCase
         end
     end
 
+    % ---- Help for this page -----------------------------------------------
+    methods (Test)
+        function pageHelpOpensTheGuideForThePageOnScreen(testCase)
+            % Asserted on the file it would open, not by pressing it: the
+            % press hands the file to the OS browser.
+            for id = testCase.App.pageIds()
+                testCase.App.navigateTo(id);
+                f = testCase.App.pageHelpFile();
+                testCase.verifyTrue(endsWith(f, id + ".html"), ...
+                    sprintf('On "%s" the help button targets %s.', id, f));
+                testCase.verifyTrue(isfile(f), ...
+                    sprintf('On "%s" the help button targets a missing file.', id));
+            end
+        end
+
+        function thePageHelpButtonIsWired(testCase)
+            b = testCase.App.pageHelpButton();
+            testCase.verifyTrue(isvalid(b));
+            testCase.verifyTrue(logical(b.Visible));
+            testCase.verifyNotEmpty(b.ButtonPushedFcn);
+        end
+    end
+
     % ---- The References window --------------------------------------------
     methods (Test)
         function referencesListsEveryDocument(testCase)

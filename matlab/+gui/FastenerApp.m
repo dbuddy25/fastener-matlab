@@ -54,6 +54,7 @@ classdef FastenerApp < handle
         CardGrid
         StatusLabel
         StatusBox
+        PageHelpButton
         SummaryLabel
         RecentMenu
 
@@ -396,15 +397,22 @@ classdef FastenerApp < handle
             app.StatusBox = statusBox;
             statusBox.Layout.Row    = 2;
             statusBox.Layout.Column = [1 2];
-            sg = uigridlayout(statusBox, [1 1]);
+            sg = uigridlayout(statusBox, [1 2]);
             sg.RowHeight   = {'1x'};
-            sg.ColumnWidth = {'1x'};
-            sg.Padding     = [8 0 8 0];
+            sg.ColumnWidth = {'1x', 'fit'};
+            sg.Padding     = [8 0 2 0];
 
             app.StatusLabel = uilabel(sg, 'Text', '', ...
                 'HorizontalAlignment', 'left');
             app.StatusLabel.Layout.Row    = 1;
             app.StatusLabel.Layout.Column = 1;
+
+            app.PageHelpButton = uibutton(sg, 'push', ...
+                'Text', '? Help for this page', ...
+                'Tooltip', 'Open this page''s section of the user guide.', ...
+                'ButtonPushedFcn', @(~, ~) app.onPageHelp());
+            app.PageHelpButton.Layout.Row    = 1;
+            app.PageHelpButton.Layout.Column = 2;
 
             % Always-live summary of the factors and temperatures every
             % analysis on every page runs with. These are global, they are
@@ -696,6 +704,10 @@ classdef FastenerApp < handle
             gui.openExternal(gui.userGuidePath(), app.Fig);
         end
 
+        function onPageHelp(app)
+            gui.openExternal(app.pageHelpFile(), app.Fig);
+        end
+
         function onHelpReferences(app)
             %ONHELPREFERENCES  The documents this tool's numbers rest on.
             %   Create-or-focus: the view owns its own uifigure and raises
@@ -938,6 +950,15 @@ classdef FastenerApp < handle
             %   focus, so the window is opened and inspected through seams.
             app.onHelpReferences();
             v = app.ReferencesView;
+        end
+
+        function f = pageHelpFile(app)
+            %PAGEHELPFILE  The guide file the "? Help for this page" button opens.
+            f = gui.userGuidePath(app.ActiveId + ".html");
+        end
+
+        function b = pageHelpButton(app)
+            b = app.PageHelpButton;
         end
 
         function v = referencesView(app)

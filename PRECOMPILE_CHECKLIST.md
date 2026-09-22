@@ -133,7 +133,8 @@ pre-existing gap.
 
 - [ ] **Help → About** shows a version.
 - [ ] **Help → User Guide** opens the HTML guide in the browser, styled, with
-      working links between pages.
+      working links between pages. **? Help for this page** opens the right
+      page from at least three rail pages.
 - [ ] **Results → Save PDF Report...** Opens in a real viewer, carries the
       version stamp, margins match section B. *Slowest action in the app —
       `report.singleJointReport` re-runs `engine.analyze` internally.*
