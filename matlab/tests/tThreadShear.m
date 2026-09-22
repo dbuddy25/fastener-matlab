@@ -914,11 +914,11 @@ classdef tThreadShear < matlab.unittest.TestCase
 
         function aComputedPullOutAreaIsAlsoUncapped(testCase)
             % The pull-out row reports the parent's capacity whatever the
-            % area SOURCE — the specified allowable no longer caps it from
-            % the other failure mode. Same geometry as
+            % area SOURCE — the specified allowable does not cap it from the
+            % other failure mode. Same geometry as
             % insertComputedAreaGovernsWhenUnspecified (As = 0.124805 in^2,
             % ultimate allowable 3,369.73 lb), with a 2,500 lb rating that
-            % now lives on its own row instead of trimming this one.
+            % lives on its own row instead of trimming this one.
             parent = model.Material(Name="Al 6061-T651", Ftu=42000, ...
                 Fty=36000, Fsu=27000, Fsy=20000);
             [j, lc, fac] = insertJointSti(parent, 0.2000, 0.3000, 2500, NaN);

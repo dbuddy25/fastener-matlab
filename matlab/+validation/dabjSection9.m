@@ -4,7 +4,7 @@ function c = dabjSection9()
 %   (Design and Analysis of Bolted Joints, Instar/ATI, Dec 2025) Section 9
 %   worked class problem — the primary answer key for this tool. It carries
 %   the fully-built inputs (Joint / LoadCase / Factors) AND the book's
-%   expected numbers, so each engine check (Phase 2.4+) can replay the case
+%   expected numbers, so each engine check can replay the case
 %   and assert a numeric match.
 %
 %   Fields:

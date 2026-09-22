@@ -1,6 +1,6 @@
 function p = userFactorPresetsPath()
 %USERFACTORPRESETSPATH  Default location for the user factor-presets file
-%   (Phase 3.7). fullfile(userpath, "fastener_factor_presets.json"); if
+%   fullfile(userpath, "fastener_factor_presets.json"); if
 %   userpath() is empty (not yet initialized on this MATLAB install, or
 %   running from the packaged .exe), falls back to prefdir() -- per-user
 %   and always writable.

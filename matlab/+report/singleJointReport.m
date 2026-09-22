@@ -1,5 +1,5 @@
 function file = singleJointReport(joint, loadCase, factors, file)
-%SINGLEJOINTREPORT  Single-joint PDF report via MATLAB Report Generator (Phase 3.8).
+%SINGLEJOINTREPORT  Single-joint PDF report via MATLAB Report Generator.
 %   file = report.singleJointReport(joint, loadCase, factors, file) runs
 %   engine.analyze(joint, loadCase, factors) and builds ONE PDF report
 %   documenting that single-joint analysis, returning the resolved
@@ -249,10 +249,9 @@ end
 
 function p = gateVerdict(r)
 %GATEVERDICT  The Fig. 8 outcome, stated rather than left in prose.
-%   Reads Result.Gate. It used to print Result.Narrative, which is the
-%   engine's glued sentence -- gate trace, winning equation and Ptu_allow
-%   basis in one run-on line -- the same string the Results page stopped
-%   showing once Gate carried the pieces separately. Paper had kept it.
+%   Reads Result.Gate, which carries the gate trace, the winning equation
+%   and the Ptu_allow basis as separate pieces — not Result.Narrative, the
+%   engine's run-on sentence, which the Results page does not show either.
 import mlreportgen.dom.*
 st = report.reportStyle();
 p  = Paragraph();

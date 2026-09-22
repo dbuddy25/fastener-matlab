@@ -1,6 +1,6 @@
 function m = loadUserFactorPresets(file)
 %LOADUSERFACTORPRESETS  containers.Map name -> model.Factors read from a
-%   user factor-presets JSON file (Phase 3.7). Missing file -> empty map
+%   user factor-presets JSON file. Missing file -> empty map
 %   (no user presets saved yet); this is the normal, expected case.
 %
 %   On-disk shape: {"schemaVersion":1,"presets":[{"name":...,"factors":

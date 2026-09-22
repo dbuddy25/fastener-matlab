@@ -435,9 +435,9 @@ classdef tBulk < matlab.unittest.TestCase
             % bulkRunsTemplateJointWithoutCrashing (NAS1351 3/8-24 + A286:
             % the FF-S-86F Table VII rated pair 14,050/10,500, Eq. 20/21 criterion
             % R = Rt^1.5 + Rs^2.5 for interaction -- direct evaluation, no
-            % root-find). T.InteractionR now carries this R directly
-            % (renamed from "Interaction", sourced from .R not .MS -- see
-            % engine.analyzeBulk's header); verified BOTH against the
+            % root-find). T.InteractionR carries this R directly (sourced
+            % from .R, not .MS -- see engine.analyzeBulk's header); verified
+            % BOTH against the
             % table AND directly against engine.marginInteraction.
             % Tension-Yield ALSO takes the not-assured Eq. 16/17 branch here
             % (same shared Fig. 8 gate as bulkRunsTemplateJointWithoutCrashing
@@ -470,8 +470,7 @@ classdef tBulk < matlab.unittest.TestCase
             % Tension-Ultimate: same gate/phi/PpMax chain as
             % bulkRunsTemplateJointWithoutCrashing's hand-derivation (this
             % row's BodyLengthInGrip/NutHeight are unaffected by which
-            % elements reference it, and ThermalRate no longer exists as an
-            % analyst override -- both rows go through the same
+            % elements reference it -- both rows go through the same
             % engine.stiffness + TM-106943 Eq. 10 thermal path) --
             %   Ptu_allow = 14,050 (unchanged); PpMax = 11,006.78 lbf
             %   (unchanged -- the thermal/torque preload chain doesn't

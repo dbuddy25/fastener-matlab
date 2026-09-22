@@ -1,12 +1,12 @@
 function file = userGuide(file)
-%USERGUIDE  The GUI user guide, as a PDF (GUI step 10 / Phase 5).
+%USERGUIDE  The GUI user guide, as a PDF.
 %   file = report.userGuide(file) writes a PDF walkthrough of the
 %   application and returns the resolved absolute path.
 %   file = report.userGuide() writes it to a per-user cache location,
 %   keyed by tool version, and returns that path.
 %
-%   WHY A GENERATED PDF AND NOT THE MARKDOWN. Help used to open
-%   USER_GUIDE.md. Handing an analyst a .md file is wrong twice: on a
+%   WHY A GENERATED PDF AND NOT THE MARKDOWN. Handing an analyst
+%   USER_GUIDE.md is wrong twice: on a
 %   Windows machine it opens in Notepad or in nothing at all, and it reads
 %   as source rather than as a document. A PDF opens everywhere, prints,
 %   and can be attached to a review package -- which is usually what
@@ -29,11 +29,6 @@ function file = userGuide(file)
 %
 %   Cached per version. The second open is instant, and a version bump
 %   invalidates it by filename rather than by anything having to remember.
-%
-%   Call graph:
-%       Precedents (calls)      toolVersion.
-%       Dependents (called by)  gui.FastenerApp (Help > User Guide).
-%       Tests                   tests/tUserGuide.m.
 
 arguments
     file (1,1) string = ""      % "" -> the per-version cache location

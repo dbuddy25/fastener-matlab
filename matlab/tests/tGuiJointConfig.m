@@ -1708,8 +1708,8 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
         function changingTheTemperaturesChangesTheNextRun(testCase)
             % The trickle itself: edit the global temps, and the joint the
-            % engine is handed must follow. It used to keep the defaults
-            % however the Temp & Loads page was edited.
+            % engine is handed must follow, whatever the Temp & Loads page
+            % held before.
             testCase.App.State.Settings = struct( ...
                 'NominalTempC', 20, 'HotTempC', 20, 'ColdTempC', 20);
             before = testCase.Page.analysisJoint().MaxTemperature;
@@ -1742,9 +1742,8 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             %READOUTLINE  The first bolt-length readout line containing needle.
             %   BY CONTENT, NEVER BY INDEX. The readout itemises the minimum
             %   bolt length, so its length varies with the joint - a washer
-            %   present or absent adds or removes a line. Every assertion
-            %   here used to index a fixed position, and itemising the sum
-            %   broke six of them at once. Returns "" when absent, so a
+            %   present or absent adds or removes a line, so assertions must
+            %   not index a fixed position. Returns "" when absent, so a
             %   contains() assertion fails rather than erroring on a bad
             %   subscript.
             txt = string(testCase.Page.boltLengthLabel().Text);
@@ -1772,7 +1771,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             testCase.choose(p.memberMaterialDropDown(), char(mats(1)));
             testCase.type(p.flangeThickness(1), '0.25');
             testCase.choose(p.flangeMaterial(1), char(mats(1)));
-            % Required since 2026-08-14: without it the Fig. 8 gate assumes
+            % Required: without it the Fig. 8 gate assumes
             % e/D >= 1.5 passes, which pushes margins up on no evidence.
             testCase.type(p.flangeEdge(1), '0.75');
             testCase.type(p.engagementLengthField(), '0.25');

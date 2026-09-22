@@ -307,7 +307,7 @@ classdef tStiffness < matlab.unittest.TestCase
                 Name="Steel (mixed-modulus test)", ...
                 Ftu=180000, Fty=160000, Fsu=108000, E=29e6, CTE=1.17e-5);
             % The Ex 8-b fixture gives its washers a thickness but no
-            % material, and since 2026-08-13 a thermal run needs a CTE for
+            % material, and a thermal run needs a CTE for
             % every part of the clamped stack. Supplied HERE rather than in
             % validation.dabjExample8b: that fixture is an answer-key
             % transcription and the book states no washer material, so the

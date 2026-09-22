@@ -14,8 +14,8 @@ function f = makeTemplate(outFile)
 %                   SHCS/nut joint") and an insert (Helicoil) joint, both
 %                   built from REAL catalog hardware (NAS1351 3/8-24, A286,
 %                   Al 7075-T7351) — NOT the DABJ Section 9 validation
-%                   fixture, which library.json no longer ships (see
-%                   validation.dabjSection9). The demo configuration
+%                   fixture (validation.dabjSection9 builds that inline).
+%                   The demo configuration
 %                   (torque, factors, bolt count, ...) still mirrors that
 %                   class problem, but the computed margins are
 %                   illustrative, not the published answer key. Both rows
@@ -226,11 +226,10 @@ function s = sampleNutJointRow()
 %SAMPLENUTJOINTROW  Sample four-bolt SHCS/nut joint (template row 1).
 %   Configuration (torque, factors, bolt count, flange layout) mirrors the
 %   DABJ Section 9 class problem, but the hardware keys are REAL catalog
-%   parts (NAS1351 3/8-24, A286, Al 7075-T7351) -- library.json no longer
-%   ships the DABJ validation fixture (see validation.dabjSection9, which
-%   now builds that fixture's geometry inline). Renamed off the DABJ name
-%   entirely (it used to be called "DABJ Sec. 9 class problem") because a
-%   name promising the book's answer key, attached to different hardware
+%   parts (NAS1351 3/8-24, A286, Al 7075-T7351), not the DABJ validation
+%   fixture (validation.dabjSection9 builds that inline). It is not named
+%   after the class problem: a name promising the book's answer key,
+%   attached to different hardware
 %   (NAS1351/A286 vs. the book's own bolt spec) and different derived
 %   allowables, is actively misleading -- anyone comparing this row's
 %   margins to the book will get different numbers and reasonably

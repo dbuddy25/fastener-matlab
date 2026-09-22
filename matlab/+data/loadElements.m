@@ -1,5 +1,5 @@
 function [el, info] = loadElements(file, sheet)
-%LOADELEMENTS  Read an element + forces table (FEM mapping) (Phase 3.5b).
+%LOADELEMENTS  Read an element + forces table (FEM mapping).
 %   el = data.loadElements(file) reads a table (.csv or .xlsx) of FEM
 %   element forces — one row per (element, load case) — and returns a
 %   struct array with fields:

@@ -17,8 +17,9 @@ function file = exportResults(T, file, opts)
 %                  columns. FAIL IS NOT WorstMargin < 0 ALONE — see the
 %                  note at the counting code: the NASA-STD-5020B Eq. 20-23
 %                  interaction criterion is a ratio, carries no MS, and is
-%                  therefore absent from WorstMargin, so an element that
-%                  fails it used to be exported as Pass.
+%                  therefore absent from WorstMargin; counting it
+%                  separately keeps an element that fails it from being
+%                  exported as Pass.
 %       About    — tool name, version (toolVersion), run timestamp and the
 %                  governing standard, so an exported workbook stays
 %                  traceable to the build that produced it. Any strings

@@ -1153,7 +1153,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function anExemptJointWithNoMomentStillReadsVerifiedExempt(testCase)
-            % The determination now controls exactly ONE thing: what
+            % The determination controls exactly ONE thing: what
             % happens when no moment is supplied. Then it is fbu = 0 and
             % the wording is VERIFIED rather than ASSUMED -- which is the
             % whole remaining job of the declaration, and worth pinning so

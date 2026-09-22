@@ -22,10 +22,8 @@ classdef tLibrary < matlab.unittest.TestCase
         end
 
         function pullsBoltByKey(testCase)
-            % The plumbing is what's tested here, not DABJ -- library.json
-            % no longer ships the DABJ fixture bolt, so this pulls a real
-            % catalog entry instead (see validation.dabjSection9 for the
-            % fixture's own inline geometry).
+            % The plumbing is what's tested here, so it pulls a real catalog
+            % entry (the DABJ fixture builds its own geometry inline).
             lib = data.Library.load();
             b = lib.bolt("NAS1351 3/8-24");
             testCase.verifyClass(b, "model.Bolt");
@@ -36,8 +34,7 @@ classdef tLibrary < matlab.unittest.TestCase
         end
 
         function pullsMaterialByKey(testCase)
-            % Plumbing test, repointed onto the real catalog A286 entry
-            % (library.json no longer ships the DABJ fixture material).
+            % Plumbing test, on the real catalog A286 entry.
             lib = data.Library.load();
             m = lib.material("A286");
             testCase.verifyClass(m, "model.Material");
@@ -221,9 +218,9 @@ classdef tLibrary < matlab.unittest.TestCase
 
         function seededCatalogExposesAllShcsSizes(testCase)
             % 32 socket head cap screws: NAS1351 (UNF) + NAS1352 (UNC),
-            % keyed "<spec> <thread size>". library.json no longer ships
-            % the DABJ "3/8-24 UNF" validation-fixture entry (see
-            % validation.dabjSection9), so the first catalog bolt in file
+            % keyed "<spec> <thread size>". The DABJ "3/8-24 UNF" fixture
+            % bolt is not in the library (validation.dabjSection9 builds it
+            % inline), so the first catalog bolt in file
             % order is now the first NAS1351/NAS1352 entry.
             lib = data.Library.load();
             keys = lib.boltKeys();

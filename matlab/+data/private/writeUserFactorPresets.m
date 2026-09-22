@@ -1,6 +1,6 @@
 function writeUserFactorPresets(m, file)
 %WRITEUSERFACTORPRESETS  Write a containers.Map name -> model.Factors to a
-%   user factor-presets JSON file (Phase 3.7). See loadUserFactorPresets
+%   user factor-presets JSON file. See loadUserFactorPresets
 %   for the on-disk shape (a name+factors array, not a name-keyed object,
 %   so arbitrary preset names are safe).
 arguments
