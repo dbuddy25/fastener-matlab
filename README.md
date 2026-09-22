@@ -28,9 +28,9 @@ networked database (the library is local JSON files).
 matlab/
 ├── fastenerTool.m     entry point — prints the version banner and opens the GUI (`+gui`)
 ├── +model/            domain types: Bolt, Material, Joint, enums 
-├── +engine/           analysis math — the core; bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook, Step 2c)
-├── +data/             library loader (`data.Library` + `library/` — one JSON per part, plus user drop-in files); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`); factor presets (`factorPreset`/`saveFactorPreset`)
-├── +report/           XLSX export (`report.exportResults`); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
+├── +engine/           analysis math — the core; bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook)
+├── +data/             library loader (`data.Library` + `library/` — one JSON per part, plus user drop-in files); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`); factor presets (`factorPreset`/`saveFactorPreset`)
+├── +report/           XLSX export (`report.exportResults`); single-joint PDF report (`report.singleJointReport`, via MATLAB Report Generator)
 ├── +gui/             THE GUI (`gui.launch`, GUI_SPEC.md) — what `fastenerTool`
 │                      opens. Programmatic uifigure, rail + card over AppState,
 │                      eleven pages.
