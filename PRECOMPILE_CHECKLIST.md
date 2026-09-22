@@ -203,7 +203,7 @@ pre-existing gap.
 
 ## I · Deliberate abuse
 
-Error paths are written blind and read by an analyst on a deadline.
+Error paths are read by an analyst on a deadline.
 
 - [ ] Analyze with **required fields blank** — the gate names what's missing in
       words, not identifiers.

@@ -216,10 +216,8 @@ for r = reshape(d.DiagnosticRecord, 1, [])
     % ExceptionDiagnosticRecord instead carries the MException on
     % .Exception. Reading only the qualification pair meant an
     % [ExceptionThrown] failure printed its event tag and NOTHING ELSE —
-    % no identifier, no message, no line number — which is the one failure
-    % kind where the report is the only evidence available, since the
-    % suite runs on a machine away from the one it is debugged on. That
-    % cost a full 12-minute run on 2026-08-14.
+    % no identifier, no message, no line number — the one failure kind
+    % where the report is the only evidence available.
     lines = [lines, exceptionLines(r)]; %#ok<AGROW>
 end
 lines = lines(strlength(strtrim(lines)) > 0);

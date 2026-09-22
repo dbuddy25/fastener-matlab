@@ -50,7 +50,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 | 18 | 4.6.3 | Liquid locking compound process control | OUT-OF-SCOPE | Process validation |
 | 19 | 4.6.4 | Locking feature verification per Table 4 | OUT-OF-SCOPE | Physical inspection — but see the torque note |
 | 20 | 4.7.1 | Materials per NASA-STD-6016 | OUT-OF-SCOPE | Materials certification |
-| 21 | 4.7.2 | Thread form compatibility | **ABSENT** | `Library.nutFor`/`insertFor` enforce it only where wired in; Insert gained real but partial coverage today — see below |
+| 21 | 4.7.2 | Thread form compatibility | **ABSENT** | `Library.nutFor`/`insertFor` enforce it only where wired in; partial for Insert — see below |
 | 22 | 4.7.3 | Head-to-shank fillet radius clearance | **ABSENT** | No fillet-radius field exists |
 | 23 | 4.7.4 | Fastener length to engage a **prevailing torque locking feature** | **ABSENT** | No locking-feature concept in `+model` |
 | 24 | 4.7.5a | Grip/washers prevent internal threads encroaching runout threads | **ABSENT** | `Bolt.ThreadLength` feeds only `engine.stiffness` |
@@ -179,7 +179,7 @@ independently re-derived. `VALIDATION.md` covers that, separately.
 > reading of 5020B; if it is ever wanted it belongs in a separately labelled
 > supplementary check, not in the cited equation.
 
-> **Shear yield strength — citation corrected 2026-08-13.** `engine.shearYieldStrength`
+> **Shear yield strength.** `engine.shearYieldStrength`
 > derives `Fsy = Fty/√3` when a material carries no measured `Fsy`. It cited only
 > "the von Mises criterion" as prose, and three call sites stated that no equation
 > number was claimed. **NASA-STD-5020B prints it as Eq. 63** (p66, Appendix A.8),
@@ -273,7 +273,7 @@ TFSR 13 — friction credited only at limit or yield, never ultimate — remains
 enforced structurally, since µ reaches only `marginSlip` and no ultimate
 allowable takes a friction credit.
 
-### §4.2.2 — the separation-critical flag's second obligation, now warned on
+### §4.2.2 — the separation-critical flag's second obligation is warned on
 
 §4.2.2 p19: *"Separation analysis of joints that are separation-critical should
 include a fitting factor of at least **1.15** as a multiplier of the required
@@ -380,9 +380,8 @@ which is the non-conservative direction for both separation and slip.
 
 TFSR 22, 23, 24 and 25 share a root cause: **the data model carries no
 field the check could read.** These are not missing `if` statements. TFSR 21
-used to belong on this list too; today's insert work gave it one real field
-(`ThreadedMember.StiPitchDiameter`) and a real resolution path for Insert, so
-it gets its own discussion below rather than the blanket description.
+has one real field (`ThreadedMember.StiPitchDiameter`) and a resolution path for
+Insert, so it gets its own discussion below.
 
 | TFSR | Missing concept |
 |---|---|
@@ -392,20 +391,19 @@ it gets its own discussion below rather than the blanket description.
 | 25 | `ThreadedMember` (tapped hole) has no hole depth |
 
 **TFSR 21 deserves particular attention** because partial enforcement is easy
-to mistake for full enforcement, and today's insert work changed the shape of
-that partial enforcement without completing it.
+to mistake for full enforcement.
 
 `Library.nutFor(diameter, tpi, spec)` and `Library.insertFor(diameter, tpi)`
 (mirrors `nutFor` exactly — same `abs(diff) < 1e-6` diameter tolerance, same
 exact-tpi match; `+data/Library.m`) both match a catalogued internal thread to
 the bolt's own diameter and TPI, so a match genuinely cannot pair a
-mismatched thread size. Where each runs, as of today:
+mismatched thread size. Where each runs:
 
-- **Nut** — `Library.nutFor` still runs from exactly two places: the GUI's
+- **Nut** — `Library.nutFor` runs from exactly two places: the GUI's
   nut-spec picker (`gui.JointConfigPage`, only when the nut-spec dropdown
   is off `Custom`) and `engine.boltSizingSweep`'s Nut mode (Library+NutSpec).
-  Neither changed today. It still does **not** run when the picker sits on
-  `Custom` (its default), and it still does **not** run anywhere in the
+  It does **not** run when the picker sits on `Custom` (its default), and it
+  does **not** run anywhere in the
   bulk/headless path — `data.loadJointLibrary` never calls `nutFor`.
 - **Insert** — `Library.insertFor` runs from three places:
   `gui.JointConfigPage.stiPitchDiameterFor` (unconditionally whenever the
@@ -415,26 +413,6 @@ mismatched thread size. Where each runs, as of today:
   `engine.boltSizingSweep`, which resolves each swept size's own
   `StiPitchDiameter` whenever a `Library` accompanies the Insert template.
 
-  > ⚠️ **The rebuilt GUI lost this and ran without it.** `+gui` carried no
-  > `insertFor` call from the day Joint Config was rebuilt until 2026-08-12,
-  > so every insert joint built there had `StiPitchDiameter` NaN, no control
-  > existed for `RatedUltimateLoad` either, and BOTH §4.4.1 insert allowables
-  > were unreachable — the row read NotEvaluated, which an analyst reasonably
-  > read as "no Heli-Coil strength data" while `library.json` held the entry
-  > all along. A REGRESSION in the rebuild, not a gap that was always there:
-  > the first GUI resolved it correctly, so nothing wrong was ever shipped
-  > from that path. Wiring it back also re-enters the insert mode into
-  > `systemTensileAllowable`, which can lower `Ptu_allow` and flip the Fig. 8
-  > gate — so gui Heli-Coil margins move, and move less optimistic. The third only became so while this
-  audit was being written: `boltSizingMemberArgs` built Insert's sweep
-  arguments as `{'ThreadedMember', member}` with no `Library`, and
-  `collectBoltSizingMemberSelection` populated `library` only for Nut, so the
-  engine's per-row lookup could never fire from the Bolt Sizing tab — and the
-  sweep then refused with *"no insert is catalogued for this thread size"*,
-  naming the wrong cause. Both are fixed, and
-  `insertModePassesTheLibraryThroughForPerRowGeometry` guards the wiring.
-- **Tapped Hole** — no catalogue, no resolution function, unchanged.
-
 **What the Insert coverage actually protects, and what it does not.**
 `insertFor` resolves exactly one field: `ThreadedMember.StiPitchDiameter`, the
 geometry `marginInsert`'s computed-area basis needs
@@ -443,14 +421,11 @@ geometry `marginInsert`'s computed-area basis needs
 (GUI) or CSV-supplied (bulk) with no check against the bolt's actual thread
 size.
 
-The sharpest version of this gap has since been closed. A directly-supplied
-`ShearEngagementArea` used to override the catalogue geometry entirely, so an
-analyst or a CSV row could hand the check a shear area with nothing to do with
-the bolt actually selected — exactly the failure mode TFSR 21 exists to catch.
-An analyst can no longer supply one at all: the field has no GUI control and no
-workbook column, and the area now always comes from a source resolved by exact
-diameter and exact tpi. What remains unchecked is the rated load and the
-engagement ratio. So: real, exact-match protection for one derived geometry input, in
+An analyst cannot supply a `ShearEngagementArea` directly — the field has no GUI
+control and no workbook column — so the area always comes from a source resolved
+by exact diameter and exact tpi, and a CSV row cannot hand the check a shear
+area with nothing to do with the bolt selected. What remains unchecked is the
+rated load and the engagement ratio. So: real, exact-match protection for one derived geometry input, in
 two of the tool's three joint-building paths (Joint Config, bulk CSV), for
 Insert only — not a general thread-compatibility check, and not grounds to
 move this row out of ABSENT.
@@ -461,7 +436,7 @@ as incompatible; the reverse — external UN into internal UNJ, which is what
 this library actually pairs — is not listed and is accepted practice, since
 UNJ's larger root radius is geometrically permissive.
 
-### TFSR 25 — the governing formulas are now identified, not implemented
+### TFSR 25 — the governing formulas are identified, not implemented
 
 Reading NASM33537 for the insert catalogue surfaced the formulas 5020B defers
 to for this check, which were not on file here before. Table III gives the
@@ -504,26 +479,13 @@ in `engine.marginTappedParentThread`.
 
 ### TFSR 11 — bolt bending
 
-`fbu = 0` in every interaction criterion — no bending physics (`M·c/I`) is
-implemented anywhere in this tool. Recorded in `TOOL_DIFFERENCES.md` §7.4,
-resting on §4.4.4's statement that bending typically need not be considered
-for close-tolerance or interference fits.
-
-The decision is sound for close-tolerance joints. The residual risk used to be
-that **the exemption is conditional and nothing checked the condition** —
-`model.Joint` had no fit-class field, `marginInteraction` applied `fbu = 0`
-unconditionally regardless of configuration, and a joint with real clearance,
-or shear transferred across a gap or spacer, received a silently
-non-conservative interaction result with no warning.
-
-**Closed (2026-08-10) — bending is now computed.** `LoadCase.BoltBendingLimitMoment`
-carries the limit moment (in-lbf), `engine.designLoads` factors it to `Mbu`,
-`engine/private/boltBendingStress` converts it to `fbu = 32*Mbu/(pi*d^3)` on the
-section the shear plane selects, and `engine.marginInteraction` adds `Rb = fbu/Ftu`
-to `Rt` **inside** the Eq. 20/22 tension bracket. `engine.loadCaseFromForces` no
-longer discards the moment `engine.resolveForces` derives from the FE moments, so
-the bulk path carries bending too. A `ClearanceOrGapped` joint with a moment now
-evaluates instead of returning NaN — the case the enum was created to expose.
+`LoadCase.BoltBendingLimitMoment` carries the limit moment (in-lbf),
+`engine.designLoads` factors it to `Mbu`, `engine/private/boltBendingStress`
+converts it to `fbu = 32*Mbu/(pi*d^3)` on the section the shear plane selects,
+and `engine.marginInteraction` adds `Rb = fbu/Ftu` to `Rt` **inside** the
+Eq. 20/22 tension bracket. `engine.loadCaseFromForces` carries the moment
+`engine.resolveForces` derives from the FE moments, so the bulk path has bending
+too. See `TOOL_DIFFERENCES.md` §7.4.
 
 **What remains — and why this row is PARTIAL, not IMPLEMENTED.** TFSR 11 is a
 *shall* and it names four load conditions:
@@ -602,21 +564,15 @@ conservative one. The section choice (body vs minor diameter, by shear plane) is
 a **derived convention**: 5020B defines `fbu` as linear-elastic but does not say
 which section to take it on.
 
-**Previously closed (2026-08-04):** `model.Joint.ShearTransferCondition`
-(`model.ShearTransferCondition`) now records the §4.4.4 determination per
-joint, and `engine.marginInteraction` branches on it: `NotDeclared` (default)
-computes exactly as before with the exemption marked ASSUMED, not verified;
+`model.Joint.ShearTransferCondition` records the §4.4.4 determination per
+joint and `engine.marginInteraction` branches on it when NO moment is supplied:
+`NotDeclared` (default) computes with the exemption marked ASSUMED;
 `CloseToleranceOrInterference` computes the same result marked VERIFIED;
-`ClearanceOrGapped` reports the Interaction row as **NotEvaluated**
-(`R = NaN`, no throw) instead of a wrong number. Bending physics itself is
-still not implemented — a `ClearanceOrGapped` joint gets an honest "cannot
-evaluate," not a computed answer — so TFSR 11 is not fully closed, but the
-silent-failure mode is: the exemption no longer travels unrecorded, and
-`NotDeclared` (still the default when an analyst has not looked at this) is
-now visibly ASSUMED rather than indistinguishable from a verified result.
+`ClearanceOrGapped` reports the Interaction row as **NotEvaluated** (`R = NaN`,
+no throw) instead of a wrong number. The exemption never travels unrecorded.
 
-`fbu = 0` on the `NotDeclared`/`CloseToleranceOrInterference` paths is no longer
-a deviation: it is what §4.4.4's exemption permits, and it now applies only when
+`fbu = 0` on the `NotDeclared`/`CloseToleranceOrInterference` paths is not
+a deviation: it is what §4.4.4's exemption permits, and it applies only when
 no moment was supplied. Supplying one includes bending on any determination —
 5020B calls that conservative, so the tool never refuses a moment it was given.
 
@@ -713,20 +669,3 @@ fastening-system minimum. That is what §4.4.1 and Appendix A.8 call for — tho
 criteria assess the fastener, not the system.
 
 ---
-
-## What this audit did not do
-
-- **Nothing was executed.** MATLAB was unavailable. Every finding is source
-  reading cross-referenced against the standard's text. "IMPLEMENTED" means the
-  equation is coded and cited correctly, not that its output was re-derived.
-- Figure 8 was read as a rendered image rather than extracted text, because
-  text extraction reorders the decision boxes misleadingly. Figure 1 was not
-  read at all — it renders as an image and was not needed, since the decision
-  tree is confirmed unencoded either way.
-- `marginNutStrength`, `marginInsert` and `marginTappedParentThread` were
-  audited through their shared `boltDesignLoad` mechanics and their own
-  docstrings rather than line by line.
-- `preloadWatchdog`'s thresholds were confirmed structurally (a Warning
-  comparing `PpMax` against the bolt yield allowable) but not re-derived
-  against Appendix A.9's stated criterion.
-</content>

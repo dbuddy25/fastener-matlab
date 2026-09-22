@@ -32,9 +32,8 @@ classdef HardwareLibraryPage < gui.Page
     %   ORIGIN RENDERS AS ASCII, not as the lock/pencil glyphs GUI_SPEC.md
     %   §15 sketches. Deliberate:
     %   the glyphs are non-ASCII (the lock is outside the Basic Multilingual
-    %   Plane), this code is written on a machine that never runs it, and a
-    %   font-fallback or file-encoding problem on the Windows target would
-    %   silently break the one column that carries the protection state.
+    %   Plane), and a font-fallback or file-encoding problem would silently
+    %   break the one column that carries the protection state.
     %   A word cannot fail that way.
     %
     %   READ-ONLY BY CONSTRUCTION. Every table sets ColumnEditable = false.

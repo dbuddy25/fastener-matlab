@@ -734,12 +734,10 @@ for the split are the constraints the page must respect:
 - **Cost asymmetry.** Retrofitting after users have saved libraries would mean a
   migration that guesses which rows were baseline. There is no good guess.
 
-**CHANGED — origin renders as the words `baseline` / `custom`, not 🔒 / ✏.**
-The glyphs are non-ASCII (the lock is outside the Basic Multilingual Plane),
-this code is written on a machine that never runs it, and a font-fallback or
-file-encoding problem on the Windows target would silently break the one column
-that carries the protection state. A word cannot fail that way. Inherited from
-the first-pass DB tab, which made the same call for the same reason. No colour,
+**Origin renders as the words `baseline` / `dropin` / `custom`, not 🔒 / ✏.**
+The glyphs are non-ASCII (the lock is outside the Basic Multilingual Plane), and
+a font-fallback or file-encoding problem would silently break the one column
+that carries the protection state. A word cannot fail that way. No colour,
 no separate table.
 
 **The key UX move: `Duplicate as Custom` works on any row.** A user who wants to

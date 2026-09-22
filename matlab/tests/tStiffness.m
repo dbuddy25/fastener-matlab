@@ -346,7 +346,7 @@ classdef tStiffness < matlab.unittest.TestCase
             % change from the OD-cap branch already covered by 8-b.
             %
             % HAND DERIVATION (no book number; checkable with a
-            % calculator, no MATLAB):
+            % calculator):
             %   tanA = tan(45 deg) = 1
             %   Dc = dwf + 2*tanA*tw = 0.523 + 2*1*0.070 = 0.663 in
             %   numerator   = (tanA*L + Dc - D)*(Dc + D)

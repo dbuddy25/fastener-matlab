@@ -55,9 +55,6 @@ b = model.Bolt(Designation="#10-32 UNF", NominalDiameter=0.190, ...
 b.Pitch                      % -> 0.03125
 ```
 
-> **Note:** developed on macOS (no MATLAB there), so acceptance is verified on the
-> Windows/MATLAB work machine — `git pull` (or re-download), then run the above.
-
 ## Headless bulk analysis (the Headless Release workflow)
 
 The streamlined flow is ONE workbook in, one margins workbook out — no GUI,

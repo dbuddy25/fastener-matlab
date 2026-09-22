@@ -153,11 +153,9 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
     % ---- Baseline vs custom ----------------------------------------------
     methods (Test)
         function originIsTheFirstColumnAndReadsAsAWord(testCase)
-            % ASCII on purpose. GUI_SPEC.md §16 sketches lock/pencil
-            % glyphs; they are non-ASCII, this code is written on a machine
-            % that never runs it, and a font-fallback problem on the Windows
-            % target would silently break the one column carrying the
-            % protection state.
+            % ASCII on purpose. GUI_SPEC.md §15 sketches lock/pencil
+            % glyphs; they are non-ASCII, and a font-fallback problem would
+            % silently break the one column carrying the protection state.
             t = testCase.Page.sectionTable("material");
             testCase.verifyEqual(string(t.ColumnName{1}), "Origin");
             testCase.verifyEqual(string(t.Data{1, 1}), "baseline");
