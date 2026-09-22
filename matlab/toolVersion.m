@@ -111,6 +111,32 @@ function v = toolVersion()
 %            rejected — the §4.4.2 yield and Figure 8 system allowables are
 %            both correct as shipped; see COMPLIANCE.md.
 %
+%     0.7.0  Margin review corrections, and the tool made usable without
+%            the source. Read this before comparing a 0.7.0 report against
+%            an earlier one; five changes move numbers or verdicts.
+%            (a) A nut with a spec rating is assessed on that rating as its
+%            ultimate allowable (5020B §4.4.1 p26), not on a computed
+%            thread-shear value capped by it. Yield is still computed.
+%            (b) Slip: Eq. 5's sqrt(nf) applies to joint slip (Eq. 84)
+%            only, not single-fastener slip (Eq. 86), and joint slip takes
+%            Eq. 5 even on a separation-critical joint.
+%            (c) A supplied bolt bending moment always enters the Eq. 20/22
+%            interaction, whatever the §4.4.4 setting records.
+%            (d) Shear tear-out also checks the clamped parts for yield.
+%            (e) The separation-before-rupture gate reads Assured / Not
+%            assured, never Pass / Fail, and an undetermined gate is
+%            NotEvaluated.
+%            New warnings: friction above the TFSR 14 caps, and a fitting
+%            factor under 1.15 on a separation-critical joint. Bolt Sizing
+%            sizes on the fastening-system yield allowable.
+%            Capabilities: the Bolt Sizing page; every margin shows its
+%            equation written out with the numbers substituted; the
+%            library is one file per part, with user drop-in files and a
+%            cited source on every custom entry; a washer needs a material;
+%            Help > User Guide opens an HTML guide covering every page.
+%            TFSR 11's yield and separation under combined loading remain
+%            required and unimplemented.
+%
 %   THIS IS NOT THE CASE-FILE FORMAT VERSION, and the two must never be
 %   tied together. gui.AppState.CaseFormat
 %   ("fastener-analysis-matlab-v1") changes only when the saved-case
@@ -121,5 +147,5 @@ function v = toolVersion()
 %   Consumers: fastenerTool, gui.AppState,
 %   report.singleJointReport, report.exportResults.
 
-v = "0.6.0";
+v = "0.7.0";
 end
