@@ -10,8 +10,8 @@ classdef ResultsPage < gui.Page
     %
     %   Separation-before-rupture carries NO NUMBER — it records which
     %   branch the tension check took (5020B Fig. 8). Listing it among
-    %   margins is a category error the first build made; it leads the
-    %   Analysis decisions section instead (Section 8.2).
+    %   margins is a category error; it leads the Analysis decisions
+    %   section instead (Section 8.2).
     %
     %   Interaction reports a RATIO R, passing iff R <= 1 — the OPPOSITE
     %   direction from MS >= 0. It is last in the table and rendered with
@@ -66,33 +66,24 @@ classdef ResultsPage < gui.Page
         % The ninth displayed check. A decision, not a margin.
         DecisionRow = "Separation-before-rupture"
 
-        % NOTHING IS HIDDEN ANY MORE, and the reasoning that hid the four
-        % §4.4.1 threaded-member modes was wrong. It claimed a margin row
-        % for them would "report one fact twice", because whichever mode
-        % applies sets Ptu_allow and so governs Tension-Ultimate. They are
-        % not one fact. The modes carry their own margins against a
+        % Each §4.4.1 threaded-member mode carries its own margin against a
         % DIFFERENT design load -- engine.boltDesignLoad's preload-included
         % Eq. 8 form, Pb = PpMax + FFU*FSU*n*phi*PtL -- while
         % Tension-Ultimate divides by Ptu = FSU*FFU*PtL with no preload and
-        % no n*phi. A nut-strength MS is therefore not recoverable from the
-        % Tension-Ultimate row, and hiding it meant four computed margins
-        % appeared nowhere while the scope footer asserted that nothing was
-        % omitted.
-        %
-        % All fifteen checks are now displayed: fourteen margin rows plus
-        % the Fig. 8 gate, which leads Analysis decisions because it is a
-        % branch selection rather than a margin (see the class note).
+        % no n*phi. A nut-strength MS is not recoverable from the
+        % Tension-Ultimate row, so all fifteen checks are displayed:
+        % fourteen margin rows plus the Fig. 8 gate, which leads Analysis
+        % decisions because it is a branch selection rather than a margin
+        % (see the class note).
         %
         % Only one threaded-member mode applies to any given joint, so the
-        % other three come back NotEvaluated and render amber. That is the
-        % honest outcome and the table already handles it: Slip does the
-        % same whenever mu = 0.
+        % other three come back NotEvaluated and render amber -- the same
+        % honest outcome the table already gives Slip whenever mu = 0.
 
-        % (The ">+5" display cap moved to gui.MarginView with the
+        % (The ">+5" display cap lives in gui.MarginView, with the
         % formatting it belongs to. NOT aliased back here: a Constant
         % initialised from another class's Constant is evaluated once at
-        % class load and then silently keeps a stale copy — the same trap
-        % that shipped a wrong version string on a PDF.)
+        % class load and then silently keeps a stale copy.)
 
         % The readout rows: field name on Result.Preload, the gloss, and the
         % citation + written equation. Columns 2 and 3 become the tooltip, so
@@ -556,9 +547,9 @@ classdef ResultsPage < gui.Page
             % the same cell - they stack rather than error, which is worse.
             p.Layout.Column = 1;
             pg = uigridlayout(p, [1 1]);
-            % '1x', not a fixed 90: the row is now '1x' and a fixed inner
-            % height was why the citation sat squeezed at the bottom of a
-            % panel with room to spare.
+            % '1x', not a fixed height: a fixed inner height leaves the
+            % citation squeezed at the bottom of a panel with room to
+            % spare.
             pg.RowHeight   = {'1x'};
             pg.ColumnWidth = {'1x'};
             pg.Padding     = [6 6 6 6];
@@ -726,29 +717,23 @@ classdef ResultsPage < gui.Page
                 col = gui.palette('statusPass');
             end
 
-            % NO "N more computed, not shown" TAIL. It existed because six,
-            % then four, computed checks had no row; every one of them has
-            % a row now, so the sentence would read "0 more computed, not
-            % shown" -- a qualification about nothing, which is exactly the
-            % kind of boilerplate an analyst stops reading and then misses
-            % when it says something real.
+            % NO "N more computed, not shown" TAIL: every check now carries
+            % a row, so it would read "0 more computed, not shown" -- a
+            % qualification about nothing, which is exactly the kind of
+            % boilerplate an analyst stops reading and then misses when it
+            % says something real.
             obj.VerdictLabel.Text = txt;
             obj.VerdictLabel.FontColor = col;
         end
 
         function renderDecisions(obj)
             %RENDERDECISIONS  Which branches ran, and on what authority.
-            %   DECISIONS ONLY. Equation citations were duplicated here for
-            %   every check that had one, while the Selected check panel
-            %   already shows Method and Detail for whichever row is
-            %   clicked - so the longest text on the page repeated what was
-            %   one click away, twice over, because tu.Decision also
-            %   arrives as Result.Narrative AND as the gate row's Detail.
+            %   DECISIONS ONLY - no equation citations here for checks that
+            %   have one, since the Selected check panel already shows
+            %   Method and Detail for whichever row is clicked.
             %
             %   Everything below is read from STRUCTURED fields
             %   (Result.Gate, Result.Allowables), never parsed out of prose.
-            %   The engine had this structure and used to flatten it into
-            %   one sentence on the way out; it does not any more.
             r = obj.State.Result;
             lines = {};
 
@@ -811,13 +796,7 @@ classdef ResultsPage < gui.Page
         end
 
         function lines = bendingLines(~, r)
-            %BENDINGLINES  The §4.4.4 determination, read from the Result.
-            %   These four lines were HARDCODED to "not included (fbu = 0),
-            %   exemption ASSUMED, not verified" -- printed unconditionally,
-            %   without consulting anything. That was true while bending was
-            %   unimplemented and false the moment a joint declared
-            %   CloseToleranceOrInterference, which the engine has recorded
-            %   since 2026-08-04. It now reads Result.Bending.
+            %BENDINGLINES  The §4.4.4 determination, read from Result.Bending.
             lines = {''};
             if ~isfield(r.Bending, 'Condition')
                 % A Result from before bending, or one staged directly.
@@ -842,11 +821,10 @@ classdef ResultsPage < gui.Page
                 case "CloseToleranceOrInterference"
                     lines{end+1} = ['  NASA-STD-5020B 4.4.4 exemption ' ...
                         'VERIFIED - close-tolerance or interference fit.'];
-                    % No "moment ignored" case any more: since the
-                    % 2026-08-13 audit a supplied moment is used on every
-                    % determination, because 4.4.4's exemption covers only
-                    % bending caused by the SHEAR loading. Reaching this
-                    % branch at all means no moment was supplied.
+                    % A supplied moment is used on every determination,
+                    % because 4.4.4's exemption covers only bending caused
+                    % by the SHEAR loading. Reaching this branch at all
+                    % means no moment was supplied.
                 case "ClearanceOrGapped"
                     % The one combination that is not a quiet default: the
                     % analyst has said bending applies and supplied nothing.
@@ -863,9 +841,8 @@ classdef ResultsPage < gui.Page
 
         function lines = allowableLines(~, r)
             %ALLOWABLELINES  The 5020B 4.4.1 system allowable, as a list.
-            %   It IS a table - one row per tensile failure mode, with the
-            %   minimum governing - and it used to be rendered as a single
-            %   prose sentence carrying all of it.
+            %   One row per tensile failure mode, with the minimum
+            %   governing.
             lines = {};
             if ~isfield(r.Allowables, 'PtuAllow')
                 return
@@ -893,9 +870,9 @@ classdef ResultsPage < gui.Page
                 end
             end
 
-            % THE FLAG THAT USED TO BE A CLAUSE. An incomplete set means
-            % the minimum was taken over fewer modes than apply, so the
-            % allowable - and every margin derived from it - is optimistic.
+            % An incomplete set means the minimum was taken over fewer
+            % modes than apply, so the allowable - and every margin derived
+            % from it - is optimistic.
             if isfield(a, 'Complete') && ~a.Complete
                 lines{end+1} = ['  INCOMPLETE - a mode that applies could ' ...
                     'not be assessed, so this minimum is over an ' ...
@@ -930,27 +907,18 @@ classdef ResultsPage < gui.Page
 
         function updateDetail(obj)
             %UPDATEDETAIL  The selected row, laid out rather than dumped.
-            %   Three things it used to get wrong.
+            %   The value comes from the SAME formatValue the table uses,
+            %   so the cap rule and Interaction's ratio form cannot
+            %   disagree between the two.
             %
-            %   IT NEVER SHOWED THE NUMBER. It named the check and its
-            %   status and then printed citations, so the one thing you had
-            %   selected the row to look at was back in the table. The value
-            %   comes from the SAME formatValue the table uses, so the cap
-            %   rule and Interaction's ratio form cannot disagree between
-            %   the two.
+            %   On a NotEvaluated row, Method is not a governing equation
+            %   at all - it carries the REASON the check did not run - so
+            %   it is labelled accordingly.
             %
-            %   METHOD AND DETAIL ARRIVED AS BARE PARAGRAPHS, with nothing
-            %   saying which was which. On a NotEvaluated row Method is not
-            %   a governing equation at all - it carries the REASON the
-            %   check did not run - so it is labelled accordingly.
-            %
-            %   AND THE GLUED SENTENCE MOVED HERE. analyze sets the
-            %   Tension-Ultimate row's Detail to tu.Decision, the same
-            %   string as Result.Narrative, so taking it out of the
-            %   decisions panel just relocated it one panel over. Where a
-            %   row's Detail IS the Narrative, it is not reprinted: the
-            %   decisions panel renders those facts from Result.Gate and
-            %   Result.Allowables as structure, and this points there.
+            %   Where a row's Detail IS Result.Narrative, it is not
+            %   reprinted here: the decisions panel already renders those
+            %   facts from Result.Gate and Result.Allowables as structure
+            %   (see rowDetail).
             if isempty(obj.State.Result)
                 obj.DetailArea.Value = {''};
                 return
@@ -1005,12 +973,11 @@ classdef ResultsPage < gui.Page
             %   or nowhere at all, so a disagreement with another tool can be
             %   seen but not localised to a single input.
             %
-            %   NOTHING IS COMPUTED HERE and nothing is inferred. An absent
-            %   Inputs array renders no section at all rather than a heading
-            %   over an empty list: empty means "not recorded on this row"
-            %   (a NotEvaluated check, or a margin function not yet wired),
-            %   which is not a statement that the check consumed no numbers.
-            %   Printing a bare "Inputs:" heading would imply the latter.
+            %   Nothing is computed or inferred here. An absent Inputs
+            %   array renders no section at all rather than a heading over
+            %   an empty list: empty means "not recorded on this row" (a
+            %   NotEvaluated check, or a margin function not yet wired),
+            %   not a statement that the check consumed no numbers.
             %
             %   isfield guards a Result staged with the pre-Inputs Margins
             %   shape, which the GUI tests build directly.
@@ -1117,19 +1084,15 @@ classdef ResultsPage < gui.Page
 
         function t = scopeFooterText(~)
             %SCOPEFOOTERTEXT  What the table covers, and what it does not.
-            %   It used to name the checks that had no row and explain
-            %   where they went. There are none: all fifteen are displayed.
-            %
-            %   THE STATEMENT STAYS ANYWAY, because the thing it guards
-            %   never went away -- a margin table that reads as a complete
-            %   NASA-STD-5020B assessment when it is not is a compliance
-            %   problem, and completeness of the CHECK LIST is not
-            %   completeness of the assessment. TFSR 11 still requires
-            %   yield and separation to account for combined loading and
-            %   the tool implements neither (COMPLIANCE.md, TFSR 11
-            %   PARTIAL), so a reader who takes fifteen green rows as a
-            %   finished 5020B case is still wrong, just for a different
-            %   reason than before.
+            %   The statement stays even with all fifteen checks displayed,
+            %   because the thing it guards never goes away -- a margin
+            %   table that reads as a complete NASA-STD-5020B assessment
+            %   when it is not is a compliance problem, and completeness of
+            %   the check list is not completeness of the assessment. TFSR
+            %   11 still requires yield and separation to account for
+            %   combined loading and the tool implements neither
+            %   (COMPLIANCE.md, TFSR 11 PARTIAL), so a reader who takes
+            %   fifteen green rows as a finished 5020B case is still wrong.
             t = sprintf(['SCOPE: all 15 computed checks are shown - %d ' ...
                 'margin rows plus the NASA-STD-5020B Fig. 8 gate, which ' ...
                 'leads Analysis decisions because it selects a branch ' ...

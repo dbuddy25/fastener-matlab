@@ -1,9 +1,9 @@
 classdef tPdfReport < matlab.unittest.TestCase
-    %TPDFREPORT  Phase 3.8 acceptance: report.singleJointReport (PDF).
+    %TPDFREPORT  report.singleJointReport (PDF).
     %   MATLAB Report Generator may not be installed/licensed on every
-    %   machine that runs the test suite, so this test SKIPS (via
+    %   machine that runs the test suite, so this test skips (via
     %   assumeTrue, not a failure) when the toolbox is unavailable. When
-    %   the toolbox IS available, this only checks that a non-empty PDF
+    %   the toolbox is available, this only checks that a non-empty PDF
     %   file gets produced end to end on the DABJ Section 9 validation
     %   case — no PDF-content assertions (that would require parsing the
     %   PDF, out of scope here).
@@ -68,7 +68,7 @@ classdef tPdfReport < matlab.unittest.TestCase
             % a consequence already priced into Tension-Ultimate a second
             % time and reads as a failure on a joint that may be sound.
             %
-            % Asserted on the table BUILDER rather than the PDF: the file
+            % Asserted on the table builder rather than the PDF: the file
             % is a binary this suite cannot read back, so the check has to
             % sit where the rows are chosen.
             c = validation.dabjSection9();

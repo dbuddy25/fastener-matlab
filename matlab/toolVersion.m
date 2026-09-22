@@ -25,12 +25,11 @@ function v = toolVersion()
 %     MAJOR  reserved for the first validated packaged release (1.0.0)
 %            and any later break in analysis behaviour or case-file
 %            compatibility.
-%     MINOR  one per completed CAPABILITY — something an analyst can now
-%            do end to end — rather than per numbered build step. The two
-%            are not the same: the single-joint path became usable while
-%            steps 6-10 were still untouched, and a version that could not
-%            move until step 10 would have stamped every report of that
-%            work 0.1.0.
+%     MINOR  one per completed CAPABILITY — something an analyst can do
+%            end to end — rather than per numbered build step. The two are
+%            not the same: the single-joint path became usable while later
+%            build steps were still untouched, and tying the version to
+%            those steps would have understated the work already shipped.
 %     PATCH  fixes and corrections between those.
 %
 %   WHAT EACH VERSION MEANT. Kept here because this string is stamped on
@@ -58,58 +57,58 @@ function v = toolVersion()
 %            NASA-STD-5020B assessment: yield and separation under
 %            combined loading (TFSR 11) are required and unimplemented,
 %            and every export says so.
-%     0.5.0  THE THREADED-INSERT PATH, corrected and reachable. Two
-%            NASA-STD-5020B readings landed here, and BOTH MOVE NUMBERS an
+%     0.5.0  The threaded-insert path, corrected and reachable. Two
+%            NASA-STD-5020B readings landed here, and both move numbers an
 %            analyst may already have reported — read this entry before
 %            comparing a 0.5.0 report against an earlier one.
-%            (a) §4.4.1 names TWO insert allowables and the tool had them
-%            BACKWARDS: it computed pull-out from the parent and printed it
+%            (a) §4.4.1 names two insert allowables and the tool had them
+%            backwards: it computed pull-out from the parent and printed it
 %            under "Insert internal-thread", while the internal-thread row
-%            — which p26 requires to come from the item's SPECIFIED
+%            — which p26 requires to come from the item's specified
 %            strength, not thread-stripping analysis — was never evaluated.
-%            The rows are now the right way round, the pull-out row is no
-%            longer capped by the rating (the rating is the OTHER
+%            The rows are the right way round, the pull-out row is no
+%            longer capped by the rating (the rating is the other
 %            allowable), and "the lower value should be used" is applied
-%            across the two rather than hidden inside one. gui also could
-%            not reach either check until this line — it never resolved the
+%            across the two rather than hidden inside one. The GUI could
+%            not reach either check before this — it never resolved the
 %            insert catalogue — so Heli-Coil joints read differently, and
 %            less optimistically, from here on.
-%            (b) §4.4.2's Pty-allow is the fastening SYSTEM's, not the
-%            bolt's. Eq. 15 and Eq. 17 now take the minimum over the bolt
-%            and the internally threaded part. Magnitudes and attribution
-%            move; the SIGN never did, so no earlier report ever showed a
+%            (b) §4.4.2's Pty-allow is the fastening system's, not the
+%            bolt's. Eq. 15 and Eq. 17 take the minimum over the bolt and
+%            the internally threaded part. Magnitudes and attribution
+%            move; the sign never did, so no earlier report ever showed a
 %            Pass the standard calls a Fail.
 %            TFSR 11's yield and separation under combined loading remain
 %            required and unimplemented, and every export still says so.
 %
-%     0.6.0  EQUATION AUDIT corrections. Every equation in +engine was
+%     0.6.0  Equation audit corrections. Every equation in +engine was
 %            checked against the source PDFs — NASA-STD-5020B, TM-106943,
-%            NASM33537 — and TWO MOVE NUMBERS. Read this before comparing
+%            NASM33537 — and two move numbers. Read this before comparing
 %            a 0.6.0 report against an earlier one.
-%            (a) BOLT THREAD SHEAR was ~29% UNCONSERVATIVE. The area was
-%            computed as 0.75·pi·E·Le — TM-106943 Eq. 76's INTERNAL-thread
-%            coefficient on the PITCH diameter — while the row cited
+%            (a) Bolt thread shear was ~29% unconservative. The area was
+%            computed as 0.75·pi·E·Le — TM-106943 Eq. 76's internal-thread
+%            coefficient on the pitch diameter — while the row cited
 %            Eq. 63, which prints 5·pi·Le·D_minor,int/8 on the minor
 %            diameter of the mating internal thread. The old form was
 %            declared in a comment but justified as "one consistent area
 %            basis", which does not hold: the same substitution is
 %            conservative on the internal side and unconservative on this
-%            one. That row now reads LOWER, and can newly govern.
-%            (b) THERMAL PRELOAD ignored washers while the bolt stiffness
+%            one. That row reads lower, and can newly govern.
+%            (b) Thermal preload ignored washers while the bolt stiffness
 %            spanned them. TM-106943 Eq. 10 carries one L, shared by its
 %            bolt and joint terms. The error was exactly
 %            (alpha_washer - alpha_bolt)·t_washer and vanishes when they
 %            match; with steel washers under an A-286 bolt the old form ran
-%            ~17% HIGH, so thermal preload now reads slightly LOWER there.
-%            Also: an unset material CTE used to default to ZERO — read as
-%            "does not expand" — and now defaults to NaN, so a thermal run
-%            with a coefficient missing REFUSES and names what to fix
-%            instead of returning a confident number. A joint that used to
-%            analyse may now ask for a library update; that is the point.
-%            Citations corrected throughout (Fsy = Fty/sqrt(3) is 5020B
+%            ~17% high, so thermal preload reads slightly lower there.
+%            Also: an unset material CTE defaults to NaN (previously
+%            zero, read as "does not expand"), so a thermal run with a
+%            coefficient missing refuses and names what to fix instead of
+%            returning a confident number, at the cost of a joint that
+%            analysed before now needing a library update.
+%            Citations fixed throughout (Fsy = Fty/sqrt(3) is 5020B
 %            Eq. 63; the rupture margin is Eq. 7, not Eq. 10). Two audit
 %            findings against shipped behaviour were investigated and
-%            REJECTED — the §4.4.2 yield and Figure 8 system allowables are
+%            rejected — the §4.4.2 yield and Figure 8 system allowables are
 %            both correct as shipped; see COMPLIANCE.md.
 %
 %   THIS IS NOT THE CASE-FILE FORMAT VERSION, and the two must never be

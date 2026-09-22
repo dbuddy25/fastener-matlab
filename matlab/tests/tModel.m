@@ -1,5 +1,5 @@
 classdef tModel < matlab.unittest.TestCase
-    %TMODEL  Phase 1/2.1 acceptance: the +model domain types construct and compose.
+    %TMODEL  The +model domain types construct and compose.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -183,9 +183,9 @@ classdef tModel < matlab.unittest.TestCase
         end
 
         function xlsxTemplateFieldsBuild(testCase)
-            % XLSX-template prep: the renamed enum member and the new
-            % (mostly carried-for-completeness) fields construct and hold
-            % their values. None of these change engine behavior by default.
+            % XLSX-template fields: this enum member and these (mostly
+            % carried-for-completeness) fields construct and hold their
+            % values. None of these change engine behavior by default.
             testCase.verifyClass(model.SlipMode.Ignored, "model.SlipMode");
             w = model.Washer(Thickness=0.063, OuterDiameter=0.687, ...
                              InnerDiameter=0.406, ...
@@ -205,7 +205,7 @@ classdef tModel < matlab.unittest.TestCase
     methods
         function j = makeJoint(~)
             % A representative #10-32 A286 bolt through two aluminum flanges
-            % into a nut — the Phase 1 "construct a full joint in the console" case.
+            % into a nut — a full joint constructed in the console.
             b  = model.Bolt(Designation="#10-32 UNF", NominalDiameter=0.190, ...
                             Series=model.ThreadSeries.UNF, ThreadsPerInch=32, ...
                             TensileStressArea=0.0200, MinorDiameter=0.156, ...

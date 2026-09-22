@@ -20,7 +20,7 @@ function [names, builtIn] = factorPresetNames(userFile)
 %
 %   WHY THIS EXISTS: the user-preset store is otherwise undiscoverable from
 %   outside +data. loadUserFactorPresets and userFactorPresetsPath are
-%   private, so a caller could look a user preset up BY NAME but had no way
+%   private, so a caller could look a user preset up by name but had no way
 %   to learn the name existed — a GUI could save a preset and then not be
 %   able to list it. This is the read-only enumerator that closes that gap;
 %   it computes nothing and owns no state.

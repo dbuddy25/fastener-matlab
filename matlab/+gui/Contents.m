@@ -78,34 +78,14 @@
 %   gui.recentFiles     — the persisted Open Recent list (max 5, dead paths
 %                          filtered on read).
 %
-%   BUILT (GUI_SPEC.md Section 14, step 1):
-%     - Shell: left rail with section headers and two independent state
-%       channels (pressed+bold for active, a glyph for stale/loaded), card
-%       area with lazily built pages, status bar, File/Help menus,
-%       dirty-state window title.
-%     - Case files: JSON, format "fastener-analysis-matlab-v1"; model
-%       objects via data.toStruct / data.fromStruct — the tested Phase 3.7
-%       round-trip core, never hand-rolled.
-%     - Open Recent (new build; the first pass deferred it).
-%     - Step 2: Project, Factors, Temp Loads — see gui.ProjectPage,
-%       gui.FactorsPage, gui.TempLoadsPage above.
-%     - Step 3: Joint Config — see gui.JointConfigPage above. Analyze
-%       writes AppState.Result; the Results page (step 4) renders it.
-%     - Step 4: Single Joint Results — gui.ResultsPage.
-%     - Step 5: Defined Joints — gui.DefinedJointsPage.
-%     - Step 6: Element Mapping — gui.ElementMappingPage.
-%     - Step 7: Element Forces — gui.ElementForcesPage.
-%     - Step 8: Bulk Analysis — gui.BulkAnalysisPage. The bulk workflow
-%       now runs end to end.
-%
-%     - Step 9: Materials & Hardware — gui.HardwareLibraryPage. Browses
-%       all six data.Library sections read-only, with an origin filter and
-%       every entry's source citation on screen. Add and Duplicate as
-%       Custom arrive in 9c.
-%
-%     - Step 10: Help menu (User Guide, References).
-%
-%   ALL TEN PAGES ARE BUILT. Phase 4 is complete; Phase 5 is packaging.
+%   Shell: left rail with section headers and two independent state
+%   channels (pressed+bold for active, a glyph for stale/loaded), card area
+%   with lazily built pages, status bar, File/Help menus, dirty-state
+%   window title. Case files are JSON, format "fastener-analysis-matlab-v1";
+%   model objects go through data.toStruct / data.fromStruct, never
+%   hand-rolled. Help menu: User Guide, References. Materials & Hardware
+%   browses all six data.Library sections read-only, with an origin filter
+%   and every entry's source citation on screen.
 %
 %   THE RULES THIS PACKAGE IS BOUND BY
 %     - Pure GUI. +engine, +model, +data and +report are frozen: this layer
@@ -115,10 +95,9 @@
 %     - Pass/fail comes from Result.Margins(i).Status. The view colors by
 %       that field and never re-thresholds (Section 6). Interaction reports
 %       R, passing iff R <= 1 — the OPPOSITE direction from MS >= 0.
-%     - ALL 15 of the engine's checks are displayed. The earlier rule
-%       (9 shown, the other 6 named in a footer) rested on a false
-%       premise — that the four Section 4.4.1 tensile modes restate
-%       Tension-Ultimate. They do not: they use Pb = PpMax + FFU*FSU*n*phi
-%       *PtL where Tension-Ultimate uses Ptu = FSU*FFU*PtL.
+%     - ALL 15 of the engine's checks are displayed: the four Section
+%       4.4.1 tensile modes do not restate Tension-Ultimate — they use
+%       Pb = PpMax + FFU*FSU*n*phi*PtL where Tension-Ultimate uses
+%       Ptu = FSU*FFU*PtL.
 %     - Programmatic repopulation NEVER marks the case dirty
 %       (CONVENTIONS.md A4).

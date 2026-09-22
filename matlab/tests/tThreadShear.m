@@ -1,5 +1,5 @@
 classdef tThreadShear < matlab.unittest.TestCase
-    %TTHREADSHEAR  Phase 3.3 acceptance: the four thread-strength checks —
+    %TTHREADSHEAR  The four thread-strength checks —
     %   engine.marginBoltThreadShear (TM-106943 Eq. 63/64/65 basis),
     %   engine.marginNutStrength (Eq. 76/77 + Eq. 65, ultimate/yield pair,
     %   spec rating as an ultimate ceiling per 5020B §4.4.1),
@@ -16,7 +16,7 @@ classdef tThreadShear < matlab.unittest.TestCase
     %   AREA and ALLOWABLE are cross-checked against DABJ Example 6-a (the
     %   only public thread pull-out example); every MS is pinned with
     %   HAND-DERIVED arithmetic documented inline. The DABJ §9 answer key
-    %   is re-run through analyze() to prove Phase 3.3 does not disturb it.
+    %   is re-run through analyze() to prove these checks do not disturb it.
     %   tappedParentGateAssuredSeparatedLoad / ...NotAssuredClampedLoad pin
     %   the NASA-STD-5020B Fig. 8 separation-before-rupture branch in
     %   engine.boltDesignLoad: the design load must switch to the
@@ -98,7 +98,7 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifyEqual(r.As, 0.75*pi*0.1697*0.250, "AbsTol", 1e-12);
             testCase.verifyEqual(r.Pb, 1894, "AbsTol", 1e-9);
             testCase.verifyEqual(r.MS, 0.425, "AbsTol", 0.01);
-            % Eq. 76/77, not Eq. 79 — corrected 2026-08-14. Eq. 79 is
+            % Eq. 76/77, not Eq. 79. Eq. 79 is
             % TM's INSERT parent-material mode and borrows the insert's
             % external area (TM p23); a tapped hole has no insert. The
             % parent's own internal threads are Eq. 76's mode.
@@ -115,39 +115,30 @@ classdef tThreadShear < matlab.unittest.TestCase
             % HAND-DERIVED pin on the DABJ Example 8-b geometry (a Nut
             % joint, so phi comes from the REAL stiffness path:
             % phi = 0.3354, tStiffness -- not used by this branch's
-            % SEPARATED Pb form below, but resolved). Add the Phase 3.3
-            % thread inputs:
-            % E = 0.3479 in (3/8-24 UNF basic pitch dia), Le = 0.375 in.
-            % Direct preload 2,000 lb, Gamma = 0.25, no thermal
-            % -> PpMax = 2,500 lb; PtL = 3,000 lb; n = 0.5 (fixture);
-            % DABJ default factors FFU = 1.15, FSU = 1.4:
-            % REBASELINED 2026-08-13 by the equation audit. This pin used
-            % to read As = 0.75*pi*E*Le = 0.30740, Pult 29,202.5, MS
-            % +5.046 -- TM Eq. 76's INTERNAL-thread coefficient on the
-            % PITCH diameter, which is ~27% larger than the equation the
-            % row cites and therefore UNCONSERVATIVE. TM-106943 p18 prints
-            % Eq. 63 on the minor diameter of the mating INTERNAL thread:
+            % SEPARATED Pb form below, but resolved). Add the thread
+            % inputs: E = 0.3479 in (3/8-24 UNF basic pitch dia),
+            % Le = 0.375 in. Direct preload 2,000 lb, Gamma = 0.25, no
+            % thermal -> PpMax = 2,500 lb; PtL = 3,000 lb; n = 0.5
+            % (fixture); DABJ default factors FFU = 1.15, FSU = 1.4.
+            % TM-106943 p18 Eq. 63 uses the minor diameter of the mating
+            % INTERNAL thread, not the pitch diameter (VALIDATION.md row 7
+            % marks this pin hand-derived, not a published answer key):
             %   p          = 1/24                      = 0.0416667 in
             %   D_min,int  = 0.375 - 1.08253*0.0416667 = 0.329895 in
             %                (ASME B1.1 basic = minimum internal minor)
             %   As   = (5/8)*pi*0.375*0.329895         = 0.242905 in^2
             %   Pult = 95000*0.242905 = 23,076.0 lb         (bolt Fsu)
-            % A hand-calc pin, not a published answer key (VALIDATION.md
-            % row 7 is marked hand-derived), so rebaselining is legitimate
-            % -- but it MOVES A SHIPPED MARGIN, deliberately, toward the
-            % printed equation. The NUT side below is untouched: it stays
-            % on Eq. 76's 0.75*pi*E*Le, where the pitch-diameter
-            % substitution is conservative.
+            % The NUT side below stays on Eq. 76's 0.75*pi*E*Le, where the
+            % pitch-diameter substitution is conservative.
             %
             % Fig. 8 GATE (NASA-STD-5020B, engine.boltDesignLoad via
             % separationBeforeRuptureGate): this Example 8-b fixture has a
-            % FlangeStack (Ec = 10e6, the fitting material) AND, since the
-            % engine now derives a bolt allowable when
-            % Joint.BoltRatedUltimateLoad is unset (boltTensileAllowable,
-            % At*Ftu = 0.0878*160000 = 14,048 lbf), the system
-            % Ptu_allow = min(bolt 14,048, nut 95000*0.30740 = 29,202.5) =
-            % 14,048 lbf is now assessable (previously it was not, so the
-            % gate silently fell to CLAMPED). Checking Fig. 8:
+            % FlangeStack (Ec = 10e6, the fitting material), and since
+            % engine.boltTensileAllowable derives a bolt allowable when
+            % Joint.BoltRatedUltimateLoad is unset (At*Ftu =
+            % 0.0878*160000 = 14,048 lbf), the system Ptu_allow = min(bolt
+            % 14,048, nut 95000*0.30740 = 29,202.5) = 14,048 lbf is
+            % assessable. Checking Fig. 8:
             %   Ec(10e6) > Eb/3(29e6/3 = 9.667e6): holds (Eb from this
             %     fixture's own Example 8-b bolt material, 29e6 psi).
             %   PpMax(2,500) < 0.75*Ptu_allow(10,536): holds.
@@ -177,9 +168,8 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifySubstring(r.Method, "Eq. 63");
             testCase.verifySubstring(r.Method, "D_minor,int");
             % The area must be the EQUATION'S, not the internal-thread
-            % form this row used to borrow. Guard the direction explicitly
-            % so a future "consistency" refactor cannot silently reinflate
-            % it: the pitch-diameter form is ~27% larger here.
+            % form (~27% larger here). Guard the direction explicitly so a
+            % future "consistency" refactor cannot silently reinflate it.
             testCase.verifyLessThan(r.As, 0.75 * pi * 0.3479 * 0.375, ...
                 'Eq. 63 area must stay below the internal-thread form.');
             % Missing engagement length -> NotEvaluated, not a crash
@@ -274,7 +264,7 @@ classdef tThreadShear < matlab.unittest.TestCase
             %
             % This fixture supplies 0.2000 in^2 precisely so that ignoring
             % it is observable: honouring it would give As = 0.2000 and
-            % MS = +1.133, which is the behaviour this test used to pin.
+            % MS = +1.133.
             %
             % Computed instead: As = 0.75·pi·E·Le = 0.307395 in^2, the same
             % area as nutYieldGovernsHandDerived.
@@ -329,25 +319,19 @@ classdef tThreadShear < matlab.unittest.TestCase
         end
 
         function nutRatingAboveTheComputedFormStillGoverns(testCase)
-            % REVERSED 2026-08-14. This was nutRatingNotLimiting, and it
-            % asserted the opposite: with a rating ABOVE the computed area
-            % form (20,000 > 18,443.7) the computed number stood and the
-            % Detail said the rating was "not limiting".
-            %
-            % That was the ceiling reading. NASA-STD-5020B §4.4.1 p26 says
-            % a procured nut is assessed "on the strength specified for
-            % that item RATHER THAN on thread-stripping analysis" — so the
-            % rating is the BASIS, not a cap, and 18,443.7 was exactly the
-            % thread-stripping figure p26 excludes. p27's "limited to the
-            % load rating" is then satisfied automatically.
+            % A rating ABOVE the computed area form (20,000 > 18,443.7) is
+            % still the BASIS, not a cap: NASA-STD-5020B §4.4.1 p26 says a
+            % procured nut is assessed "on the strength specified for that
+            % item RATHER THAN on thread-stripping analysis," and 18,443.7
+            % is exactly the thread-stripping figure p26 excludes. p27's
+            % "limited to the load rating" is then satisfied automatically.
             %
             % Fig. 8 GATE ASSURED -> SEPARATED Pb form, Pb = 4,830 lb,
             % PbYield = 3,750 lb:
-            %   ult: 20,000/4,830 - 1 = +3.141   (was 18,443.7 -> +2.819)
-            %   yld: 12,295.8/3,750 - 1 = +2.279 <- still governs
-            % So Pult moves and the MARGIN DOES NOT: yield was governing
-            % before and still is. Both are asserted, because a test that
-            % only checked MS would have passed through this change blind.
+            %   ult: 20,000/4,830 - 1 = +3.141
+            %   yld: 12,295.8/3,750 - 1 = +2.279 <- governs
+            % Both Pult and MS are asserted: checking MS alone would not
+            % show whether the rating or the computed figure produced it.
             [j, lc, fac] = nutJoint(model.Material( ...
                 Name="Soft nut (yield pin)", Fsu=60000, Fsy=40000), 20000, NaN);
             r = engine.marginNutStrength(j, lc, fac, engine.preload(j));
@@ -412,14 +396,12 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifySubstring(r.Detail, "yield");
             testCase.verifySubstring(r.Detail, "von Mises");
             testCase.verifySubstring(r.Detail, "estimated");
-            % Fty/Fsy both NaN, but a RATING is supplied. Before
-            % 2026-08-14 this was NotEvaluated on the rule that neither
-            % criterion may fall back to the rating. Now the rating IS the
+            % Fty/Fsy both NaN, but a RATING is supplied. The rating IS the
             % ultimate allowable (§4.4.1 p26), so the ultimate is
-            % assessable on its own and only the YIELD side is missing:
+            % assessable on its own even though the YIELD side is missing:
             %   ult: 10,000/4,830 - 1 = +1.070, and nothing to compare it to
-            % Reporting a margin the standard says we have beats refusing
-            % it because a number we no longer use cannot be formed.
+            % Reporting the margin the standard supports beats withholding
+            % it for want of a yield comparison this path does not need.
             [j2, lc2, fac2] = nutJoint(model.Material( ...
                 Name="Fsu only", Fsu=60000), 10000, NaN);
             r2 = engine.marginNutStrength(j2, lc2, fac2, engine.preload(j2));
@@ -471,13 +453,10 @@ classdef tThreadShear < matlab.unittest.TestCase
             % shear strength — no tabulated loads, no shear engagement
             % area. NASM33537 Rev 4 gives dimensions and no strengths.
             %
-            % A previous version of this comment derived 12,949 lb from
-            % the insert WIRE strength (Nitronic 60, Ftu = 200,000 psi)
-            % times a parent-side area. That is wrong on its own terms:
             % NASA-STD-5020B §4.4.1 puts an insert's pull-out capacity in
-            % the PARENT material, so a parent-side area belongs with the
-            % parent's shear strength, never the wire's. The parent-based
-            % form is exercised properly by insertAreaUltimateGoverns,
+            % the PARENT material, not the insert wire, so a parent-side
+            % area belongs with the parent's shear strength. The
+            % parent-based form is exercised by insertAreaUltimateGoverns,
             % insertAreaYieldGovernsSuppliedFsy and
             % insertRatingCeilingGoverns below; this test does not.
             % HAND-DERIVED MS: direct preload 1,000 lb, Gamma = 0.25, no
@@ -548,12 +527,12 @@ classdef tThreadShear < matlab.unittest.TestCase
         end
 
         function aSupplementalGoverningCheckIsFlagged(testCase)
-            % The reason the marking exists. Correcting the thread-shear
-            % area to TM Eq. 63 as printed (6e3e370) took ~21% off this
-            % row's allowable, so it governs far more often than it used
-            % to — and a PDF naming it as THE governing check with no
-            % caveat invites redesigning a joint to satisfy a requirement
-            % 5020B does not levy.
+            % TM Eq. 63 as printed gives the thread-shear row a tighter
+            % allowable than an internal-thread-diameter form would, so it
+            % can govern more often than a permissive area would suggest —
+            % and a PDF naming it as THE governing check with no caveat
+            % invites redesigning a joint to satisfy a requirement 5020B
+            % does not levy.
             %
             % On DABJ §9 the thread rows are all NotEvaluated (no
             % EngagementLength), so the governing check there is a required
@@ -567,7 +546,7 @@ classdef tThreadShear < matlab.unittest.TestCase
         end
 
         function dabjSection9RegressionUnchanged(testCase)
-            % Phase 3.3 must not disturb the DABJ §9 answer key. The §9
+            % These checks must not disturb the DABJ §9 answer key. The §9
             % fixture is a Nut joint with NO EngagementLength (and no
             % frustum geometry), so all five thread rows resolve
             % NotEvaluated; the six published margins, the +5.775 bearing,
@@ -596,7 +575,7 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifyEqual(r.WorstMargin, c.Expected.MS_Slip, ...
                 "AbsTol", tol);
             testCase.verifyEqual(r.GoverningCheck, "Slip");
-            % The five Phase 3.3 thread rows all NotEvaluated on §9
+            % The five thread rows are all NotEvaluated on §9
             for name = ["Bolt-thread shear", "Nut strength", ...
                         "Insert internal-thread", "Insert external-thread", ...
                         "Tapped-hole parent-thread"]
@@ -762,12 +741,10 @@ classdef tThreadShear < matlab.unittest.TestCase
         end
 
         function aRatingIsNeverReportedAsPullOut(testCase)
-            % The pull-out row used to fall back to the rating and label it
-            % "rated pull-out" when no area resolved. That conflated
-            % NASA-STD-5020B Sec. 4.4.1's two allowables: the specified
-            % value is the INTERNAL-thread capability, and reporting it
-            % under a pull-out heading claimed the parent had been checked
-            % when it had not.
+            % NASA-STD-5020B Sec. 4.4.1 gives two separate allowables: the
+            % specified value is the INTERNAL-thread capability, and
+            % reporting it under a pull-out heading would claim the parent
+            % had been checked when it had not.
             parent = model.Material(Name="Nitronic 60");   % strengths all NaN
             [j, lc, fac] = insertJoint(parent, NaN, 12949);
             p = engine.preload(j);
@@ -994,12 +971,12 @@ classdef tThreadShear < matlab.unittest.TestCase
             testCase.verifyTrue(isnan(r.MS));
             testCase.verifyTrue(isnan(r.As));
             testCase.verifySubstring(r.Detail, "does not exceed");
-            % (b) A rating IS set -> the guard STILL refuses. It used to
-            % defer to the rating and report it as pull-out, which claimed
-            % the parent had been checked when the area could not even be
+            % (b) A rating IS set -> the guard STILL refuses: the pull-out
+            % row must not fall back to it, since that would claim the
+            % parent had been checked when the area could not even be
             % formed. The rating is the insert's INTERNAL-thread allowable
-            % (NASA-STD-5020B Sec. 4.4.1) and is reported on its own row,
-            % with the same arithmetic it always had: 5000/2860 - 1.
+            % (NASA-STD-5020B Sec. 4.4.1) and is reported on its own row:
+            % 5000/2860 - 1.
             [j2, lc2, fac2] = insertJointSti(parent, 0.2000, 0.0200, 5000, NaN);
             r2 = engine.marginInsert(j2, lc2, fac2, engine.preload(j2));
             testCase.verifyTrue(isnan(r2.MS), ...
@@ -1041,8 +1018,8 @@ classdef tThreadShear < matlab.unittest.TestCase
             %     Pb = FFU*FSU*PtL = 1.61*5,000 = 8,050 lbf  (SEPARATED)
             %     MS = 2,698.96/8,050 - 1 = -0.6647
             %   (contrast tappedParentGateNotAssuredClampedLoad below, same
-            %   As/Pult but the OLD clamped form, Pb = 6,525 lbf, MS =
-            %   -0.5864 — a materially different, LESS conservative number
+            %   As/Pult but the clamped form, Pb = 6,525 lbf, MS =
+            %   -0.5864 — a materially different, less conservative number
             %   for the same failure mode).
             b = model.Bolt(Designation="#10-32 UNF (gate pin)", ...
                 NominalDiameter=0.190, Series=model.ThreadSeries.UNF, ...

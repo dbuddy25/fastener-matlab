@@ -1,8 +1,8 @@
 classdef tPreloadWatchdog < matlab.unittest.TestCase
     %TPRELOADWATCHDOG  engine.preloadWatchdog: preload-vs-allowable bands.
     %   Pure-query pins (worst-wins band ordering, NaN/never-throws
-    %   tolerance) on a synthetic rated-load fixture, PLUS the DABJ Section
-    %   9 fixture, which is EXPECTED to trip the PreloadNearYield band
+    %   tolerance) on a synthetic rated-load fixture, plus the DABJ Section
+    %   9 fixture, which is expected to trip the PreloadNearYield band
     %   (see the class-level note below) -- that is arithmetically correct
     %   and must never be "fixed" to a clean result.
     %
@@ -20,7 +20,7 @@ classdef tPreloadWatchdog < matlab.unittest.TestCase
 
     methods (Static, Access = private)
         function j = ratedJoint(yieldAllow, ultimateAllow)
-            % Minimal joint carrying ONLY rated yield/ultimate bolt loads
+            % Minimal joint carrying only rated yield/ultimate bolt loads
             % (the "rated" path in boltTensileAllowable) -- no Bolt/Material
             % geometry needed, so the arithmetic in every test below is
             % nothing but the watchdog's own band comparisons.
@@ -33,7 +33,7 @@ classdef tPreloadWatchdog < matlab.unittest.TestCase
     methods (Test)
         function cleanBelow85Percent(testCase)
             % yield 10,000 / ultimate 15,000 (rated). PpMax = 8,000 ->
-            % 8,000/10,000 = 80% of yield, BELOW the 85% band -> no warning.
+            % 8,000/10,000 = 80% of yield, below the 85% band -> no warning.
             j = tPreloadWatchdog.ratedJoint(10000, 15000);
             r = engine.preloadWatchdog(j, struct("PpMax", 8000));
             testCase.verifyTrue(r.Evaluated);
@@ -44,8 +44,8 @@ classdef tPreloadWatchdog < matlab.unittest.TestCase
         end
 
         function boundaryAt85PercentIsNotYetWarning(testCase)
-            % Band test is STRICT (PpMax > 0.85*yield): PpMax = 8,500 is
-            % EXACTLY 0.85*10,000 -- not strictly greater -- so this must
+            % Band test is strict (PpMax > 0.85*yield): PpMax = 8,500 is
+            % exactly 0.85*10,000 -- not strictly greater -- so this must
             % still read clean, proving the boundary is not off-by-one.
             j = tPreloadWatchdog.ratedJoint(10000, 15000);
             r = engine.preloadWatchdog(j, struct("PpMax", 8500));
@@ -73,7 +73,7 @@ classdef tPreloadWatchdog < matlab.unittest.TestCase
         end
 
         function exceedsUltimateWinsOverYield(testCase)
-            % PpMax = 16,000 exceeds BOTH yield (10,000) and ultimate
+            % PpMax = 16,000 exceeds both yield (10,000) and ultimate
             % (15,000) -- worst wins: the Ultimate band must be reported,
             % never the Yield band, even though the yield condition is
             % also true.
@@ -85,7 +85,7 @@ classdef tPreloadWatchdog < matlab.unittest.TestCase
 
         function notEvaluatedOnBareJoint(testCase)
             % A bare joint (no rated loads, no Bolt.TensileStressArea, no
-            % BoltMaterial.Ftu/Fty) can form NEITHER the rated NOR the
+            % BoltMaterial.Ftu/Fty) can form neither the rated nor the
             % derived allowable on either side -- boltTensileAllowable
             % reports Assessed = false for both -- so the watchdog must
             % report Evaluated = false and Name = "" (never a fabricated
@@ -113,7 +113,7 @@ classdef tPreloadWatchdog < matlab.unittest.TestCase
 
         function methodCitesEq1AndFlagsDerivedBands(testCase)
             % The Method string must carry PpMax's real citation (Eq. 1)
-            % AND explicitly flag the 85%/100% thresholds as a derived
+            % and explicitly flag the 85%/100% thresholds as a derived
             % convention with no equation number -- never a bare "Eq. 1"
             % standing in for the whole check.
             j = tPreloadWatchdog.ratedJoint(10000, 15000);
@@ -123,9 +123,9 @@ classdef tPreloadWatchdog < matlab.unittest.TestCase
         end
 
         function dabjSection9TripsNearYieldByDesign(testCase)
-            % CONSTRAINT: the DABJ Section 9 fixture is EXPECTED to trip
+            % CONSTRAINT: the DABJ Section 9 fixture is expected to trip
             % the amber PreloadNearYield band -- this is arithmetically
-            % correct and must NOT be "fixed" to report clean.
+            % correct and must not be "fixed" to report clean.
             %
             % HAND-DERIVED (all inputs from validation.dabjSection9 /
             % engine.preload's own validated header numbers):
@@ -143,9 +143,9 @@ classdef tPreloadWatchdog < matlab.unittest.TestCase
             %           = 11,069.1389 lbf
             %   Rated yield (Solutions-18, BoltRatedYieldLoad) = 11,400 lbf
             %   Utilization = 11,069.1389/11,400 = 0.970977 = 97.1%
-            %     -- ABOVE the 85% band (9,690 lbf) and BELOW the yield
+            %     -- above the 85% band (9,690 lbf) and below the yield
             %        allowable itself (11,400 lbf) -> PreloadNearYield,
-            %        Warning (not Critical: it has not yet EXCEEDED yield).
+            %        Warning (not Critical: it has not yet exceeded yield).
             %   Rated ultimate (BoltRatedUltimateLoad) = 15,200 lbf ->
             %     11,069.1389 lbf is nowhere near it (72.8%), so the
             %     Ultimate band never enters this fixture.

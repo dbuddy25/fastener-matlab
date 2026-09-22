@@ -4,20 +4,19 @@ classdef tSourceStructure < matlab.unittest.TestCase
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
     %
-    %   WHY THIS EXISTS, AND WHY IT READS TEXT RATHER THAN CALLING CODE.
-    %   A classdef whose blocks are mis-nested does not fail — it fails to
-    %   LOAD, and a test class that fails to load contributes NO TESTS AT
-    %   ALL. The suite then reports a smaller number, every one of them
-    %   green. That is the worst possible failure mode: it looks like
-    %   success, and the only symptom is a total nobody was tracking
-    %   closely enough to notice. It has happened twice in this repo, both
-    %   times from appending a methods block one line too early, and both
-    %   times a function/end COUNT looked correct because the totals still
-    %   balanced — the blocks were simply nested wrongly.
+    %   Why this exists, and why it reads text rather than calling code:
+    %   a classdef whose blocks are mis-nested does not fail — it fails to
+    %   load, and a test class that fails to load contributes no tests at
+    %   all. The suite then reports a smaller number, every one of them
+    %   green: the worst possible failure mode, since it looks like success
+    %   and the only symptom is a total nobody was tracking closely enough
+    %   to notice. A methods block appended one line too early can nest
+    %   this way while the function/end count still balances -- the blocks
+    %   are simply nested wrongly.
     %
     %   So this reads every file as text and checks two things a balanced
     %   count cannot see:
-    %       1. methods/properties/events/enumeration blocks sit DIRECTLY
+    %       1. methods/properties/events/enumeration blocks sit directly
     %          inside a classdef — never inside another block.
     %       2. every block opened is closed.
     %
@@ -56,7 +55,7 @@ classdef tSourceStructure < matlab.unittest.TestCase
         function everyGuiTestClassCanDriveAGesture(testCase)
             %   A tGui* file that extends matlab.unittest.TestCase instead
             %   of matlab.uitest.TestCase looks completely normal until it
-            %   runs, and then every test in it ERRORS with "Unrecognized
+            %   runs, and then every test in it errors with "Unrecognized
             %   method, property, or field 'press'". The file is about
             %   driving a real app; press/choose/type are the whole point,
             %   and they live on the uitest base class only.

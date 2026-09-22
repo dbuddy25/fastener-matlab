@@ -1,6 +1,6 @@
 function file = saveCase(caseStruct, file)
 %SAVECASE  Serialize an analysis case (Joint + optional LoadCase/Factors/
-%   Name) to a JSON file (Phase 3.7).
+%   Name) to a JSON file.
 %   file = data.saveCase(caseStruct, file) where caseStruct is a struct
 %   with:
 %       Joint     (1,1) model.Joint    — required

@@ -1,5 +1,5 @@
 function c = palette(name)
-%PALETTE  Semantic color names -> RGB triples — the ONLY place GUI colors live.
+%PALETTE  Semantic color names -> RGB triples — the only place GUI colors live.
 %   c = gui.palette(name) returns a 1x3 RGB triple for a semantic color
 %   name. Every color in +gui goes through this function; no literal RGB
 %   triple may appear anywhere else in the GUI layer. That discipline makes
@@ -12,11 +12,9 @@ function c = palette(name)
 %     red (bold)  = failure
 %     red border  = missing required input
 %
-%   CONVENTIONS.md A1 — "unknown must never look like fine". A check that
-%   could not run is amber, NOT muted gray: the check is not running, and
-%   that must never read as nothing to report. tableNaBg exists for that
-%   state and is deliberately distinct from both tablePassBg and
-%   tableFailBg.
+%   CONVENTIONS.md A1 — "unknown must never look like fine": a check that
+%   could not run must never look like nothing to report. See
+%   tableNotEvalBg below for how that plays out against tableNaBg.
 %
 %   Names:
 %     statusPass / statusFail / statusWarn — bold status text colors
@@ -34,19 +32,19 @@ function c = palette(name)
 %     bannerWarnBg|Fg|Border               — warning banner (amber)
 %     bannerErrorBg|Fg|Border              — error banner (red)
 %     navActiveFg / navIdleFg              — rail item label color, active
-%                                            and idle. The ACTIVE state is
+%                                            and idle. The active state is
 %                                            carried by the state button's
 %                                            native pressed rendering plus
 %                                            FontWeight (GUI_SPEC.md
 %                                            Section 3) — these two exist so
 %                                            an idle item can be slightly
-%                                            de-emphasized, NOT to signal
-%                                            status. Rail STATUS rides on
+%                                            de-emphasized, not to signal
+%                                            status. Rail status rides on
 %                                            the separate glyph channel; if
 %                                            both used color they would
 %                                            fight.
 %     navSectionFg                         — rail section-header label
-%     navStaleFg / navLoadedFg             — the rail status GLYPH color
+%     navStaleFg / navLoadedFg             — the rail status glyph color
 %                                            (amber dot / loaded check)
 %
 %   Unknown names error immediately — a typo must fail loudly at development
@@ -76,7 +74,7 @@ switch char(name)
     case 'tableFailBg', c = [1.00 0.78 0.78];
     case 'tableNaBg',   c = [0.94 0.94 0.94];
 
-    % A check that could NOT RUN is amber, never the muted grey above.
+    % A check that could not run is amber, never the muted grey above.
     % Grey reads as "nothing to report", which is the opposite of what an
     % unevaluated check means (CONVENTIONS.md A1). tableNaBg stays for
     % genuinely not-applicable cells and for muting a stale table.
@@ -118,13 +116,13 @@ switch char(name)
     case 'bannerErrorBorder',c = [0.961 0.776 0.796];
 
     % ---- Left navigation rail --------------------------------------------
-    % Active vs idle is a TEXT-WEIGHT and pressed-state distinction, not a
+    % Active vs idle is a text-weight and pressed-state distinction, not a
     % color one (GUI_SPEC.md Section 3). These two are a light emphasis
     % difference only; they never carry status.
     case 'navActiveFg',  c = [0.00 0.00 0.00];
     case 'navIdleFg',    c = [0.20 0.20 0.20];
     case 'navSectionFg', c = [0.40 0.40 0.40];   % matches mutedText
-    % Rail status glyph — the SEPARATE channel from active/idle.
+    % Rail status glyph — the separate channel from active/idle.
     case 'navStaleFg',   c = [0.80 0.40 0.00];   % amber, matches statusWarn
     case 'navLoadedFg',  c = [0.00 0.40 0.00];   % green, matches statusPass
 

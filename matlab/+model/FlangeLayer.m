@@ -1,7 +1,7 @@
 classdef FlangeLayer
     %FLANGELAYER  One layer of the clamped stack (flanges only, not threads).
-    %   HoleDiameter and EdgeDistance are the Phase 3.2 member-strength
-    %   geometry: HoleDiameter feeds the bearing-under-head/nut annulus
+    %   HoleDiameter and EdgeDistance are member-strength geometry:
+    %   HoleDiameter feeds the bearing-under-head/nut annulus
     %   (engine.marginBearingUnderHead) and EdgeDistance the shear tear-out
     %   check (engine.marginShearTearout). Both default NaN ("unconfigured");
     %   checks that need them report NotEvaluated until they are set.
@@ -13,7 +13,7 @@ classdef FlangeLayer
         Name             (1,1) string = ""                          % cosmetic layer label (e.g. "Bracket flange")
         Material         (1,1) model.Material = model.Material()
         Thickness        (1,1) double {mustBePositive} = 0.1        % in
-        HoleDiameter     (1,1) double {mustBePositiveOrNaN} = NaN   % clearance/hole diameter dt, in (TM-106943 Eq. 75 names dh the head/washer BEARING diameter and dt the hole diameter -- this property is consumed as dt, e.g. marginBearingUnderHead.m's "dt" field; the property was mislabeled "dh" here previously)
+        HoleDiameter     (1,1) double {mustBePositiveOrNaN} = NaN   % clearance/hole diameter dt, in (TM-106943 Eq. 75 names dh the head/washer BEARING diameter and dt the hole diameter -- this property is consumed as dt, e.g. marginBearingUnderHead.m's "dt" field)
         EdgeDistance     (1,1) double {mustBePositiveOrNaN} = NaN   % hole center -> free edge, e, in
         CheckShearTearout (1,1) logical = true                      % run tear-out on this layer when EdgeDistance is set
     end

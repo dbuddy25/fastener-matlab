@@ -36,7 +36,7 @@ function docs = referenceDocuments()
 %     File            expected file name of a local copy ("" if none)
 %     Redistributable logical -- may this ship inside the packaged tool
 %
-%   ROLE FOLLOWS CONVENTIONS.md's DOCUMENT HIERARCHY, and the distinction is
+%   ROLE FOLLOWS CONVENTIONS.md's document hierarchy, and the distinction is
 %   not cosmetic: NASA-STD-5020B governs; a supplement is cited only where
 %   5020B itself relies on it for a formula it does not print; and the
 %   DABJ course book is VALIDATION ONLY and must never be cited as a

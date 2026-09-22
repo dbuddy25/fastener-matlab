@@ -50,11 +50,10 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function dabjAnswerKeyUnchanged(testCase)
-            % REGRESSION GUARD (the safety constraint of this change): with
-            % Ptu_allow now the SYSTEM allowable, the DABJ §9 answer key
-            % must not move — the system minimum resolves to the bolt's
-            % 15,200 lbf (see dabjSystemIsBoltGoverned), so the Fig. 8 gate
-            % still passes (PpMax 11,070 < 0.75*15,200 = 11,400,
+            % REGRESSION GUARD: with Ptu_allow now the system allowable, the
+            % DABJ §9 answer key must not move — the system minimum resolves
+            % to the bolt's 15,200 lbf (see dabjSystemIsBoltGoverned), so the
+            % Fig. 8 gate still passes (PpMax 11,070 < 0.75*15,200 = 11,400,
             % Solutions-13/16) and Eq. 6 still gives
             %   MS = 15,200/9,000 - 1 = +0.69 (Solutions-16).
             % WorstMargin stays -0.65 governed by Slip (Solutions-23) and
@@ -71,7 +70,7 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             % The gate decision must still read as assured (Narrative pin)
             testCase.verifySubstring(r.Narrative, ...
                 "Separation before rupture assured");
-            % ... and the COMPLETE §9 assessment must NOT be flagged as
+            % ... and the complete §9 assessment must not be flagged as
             % incomplete (both modes assessed, see dabjSystemIsBoltGoverned)
             testCase.verifyFalse(contains(r.Narrative, "INCOMPLETE"));
             % Decision names the governing mode of the system allowable
@@ -79,11 +78,11 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function nutAreaGovernsSystem(testCase)
-            % A nut SOFTER than the bolt must set the system allowable.
-            % Ex 8-b joint (validation.dabjExample8b) + Phase 3.3 thread
-            % inputs (E = 0.3479 in, the 3/8-24 UNF basic pitch dia;
-            % Le = 0.375 in), nut Fsu = 30,000 psi, no rating; bolt rated
-            % 15,200 lbf (the §9 spec value). HAND-DERIVED:
+            % A nut softer than the bolt must set the system allowable.
+            % Ex 8-b joint (validation.dabjExample8b) with thread inputs
+            % (E = 0.3479 in, the 3/8-24 UNF basic pitch dia; Le = 0.375 in),
+            % nut Fsu = 30,000 psi, no rating; bolt rated 15,200 lbf (the §9
+            % spec value). HAND-DERIVED:
             %   As        = 0.75*pi*0.3479*0.375       = 0.307395 in^2
             %             (TM-106943 Eq. 76, pitch-diameter form)
             %   nut allow = 30,000 * 0.307395          = 9,221.86 lbf
@@ -100,14 +99,14 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function nutRatingIsTheNutAllowableInTheSystemMinimum(testCase)
-            % REVERSED 2026-08-14 (was nutRatingCapsSystem). The rating is
-            % no longer a lower-of CEILING on a computed nut allowable — it
-            % IS the nut's allowable, per NASA-STD-5020B §4.4.1 p26:
-            % assessment of a procured item is "based on the strength
-            % specified for that item RATHER THAN on thread-stripping
-            % analysis". p27's "limited to the load rating" then holds
-            % automatically. The system minimum has to see the same number
-            % the nut row does, or the two disagree about one nut.
+            % The rating is not a lower-of ceiling on a computed nut
+            % allowable — it IS the nut's allowable, per NASA-STD-5020B
+            % §4.4.1 p26: assessment of a procured item is "based on the
+            % strength specified for that item rather than on
+            % thread-stripping analysis". p27's "limited to the load
+            % rating" then holds automatically. The system minimum has to
+            % see the same number the nut row does, or the two disagree
+            % about one nut.
             %
             % HAND-DERIVED (computed form shown only to prove it is NOT
             % what the system uses):
@@ -116,9 +115,8 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             %                    system = min(15,200 bolt, 8,000) = 8,000
             %   rating 20,000 -> nut allowable 20,000   (was 9,221.86)
             %                    system = min(15,200 bolt, 20,000) = 15,200
-            % The second case is the one that moved, and it moved the
-            % GOVERNING MODE with it: the nut used to govern, the bolt now
-            % does. That is the visible consequence of the change.
+            % The second case moves the governing mode too: the nut used to
+            % govern, the bolt now does.
             j = tSystemAllowable.softNutJoint(30000, 8000, 15200);
             s = engine.systemTensileAllowable(j);
             testCase.verifyEqual(s.PtuAllow, 8000, "AbsTol", 1e-9);
@@ -178,10 +176,10 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function weakNutFlipsFig8Gate(testCase)
-            % THE POINT OF THE CHANGE: the Fig. 8 preload gate
-            % (PpMax <= 0.75·Ptu_allow) must test the SYSTEM allowable. A
-            % preload that sits between the two thresholds selects Eq. 6
-            % off the bolt's allowable but Eq. 10 off the system's.
+            % The Fig. 8 preload gate (PpMax <= 0.75·Ptu_allow) must test
+            % the system allowable, not the bolt's alone. A preload that
+            % sits between the two thresholds selects Eq. 6 off the bolt's
+            % allowable but Eq. 10 off the system's.
             %
             % Ex 8-b joint (real stiffness path, phi = 0.3354 per
             % tests/tStiffness.m -- Kc taken with its exact pi*tan(30 deg)
@@ -189,8 +187,8 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             % Fsu = 30,000 psi, bolt rated 15,200 lbf, direct preload
             % 8,000 lbf (zero uncertainty, no thermal). HAND-DERIVED:
             %   system Ptu_allow = 30,000*0.75*pi*0.3479*0.375 = 9,221.86 lbf
-            %   BOLT-ONLY gate:  PpMax 8,000 <= 0.75*15,200  = 11,400 -> "assured" (WRONG)
-            %   SYSTEM gate:     PpMax 8,000 >  0.75*9,221.86 = 6,916.4 -> rupture (Eq. 10)
+            %   bolt-only gate:  PpMax 8,000 <= 0.75*15,200  = 11,400 -> "assured"
+            %   system gate:     PpMax 8,000 >  0.75*9,221.86 = 6,916.4 -> rupture (Eq. 10)
             % Rupture branch (NASA-STD-5020B Eq. 10, n = 0.5 fixture):
             %   P'tu = (9,221.86 - 8,000)/(0.5*0.3354) = 1,221.86/0.1677
             %        = 7,287 lbf
@@ -236,12 +234,12 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function incompleteAssessmentFlagged(testCase)
-            % A mode that CANNOT be assessed must be reported, not silently
+            % A mode that cannot be assessed must be reported, not silently
             % dropped from the minimum. Ex 8-b as-shipped has a Nut member
-            % with NO rating, NO engagement length, and no pitch diameter
-            % on the bolt -> the nut mode has no basis; only the bolt's
-            % 10,000 lbf is assessable, so the system minimum covers an
-            % INCOMPLETE set (optimistic) and must say so.
+            % with no rating, no engagement length, and no pitch diameter
+            % on the bolt, so the nut mode has no basis; only the bolt's
+            % 10,000 lbf is assessable, and the system minimum covers an
+            % incomplete (optimistic) set that must say so.
             c = validation.dabjExample8b();
             j = c.Joint;
             j.BoltRatedUltimateLoad = 10000;
@@ -272,18 +270,12 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function aRatedNutNeedsNoMaterialDataForItsUltimate(testCase)
-            % REVERSED 2026-08-14 (was areaWithoutFsuIsNotSilentlyRated).
-            % That test asserted a rated nut with no Fsu must report
-            % UNASSESSED, reasoning that "the true allowable
-            % min(Fsu·As, rating) is unknowable and is <= the rating, so
-            % standing the rating in for it would be OPTIMISTIC."
-            %
-            % That reasoning is pure ceiling logic and it dissolved with
-            % the ceiling. Under §4.4.1 p26 the rating is not an upper
-            % bound on an unknown — it is the allowable. Fsu is needed only
-            % for the FALLBACK form, which a rated nut never reaches. So
+            % A rated nut needs no material data for its ultimate mode.
+            % Under §4.4.1 p26 the rating is not an upper bound on an
+            % unknown allowable — it IS the allowable. Fsu is needed only
+            % for the fallback form, which a rated nut never reaches. So
             % the mode is fully assessable at 10,000 lbf and the system
-            % minimum is COMPLETE, not incomplete.
+            % minimum is complete, not incomplete.
             %   system = min(15,200 bolt, 10,000 nut) = 10,000
             j = tSystemAllowable.softNutJoint(NaN, 10000, 15200);  % Fsu NaN
             s = engine.systemTensileAllowable(j);
@@ -295,11 +287,10 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function anUnratedNutStillNeedsFsuForTheFallback(testCase)
-            % The other side of the same rule, so the reversal above did
-            % not quietly delete the guard. With NO rating there is nothing
-            % to be assessed on but the computed form, and that form needs
-            % Fsu — so this must still refuse, and the system minimum must
-            % still report itself INCOMPLETE.
+            % The other side of the same rule: with no rating there is
+            % nothing to assess but the computed form, which still needs
+            % Fsu, so this case must still refuse and the system minimum
+            % must still report itself incomplete.
             j = tSystemAllowable.softNutJoint(NaN, 0, 15200);   % Fsu NaN, no rating
             s = engine.systemTensileAllowable(j);
             testCase.verifyEqual(s.PtuAllow, 15200, "AbsTol", 1e-9);
@@ -309,15 +300,15 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function noBoltRatingFallsBackToDerivedAllowable(testCase)
-            % BEHAVIOR CHANGED (see boltTensileAllowable): with
-            % BoltRatedUltimateLoad unset but the bolt's own At/Ftu present,
-            % the tension margin no longer throws — it uses the DERIVED
-            % Ptu_allow = At*Ftu fallback (NASA-STD-5020B §4.4.2 derived
-            % convention, not a numbered equation). Ex 8-b fixture: At =
-            % 0.0878, Ftu = 160,000 -> Ptu_allow = 14,048 lbf; the Nut mode
-            % still can't be assessed (no rating, no engagement length), so
-            % the bolt's derived allowable alone sets the system minimum —
-            % an INCOMPLETE (optimistic) but non-error assessment.
+            % With BoltRatedUltimateLoad unset but the bolt's own At/Ftu
+            % present, the tension margin uses the derived Ptu_allow =
+            % At*Ftu fallback (NASA-STD-5020B §4.4.2 derived convention, not
+            % a numbered equation) rather than erroring. Ex 8-b fixture:
+            % At = 0.0878, Ftu = 160,000 -> Ptu_allow = 14,048 lbf; the Nut
+            % mode still can't be assessed (no rating, no engagement
+            % length), so the bolt's derived allowable alone sets the
+            % system minimum — an incomplete (optimistic) but non-error
+            % assessment.
             c = validation.dabjExample8b();   % BoltRatedUltimateLoad = NaN
             j = c.Joint;
             j.PreloadSpec = model.PreloadSpec( ...
@@ -355,25 +346,22 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         % consumes the ultimate one in Eq. 6 and Eq. 10.
 
         function dabjYieldSystemBoltGovernedButIncomplete(testCase)
-            % THE REGRESSION GUARD FOR THIS CHANGE, and the executable form
-            % of the argument that let it ship: DABJ §9's +0.63 must not
-            % move, and the reason it cannot is worth pinning, not just
-            % asserting.
+            % REGRESSION GUARD: DABJ §9's +0.63 must not move, and the
+            % reason it cannot is worth pinning, not just asserting.
             %
             % validation.dabjSection9 builds a Nut with
-            % RatedUltimateLoad = 15,200 lbf and NO EngagementLength. A spec
-            % rating is an ULTIMATE quantity and carries no yield
+            % RatedUltimateLoad = 15,200 lbf and no EngagementLength. A spec
+            % rating is an ultimate quantity and carries no yield
             % information (memberTensileYldAllowable rule 2 —
-            % engine.marginNutStrength has treated a flat rating as
-            % ultimate-only all along), so the nut has an ultimate mode and
-            % NO yield mode. The yield minimum therefore degenerates to the
-            % bolt's rated 11,400 lbf and Eq. 15 still gives
+            % engine.marginNutStrength treats a flat rating as
+            % ultimate-only), so the nut has an ultimate mode and no yield
+            % mode. The yield minimum therefore degenerates to the bolt's
+            % rated 11,400 lbf and Eq. 15 still gives
             %   MS = 11,400/6,987.5 - 1 = +0.63   (Solutions-18)
             %
-            % But it is INCOMPLETE, and that is a real finding rather than
-            % bookkeeping: on this joint the tool genuinely does not know
-            % the nut's yield capability, and before this change nothing
-            % said so. Pin the flag alongside the number.
+            % But it is incomplete: on this joint the tool genuinely does
+            % not know the nut's yield capability, and that flag has to be
+            % pinned alongside the number.
             c = validation.dabjSection9();
             s = engine.systemTensileYieldAllowable(c.Joint);
             testCase.verifyEqual(s.PtyAllow, 11400, "AbsTol", 1e-9);
@@ -393,11 +381,11 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function nutYieldGovernsSystem(testCase)
-            % A nut softer than the bolt sets the system YIELD allowable,
+            % A nut softer than the bolt sets the system yield allowable,
             % the same way nutAreaGovernsSystem shows it setting the
-            % ultimate one. Ex 8-b + Phase 3.3 thread inputs (E = 0.3479 in,
-            % Le = 0.375 in), nut Fsu = 30,000 psi with Fsy SUPPLIED as
-            % 0.9*Fsu = 27,000 psi (softNutJoint's convention — so this pin
+            % ultimate one. Ex 8-b with thread inputs (E = 0.3479 in,
+            % Le = 0.375 in), nut Fsu = 30,000 psi with Fsy supplied as
+            % 0.9*Fsu = 27,000 psi (softNutJoint's convention, so this pin
             % does not depend on the von Mises estimate); bolt rated
             % ultimate 15,200 lbf, no rated yield. HAND-DERIVED:
             %   As        = 0.75*pi*0.3479*0.375        = 0.3073950 in^2
@@ -447,18 +435,16 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function tappedHoleYieldModeAssessed(testCase)
-            % THE DEFERRED DECISION, NOW SETTLED. engine.marginTappedParentThread
-            % has always been ultimate-only, with a header note saying a
-            % yield criterion for tapped parent threads was an open question.
-            % NASA-STD-5020B §4.4.2 answers it: p29 requires the yield
-            % assessment to address "all elements of the threaded fastening
-            % system, including the fastener, the internally threaded part
-            % such as a nut or an insert" — illustrative, and in a tapped
-            % configuration the parent IS that part — and p30 removes the
-            % obstacle that caused the deferral by sanctioning a failure
-            % theory for shear yield. So the mode is assessed HERE, in the
-            % system minimum, while the Pb-based ROW stays ultimate-only so
-            % DABJ Example 6-a's pin is untouched.
+            % engine.marginTappedParentThread is ultimate-only; a yield
+            % criterion for tapped parent threads is assessed here instead,
+            % in the system minimum. NASA-STD-5020B §4.4.2 requires the
+            % yield assessment to address "all elements of the threaded
+            % fastening system, including the fastener, the internally
+            % threaded part such as a nut or an insert" (p29) — illustrative,
+            % and in a tapped configuration the parent is that part — and
+            % p30 sanctions a failure theory for shear yield. The Pb-based
+            % row stays ultimate-only so DABJ Example 6-a's pin is
+            % untouched.
             %
             % DABJ Example 6-a geometry: #10-32 (E = 0.1697 in) fully
             % engaged in 0.250-in 6061-T651 (Fty = 36,000, no Fsy).
@@ -556,10 +542,8 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             s = engine.systemTensileYieldAllowable(j);
             testCase.verifySubstring(s.Note, "von Mises");
             testCase.verifySubstring(s.Note, "Fty/sqrt(3)");
-            % The EQUATION NUMBER must travel too. 5020B prints this as
-            % Eq. 63 (p66, Appendix A.8); the engine used to cite prose and
-            % state that no equation number was claimed, which is the
-            % document-hierarchy violation the 2026-08-13 audit found.
+            % The equation number must travel too. 5020B prints this as
+            % Eq. 63 (p66, Appendix A.8).
             testCase.verifySubstring(s.Note, "NASA-STD-5020B Eq. 63");
 
             lc  = model.LoadCase(Name="derived Fsy trace", ...
@@ -571,11 +555,11 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function memberGovernedYieldRuptureBranchHandDerived(testCase)
-            % THE PIN THAT SHOWS THE CORRECTION MATTERS — Eq. 16/17 with a
-            % MEMBER-governed Pty_allow, the case min() over the per-mode
-            % rows provably cannot reproduce (those rows divide by
-            % boltDesignLoad's Pb; Eq. 17 subtracts PpMax first and divides
-            % by n*phi, a different function of the same allowable).
+            % Eq. 16/17 with a member-governed Pty_allow — a case min()
+            % over the per-mode rows cannot reproduce, since those rows
+            % divide by boltDesignLoad's Pb while Eq. 17 subtracts PpMax
+            % first and divides by n*phi, a different function of the same
+            % allowable.
             %
             % Ex 8-b geometry, so phi comes from the real stiffness path
             % (phi = 0.3354, n = 0.5 — the same chain
@@ -594,10 +578,6 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             %   P'ty = (5,533.11 - 5,000)/(0.5*0.3354) = 3,178.95 lbf (Eq. 17)
             %   Pty  = FSY*FFY*PtL = 1.25*1.0*2,000    = 2,500 lbf
             %   MS   = 3,178.95/2,500 - 1              = +0.2716    (Eq. 16)
-            % The bolt-only allowable this row used before would have given
-            % P'ty = (9,000 - 5,000)/0.1677 = 23,851 and MS = +8.54 — the
-            % same SIGN, a different order of magnitude, and the wrong part
-            % named as the limit.
             j = tSystemAllowable.softNutJoint(20000, 0, 10000);
             j.BoltRatedYieldLoad = 9000;
             j.PreloadSpec = model.PreloadSpec( ...
@@ -627,8 +607,8 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function noAllowableAtAllStaysNotEvaluated(testCase)
-            % TRUE unavailable case: no rating AND no At (so the derived
-            % fallback cannot be formed either) AND no member mode ->
+            % The fully unavailable case: no rating, no At (so the derived
+            % fallback cannot be formed either), and no member mode ->
             % NotEvaluated (MS = NaN), not a throw.
             c = validation.dabjExample8b();
             j = c.Joint;
@@ -656,11 +636,11 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             testCase.verifyEqual(numel(s.Unassessed), 2);
         end
         function anUnassessableGateReportsNotEvaluatedNotFail(testCase)
-            % The gate row was the ONE place this tool said a check FAILED
-            % when it meant it could not evaluate one. marginTensionUlt
-            % sets SeparationBeforeRupture = false when the gate cannot be
-            % assessed, and analyze read that false as "determined to
-            % fail" — reporting a determination nobody made.
+            % The gate row must not report a check as failed when it could
+            % not be evaluated. marginTensionUlt sets
+            % SeparationBeforeRupture = false when the gate cannot be
+            % assessed; analyze must not read that false as "determined to
+            % fail" — that would report a determination nobody made.
             %
             % NASA-STD-5020B A.5: whether separation occurs before rupture
             % "can be determined based on test, analysis, or the logic flow
@@ -689,7 +669,7 @@ classdef tSystemAllowable < matlab.unittest.TestCase
                 'An undetermined gate must not report a determination.');
             testCase.verifyFalse(r.Gate.Assessed);
 
-            % The ANALYSIS must stay conservative regardless: an unassessed
+            % The analysis must stay conservative regardless: an unassessed
             % gate is not assured, so boltDesignLoad keeps the clamped Pb.
             % If this ever flipped to the separated form, the label change
             % would have quietly moved margins.
@@ -697,9 +677,9 @@ classdef tSystemAllowable < matlab.unittest.TestCase
         end
 
         function anAssessedGateStatesItsBranchNotAPassOrFail(testCase)
-            % The sibling of the test above. That one covered a gate that
-            % reached NO determination; this one covers a gate that reached
-            % one -- which used to be reported as "Pass" or "Fail".
+            % The sibling of the test above: that one covers a gate that
+            % reached no determination; this one covers a gate that reached
+            % one, which must not be reported as "Pass" or "Fail".
             %
             % Nothing is assessed against an allowable at this gate. It
             % selects which equation prices the bolt load: NASA-STD-5020B
@@ -732,9 +712,9 @@ classdef tSystemAllowable < matlab.unittest.TestCase
             testCase.verifyEqual(row(rN, "Separation-before-rupture").Status, ...
                 "NotAssured");
 
-            % The point of the whole change: neither determined outcome is
-            % a pass or a failure. A caller counting failures across
-            % Result.Margins must not pick this row up.
+            % The point: neither determined outcome is a pass or a failure.
+            % A caller counting failures across Result.Margins must not
+            % pick this row up.
             for st = [row(rA, "Separation-before-rupture").Status, ...
                       row(rN, "Separation-before-rupture").Status]
                 testCase.verifyNotEqual(st, "Fail");
@@ -746,7 +726,7 @@ classdef tSystemAllowable < matlab.unittest.TestCase
 
     methods (Static)
         function j = softNutJoint(nutFsu, rating, boltRated)
-            %SOFTNUTJOINT  Ex 8-b Nut joint + Phase 3.3 thread inputs,
+            %SOFTNUTJOINT  Ex 8-b Nut joint with per-row thread inputs,
             %   parameterised on nut Fsu (NaN = unset), the spec rating
             %   (0 = unset), and the bolt rated ultimate load. Same
             %   geometry as tests/tThreadShear.m nutJoint (E = 0.3479 in,

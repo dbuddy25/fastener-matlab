@@ -1,17 +1,8 @@
 classdef tDabjCase < matlab.unittest.TestCase
-    %TDABJCASE  Phase 2.3 acceptance: the DABJ Section 9 validation case
+    %TDABJCASE  DABJ Section 9 acceptance: the validation case
     %   (validation.dabjSection9) is well-formed and pins the book's
     %   expected numbers.
     %
-    %   Engine-driven assertions are added here as each check is built;
-    %   Phase 2.4 added preloadMatchesDABJ (engine.preload vs the book);
-    %   Phase 2.5 added designLoadsMatchDABJ and tensionUltMarginMatchesDABJ;
-    %   Phase 2.6 added separationMarginMatchesDABJ and boltYieldMarginMatchesDABJ;
-    %   Phase 2.7 added shearUltMarginMatchesDABJ and interactionMarginMatchesDABJ;
-    %   Phase 2.8 added slipMarginMatchesDABJ;
-    %   Phase 2.9 added analyzeReproducesAllDABJMargins (the full solver);
-    %   the slip-mode toggle added singleFastenerSlipMatches and
-    %   ignoredSlipNotEvaluated (fixture pinned to SlipMode.Joint).
     %   The Expected values verified here are recorded constants from the
     %   course book, not computed results — the point is that the answer
     %   key is captured and cannot drift silently.
@@ -60,30 +51,24 @@ classdef tDabjCase < matlab.unittest.TestCase
                 25/1.8, "AbsTol", 1e-12);
             testCase.verifyEqual(j.ReferenceTemperature - j.MinTemperature, ...
                 25/1.8, "AbsTol", 1e-12);
-            % Bolt/material geometry is built inline (not from the shared
-            % library -- see validation.dabjSection9's header). Fsu/Fbru are
+            % Bolt/material geometry is built inline, not from the shared
+            % library (see validation.dabjSection9's header). Fsu/Fbru are
             % pinned directly here since they drive the shear/bearing
-            % margins and no longer live in library.json to be guarded by
+            % margins and are not in library.json to be guarded by
             % tests/tLibrary.m.
             testCase.verifyEqual(j.Bolt.NominalDiameter, 0.375, "AbsTol", 1e-12);
-            % A-286 (DABJ) and Al 7075-T7351 (DABJ) book values, transcribed
-            % from the now-deleted library.json "(DABJ)" material entries
-            % (see tests/tLibrary.m's former dabjFixtureMaterialsKeepBookValues,
-            % which pinned all six of these against the library; the fixture
-            % moved inline here, so all six are guarded here instead). Ftu/Fty
-            % are currently inert in the §9 computation (rated loads are
-            % supplied as literals -- see the module header), but they are
-            % book values and a future silent edit to them would otherwise go
-            % undetected.
+            % A-286 (DABJ) and Al 7075-T7351 (DABJ) book values. Ftu/Fty are
+            % inert in the §9 computation (rated loads are supplied as
+            % literals -- see the module header), but they are book values
+            % and a silent edit to them would otherwise go undetected.
             testCase.verifyEqual(j.BoltMaterial.Ftu, 160000);
             testCase.verifyEqual(j.BoltMaterial.Fty, 120000);
             testCase.verifyEqual(j.BoltMaterial.Fsu, 95000);
             testCase.verifyEqual(j.FlangeStack(1).Material.Ftu, 68000);
             testCase.verifyEqual(j.FlangeStack(1).Material.Fty, 57000);
             testCase.verifyEqual(j.FlangeStack(1).Material.Fbru, 121000);
-            % Full bolt geometry, transcribed exactly from the former
-            % library.json fixture entry (now inline in dabjSection9.m) --
-            % the answer key (worst MS -0.65) depends on these exact values.
+            % Full bolt geometry -- the answer key (worst MS -0.65) depends
+            % on these exact values.
             testCase.verifyEqual(j.Bolt.ThreadsPerInch, 24);
             testCase.verifyEqual(j.Bolt.TensileStressArea, 0.0878, "AbsTol", 1e-12);
             testCase.verifyEqual(j.Bolt.MinorDiameter, 0.3209, "AbsTol", 1e-12);
@@ -119,7 +104,7 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyEqual(e.Psu,          2510);
             testCase.verifyEqual(e.Psep,         5590);
             testCase.verifyEqual(e.InteractionA, 1.59);
-            % Tolerances for the Phase 2.4+ engine assertions
+            % Tolerances for the engine assertions
             testCase.verifyEqual(c.Tol.MarginAbsTol, 0.01);
             testCase.verifyEqual(c.Tol.LoadRelTol, 0.005);
         end
@@ -138,7 +123,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function preloadMatchesDABJ(testCase)
-            % Phase 2.4: engine.preload reproduces the book's preloads
+            % engine.preload reproduces the book's preloads
             % (Solutions-11..13; book values are lightly rounded, so the
             % 0.5% load tolerance absorbs e.g. 10,888.9 vs printed 10,890).
             c = validation.dabjSection9();
@@ -156,7 +141,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function designLoadsMatchDABJ(testCase)
-            % Phase 2.5: engine.designLoads reproduces the book's design
+            % engine.designLoads reproduces the book's design
             % loads (p. 9-6; book values are rounded, e.g. 8,999.9 -> 9,000,
             % 6,987.5 -> 6,990, 2,511.6 -> 2,510 — the 0.5% tolerance covers it).
             c = validation.dabjSection9();
@@ -172,7 +157,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function tensionUltMarginMatchesDABJ(testCase)
-            % Phase 2.5: the Fig. 9-9 separation-before-rupture gate passes
+            % The Fig. 9-9 separation-before-rupture gate passes
             % on all four conditions (Ec > Eb/3, PpMax < 0.75*Ptu-allow,
             % n <= 0.9, e/D assumed), so Eq. 6 applies:
             % MS = 15,200/9,000 - 1 = +0.69 (Solutions-16).
@@ -186,7 +171,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function separationMarginMatchesDABJ(testCase)
-            % Phase 2.6: min preload vs the design separation load
+            % Min preload vs the design separation load
             % (NASA-STD-5020B Eq. 19): MS = 6,469.75/5,590 - 1 = +0.16
             % (Solutions-17; book prints 0.16, exact 0.157).
             c = validation.dabjSection9();
@@ -204,11 +189,11 @@ classdef tDabjCase < matlab.unittest.TestCase
             % divided, and they are the published ones (Solutions-17):
             % 6,469.75 / 5,590 - 1 = +0.16.
             %
-            % Verified AGAINST THE PRELOAD AND DESIGN-LOAD STRUCTS rather
+            % Verified against the preload and design-load structs rather
             % than against literals, so the row can never drift into
-            % reporting one number while the margin used another -- which
-            % is the single failure mode that would make this feature
-            % worse than useless.
+            % reporting one number while the margin used another -- the
+            % single failure mode that would make this feature worse than
+            % useless.
             c = validation.dabjSection9();
             p = engine.preload(c.Joint);
             d = engine.designLoads(c.LoadCase, c.Factors);
@@ -227,10 +212,8 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function analyzeCarriesSeparationInputsOntoTheMarginRow(testCase)
-            % engine.analyze historically dropped everything a margin
-            % function returned beyond MS/Method/Detail (that is why
-            % Result.Allowables had to be added later). Inputs must
-            % actually survive the entry() call, not just exist upstream.
+            % engine.analyze must carry a margin function's Inputs through
+            % the entry() call, not just leave them existing upstream.
             c = validation.dabjSection9();
             r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
             k = find([r.Margins.Name] == "Separation", 1);
@@ -369,7 +352,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function boltYieldMarginMatchesDABJ(testCase)
-            % Phase 2.6: spec yield allowable vs the design yield load
+            % Spec yield allowable vs the design yield load
             % (NASA-STD-5020B Eq. 15): MS = 11,400/6,987.5 - 1 = +0.63
             % (Solutions-18; book prints 0.63, exact 0.631).
             c = validation.dabjSection9();
@@ -382,7 +365,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function shearUltMarginMatchesDABJ(testCase)
-            % Phase 2.7: threads NOT in the shear plane, so the allowable
+            % Threads NOT in the shear plane, so the allowable
             % uses the full-diameter area (NASA-STD-5020B Eq. 14):
             % MS = 95,000*(pi/4)*0.375^2 / 2,511.6 - 1
             %    = 10,492.4/2,511.6 - 1 = +3.18 (Solutions-19).
@@ -392,22 +375,19 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyEqual(r.MS, c.Expected.MS_ShearUlt, ...
                 "AbsTol", c.Tol.MarginAbsTol);
             testCase.verifySubstring(r.Method, "Eq. 14");
-            % B/C: Detail must now carry the governing arithmetic (used to
-            % be hardcoded "" by engine.analyze) -- confirms the NaN guard
-            % added alongside it does not disturb this passing margin.
+            % Detail must carry the governing arithmetic, and the NaN
+            % guard added alongside it must not disturb this passing margin.
             testCase.verifyNotEqual(r.Detail, "");
             testCase.verifySubstring(r.Detail, "Psu_allow");
         end
 
         function shearUltNaNGuardNamesMissingInput(testCase)
-            % B/C: marginShearUlt had no NaN guard -- an unset Fsu, area,
-            % or design shear load silently produced MS = NaN with no
-            % explanation, and marginInteraction (which reuses
-            % ShearAllowable) inherited that silence. Each of the three
-            % inputs is knocked out in turn on the DABJ §9 fixture; each
-            % must report NotEvaluated (MS NaN) with that specific input
-            % named in Detail, never a crash, and must not disturb the
-            % other two inputs' arithmetic.
+            % An unset Fsu, area, or design shear load must report
+            % NotEvaluated (MS NaN) with that specific input named in
+            % Detail, never a crash, and must not disturb the other two
+            % inputs' arithmetic -- including in marginInteraction, which
+            % reuses ShearAllowable. Each of the three inputs is knocked
+            % out in turn on the DABJ §9 fixture.
             c = validation.dabjSection9();
             d = engine.designLoads(c.LoadCase, c.Factors);
 
@@ -443,15 +423,15 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function interactionMarginMatchesDABJ(testCase)
-            % Phase 2.7 (contract updated -- see engine.marginInteraction's
-            % header): NASA-STD-5020B Eq. 20/21 is a pass/fail CRITERION,
-            % R <= 1, not a margin -- so this checks the ratio R, not an
+            % NASA-STD-5020B Eq. 20/21 is a pass/fail criterion,
+            % R <= 1, not a margin (see engine.marginInteraction's header)
+            % -- so this checks the ratio R, not an
             % MS. With Rt = 9,000/15,200 = 0.592099 and
             % Rs = 2,511.6/10,492.4 = 0.239373 (body in shear):
             %   R = Rt^1.5 + Rs^2.5 = 0.455535 + 0.028085 = 0.483642 (Pass)
-            % The book's own solve-for-a reading (Solutions-20..21) still
-            % gives a = 1.59 exactly as before -- kept as the secondary,
-            % informational "a" field (NOT the reported result any more).
+            % The book's own solve-for-a reading (Solutions-20..21) gives
+            % a = 1.59, kept as the secondary, informational "a" field, not
+            % the reported result.
             c = validation.dabjSection9();
             d = engine.designLoads(c.LoadCase, c.Factors);
             r = engine.marginInteraction(c.Joint, d);
@@ -703,7 +683,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function slipMarginMatchesDABJ(testCase)
-            % Phase 2.8: joint-level friction check (NASA-STD-5020B Eq. 84) with
+            % Joint-level friction check (NASA-STD-5020B Eq. 84) with
             % joint totals, NOT nf x per-bolt — the fixture Joint is pinned to
             % SlipMode.Joint because the book works JOINT slip (Solutions-22..23):
             % MS = 4*0.1*6,469.75 / (1.0*(5,690 + 0.1*16,090)) - 1
@@ -823,10 +803,10 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function muAboveTheCeilingWarns(testCase)
-            % NASA-STD-5020B §4.4.6b [TFSR 14] caps mu at 0.20 for ANY
-            % surface absent test substantiation. Nothing in the tool used
-            % to mention it, and the slip margin scales directly with mu —
-            % 0.35 reports a margin 75% higher than 0.20 on the same joint.
+            % NASA-STD-5020B §4.4.6b [TFSR 14] caps mu at 0.20 for any
+            % surface absent test substantiation, and the slip margin
+            % scales directly with mu — 0.35 reports a margin 75% higher
+            % than 0.20 on the same joint.
             c = validation.dabjSection9();
             j = c.Joint;
             j.FrictionCoefficient = 0.35;
@@ -964,7 +944,7 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function analyzeReproducesAllDABJMargins(testCase)
-            % Phase 2.9: ONE engine.analyze call reproduces every published
+            % ONE engine.analyze call reproduces every published
             % DABJ margin, names the governing check (the deliberate slip
             % failure), and advertises the full 15-check set (unbuilt
             % checks -> NotEvaluated).
@@ -984,7 +964,7 @@ classdef tDabjCase < matlab.unittest.TestCase
             testCase.verifyEqual(marginMS(r, "Slip"), ...
                 c.Expected.MS_Slip, "AbsTol", tol);
             % Interaction is NOT a margin (NASA-STD-5020B Eq. 20-23 is a
-            % pass/fail CRITERION, R <= 1) -- its Margins row carries
+            % pass/fail criterion, R <= 1) -- its Margins row carries
             % MS = NaN by design (see engine.analyze's INTERACTION IS NOT A
             % MARGIN note) and is excluded from the WorstMargin pick below;
             % its real result (R = 0.483642, Pass) is checked directly
@@ -1147,9 +1127,8 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function anExemptJointStillUsesASuppliedMoment(testCase)
-            % REVERSED 2026-08-13 by the equation audit. This test used to
-            % assert the opposite -- that an exempt joint DROPS a supplied
-            % moment -- and the behaviour it pinned over-applied §4.4.4.
+            % An exempt joint does NOT drop a supplied moment; §4.4.4's
+            % exemption is narrower than that.
             %
             % p33, with the clause that decides it: "if interference or
             % close tolerance fits are used, then typically there is no
@@ -1192,11 +1171,10 @@ classdef tDabjCase < matlab.unittest.TestCase
         end
 
         function anExemptJointWithAMomentDiffersFromOneWithout(testCase)
-            % The consequence as a number, and the exact inverse of what
-            % this file asserted before the audit: exempt-with-moment must
-            % now give a HIGHER R than exempt-without, because the bending
-            % ratio is added inside the tension bracket. If these were
-            % equal again, the moment would be being dropped somewhere.
+            % The consequence as a number: exempt-with-moment must give a
+            % higher R than exempt-without, because the bending ratio is
+            % added inside the tension bracket. If these were equal, the
+            % moment would be being dropped somewhere.
             [jm, dm] = tDabjCase.bendingFixture(0.500, 0.400, ...
                 model.ShearPlaneCondition.BodyInShear, 200);
             [jn, dn] = tDabjCase.bendingFixture(0.500, 0.400, ...

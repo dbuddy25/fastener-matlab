@@ -7,16 +7,14 @@ classdef Washer
     %   the fitting stack) and enter the bolt stiffness kb through the
     %   added clamped length.
     %
-    %   MATERIAL IS USED — for the THERMAL term, not for stiffness. Rigid in
-    %   the frustum is a STIFFNESS idealisation, not a thermal one: a washer
+    %   Material is used for the thermal term, not for stiffness. Rigid in
+    %   the frustum is a stiffness idealisation, not a thermal one: a washer
     %   still occupies clamped length and still expands with its own CTE, so
     %   engine.preload includes it in the member CTE sum for TM-106943
-    %   Eq. 10 (see that function; before 2026-08-13 washers were thermally
-    %   absent, which was arithmetically identical to giving every washer
-    %   the BOLT's CTE). A washer with Thickness > 0 whose Material carries
-    %   no CTE makes the thermal calculation REFUSE rather than reading
-    %   the absence as zero expansion. InnerDiameter is still carried for completeness only
-    %   (library / template round-tripping).
+    %   Eq. 10 (see that function). A washer with Thickness > 0 whose
+    %   Material carries no CTE makes the thermal calculation refuse rather
+    %   than reading the absence as zero expansion. InnerDiameter is carried
+    %   for completeness only (library / template round-tripping).
     %
     %   w = model.Washer(Thickness=0.078, OuterDiameter=0.687);
 

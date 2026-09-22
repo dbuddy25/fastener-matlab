@@ -4,10 +4,8 @@ classdef tBoltSizing < matlab.unittest.TestCase
     %   the 15 NASA-STD-5020B margins (tension-ultimate, tension-yield,
     %   shear), because no bolt has been chosen yet and therefore no
     %   preload exists — see boltSizingSweep.m's header. Interaction
-    %   (Eq. 20-23) is evaluated too, but ONLY as a pass/fail GATE folded
-    %   into Status — it is no longer a reported number/column (no `R`,
-    %   no margin, not the retired "solve-for-a" MS_Interaction). When the
-    %   gate is the reason (or a contributing reason) a row fails, the
+    %   (Eq. 20-23) is evaluated as a pass/fail GATE folded into Status,
+    %   not a reported number/column. When the
     %   Notes column carries the explanation so a row that passes
     %   tension/yield/shear individually but still fails is never an
     %   unexplained rejection.
@@ -18,36 +16,34 @@ classdef tBoltSizing < matlab.unittest.TestCase
     %   library (+data/library.json: A286 bolt material, NAS1351/NAS1352
     %   socket-head bolts) and model.Factors() defaults (FSU 1.4, FSY
     %   1.25, FFU 1.15, FFY 1.0). Interaction R values are re-derived
-    %   longhand where asserted (e.g. via ln/exp for the non-integer
-    %   exponent, since MATLAB is not available to check the arithmetic
-    %   directly) but the tests below deliberately assert only the
-    %   pass/fail OUTCOME and the presence of the Notes explanation, not
-    %   an exact formatted R string, since the longhand ln/exp arithmetic
-    %   carries more rounding slack than a direct power evaluation would.
+    %   longhand where asserted (via ln/exp for the non-integer exponent),
+    %   but the tests below deliberately assert only the pass/fail
+    %   OUTCOME and the presence of the Notes explanation, not an exact
+    %   formatted R string, since the longhand ln/exp arithmetic carries
+    %   more rounding slack than a direct power evaluation would.
     %
     %   Threaded-member context (system-vs-bolt-only tension-ultimate):
-    %   MS_TensionUlt/TensionUltBasis now depend on whether the caller
-    %   supplies Library+NutSpec (per-size nut resolution) or a fixed
-    %   ThreadedMember template (Insert/TappedHole) -- see
-    %   nutGovernsBelowBoltFlipsPassToFail (the defect this task fixes: a
-    %   size the bolt-only screen would Pass actually fails once the
-    %   governing nut is considered), noMatchingNutFallsBackToBoltOnlyHonestly
-    %   and unassessedThreadedMemberRefusedNotGuessed (honest fallback,
-    %   never a fabricated system number), noContextStaysBoltOnlyWithBasisStated
-    %   (today's call shape, basis stated in the table itself),
+    %   MS_TensionUlt/TensionUltBasis depend on whether the caller supplies
+    %   Library+NutSpec (per-size nut resolution) or a fixed ThreadedMember
+    %   template (Insert/TappedHole) -- see nutGovernsBelowBoltFlipsPassToFail
+    %   (a size the bolt-only screen would Pass can fail once the governing
+    %   nut is considered), noMatchingNutFallsBackToBoltOnlyHonestly and
+    %   unassessedThreadedMemberRefusedNotGuessed (honest fallback, never a
+    %   fabricated system number), noContextStaysBoltOnlyWithBasisStated
+    %   (bolt-only call shape, basis stated in the table itself),
     %   engagementRatioResolvesPerRowNominalDiameter (a fixed
     %   Insert/TappedHole template's EngagementRatio must still resolve a
     %   DIFFERENT Le per candidate size, scaled by THAT row's own
     %   NominalDiameter -- see model.ThreadedMember / resolveEngagementLength),
     %   insertStiPitchDiameterResolvesPerRow (a fixed Insert template's
-    %   StiPitchDiameter is ALSO resolved per candidate size, from
-    %   Library.insertFor, when a Library is supplied alongside it -- the
-    %   real seeded NASM33537 catalogue, mirroring the Nut branch's
-    %   per-row nutFor resolution), and misconfiguredThreadedMemberContextErrors
-    %   (programming-error guards). MS_TensionYield, MS_Shear, and the interaction gate are
-    %   UNCHANGED by any of this -- they stay bolt-only in every case,
-    %   mirroring engine.marginTensionYield / engine.marginInteraction's
-    %   own deliberate bolt-only rules (see boltSizingSweep.m's header).
+    %   StiPitchDiameter is also resolved per candidate size, from
+    %   Library.insertFor when a Library is supplied alongside it,
+    %   mirroring the Nut branch's per-row nutFor resolution), and
+    %   misconfiguredThreadedMemberContextErrors (programming-error
+    %   guards). MS_TensionYield, MS_Shear, and the interaction gate stay
+    %   bolt-only in every case, mirroring engine.marginTensionYield /
+    %   engine.marginInteraction's own deliberate bolt-only rules (see
+    %   boltSizingSweep.m's header).
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -88,9 +84,7 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %     Rt^1.5 = Rt*sqrt(Rt) = 0.553341*0.743868 = 0.411613
             %     Rs^2.5 = Rs^2*sqrt(Rs) = 0.030829*0.419026 = 0.012918
             %     R = 0.411613 + 0.012918 = 0.424531 <= 1 -> interaction
-            %     gate PASSES (this is well inside the envelope; the old
-            %     solve-for-a reading, a = 1.744126, agreed: a >= 1 iff
-            %     R <= 1, same pass/fail direction).
+            %     gate PASSES (well inside the envelope).
             % Every core margin >= 0 AND the interaction gate passes ->
             % Status must be Pass, with no Notes explanation needed.
             [b, m, fac] = tBoltSizing.fixture();
@@ -142,9 +136,7 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %                      = 0.763379 * 1.004201 = 0.766586
             %       -> Rs^0.2 = 0.766586 -> Rs^1.2 = 0.264730*0.766586
             %                                       = 0.202917
-            %     R = 0.306186 + 0.202917 = 0.509103 <= 1 -> gate PASSES
-            %     (agrees with the retired solve-for-a reading, a =
-            %     1.483829 >= 1, same pass/fail direction).
+            %     R = 0.306186 + 0.202917 = 0.509103 <= 1 -> gate PASSES.
             % Both shear planes therefore pass the gate here, so neither
             % Tbody nor Tthread needs a Notes explanation.
             testCase.verifyEqual(strlength(Tbody.Notes), 0);
@@ -168,8 +160,7 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %       (Rs^2 = 1.123723^2 = 1.262754; sqrt(1.123723): 1.06^2=
             %       1.1236, so sqrt(Rs) ~= 1.060058)
             %     R = 0.411613 + 1.338592 = 1.750205 > 1 -> interaction gate
-            %     ALSO fails (agrees with the retired solve-for-a reading,
-            %     a = 0.779014 < 1, same pass/fail direction).
+            %     ALSO fails.
             % Since MS_Shear already fails (coreOk = false), Notes uses the
             % "Also fails" wording, not the interaction-ONLY wording.
             [b, m, fac] = tBoltSizing.fixture();
@@ -190,9 +181,7 @@ classdef tBoltSizing < matlab.unittest.TestCase
             % divided by an exactly-zero design load, which is IEEE-754
             % +Inf, not NaN — see boltSizingSweep.m's header on the
             % decision. Rt = Rs = 0, so R = 0^1.5 + 0^2.5 = 0 <= 1 -- the
-            % interaction gate passes with no special-case code needed
-            % (direct R evaluation, unlike the retired solve-for-a
-            % reading, handles this case for free).
+            % interaction gate passes with no special-case code needed.
             [b, m, fac] = tBoltSizing.fixture();
             T = engine.boltSizingSweep(b, m, 0, 0, fac, ...
                 model.ShearPlaneCondition.BodyInShear);
@@ -212,11 +201,7 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %   R = 0^1.5 + 0.175582^2.5 = 0 + 0.012918 = 0.012918 <= 1
             %   (Rs^2.5 re-used from tensionYieldShearAndInteractionMargins)
             % Gate passes comfortably -- with no tension load at all, the
-            % interaction envelope reduces to the shear check alone, which
-            % is exactly the physical limit the retired solve-for-a
-            % reading also showed (its a = 1/Rs = 5.695356, matching
-            % MS_Shear exactly, since with Rt = 0 the envelope becomes
-            % (a*Rs)^2.5 = 1).
+            % interaction envelope reduces to the shear check alone.
             [b, m, fac] = tBoltSizing.fixture();
             T = engine.boltSizingSweep(b, m, 0, 500, fac, ...
                 model.ShearPlaneCondition.BodyInShear);
@@ -261,8 +246,7 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %             Rs^1.2 = 0.356510*0.813605 = 0.290059
             %       R = 2.965449+0.290059 = 3.255508 > 1 -> gate FAILS
             %       (core also fails on tension-ultimate alone, so Status
-            %       was already Fail; matches the retired solve-for-a
-            %       reading, a=0.539089 < 1, same direction)
+            %       was already Fail)
             %   #10-32 UNF: MinorArea=pi/4*0.1494^2=0.0175304, PsuAllow=1,637.34,
             %       Rt=4,830/3,198.40=1.510130, Rs=483/1,637.34=0.294991
             %       Rt^2 = 1.510130^2 = 2.280493
@@ -274,7 +258,7 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %             Rs^1.2 = 0.294991*0.783362 = 0.231085
             %       R = 2.280493+0.231085 = 2.511578 > 1 -> gate FAILS
             %       (core also fails on tension-ultimate; Status was
-            %       already Fail; matches a=0.617778 < 1)
+            %       already Fail)
             %   1/4-20 UNC: MinorArea=pi/4*0.1850^2=0.0268803, PsuAllow=2,510.62,
             %       Rt=4,830/5,091.20=0.948696, Rs=483/2,510.62=0.192383
             %       Rt^2 = 0.948696^2 = 0.900023
@@ -284,11 +268,9 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %             exp(-0.329652) = exp(-0.33)*exp(0.000348)
             %                            = 0.718924*1.000348 = 0.719174
             %             Rs^1.2 = 0.192383*0.719174 = 0.138357
-            %       R = 0.900023+0.138357 = 1.038380 > 1 -> gate FAILS
-            %       (matches the retired reading, a=0.980298 < 1) --
+            %       R = 0.900023+0.138357 = 1.038380 > 1 -> gate FAILS --
             %       tension-ultimate/tension-yield/shear ALL individually
-            %       pass here (this row's core margins are unaffected by
-            %       this rework); ONLY the interaction gate rejects it, so
+            %       pass here; ONLY the interaction gate rejects it, so
             %       Notes must carry the "ONLY" wording and the reason.
             %   1/4-28 UNF: MinorArea=pi/4*0.2036^2=0.0325571, PsuAllow=3,040.83,
             %       Rt=4,830/5,819.20=0.830011, Rs=483/3,040.83=0.158838
@@ -299,9 +281,9 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %             exp(-0.367974) = exp(-0.37)*exp(0.002026)
             %                            = 0.690734*1.002028 = 0.692135
             %             Rs^1.2 = 0.158838*0.692135 = 0.109937
-            %       R = 0.688918+0.109937 = 0.798855 <= 1 -> gate PASSES
-            %       (matches a=1.125866 >= 1) -- core also passes, so row 4
-            %       is a clean Pass with no Notes explanation.
+            %       R = 0.688918+0.109937 = 0.798855 <= 1 -> gate PASSES --
+            %       core also passes, so row 4 is a clean Pass with no
+            %       Notes explanation.
             % So the sweep returns exactly this 4-row order (this function
             % must NOT re-sort), rows 1-3 Fail, row 4 Pass -- 1/4-28 UNF
             % (row 4) is the ONLY / smallest passer, and row 3 (1/4-20 UNC)
@@ -361,9 +343,8 @@ classdef tBoltSizing < matlab.unittest.TestCase
             % individually, yet Status must be Fail because the Eq. 22/23
             % interaction gate rejects it (R > 1) -- and that rejection
             % must be explained in Notes, not silently absorbed into an
-            % unexplained Fail. This is the dedicated proof the task asks
-            % for: a size failing ONLY on interaction is both rejected AND
-            % explained.
+            % unexplained Fail: a size failing ONLY on interaction must be
+            % both rejected AND explained.
             %
             % HAND-DERIVED (ThreadsInShear, PtL=3,000, PsL=300, A286;
             % NAS1352 1/4-20 UNC: At=0.03182, MinorDiameter=0.1850,
@@ -408,14 +389,14 @@ classdef tBoltSizing < matlab.unittest.TestCase
             testCase.verifyFalse(contains(T.Notes, "Also fails"));
         end
 
-        % ---- Threaded-member context (system-vs-bolt-only rework) --------
+        % ---- Threaded-member context (system-vs-bolt-only) --------
 
         function noContextStaysBoltOnlyWithBasisStated(testCase)
-            % Today's call shape (no Library/NutSpec/ThreadedMember at all)
-            % must keep EXACTLY today's bolt-only arithmetic -- reusing
+            % A call with no Library/NutSpec/ThreadedMember at all keeps
+            % exactly the bolt-only arithmetic -- reusing
             % tensionYieldShearAndInteractionMargins' fixture/loads
-            % (MS_TensionUlt = 0.807205, hand-derived there) -- but the new
-            % TensionUltBasis column must say so explicitly, in the output
+            % (MS_TensionUlt = 0.807205, hand-derived there) -- and the
+            % TensionUltBasis column says so explicitly, in the output
             % table itself, not only in the function header.
             [b, m, fac] = tBoltSizing.fixture();
             T = engine.boltSizingSweep(b, m, 2000, 500, fac, ...
@@ -426,17 +407,16 @@ classdef tBoltSizing < matlab.unittest.TestCase
         end
 
         function nutGovernsBelowBoltFlipsPassToFail(testCase)
-            % THE DEFECT THIS TASK EXISTS TO FIX: NAS1351 1/4-28 UNF + A286
-            % (fixture()), PtL=3,000/PsL=300, ThreadsInShear -- the EXACT
-            % same bolt/loads as row 4 of sweepPreservesOrderAndMarksSmallestPasser,
-            % which showed a clean bolt-only Pass (MS_TensionUlt = +0.204803).
-            % Supplying the NAS1291 nut family (the shipped library's
-            % NAS1291C4M entry matches this bolt's 1/4-28 thread size)
-            % reveals the nut is actually the governing tensile mode, and
-            % MS_TensionUlt must now be NEGATIVE -- a bolt size the
-            % bolt-only screen would have waved through actually fails a
-            % full system-consistent check, exactly the scenario the task
-            % describes.
+            % NAS1351 1/4-28 UNF + A286 (fixture()), PtL=3,000/PsL=300,
+            % ThreadsInShear -- the same bolt/loads as row 4 of
+            % sweepPreservesOrderAndMarksSmallestPasser, which showed a
+            % clean bolt-only Pass (MS_TensionUlt = +0.204803). Supplying
+            % the NAS1291 nut family (the shipped library's NAS1291C4M
+            % entry matches this bolt's 1/4-28 thread size) reveals the
+            % nut is actually the governing tensile mode, and
+            % MS_TensionUlt is NEGATIVE -- a bolt size the bolt-only
+            % screen would have waved through fails a full
+            % system-consistent check.
             %
             % HAND-DERIVED (+data/library.json NAS1291C4M: height 0.219 in,
             % bearingDiameter 0.386, material "A286" (Fsu 93,400 psi),
@@ -457,8 +437,6 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %     -- the NUT governs, well below the bolt's own allowable.
             %   Ptu = FSU*FFU*PtL = 1.4*1.15*3,000            = 4,830 lbf
             %   MS_TensionUlt (system) = 4,580/4,830 - 1        = -0.051760
-            %     (vs. the bolt-only +0.204803 the pre-existing screen would
-            %     have reported for this exact bolt/load pair)
             %   Pty = FSY*FFY*PtL = 1.25*1.0*3,000             = 3,750 lbf
             %   PtyAllowBolt = At*Fty = 0.03637*120,000         = 4,364.4 lbf
             %   Nut yield = As*Fsy = 0.11703030*69,282         = 8,108.09 lbf
@@ -477,16 +455,15 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %   Rs = Psu/PsuAllow = 483/3,040.831                = 0.158838
             %   R (Eq. 22/23, ThreadsInShear) = Rt^2.0 + Rs^1.2
             %                                 = 0.688918 + 0.109937 = 0.798856
-            %     <= 1 -> interaction gate PASSES (matches the longhand
-            %     re-derivation in sizeFailingOnlyOnInteractionIsRejectedAndExplained,
-            %     R = 1.038380, for the DIFFERENT bolt/Rt/Rs there -- not
-            %     reused, just the same method).
+            %     <= 1 -> interaction gate PASSES (same method as
+            %     sizeFailingOnlyOnInteractionIsRejectedAndExplained's
+            %     R = 1.038380, for a different bolt/Rt/Rs).
             % core = [-0.051760, +0.163840, +5.295717] -- one negative ->
             % coreOk = false -> Status = Fail. interactionOk is TRUE (gate
             % passes), so Notes stays EMPTY (Notes only ever explains an
             % interaction-gate-caused Fail, per the header/Status rules) --
             % the explanation for THIS Fail lives in TensionUltBasis
-            % instead, which is exactly the column this task added.
+            % instead.
             lib = data.Library.load();
             b   = lib.bolt("NAS1351 1/4-28");
             m   = lib.material("A286");
@@ -620,9 +597,9 @@ classdef tBoltSizing < matlab.unittest.TestCase
 
         function memberGovernedYieldLowersTheYieldMargin(testCase)
             % Tension-YIELD takes the NASA-STD-5020B §4.4.2 system minimum,
-            % like engine.marginTensionYield. Until 2026-09-18 it was
-            % bolt-only, so this screen could Pass a size on yield that the
-            % full analysis then failed.
+            % like engine.marginTensionYield, rather than staying
+            % bolt-only -- a bolt-only screen could Pass a size on yield
+            % that a full system-consistent analysis fails.
             %
             % HAND-DERIVED. Same fixture as
             % engagementRatioResolvesPerRowNominalDiameter, with a parent
@@ -666,8 +643,8 @@ classdef tBoltSizing < matlab.unittest.TestCase
 
         function insertStiPitchDiameterResolvesPerRow(testCase)
             % Mirrors engagementRatioResolvesPerRowNominalDiameter, but for
-            % an Insert template's StiPitchDiameter (the NEW per-row
-            % resolution this task added): a Library supplied alongside a
+            % an Insert template's StiPitchDiameter: a Library supplied
+            % alongside a
             % fixed Insert ThreadedMember template must resolve EACH
             % candidate size's OWN StiPitchDiameter via Library.insertFor,
             % so the COMPUTED area (engine.marginInsert's
@@ -786,12 +763,11 @@ classdef tBoltSizing < matlab.unittest.TestCase
             %
             % REGRESSION GUARD for a silent wrong number. The per-row
             % Library.insertFor overwrite only fires when a Library was
-            % supplied AND that row's size matches. A template arriving
+            % supplied AND that row's size matches, so a template arriving
             % with StiPitchDiameter already set -- e.g. a ThreadedMember
-            % lifted off a Joint that Joint Config had
-            % already resolved -- was otherwise reused for EVERY candidate
-            % size, with Detail affirmatively labelling it the NASM33537
-            % value for that row. Non-conservative whenever the template's
+            % lifted off a Joint that Joint Config had already resolved --
+            % must be refused rather than applied unchanged to every
+            % candidate size. Non-conservative whenever the template's
             % size exceeds the row's: a 3/8-24 D2 (0.4020 in) applied to a
             % #10-32 row nearly doubles the true 0.2103 in, roughly
             % doubling the insert pull-out allowable and able to show Pass

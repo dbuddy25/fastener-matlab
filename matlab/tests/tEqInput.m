@@ -6,7 +6,7 @@ classdef tEqInput < matlab.unittest.TestCase
     %
     %   WHY THIS EXISTS. engine.eqInput is the vocabulary every margin row's
     %   Inputs array is written in, and it has exactly one trap: the no-
-    %   argument form must return a 1x0 array with the FIELDS PRESENT, not a
+    %   argument form must return a 1x0 array with the fields present, not a
     %   scalar of blanks and not a bare []. A scalar of blanks would render
     %   as a real term whose value happened to be missing, which is the one
     %   thing an analyst comparing this tool against a spreadsheet must never

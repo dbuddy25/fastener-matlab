@@ -21,16 +21,10 @@ classdef tFastenerToolSmoke < matlab.unittest.TestCase
 
     methods (Test)
         function theEntryPointOpensTheApp(testCase)
-            % THIS TEST USED TO PASS AGAINST A STUB. It called
-            % verifyWarningFree(@fastenerTool) when fastenerTool printed a
-            % banner and returned — so "the documented entry point works"
-            % was true of an entry point that launched nothing, for as long
-            % as it took a dead-code review to notice (2026-08-13).
-            %
-            % It now opens the real app, which means the handle MUST be
-            % captured and torn down: discarding it would leave a window
-            % open for the rest of the suite, the orphaned-figure problem
-            % gui.FastenerApp.delete was extended to prevent.
+            % Opens the real app; the handle must be captured and torn
+            % down, or it leaves a window open for the rest of the suite
+            % (the orphaned-figure problem gui.FastenerApp.delete guards
+            % against).
             app = fastenerTool();
             testCase.addTeardown(@() delete(app));
 
@@ -40,8 +34,8 @@ classdef tFastenerToolSmoke < matlab.unittest.TestCase
         end
 
         function theEntryPointIsWarningFree(testCase)
-            % The original Phase 1 assertion, kept — but with the handle
-            % captured this time.
+            % Must open with no warnings; the handle is captured so the
+            % window is torn down afterward.
             testCase.verifyWarningFree(@() closeAfter(testCase, fastenerTool()));
         end
     end

@@ -30,16 +30,13 @@ classdef tVersion < matlab.unittest.TestCase
         end
 
         function noShellKeepsItsOwnCopyOfTheVersion(testCase)
-            % THE DRIFT GUARD, and it now checks the thing that actually
-            % drifts. Both shells used to hold `ToolVersion = toolVersion()`
-            % as a Constant property, which looks like a single source and
-            % is not: MATLAB evaluates a Constant default ONCE at class load
-            % and caches it, so bumping toolVersion.m left both stale until
-            % the classes were cleared. That is how this test caught a
-            % 0.1.0 against a 0.2.0 in the same session.
-            %
-            % So the guard is no longer "do the copies agree" - there are no
-            % copies. It is "does anything still keep one".
+            % THE DRIFT GUARD: no shell may keep its own copy of the
+            % version. A `ToolVersion = toolVersion()` Constant property
+            % looks like a single source and is not: MATLAB evaluates a
+            % Constant default once at class load and caches it, so bumping
+            % toolVersion.m would leave that copy stale until the class is
+            % cleared. The guard is not "do the copies agree" - there must
+            % be no copies at all.
             src = fileread(fullfile(fileparts(fileparts( ...
                 which("tVersion"))), "+gui", "AppState.m"));
             testCase.verifyEmpty( ...

@@ -1,6 +1,6 @@
 function s = toStruct(obj)
 %TOSTRUCT  Recursively convert a model.* value object to a plain,
-%   JSON-ready struct (Phase 3.7). This is the generic round-trip core
+%   JSON-ready struct. This is the generic round-trip core
 %   shared by data.saveCase and data.saveFactorPreset — adding a new
 %   property to any +model class "just works" without touching this file.
 %
@@ -12,15 +12,15 @@ function s = toStruct(obj)
 %
 %   Encoding:
 %     - scalar object  -> struct with x_class = "model.Xxx" plus one field
-%                         per SETTABLE property (Dependent properties are
+%                         per settable property (Dependent properties are
 %                         skipped — they are recomputed on load, never
 %                         written back), each converted recursively.
 %     - object array   -> struct with x_class = "array", x_elemClass =
-%                         "model.Xxx" (the element class, so an EMPTY array
+%                         "model.Xxx" (the element class, so an empty array
 %                         still round-trips to the right type), and
 %                         x_elements = a cell array of recursed element
 %                         structs (jsonencode turns this into a JSON array).
-%                         Array-ness is detected from the PROPERTY's
+%                         Array-ness is detected from the property's
 %                         declared default value cardinality (numel ~= 1),
 %                         not just the current instance's numel — so a
 %                         FlangeStack with exactly one layer still encodes
@@ -41,7 +41,7 @@ end
 
 function out = convertValue(val, forceArray)
 %CONVERTVALUE  Convert one property value (or the top-level object).
-%   forceArray — true when the PROPERTY this value came from is known
+%   forceArray — true when the property this value came from is known
 %   (from its declared default) to be an array-type property, even if the
 %   current instance happens to hold exactly one element.
 cls = string(class(val));
@@ -78,7 +78,7 @@ out = convertObject(val);
 end
 
 function s = convertObject(obj)
-%CONVERTOBJECT  Convert one SCALAR model.* object to a tagged struct.
+%CONVERTOBJECT  Convert one scalar model.* object to a tagged struct.
 cls = string(class(obj));
 mc  = metaclass(obj);
 props = mc.PropertyList;
@@ -95,7 +95,7 @@ end
 end
 
 function tf = isArrayProperty(p)
-%ISARRAYPROPERTY  True when a meta.property's DECLARED default value has
+%ISARRAYPROPERTY  True when a meta.property's declared default value has
 %   numel ~= 1 — the signal that the property is array-typed (e.g.
 %   Joint.FlangeStack, declared "(1,:) model.FlangeLayer = ...empty(1,0)")
 %   as opposed to a plain scalar object property. Using the declared

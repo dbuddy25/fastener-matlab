@@ -2,7 +2,7 @@ classdef tApplyGlobalSettings < matlab.unittest.TestCase
     %TAPPLYGLOBALSETTINGS  engine.private.applyGlobalSettings temperature
     %   invariant guard: a settings file whose global temperatures violate
     %   MinTemperature <= ReferenceTemperature <= MaxTemperature must be
-    %   REJECTED via model.Joint's own model:Joint:temperatureOrder error,
+    %   rejected via model.Joint's own model:Joint:temperatureOrder error,
     %   not silently stamped onto an already-built Joint by direct
     %   property write (which bypasses the constructor's normal
     %   enforcement of that invariant).
@@ -52,7 +52,7 @@ classdef tApplyGlobalSettings < matlab.unittest.TestCase
         function outOfOrderSettingsTemperaturesRejected(testCase)
             % ColdTempC above HotTempC (and both straddling NominalTempC)
             % -- an obviously invalid settings file -- must error with
-            % model:Joint:temperatureOrder, the SAME id model.Joint's
+            % model:Joint:temperatureOrder, the same id model.Joint's
             % constructor raises for a directly-built invalid Joint, not
             % silently build an invalid joint and run the thermal preload
             % chain on it.
@@ -69,7 +69,7 @@ classdef tApplyGlobalSettings < matlab.unittest.TestCase
         end
 
         function nominalAboveHotAloneRejected(testCase)
-            % Cold <= Hot but NominalTempC (the reference) sits ABOVE Hot
+            % Cold <= Hot but NominalTempC (the reference) sits above Hot
             % -- still a violation of Min <= Ref <= Max even though
             % Min <= Max holds -- must be caught too (guards against a
             % check that only compares the two extremes).
@@ -86,8 +86,8 @@ classdef tApplyGlobalSettings < matlab.unittest.TestCase
         end
 
         function inOrderSettingsTemperaturesStillWork(testCase)
-            % Sanity check: a properly-ordered settings file is NOT caught
-            % by the new guard (no false positive), and the joints reach
+            % Sanity check: a properly-ordered settings file is not caught
+            % by the guard (no false positive), and the joints reach
             % applyGlobalSettings's stamping loop as before.
             [fj, fe] = tApplyGlobalSettings.minimalJointAndElements(testCase);
             fs = tApplyGlobalSettings.writeTempCsv(testCase, { ...

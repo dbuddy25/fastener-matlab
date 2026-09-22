@@ -1,5 +1,5 @@
 classdef tExport < matlab.unittest.TestCase
-    %TEXPORT  Phase 3.6 acceptance: engine.runBulk + report.exportResults.
+    %TEXPORT  Acceptance tests for engine.runBulk + report.exportResults.
     %   The one-call headless workflow (files in -> results table ->
     %   .xlsx out) must run end to end on the bundled template CSVs with
     %   the settings file supplying the global temperatures + factors
@@ -12,24 +12,23 @@ classdef tExport < matlab.unittest.TestCase
     %   orchestration + export shell.
     %
     %   See tests/tBulk.m's class header for the full story: the shipped
-    %   template's demo joint ("Sample four-bolt SHCS/nut joint" -- it used
-    %   to be misleadingly named "DABJ Sec. 9 class problem") has no
-    %   BoltSpec, but library.json now ships one for its NAS1351 3/8-24 +
+    %   template's demo joint ("Sample four-bolt SHCS/nut joint") has no
+    %   BoltSpec, but library.json ships one for its NAS1351 3/8-24 +
     %   A286 pairing, so the auto-lookup fills BoltRatedUltimateLoad /
     %   BoltRatedYieldLoad with the FF-S-86F Table VII rated pair,
     %   14,050 / 10,500 lbf, and boltTensileAllowable takes its "rated"
     %   basis rather than the derived At*Ftu / Eq. 18 fallback.
-    %   Tension-Ultimate ALSO resolves
+    %   Tension-Ultimate also resolves
     %   to a real number: the row carries BodyLengthInGrip/NutHeight (see
     %   data.makeTemplate's sampleNutJointRow), so engine.stiffness
     %   computes phi instead of erroring, and the Fig. 8 rupture branch
     %   (NASA-STD-5020B Eq. 10) evaluates to a real margin — see
-    %   runBulkEndToEnd's hand-derivation below. The SAME Fig. 8 gate (NOT
+    %   runBulkEndToEnd's hand-derivation below. The same Fig. 8 gate (not
     %   assured) governs Tension-Yield too (engine.marginTensionYield shares
     %   separationBeforeRuptureGate with Tension-Ultimate), so it takes
-    %   Eq. 16/17 and resolves NEGATIVE (~-1.339): the derived yield
+    %   Eq. 16/17 and resolves negative (~-1.339): the derived yield
     %   allowable is itself below PpMax on this row -- a genuinely
-    %   over-torqued joint, the same fact engine.preloadWatchdog already
+    %   over-torqued joint, the same fact engine.preloadWatchdog
     %   flags Critical on this row (see the Warnings check below).
     %
     %   Run from the matlab/ folder with:
@@ -77,7 +76,7 @@ classdef tExport < matlab.unittest.TestCase
 
             % Row 1 is the template's first demo element: it resolves its
             % per-bolt loads (Axial/Shear happen before the margin solver)
-            % and now analyzes cleanly (see the class header), including a
+            % and analyzes cleanly (see the class header), including a
             % real Tension-Ultimate (stiffness geometry is available on
             % this row) -- not an error.
             testCase.verifyEqual(T.ElementId(1), "1001");
@@ -108,7 +107,7 @@ classdef tExport < matlab.unittest.TestCase
             % Pty_allow is itself below PpMax -- a genuinely over-torqued
             % joint (matches engine.preloadWatchdog's Critical warning
             % below), not a defect; Eq. 15 never subtracts preload, so it
-            % previously masked this.
+            % cannot surface this.
             expectedPtuAllow = 14050;   % FF-S-86F Tbl VII, NAS1351 3/8-24 + A286
             expectedPtyAllow = 10500;   % FF-S-86F Tbl VII rated yield (no Eq. 18)
             phi = 0.394005;   n = 0.5;   PpMax = 11006.78;      % from the Tension-Ultimate derivation below
@@ -119,15 +118,15 @@ classdef tExport < matlab.unittest.TestCase
             testCase.verifyEqual(T.TensionYield(1), -1.3682, "AbsTol", 1e-3);
             testCase.verifyLessThan(T.TensionYield(1), 0);   % over-torqued: assert the sign plainly
 
-            % Tension-Ultimate resolves now: the row carries BodyLengthInGrip
+            % Tension-Ultimate resolves: the row carries BodyLengthInGrip
             % = 0.50 in and NutHeight = 0.328 in (data.makeTemplate's
             % sampleNutJointRow), so engine.stiffness computes phi instead
             % of erroring. Same hand-derivation as tests/tBulk.m's
             % bulkRunsTemplateJointWithoutCrashing (identical joint,
             % identical settings-template factors/temps, identical
-            % Axial = 5590). ThermalRate is no longer an analyst-facing
+            % Axial = 5590). ThermalRate is not an analyst-facing
             % column, so this row's thermal preload comes from
-            % engine.stiffness + TM-106943 Eq. 10, the SAME geometry phi
+            % engine.stiffness + TM-106943 Eq. 10, the same geometry phi
             % needs:
             %   engine.stiffness (L1 = 0.50, L2 = 0.25, grip 0.75 in, no
             %   washers, 30 deg frustum): Kb = 2,787,504 lbf/in,
@@ -166,14 +165,12 @@ classdef tExport < matlab.unittest.TestCase
             % Trailing Warnings column (engine.preloadWatchdog via
             % engine.analyze): this row's PpMax (~11,006.78, derived above)
             % is compared against the bolt's YIELD allowable -- which on
-            % THIS row is the FF-S-86F Table VII RATED value, 10,500. That
-            % is a DIFFERENT number from the Fig. 8 gate threshold above
-            % (0.75*14,050 = 10,537.5) even though both once evaluated to
-            % 10,539.6: the old derived yield allowable was Eq. 18's
-            % (Fty/Ftu)*Ptu_allow, and this bolt's Fty/Ftu = 120,000/160,000
-            % happens to equal the gate's own 0.75 -- a coincidence the
-            % catalogued pair now breaks, which is exactly why the two were
-            % never the same check.
+            % this row is the FF-S-86F Table VII rated value, 10,500. That
+            % is a different number from the Fig. 8 gate threshold above
+            % (0.75*14,050 = 10,537.5): the gate threshold is a fraction of
+            % Ptu_allow, while the watchdog compares PpMax against
+            % Pty_allow directly -- two distinct checks that can
+            % coincidentally align in value.
             % HAND-DERIVED:
             %   PpMax/YieldAllow = 11,006.78/10,500 = 1.048265 = 104.8%
             %   -- ABOVE 100% of yield -> PreloadExceedsYield, Critical
@@ -235,26 +232,25 @@ classdef tExport < matlab.unittest.TestCase
             testCase.assertEqual(height(Tdef), height(Tfac));
             % Same (clean) outcome from all three calls -- the point of
             % this test is that default / empty / explicit model.Factors()
-            % produce IDENTICAL results, so cross-check across all THREE
+            % produce identical results, so cross-check across all three
             % tables (not just two), on columns that actually demonstrate
             % agreement.
             testCase.verifyEqual(Tdef.Error(1), Temp.Error(1));
             testCase.verifyEqual(Tdef.Error(1), Tfac.Error(1));
             testCase.verifyEqual(Tdef.Error(1), "");
 
-            % TensionUlt(1) now resolves to a REAL number on all three
+            % TensionUlt(1) resolves to a real number on all three
             % calls (the row carries BodyLengthInGrip/NutHeight -- see the
             % class header) -- cross-check all three agree, then pin the
-            % value by hand. NOTE this scenario differs from
+            % value by hand. This scenario differs from
             % tests/tBulk.m's bulkRunsTemplateJointWithoutCrashing /
             % runBulkEndToEnd above: no settings file is given here, so the
-            % joint keeps the model.Joint DEFAULT temperatures (Reference =
+            % joint keeps the model.Joint default temperatures (Reference =
             % Max = Min = 20 degC) instead of the settings template's Hot/
-            % Cold excursion -- NO thermal excursion (dThot = dTcold = 0),
-            % so engine.preload's thermal term is zero regardless of
-            % ThermalRate (which no longer exists as an analyst override
-            % anyway), and PpMax is just the torque-control PpiMax with no
-            % thermal add-on. HAND-DERIVED, longhand:
+            % Cold excursion -- no thermal excursion (dThot = dTcold = 0),
+            % so engine.preload's thermal term is zero, and PpMax is just
+            % the torque-control PpiMax with no thermal add-on.
+            % HAND-DERIVED, longhand:
             %   PpiNom = NominalTorque/(NutFactor*D) = 470/(0.15*0.375)
             %          = 8,355.556; cMax = 1.042553, Gamma = 0.25
             %   PpiMax = cMax*(1+Gamma)*PpiNom = 1.302319*8,355.556
@@ -331,8 +327,8 @@ classdef tExport < matlab.unittest.TestCase
 
         function runBulkRefusesSettingsFileAsOutput(testCase)
             % Same guard, settingsFile slot -- the one runBulk uniquely
-            % takes as a THIRD input path (runWorkbook has only one input
-            % file), and the one this fix actually adds coverage for.
+            % takes as a third input path (runWorkbook has only one input
+            % file).
             jf = tExport.templatePath("joint_library_template.csv");
             ef = tExport.templatePath("elements_template.csv");
             sf = tExport.templatePath("settings_template.csv");
@@ -406,8 +402,8 @@ classdef tExport < matlab.unittest.TestCase
             % e1 passes outright; e4's NaN interaction is NOT a failure
             % (NaN > 1 is false), and its margin is positive.
             testCase.verifyEqual(count("Pass"), 2);
-            % e2 on margin, e3 on interaction ALONE -- the case that used
-            % to count as a pass.
+            % e2 on margin, e3 on interaction alone -- exactly the case
+            % WorstMargin >= 0 alone would miss.
             testCase.verifyEqual(count("Fail"), 2);
             testCase.verifyEqual(count("Error"), 0);
         end
@@ -415,8 +411,8 @@ classdef tExport < matlab.unittest.TestCase
         function summaryStillCountsWithoutAnInteractionColumn(testCase)
             % report.exportResults is documented as working on any table
             % carrying WorstMargin + Error, not only on analyzeBulk output.
-            % The interaction guard must be optional, not a new required
-            % column -- and the old behaviour must survive its absence.
+            % The interaction guard must be optional, not a required
+            % column, and counting must still work without it.
             T = table(["e1"; "e2"], [0.5; -0.2], ["", ""]', ...
                 'VariableNames', {'ElementId', 'WorstMargin', 'Error'});
 

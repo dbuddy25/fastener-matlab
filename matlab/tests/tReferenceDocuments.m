@@ -5,7 +5,7 @@ classdef tReferenceDocuments < matlab.unittest.TestCase
     %       runTests("ReferenceDocuments")
     %
     %   WHY THIS IS TESTED AT ALL, given it is a list of constants: the
-    %   list is a COMPLIANCE artifact, not decoration. It is the tool's own
+    %   list is a compliance artifact, not decoration. It is the tool's own
     %   statement of which documents its numbers rest on and in what role,
     %   and CONVENTIONS.md's document hierarchy is a rule with real
     %   consequences -- the DABJ course book being marked Validation rather
@@ -78,7 +78,7 @@ classdef tReferenceDocuments < matlab.unittest.TestCase
         end
 
         function theCopyrightedDocumentsAreMarkedUnshippable(testCase)
-            % THIS IS THE FLAG THAT KEEPS THE TOOL LEGAL. Every NAS/NASM
+            % This is the flag that keeps the tool legal. Every NAS/NASM
             % sheet carries "COPYRIGHT ... Aerospace Industries Association
             % ... ALL RIGHTS RESERVED" on its face, the course book carries
             % a copyright notice and restrictions, and the Heli-Coil
@@ -124,7 +124,7 @@ classdef tReferenceDocuments < matlab.unittest.TestCase
         end
 
         function theStoredFolderRoundTrips(testCase)
-            % A TEMP STORE, not the real one. This writes a per-user
+            % A temp store, not the real one. This writes a per-user
             % preference, and a test that pointed a developer's machine at
             % a folder it then deleted would be a nasty thing to leave
             % behind. Same reason data.saveFactorPreset takes a file.

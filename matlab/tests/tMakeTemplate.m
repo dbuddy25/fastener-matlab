@@ -1,5 +1,5 @@
 classdef tMakeTemplate < matlab.unittest.TestCase
-    %TMAKETEMPLATE  Step 2b acceptance: data.makeTemplate workbook generator.
+    %TMAKETEMPLATE  data.makeTemplate workbook generator.
     %   The generated multi-sheet .xlsx must (a) exist and be non-empty,
     %   (b) round-trip through data.loadJointLibrary — the Joints sheet's
     %   two-row header (friendly names above the MATLAB names) is handled
@@ -35,7 +35,7 @@ classdef tMakeTemplate < matlab.unittest.TestCase
             d = dir(f);
             testCase.assertGreaterThan(d.bytes, 0, "workbook is empty");
 
-            % Parse-back: Joints is the FIRST sheet, so the plain reader
+            % Parse-back: Joints is the first sheet, so the plain reader
             % (which reads sheet 1) must parse it — friendly banner row
             % skipped by the header auto-detect, examples intact.
             jl = data.loadJointLibrary(f, data.Library.load());
@@ -73,7 +73,7 @@ classdef tMakeTemplate < matlab.unittest.TestCase
                 jl(2).Joint.ThreadedMember.RatedUltimateLoad, 2600, "AbsTol", 1e-12);
 
             % HelicoilLengthRatio (insertExampleRow: 1.5) round-trips onto
-            % EngagementRatio itself, NOT a computed EngagementLength --
+            % EngagementRatio itself, not a computed EngagementLength --
             % data.loadJointLibrary stores the ratio and lets
             % engine/private/resolveEngagementLength multiply it out per
             % row at analysis time.
@@ -119,7 +119,7 @@ classdef tMakeTemplate < matlab.unittest.TestCase
                 testCase.verifyTrue(any(names == want), ...
                     "Fields sheet is missing a row for " + want);
             end
-            % HelicoilShearArea is deliberately NOT a dictionary row --
+            % HelicoilShearArea is deliberately not a dictionary row --
             % ShearEngagementArea has no analyst-facing column at all (see
             % data.loadJointLibrary), so the Fields sheet must not document
             % one either.

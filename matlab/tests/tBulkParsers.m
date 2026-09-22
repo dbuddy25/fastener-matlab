@@ -1,16 +1,16 @@
 classdef tBulkParsers < matlab.unittest.TestCase
-    %TBULKPARSERS  Phase 3.5b acceptance: the bulk input parsers.
+    %TBULKPARSERS  Acceptance tests for the bulk input parsers.
     %   data.loadJointLibrary (joint-table -> model.Joint per row, library
-    %   keys resolved through data.Library; NEW layout: boltSpec
-    %   auto-lookup, AxialX/Y/Z bolt-direction marks, On-gated washers,
-    %   Nut*/Helicoil* threaded-member columns, header-row auto-detect),
-    %   data.loadElements (element + forces table -> struct array for
-    %   engine.resolveForces; same header-row auto-detect as the joint
-    %   reader), and data.loadSettings (global temperatures + factors). All are exercised against the shipped template CSVs in
-    %   templates/ — the joint template's first row is a sample four-bolt
-    %   SHCS/nut joint built from real catalog hardware (NAS1351 3/8-24,
-    %   A286, Al 7075-T7351), NOT the DABJ Section 9 class-problem joint
-    %   (library.json no longer ships that fixture; see
+    %   keys resolved through data.Library; boltSpec auto-lookup, AxialX/Y/Z
+    %   bolt-direction marks, On-gated washers, Nut*/Helicoil* threaded-member
+    %   columns, header-row auto-detect), data.loadElements (element + forces
+    %   table -> struct array for engine.resolveForces; same header-row
+    %   auto-detect as the joint reader), and data.loadSettings (global
+    %   temperatures + factors). All are exercised against the shipped
+    %   template CSVs in templates/ — the joint template's first row is a
+    %   sample four-bolt SHCS/nut joint built from real catalog hardware
+    %   (NAS1351 3/8-24, A286, Al 7075-T7351), NOT the DABJ Section 9
+    %   class-problem joint (library.json does not ship that fixture; see
     %   validation.dabjSection9, which builds it inline). This suite checks
     %   the PARSER's field mapping against the table schema, not answer-key
     %   physics.
@@ -51,12 +51,10 @@ classdef tBulkParsers < matlab.unittest.TestCase
 
     methods (Test)
         function loadsJointLibrary(testCase)
-            % The template's first row uses real catalog hardware (NAS1351
-            % 3/8-24, A286, Al 7075-T7351) in a DABJ-Section-9-like
-            % configuration -- NOT the DABJ validation fixture, which
-            % library.json no longer ships (see validation.dabjSection9,
-            % which now builds that fixture's geometry inline). This test
-            % checks the PARSER's field mapping, not answer-key numbers.
+            % Real catalog hardware (NAS1351 3/8-24, A286, Al 7075-T7351) in
+            % a DABJ-Section-9-like configuration, NOT the DABJ validation
+            % fixture (see the class header) -- checks the PARSER's field
+            % mapping, not answer-key numbers.
             lib = data.Library.load();
             jl  = data.loadJointLibrary( ...
                 tBulkParsers.templatePath("joint_library_template.csv"), lib);
@@ -68,8 +66,8 @@ classdef tBulkParsers < matlab.unittest.TestCase
             testCase.verifyClass(j, "model.Joint");
 
             % Library-resolved pieces. BoltSpec is blank, but the catalog
-            % now ships a boltSpec for NAS1351 3/8-24 + A286, so the
-            % AUTO-LOOKUP HITS and fills the rated loads from FF-S-86F
+            % carries a boltSpec for NAS1351 3/8-24 + A286, so the
+            % auto-lookup hits and fills the rated loads from FF-S-86F
             % Table VII (heat and corrosion resistant steel = A286).
             % This is the path data.loadJointLibrary exists to exercise:
             % a row that names only a bolt and a material still arrives
@@ -96,17 +94,17 @@ classdef tBulkParsers < matlab.unittest.TestCase
             testCase.verifyEqual(j.PreloadSpec.NutFactor, 0.15, "AbsTol", 1e-12);
             testCase.verifyEqual(j.PreloadSpec.Uncertainty, 0.25, "AbsTol", 1e-12);
             testCase.verifyEqual(j.PreloadSpec.RelaxationFraction, 0.05, "AbsTol", 1e-12);
-            % No ThermalRate column (removed -- not an analyst-facing
-            % input, see model.PreloadSpec): stays the model default 0, so
+            % No ThermalRate column (not analyst-facing, see
+            % model.PreloadSpec): stays the model default 0, so
             % this row's thermal preload comes from the CTE-mismatch/
             % joint-stiffness path (TM-106943 Eq. 10) -- see tests/tBulk.m.
             testCase.verifyEqual(j.PreloadSpec.ThermalRate, 0, "AbsTol", 1e-12);
             testCase.verifyFalse(j.PreloadSpec.SeparationCritical);
 
-            % BodyLengthInGrip / NutHeight -- added so this row's stiffness
-            % actually resolves (see data.makeTemplate's sampleNutJointRow
-            % for the geometry reasoning and tests/tBulk.m for the
-            % Tension-Ultimate consequence).
+            % BodyLengthInGrip / NutHeight make this row's stiffness resolve
+            % (see data.makeTemplate's sampleNutJointRow for the geometry
+            % reasoning and tests/tBulk.m for the Tension-Ultimate
+            % consequence).
             testCase.verifyEqual(j.BodyLengthInGrip, 0.50, "AbsTol", 1e-12);
             testCase.verifyEqual(j.ThreadedMember.EngagementLength, 0.328, "AbsTol", 1e-12);
 
@@ -186,7 +184,7 @@ classdef tBulkParsers < matlab.unittest.TestCase
         function insertRowMapsHelicoilColumns(testCase)
             % The template's second row exercises the insert configuration:
             % HelicoilLengthRatio 1.5 -> ThreadedMember.EngagementRatio 1.5
-            % STORED AS THE RATIO ITSELF (not multiplied into an inch
+            % stored as the ratio itself (not multiplied into an inch
             % value here) -- engine/private/resolveEngagementLength is the
             % one place Le = EngagementRatio x Bolt.NominalDiameter gets
             % computed, at analysis time against THAT row's own bolt (see
@@ -208,7 +206,7 @@ classdef tBulkParsers < matlab.unittest.TestCase
 
             % No HelicoilShearArea column exists -- ShearEngagementArea is
             % not analyst-facing (NASA-STD-5020B Section 4.4.1 wants a
-            % SPECIFIED insert catalogue geometry, not a typed area), so a
+            % specified insert catalogue geometry, not a typed area), so a
             % bulk-loaded Insert row always leaves it at the model default
             % (NaN); engine.marginInsert derives the NASA-STD-5020B Section
             % 4.4.1 parent-material pull-out area itself from
@@ -353,11 +351,10 @@ classdef tBulkParsers < matlab.unittest.TestCase
         end
 
         function elementsWithJointNameUnchanged(testCase)
-            % REGRESSION GUARD for the optional-joint_name change: a file
-            % that DOES supply joint_name must parse exactly as before
-            % (same row shape as elementsHeaderRowAutoDetect). Expected
-            % values are the CSV literals written below. The two-output
-            % form must report zero skipped rows for a clean file.
+            % REGRESSION GUARD: a file that supplies joint_name must parse
+            % with it kept (same row shape as elementsHeaderRowAutoDetect).
+            % Expected values are the CSV literals written below. The
+            % two-output form must report zero skipped rows for a clean file.
             f = tBulkParsers.writeTempCsv(testCase, { ...
                 'element_id,joint_name,load_case,FX,FY,FZ', ...
                 '2001,HDR test,Liftoff,100,0,250'});
@@ -434,8 +431,8 @@ classdef tBulkParsers < matlab.unittest.TestCase
             % Headless run on UNMAPPED elements (no joint_name anywhere):
             % the per-row Error must name the real problem — no
             % joint_name / no mapping — not `Joint "" not found in the
-            % joint library.` Same per-row error mechanism as before (no
-            % throw, margins NaN, batch continues). Library row: the
+            % joint library.` The per-row error mechanism applies here too
+            % (no throw, margins NaN, batch continues). Library row: the
             % minimal HDR-test joint from headerRowAutoDetect.
             lib = data.Library.load();
             fj = tBulkParsers.writeTempCsv(testCase, { ...

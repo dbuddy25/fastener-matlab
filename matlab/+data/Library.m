@@ -1,5 +1,5 @@
 classdef Library
-    %LIBRARY  Hardware/material catalog loaded from +data/library/ (Phase 2.2).
+    %LIBRARY  Hardware/material catalog loaded from +data/library/.
     %   ONE JSON FILE PER PART: library/<category>/<part>.json, with
     %   library/library.json as the header (schemaVersion, units, and the
     %   curated per-category key order). Users add parts without touching it
@@ -44,7 +44,7 @@ classdef Library
     %   id "data:Library:keyNotFound". Units per UNITS.md (in, lbf, psi,
     %   temperature degC, CTE 1/degC) — stated in the file's "units" block.
     %
-    %   Headless editing (Phase 3 — the Phase 4.10 GUI editor wraps these):
+    %   Headless editing (the GUI editor wraps these):
     %
     %       lib = lib.addMaterial(entry);   % value-class: capture the return
     %       lib = lib.addBolt(entry);
@@ -54,11 +54,11 @@ classdef Library
     %       lib = lib.addInsert(entry);
     %       lib.save(path);                 % writes the CUSTOM entries only
     %
-    %   BASELINE vs CUSTOM PROVENANCE (GUI step 3 — baseline protection):
+    %   BASELINE vs CUSTOM PROVENANCE (baseline protection):
     %   every material / bolt / boltSpec / nut / washer / insert entry
     %   carries an "origin" field, either "baseline" (shipped, reviewed seed
-    %   data) or "custom" (added by a user). TWO FIELDS COEXIST — DO NOT
-    %   CONFLATE THEM:
+    %   data) or "custom" (added by a user). TWO FIELDS COEXIST — do not
+    %   conflate them:
     %     - origin : the baseline/custom protection flag ("baseline"|"custom").
     %     - source : free-text provenance/citation prose (which document the
     %                numbers came from). Pre-dates origin, appears on every
@@ -67,7 +67,7 @@ classdef Library
     %   already means the citation string here, and one name for two
     %   unrelated fields is exactly how they get conflated.)
     %
-    %   PROVENANCE ON WRITE (GUI step 9 — the app as system of record).
+    %   PROVENANCE ON WRITE (the app as system of record).
     %   While the baseline is curated by editing library.json directly, git
     %   carries the record: who changed a number, when, and with what
     %   review behind it. Once the app writes entries, git stops carrying
@@ -200,13 +200,10 @@ classdef Library
             %   whatever this installation added -- and the bare baseline
             %   when it does not.
             %
-            %   USE THIS, NOT load(), ANYWHERE A REAL RUN RESOLVES HARDWARE.
-            %   The GUI, the bulk runners and the template generator all
-            %   called load() directly, which reads only the seed. That was
-            %   invisible while nothing could write a user library; the
-            %   moment the Materials & Hardware page could, it would have
-            %   meant a material added and saved in the GUI was not found by
-            %   runBulk, and was gone from the GUI itself after a restart.
+            %   USE THIS, not load(), anywhere a real run resolves hardware.
+            %   load() alone reads only the seed, so a material added and
+            %   saved through the GUI would not be found by runBulk, and
+            %   would be gone from the GUI itself after a restart.
             p = data.Library.userPath();
             d = data.Library.dropInPath();
             if isfile(p)
@@ -219,10 +216,10 @@ classdef Library
         function p = userPath()
             %USERPATH  Where this installation's CUSTOM entries live.
             %   fullfile(userpath, "fastener_library.json"), falling back to
-            %   a repo-local file next to +data/ when userpath() is empty
-            %   (not yet initialized on this MATLAB install) — the same
-            %   shape, and the same fallback, as the user factor-presets
-            %   file in +data/private/userFactorPresetsPath.m.
+            %   prefdir() when userpath() is empty (not yet initialized on
+            %   this MATLAB install) — the same shape, and the same
+            %   fallback, as the user factor-presets file in
+            %   +data/private/userFactorPresetsPath.m.
             %
             %   WHY NOT THE INSTALL DIRECTORY. save() refuses to write the
             %   bundled seed, and a compiled standalone cannot reliably
@@ -235,15 +232,15 @@ classdef Library
             %   run can never read or write the real user's library.
             up = userpath();
             if isempty(up) || strlength(string(up)) == 0
-                % PREFDIR, NOT THE INSTALL DIRECTORY. This used to fall
-                % back to a file beside Library.m, which is wrong twice
-                % over: from source it writes a user's private data into
-                % the repository, and in the packaged .exe that folder is
-                % under ctfroot -- read-only under Program Files, or
-                % extracted fresh each run, so a saved custom library
-                % would either refuse to write or silently disappear.
-                % prefdir() is per-user and always writable, which is why
-                % gui.recentFiles already uses it.
+                % PREFDIR, NOT THE INSTALL DIRECTORY. A file beside
+                % Library.m would be wrong twice over: from source it
+                % writes a user's private data into the repository, and in
+                % the packaged .exe that folder is under ctfroot --
+                % read-only under Program Files, or extracted fresh each
+                % run, so a saved custom library would either refuse to
+                % write or silently disappear. prefdir() is per-user and
+                % always writable, which is why gui.recentFiles already
+                % uses it.
                 p = string(fullfile(prefdir(), "fastener_library.json"));
             else
                 p = string(fullfile(char(up), "fastener_library.json"));
@@ -1189,7 +1186,7 @@ classdef Library
 
     methods (Static, Access = private)
         function raw = readFolder(folder)
-            %READFOLDER  Baseline folder -> the raw struct one file used to give.
+            %READFOLDER  Baseline folder -> the raw struct a single library file gives.
             %   folder/library.json is the header (schemaVersion, description,
             %   units, order); folder/<category>/*.json is ONE ENTRY PER FILE.
             %   The "key" inside a file is authoritative - the filename is

@@ -154,15 +154,13 @@ classdef tGuiResults < matlab.uitest.TestCase
         end
 
         function anUnassuredGateIsReportedButNotCountedAsAFailure(testCase)
-            % This test previously asserted the opposite - that a not-assured
-            % gate makes the verdict read FAIL - on the reasoning that
-            % counting only the table would let a failed Fig. 8 gate escape.
-            % That reasoning was wrong. Nothing escapes: the gate SELECTS the
-            % conservative Eq. 10 rupture branch, and that choice is already
-            % priced into the Tension-Ultimate margin. Counting it again
-            % reports one fact twice and paints a red failure on a sound
-            % joint. The engine gives the gate MS = NaN so it cannot govern
-            % WorstMargin; the verdict follows the same rule.
+            % A branch selection must not read as a failed check: the gate
+            % SELECTS the conservative Eq. 10 rupture branch, and that
+            % choice is already priced into the Tension-Ultimate margin.
+            % Counting it again would report one fact twice and paint a
+            % red failure on a sound joint. The engine gives the gate
+            % MS = NaN so it cannot govern WorstMargin; the verdict
+            % follows the same rule.
             testCase.showResult(tGuiResults.syntheticResult("decisionNotAssured"));
 
             verdict = string(testCase.Page.verdictLabel().Text);
@@ -179,12 +177,12 @@ classdef tGuiResults < matlab.uitest.TestCase
     % ---- Scope: the verdict and footer are always qualified ---------------
     methods (Test)
         function theVerdictDoesNotQualifyAgainstNothing(testCase)
-            % It used to end "- N more computed, not shown". Nothing is
-            % hidden any more, so that would read "0 more computed, not
-            % shown" - a qualification about nothing, and exactly the kind
-            % of boilerplate a reader learns to skip and then misses when
-            % it says something real. The scope statement lives in the
-            % footer, which still refuses to claim a complete assessment.
+            % Nothing is hidden, so "N more computed, not shown" would
+            % read "0 more computed, not shown" - a qualification about
+            % nothing, and exactly the kind of boilerplate a reader
+            % learns to skip and then misses when it says something
+            % real. The scope statement lives in the footer, which
+            % still refuses to claim a complete assessment.
             testCase.showSynthetic();
             txt = string(testCase.Page.verdictLabel().Text);
 
@@ -194,9 +192,8 @@ classdef tGuiResults < matlab.uitest.TestCase
         end
 
         function theScopeFooterNoLongerClaimsChecksAreMissing(testCase)
-            % It used to name the checks with no row and say where they
-            % went. All fifteen have rows now, so naming any would send a
-            % reader hunting for something that is on screen.
+            % All fifteen checks have rows, so naming any as absent would
+            % send a reader hunting for something that is on screen.
             txt = string(testCase.Page.scopeLabel().Text);
 
             testCase.verifyTrue(contains(txt, "all 15"));
@@ -338,12 +335,9 @@ classdef tGuiResults < matlab.uitest.TestCase
             % Section 2: the hidden 4.4.1 rows produce the allowable that
             % GOVERNS Tension-Ultimate. Hiding the rows must not hide that.
             %
-            % This asserted the literal "Ptu_allow" - a word that happened
-            % to appear in the prose the panel used to dump. The panel now
-            % renders the same fact from Result.Allowables as a per-mode
-            % list, so the assertion moved onto the FACT: which mode
-            % governs, and at what load. Strictly stronger than the token
-            % it replaced, and no longer coupled to a sentence's wording.
+            % The assertion checks the FACT - which mode governs, and at
+            % what load - rather than a literal string, so it stays true
+            % regardless of how the panel phrases the sentence.
             testCase.showSynthetic();
             txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
             testCase.verifyTrue(contains(txt, "FASTENING-SYSTEM ALLOWABLE"));
@@ -388,8 +382,8 @@ classdef tGuiResults < matlab.uitest.TestCase
             p = testCase.Page;
             testCase.verifyEqual(char(p.marginTable().Visible), 'on');
             testCase.verifyNumElements(p.marginTable().Data(:, 1), 14);
-            % The verdict no longer carries a "N more computed, not shown"
-            % tail - nothing is hidden. It still states what it counted.
+            % Nothing is hidden, so the verdict carries no "N more
+            % computed, not shown" tail. It still states what it counted.
             testCase.verifyTrue( ...
                 contains(string(p.verdictLabel().Text), "displayed checks"));
         end
@@ -449,8 +443,8 @@ classdef tGuiResults < matlab.uitest.TestCase
             %   "withWarning"   as "mixed", plus one warning row
             %   "withPreload"   as "mixed", plus Preload and DesignLoads
             %
-            %   EVERY OTHER VARIANT LEAVES Preload AND DesignLoads EMPTY, and
-            %   that is deliberate: struct() with no fields is what
+            %   Every other variant leaves Preload and DesignLoads empty,
+            %   and that is deliberate: struct() with no fields is what
             %   engine.Result defaults to, so the readout's absent-field path
             %   is the one most of this file exercises.
             % Inputs defaults EMPTY on every row -- the un-wired shape --
@@ -462,11 +456,9 @@ classdef tGuiResults < matlab.uitest.TestCase
                 'Inputs', engine.eqInput());
 
             % ONE SOURCE OF TRUTH FOR THE BRANCH. Result.Gate and the
-            % gate row's Status are two views of the same determination,
-            % and the fixture used to derive the first from the second by
-            % string comparison -- so renaming the status silently flipped
-            % every variant to not-assured while still looking correct.
-            % Both now come from this boolean.
+            % gate row's Status are two views of the same determination;
+            % both come from this boolean so renaming the status can
+            % never silently desync them.
             %
             % The status is NOT Pass/Fail: the gate selects a branch rather
             % than assessing anything against an allowable (see
@@ -535,9 +527,7 @@ classdef tGuiResults < matlab.uitest.TestCase
                 Warnings  = warnings);
 
             % The Fig. 8 gate and the 4.4.1 allowable as STRUCTURED data -
-            % what the decisions panel now reads. Before, it dug the same
-            % facts out of tu.Decision prose that arrived as Narrative AND
-            % as the gate row's Detail.
+            % what the decisions panel reads.
             if gateAssured
                 r.Gate = struct('Assessed', true, 'Assured', true, ...
                     'Trace', "e/D >= 1.5 ASSUMED (no EdgeDistance set)", ...
@@ -549,8 +539,7 @@ classdef tGuiResults < matlab.uitest.TestCase
                     'Phi', 0.336, 'N', 1.00);
             end
 
-            % The §4.4.4 bending block the decisions panel now reads
-            % instead of printing a hardcoded sentence.
+            % The §4.4.4 bending block the decisions panel reads.
             if variant == "bendingIncluded"
                 r.Bending = struct('Included', true, 'Fbu', 16297.4662, ...
                     'Rb', 0.101859, 'Diameter', 0.5, 'Basis', "body", ...
@@ -777,9 +766,9 @@ classdef tGuiResults < matlab.uitest.TestCase
         end
 
         function aVerifiedExemptionDoesNotSayAssumed(testCase)
-            % The lines were hardcoded to "ASSUMED, not verified" and
-            % printed unconditionally, so a joint that HAD recorded the
-            % determination was told its own verification did not exist.
+            % A joint whose bending exemption was actually recorded as
+            % verified must not be told the exemption was merely
+            % assumed.
             testCase.showResult( ...
                 tGuiResults.syntheticResult("bendingVerifiedExempt"));
             txt = tGuiResults.bendingBlock(testCase);
@@ -818,9 +807,9 @@ classdef tGuiResults < matlab.uitest.TestCase
     % ---- Selected check ----------------------------------------------------
     methods (Test)
         function theSelectedCheckShowsItsValue(testCase)
-            % It named the check and its status and then printed citations,
-            % so the number you selected the row to read was back in the
-            % table.
+            % The number itself must appear here, not just the check name
+            % and citations - otherwise reading it means going back to
+            % the table.
             testCase.showSynthetic();
             p = testCase.Page;
             p.selectRow(2);   % Tension-Yield, MS = -0.14
@@ -920,12 +909,10 @@ classdef tGuiResults < matlab.uitest.TestCase
     end
 
     % ---- Decisions read structure, not prose -------------------------------
-    %   The panel used to render tu.Decision, which the engine built by
-    %   gluing the gate trace, the equation that won and the Ptu_allow
-    %   basis into one sentence - and which arrived TWICE, as
-    %   Result.Narrative and as the gate row's Detail. It now reads
-    %   Result.Gate and Result.Allowables, which carry the same facts as
-    %   separate fields.
+    %   The panel reads Result.Gate and Result.Allowables as separate
+    %   structured fields - the gate trace, the winning equation and
+    %   the Ptu_allow basis - rather than a single sentence duplicated
+    %   between Result.Narrative and the gate row's Detail.
     methods (Test)
         function theGoverningEquationIsItsOwnLine(testCase)
             testCase.showResult(tGuiResults.syntheticResult("decisionNotAssured"));
@@ -955,9 +942,8 @@ classdef tGuiResults < matlab.uitest.TestCase
         end
 
         function theSystemAllowableIsListedPerMode(testCase)
-            % It is a table - one row per tensile failure mode, the minimum
-            % governing - and used to be one prose sentence carrying all of
-            % it.
+            % It is a table - one row per tensile failure mode, with the
+            % minimum governing.
             testCase.showSynthetic();
             txt = string(testCase.Page.decisionArea().Value);
 
@@ -975,9 +961,9 @@ classdef tGuiResults < matlab.uitest.TestCase
         end
 
         function anIncompleteAllowableSetIsFlaggedAsOptimistic(testCase)
-            % The clause that used to be buried mid-sentence. If a mode
-            % that applies could not be assessed, the minimum is over an
-            % incomplete set and every margin from it is optimistic.
+            % If a mode that applies could not be assessed, the minimum
+            % is over an incomplete set and every margin from it is
+            % optimistic.
             testCase.showSynthetic();
             txt = string(testCase.Page.decisionArea().Value);
 

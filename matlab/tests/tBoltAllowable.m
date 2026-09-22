@@ -74,9 +74,8 @@ classdef tBoltAllowable < matlab.unittest.TestCase
 
             % PsL = 0 -> Rs = 0 -> R = Rt^1.5 (BodyInShear tension exponent;
             % 0^2.5 shear term drops out) = (1610/15200)^1.5 = 0.034473.
-            % (The OLD solve-for-a reading gave a = Ptu_allow/Ptu exactly
-            % when Rs = 0, for any et -- (a*Rt)^et = 1 => a*Rt = 1 -- but R
-            % itself is Rt^et, a different number; see marginInteraction.m.)
+            % (a = Ptu_allow/Ptu is a different quantity from R = Rt^et:
+            % (a*Rt)^et = 1 => a*Rt = 1, not R itself; see marginInteraction.m.)
             ia = engine.marginInteraction(j, d);
             testCase.verifyEqual(ia.R, (Ptu/15200)^1.5, "AbsTol", 1e-9);
             testCase.verifyEqual(ia.R, 0.034473, "AbsTol", 1e-5);
@@ -216,19 +215,13 @@ classdef tBoltAllowable < matlab.unittest.TestCase
         end
 
         function everyInteractionExitCarriesTheBendingBlock(testCase)
-            % engine.analyze reads ia.Bending UNCONDITIONALLY (analyze.m,
-            % Result.Bending). A not-evaluated exit that omits the field
-            % therefore does not degrade to NotEvaluated — it kills the
-            % whole run with "Unrecognized field name", every margin lost
-            % because one could not be formed.
-            %
-            % That is exactly what the no-tensile-allowable exit did: it
-            % hand-rolled its own struct instead of going through
-            % bendingNotEvaluated. The two tests directly above walk that
-            % same branch and passed throughout, because they read R and
-            % Detail and never asked for Bending. So this asserts the
-            % SHAPE, which is the part a caller depends on and the part no
-            % value assertion was ever going to notice.
+            % engine.analyze reads ia.Bending unconditionally (analyze.m,
+            % Result.Bending): a not-evaluated exit that omits the field
+            % would crash the whole run with "Unrecognized field name"
+            % rather than degrading gracefully. This asserts the shape of
+            % the returned struct, not just its values — a missing field
+            % would pass a value-only assertion (reading R and Detail) and
+            % still break every caller.
             % No rating AND no At: baseJoint(NaN, NaN) only clears the
             % ratings, and the fixture's own At = 0.0878 still forms the
             % derived At*Ftu, so the allowable resolves and the exit is
@@ -255,12 +248,12 @@ classdef tBoltAllowable < matlab.unittest.TestCase
             testCase.verifyFalse(contains(ia.Method, "bending"), ...
                 'A missing tensile allowable is not a bending exit.');
 
-            % And the whole point: analyze survives it, and the block
-            % reaches the Result intact.
+            % analyze must survive it, with the block reaching the Result
+            % intact.
             %
-            % NOT asserted via the Interaction row's MS: analyze.m builds
+            % Not asserted via the Interaction row's MS: analyze.m builds
             % that row as entry("Interaction", NaN, ...) — its MS is NaN in
-            % EVERY run, evaluated or not, because the row carries R rather
+            % every run, evaluated or not, because the row carries R rather
             % than a margin. isnan on it would pass against a completely
             % broken engine. Result.Bending is the field that only gets
             % populated if the exit actually carried one.

@@ -10,13 +10,13 @@ classdef AppState < handle
     %   window.
     %
     %   HOW EVENTS FIRE: every data property has a `set.` property setter
-    %   that notifies its event. Assignment IS the notification, so a page
+    %   that notifies its event. Assignment is the notification, so a page
     %   cannot update state and forget to announce it:
     %
     %       state.Joint = j;        % fires JointChanged
     %
     %   THE ONE RULE THAT MAKES THIS SAFE (CONVENTIONS.md A4): a data
-    %   setter NEVER touches IsDirty. Dirtiness is set only by markDirty()
+    %   setter never touches IsDirty. Dirtiness is set only by markDirty()
     %   and cleared only by clearDirty(). That is what lets applyCaseStruct
     %   repopulate everything — firing every refresh event — without
     %   claiming the user edited anything. A dirty flag set by programmatic
@@ -30,7 +30,7 @@ classdef AppState < handle
     %       SettingsChanged     Settings (global service temperatures) replaced
     %       LibraryChanged      hardware Library reloaded or edited
     %       JointLibraryChanged defined joints added/removed/renamed
-    %       ElementsChanged     the BULK INPUT DATA changed — element mapping
+    %       ElementsChanged     the bulk input data changed — element mapping
     %                           and/or imported element forces. One event
     %                           covers both because the Element Mapping and
     %                           Element Forces pages cross-validate against
@@ -43,14 +43,14 @@ classdef AppState < handle
     %       DirtyChanged        the dirty flag OR the current file changed —
     %                           i.e. the window title needs rebuilding
     %
-    %   ProjectChanged is an ELEVENTH event, added beyond Section 5's list:
+    %   ProjectChanged is an eleventh event, added beyond Section 5's list:
     %   Project metadata is real case state that round-trips through the case
     %   file, and a property with no event cannot be observed by the page
     %   that owns it. See the class notes in GUI_SPEC.md Section 5 when that
     %   list is next revised.
     %
     %   SERIALIZATION (CONVENTIONS.md A7): toCaseStruct / applyCaseStruct
-    %   are the ONLY way state is captured and restored. File > New, File >
+    %   are the only way state is captured and restored. File > New, File >
     %   Open and every reset go through applyCaseStruct, so a property added
     %   later cannot be handled by one path and forgotten by the other.
     %   Model objects convert via data.toStruct / data.fromStruct — the
@@ -62,14 +62,11 @@ classdef AppState < handle
         % Case-file format tag. Existing case files carry it — do not change it.
         CaseFormat = "fastener-analysis-matlab-v1"
 
-        % NO ToolVersion CONSTANT. It was `ToolVersion = toolVersion()`,
-        % which reads like a single source of truth and is not one: MATLAB
-        % evaluates a Constant property's default ONCE at class load and
-        % caches it, so this was a COPY taken whenever gui first loaded.
-        % Bumping toolVersion.m left it stale until the class was cleared -
-        % the very drift the constant was meant to prevent, on a shorter
-        % fuse and harder to see. Callers ask toolVersion() where they use
-        % it.
+        % NO ToolVersion CONSTANT. A Constant property's default is
+        % evaluated once at class load and cached, so it would go stale
+        % against toolVersion.m until the class is cleared — the very
+        % drift a constant is meant to prevent, on a shorter fuse and
+        % harder to see. Callers ask toolVersion() where they use it.
     end
 
     events
@@ -111,7 +108,7 @@ classdef AppState < handle
 
         % Element ID -> joint name (+ the bolt pattern it belongs to), in
         % the canonical field order emptyMapping/mappingRow build. Element
-        % Mapping is THE authority on element -> joint: a real FEM force
+        % Mapping is the authority on element -> joint: a real FEM force
         % export carries element ids and forces, not the analyst's joint
         % naming, so data.loadElementWorkbook leaves JointName blank on
         % purpose and this is where it gets filled in.
@@ -142,7 +139,7 @@ classdef AppState < handle
         % Absolute path of the open case file; "" when none.
         CurrentFile (1,1) string = ""
 
-        % True when there are unsaved edits. Written ONLY by markDirty /
+        % True when there are unsaved edits. Written only by markDirty /
         % clearDirty — never as a side effect of a data setter.
         IsDirty (1,1) logical = false
 
@@ -244,7 +241,7 @@ classdef AppState < handle
             %   Every case edit funnels through here, so "dirty" is exactly
             %   the signal for "the form no longer matches the shown
             %   result". Display-only interactions (navigation, row
-            %   selection, library browsing) must NEVER call this — none of
+            %   selection, library browsing) must never call this — none of
             %   them may falsely invalidate a result (CONVENTIONS.md A4).
             if ~obj.IsDirty
                 obj.IsDirty = true;
@@ -272,7 +269,7 @@ classdef AppState < handle
             %MARKRESULTSTALE  Flag the shown single-joint result out of date.
             %   No-op before the first result: there is nothing to stale,
             %   and a stale flag with no result would put an amber banner
-            %   over an empty page. Deliberately does NOT clear the Result —
+            %   over an empty page. Deliberately does not clear the Result —
             %   it stays readable while the user edits (CONVENTIONS.md A3).
             if isempty(obj.Result) || obj.ResultStale
                 return
@@ -292,12 +289,12 @@ classdef AppState < handle
 
         function setResult(obj, r, inputs)
             %SETRESULT  Record a fresh single-joint result and clear stale.
-            %   The ONLY path that clears ResultStale — a successful run.
+            %   The only path that clears ResultStale — a successful run.
             %
-            %   `inputs` is the joint / loadCase / factors that PRODUCED r,
+            %   `inputs` is the joint / loadCase / factors that produced r,
             %   kept because report.singleJointReport re-runs engine.analyze
             %   rather than taking a Result: handed the form's current
-            %   contents it would document a DIFFERENT analysis from the one
+            %   contents it would document a different analysis from the one
             %   on screen, which is the whole failure the stale banner
             %   exists to catch. Optional, so a test can still stage a bare
             %   Result; ResultInputs then stays empty and the report action
@@ -309,7 +306,7 @@ classdef AppState < handle
             end
             obj.ResultStale  = false;
             obj.ResultInputs = inputs;
-            obj.Result       = r;   % fires ResultChanged, so it goes LAST
+            obj.Result       = r;   % fires ResultChanged, so it goes last
         end
 
         function setBulkTable(obj, T)
@@ -350,7 +347,7 @@ classdef AppState < handle
     methods
         function c = toCaseStruct(obj)
             %TOCASESTRUCT  Whole state -> the v1 case container.
-            %   EVERY key ships from day one, including mapping and forces
+            %   Every key ships from day one, including mapping and forces
             %   even while empty. A container that omits them loses the
             %   user's bulk setup on every save — the keys are the format, not the payload.
             c = struct();
@@ -386,7 +383,7 @@ classdef AppState < handle
             %   another.
             %
             %   Fires every data event, so pages refresh — but deliberately
-            %   does NOT touch IsDirty. Repopulating is not editing. The
+            %   does not touch IsDirty. Repopulating is not editing. The
             %   caller sets file/dirty state via clearDirty and then stales
             %   any displayed result explicitly, because the dirty funnel
             %   cannot: IsDirty was just reset.
@@ -623,7 +620,7 @@ classdef AppState < handle
                 'Mapping',      gui.AppState.emptyMapping(), ...
                 'Elements',     gui.AppState.emptyElements());
 
-            % GUI default: ONE fitting factor — the four engine FF slots
+            % GUI default: one fitting factor — the four engine FF slots
             % uniform at the FFU default. model.Factors() itself keeps the
             % DABJ mixed set; seeding that would open a blank case already
             % in the mixed-FF warning state.
@@ -729,11 +726,9 @@ classdef AppState < handle
             %   order mismatch, so every mutation site must build rows
             %   through elementRow / elementCase rather than by hand.
             %
-            %   A ROW CARRIES NO JOINT AND NO PATTERN. Both used to sit
-            %   here as well as on Mapping, which is how the two would
-            %   eventually disagree about which joint an element is. The
-            %   mapping owns them: it is the only place a user can set
-            %   either, since the force-workbook format has neither column.
+            %   A ROW CARRIES NO JOINT AND NO PATTERN. The mapping owns
+            %   both: it is the only place a user can set either, since
+            %   the force-workbook format has neither column.
             %   (The flat headless CSV keeps its own joint_name and
             %   pattern_id — runBulk has no mapping step at all.)
             st = struct( ...
@@ -891,9 +886,8 @@ classdef AppState < handle
                 end
                 F = struct('FX', e.fx, 'FY', e.fy, 'FZ', e.fz, ...
                            'MX', e.mx, 'MY', e.my, 'MZ', e.mz);
-                % patternId / jointName are IGNORED if present. They used
-                % to live here, and older case files still carry them, so a file
-                % carrying them must open — but the mapping is the
+                % patternId / jointName are IGNORED if present: older case
+                % files may still carry them, but the mapping is the
                 % authority on both and this row does not get a say.
                 st.Rows(end + 1) = gui.AppState.elementRow( ...
                     string(e.elementId), lc, F); %#ok<AGROW>

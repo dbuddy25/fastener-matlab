@@ -1,5 +1,5 @@
 classdef HardwareLibraryPage < gui.Page
-    %HARDWARELIBRARYPAGE  Browse the hardware/material library (GUI step 9).
+    %HARDWARELIBRARYPAGE  Browse the hardware/material library.
     %   Six read-only tabs — Materials, Bolts, Bolt Specs, Nuts, Washers,
     %   Inserts — over data.Library, with an origin filter and every entry's
     %   SOURCE CITATION on screen.
@@ -26,8 +26,8 @@ classdef HardwareLibraryPage < gui.Page
     %   and would put an asterisk on a title bar for work that is not in the
     %   file being titled. AppState.markDirty's own header says a data
     %   setter never touches IsDirty; this page extends that to its own
-    %   actions. Persistence is an explicit act (step 9c), not a side
-    %   effect of navigation.
+    %   actions. Persistence is an explicit act, not a side effect of
+    %   navigation.
     %
     %   ORIGIN RENDERS AS ASCII, not as the lock/pencil glyphs GUI_SPEC.md
     %   §15 sketches. Deliberate:
@@ -38,16 +38,12 @@ classdef HardwareLibraryPage < gui.Page
     %
     %   READ-ONLY BY CONSTRUCTION. Every table sets ColumnEditable = false.
     %   Baseline rows are protected because data.Library refuses to write
-    %   them, but a table that LOOKS editable and then reverts teaches the
-    %   analyst to distrust the page. Adding and duplicating arrive in step
-    %   9c as explicit buttons, which is also where the decision landed:
-    %   browse plus add plus duplicate-as-custom, no inline editing.
+    %   them, but a table that looks editable and then reverts teaches the
+    %   analyst to distrust the page. Adding and duplicating are explicit
+    %   buttons: browse plus add plus duplicate-as-custom, no inline editing.
     %
-    %   Test seams at the bottom, including buildCount/refreshCount —
-    %   tGuiShell used PlaceholderPage's counters to pin the shell's
-    %   lazy-build and refresh-per-visit contracts, and this page being real
-    %   is what retires the last placeholder. Those assertions move here
-    %   rather than disappearing.
+    %   Test seams at the bottom include buildCount/refreshCount, which pin
+    %   the shell's lazy-build and refresh-per-visit contracts.
 
     properties (Access = private)
         Grid                        % page root uigridlayout
@@ -72,10 +68,9 @@ classdef HardwareLibraryPage < gui.Page
         end
 
         function id = pageId(~)
-            % THE ID IS THE CONTRACT (FastenerApp.pageSpecs). It was
-            % "HardwareLibrary" while this page was a placeholder and it
-            % stays that, or every navigateTo and tGuiShell's rail
-            % assertion breaks for a rename that buys nothing.
+            % THE ID IS THE CONTRACT (FastenerApp.pageSpecs) — a rename
+            % breaks every navigateTo call and tGuiShell's rail assertion
+            % for no benefit.
             id = "HardwareLibrary";
         end
 
@@ -120,9 +115,8 @@ classdef HardwareLibraryPage < gui.Page
                 {'Select a row to see its full source citation.'};
             obj.DetailArea.FontColor = gui.palette('mutedText');
 
-            % A library edit made anywhere must reach this page. Nothing in
-            % +gui listened to LibraryChanged before step 9 — the event was
-            % declared and fired and had no subscribers at all.
+            % A library edit made anywhere must reach this page, via
+            % LibraryChanged.
             obj.listenTo('LibraryChanged', @() obj.refresh());
             obj.refresh();
         end
@@ -215,7 +209,7 @@ classdef HardwareLibraryPage < gui.Page
             t.RowName       = {};
             % READ-ONLY. See the class header: a table that looks editable
             % and then reverts is worse than one that never invited the
-            % edit. Adding and duplicating are buttons, in step 9c.
+            % edit. Adding and duplicating are buttons.
             t.ColumnEditable  = false;
             t.ColumnSortable  = true;
             t.SelectionType   = 'row';
@@ -603,8 +597,8 @@ classdef HardwareLibraryPage < gui.Page
             end
             obj.closeForm();
             % Assignment fires LibraryChanged, which re-renders this page
-            % and (step 9d) every dropdown that reads the library. NOT
-            % markDirty: the hardware library is not part of the case.
+            % and every dropdown that reads the library. Not markDirty:
+            % the hardware library is not part of the case.
             obj.State.Library = lib;
             obj.setStatus(sprintf('Added %s "%s". Not saved yet — use Save Library.', ...
                 spec.Id, string(entry.key)));
@@ -675,10 +669,10 @@ classdef HardwareLibraryPage < gui.Page
         function specs = sectionSpecs()
             %SECTIONSPECS  One row per library entity type.
             %   Id      data.Library entity token (entries/duplicateAsCustom)
-            %   Fields  entry-struct field per column. Column 1 is ALWAYS
-            %           origin and column 2 ALWAYS key — step 9c's Duplicate
-            %           reads the key out of the selected row by that
-            %           position, and onRowSelected finds source by name.
+            %   Fields  entry-struct field per column. Column 1 is always
+            %           origin and column 2 always key — Duplicate reads the
+            %           key out of the selected row by that position, and
+            %           onRowSelected finds source by name.
             %   Columns header text, units per UNITS.md
             %   Widths  uitable ColumnWidth
             %   Noun    plural, for the "n of m" count line

@@ -1,6 +1,6 @@
 function obj = fromStruct(s)
 %FROMSTRUCT  Inverse of data.toStruct — rebuild a model.* value (or array)
-%   from a tagged struct (Phase 3.7). Generic and recursive: adding a new
+%   from a tagged struct. Generic and recursive: adding a new
 %   property to a +model class "just works" here too, since reconstruction
 %   is driven entirely by whatever field names are present in `s` (fed
 %   straight into the class's name-value constructor).

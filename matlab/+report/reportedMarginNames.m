@@ -4,17 +4,12 @@ function names = reportedMarginNames(r)
 %   the rows report.singleJointReport puts in its Margins of Safety table,
 %   in order.
 %
-%   IT EXISTS SO THE ROW CHOICE IS TESTABLE. The report writes a PDF, and
-%   a PDF is a binary this suite cannot read back to see which rows made
-%   it in — so the one decision worth pinning (that
-%   Separation-before-rupture is NOT among them, being a branch selection
+%   Exists so the row choice is testable: a PDF is a binary this suite
+%   cannot read back, so the one decision worth pinning (that
+%   Separation-before-rupture is excluded, being a branch selection
 %   rather than a margin) would otherwise be unverifiable. Sharing this
-%   function with the report guarantees the test and the document cannot
-%   disagree about what "shown" means.
-%
-%   Call graph:
-%       Dependents (called by)  report.singleJointReport (the Margins
-%                               table), tests/tPdfReport.m.
+%   function with the report guarantees the test and the document agree
+%   on what "shown" means.
 
 arguments
     r (1,1) engine.Result

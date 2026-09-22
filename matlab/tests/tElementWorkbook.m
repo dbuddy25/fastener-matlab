@@ -1,6 +1,6 @@
 classdef tElementWorkbook < matlab.unittest.TestCase
     %TELEMENTWORKBOOK  data.loadElementWorkbook — the GUI's multi-sheet
-    %   force-workbook reader: ONE LOAD CASE PER SHEET, the sheet name
+    %   force-workbook reader: one load case per sheet, the sheet name
     %   being the load case name, each sheet carrying exactly element_id +
     %   FX..MZ. Covers: sheet name -> LoadCaseName, header auto-detect /
     %   column order + case tolerance, the documented defaults (JointName
@@ -47,12 +47,12 @@ classdef tElementWorkbook < matlab.unittest.TestCase
 
     methods (Test)
         function sheetNameBecomesLoadCase(testCase)
-            % Two force sheets -> rows carrying each SHEET's name as
+            % Two force sheets -> rows carrying each sheet's name as
             % LoadCaseName, in sheet order. Expected values are the
             % fixture literals below (element 1001's FX 1560 / FZ 5590
             % mirror the data.makeTemplate demo example row -- values
             % borrowed from DABJ Sec. 9, not the row itself).
-            % Also checks the documented defaults on EVERY row: the
+            % Also checks the documented defaults on every row: the
             % workbook format has no joint/pattern/scale/reversible
             % columns, so JointName "" (the Element Mapping tab is the
             % authority), PatternId "", ScaleFactor 1, Reversible false.
@@ -100,7 +100,7 @@ classdef tElementWorkbook < matlab.unittest.TestCase
 
         function columnOrderAndCaseTolerated(testCase)
             % Shuffled column order, mixed-case header names, and a
-            % friendly banner row ABOVE the header (the header-row
+            % friendly banner row above the header (the header-row
             % auto-detect shared with data.loadElements must lock onto
             % the real header). Expected values are the fixture literals:
             % each force column carries a distinct value so a column
@@ -131,7 +131,7 @@ classdef tElementWorkbook < matlab.unittest.TestCase
         function nonForceSheetSkippedAndReported(testCase)
             % A workbook may carry a notes/cover sheet (no recognisable
             % header) and a partially-tabular sheet missing required
-            % columns — both must be SKIPPED and REPORTED via info, never
+            % columns — both must be skipped and reported via info, never
             % fatal, while the real force sheet parses. Expected values
             % are the fixture literals below.
             hdr = {'element_id', 'FX', 'FY', 'FZ', 'MX', 'MY', 'MZ'};
@@ -162,7 +162,7 @@ classdef tElementWorkbook < matlab.unittest.TestCase
         end
 
         function blankIdRowSkippedAndReported(testCase)
-            % Within a force sheet, a row WITH content but WITHOUT an
+            % Within a force sheet, a row with content but without an
             % element_id is skipped and reported per sheet (the
             % data.loadElements info convention). Grid row numbering:
             % header is row 1 of the sheet, so the bad row is row 3.
@@ -182,7 +182,7 @@ classdef tElementWorkbook < matlab.unittest.TestCase
         end
 
         function noParsableSheetErrors(testCase)
-            % A workbook where NO sheet parses must raise the documented
+            % A workbook where no sheet parses must raise the documented
             % error naming what was expected — a notes-only workbook must
             % not import as an empty success.
             f = tElementWorkbook.writeTempXlsx(testCase, { ...
@@ -195,7 +195,7 @@ classdef tElementWorkbook < matlab.unittest.TestCase
 
         function loadElementsRegressionGuard(testCase)
             % REGRESSION GUARD: the flat data.loadElements reader — the
-            % headless runBulk/runWorkbook interface — must be UNTOUCHED
+            % headless runBulk/runWorkbook interface — must be untouched
             % by the workbook reader's addition. Expected values mirror
             % tBulkParsers.loadsElements, sourced from
             % templates/elements_template.csv (= the data.makeTemplate

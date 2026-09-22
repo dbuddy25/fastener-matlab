@@ -5,14 +5,14 @@ classdef tUserGuide < matlab.unittest.TestCase
     %       runTests("UserGuide")
     %
     %   WHAT IS WORTH ASSERTING. The guide is prose, and a test cannot say
-    %   whether prose is any good. What it CAN say is that the document
+    %   whether prose is any good. What it can say is that the document
     %   builds, that it is cached the way Help depends on, and that its
     %   chapter set still covers the things a user has to be told -- the
     %   check scope, how Not-evaluated differs from a pass, and where the
     %   numbers come from. Those are claims about the tool, not about
     %   writing, and each is the kind that rots silently.
     %
-    %   PDF GENERATION IS SLOW AND NEEDS A TOOLBOX, so the build itself is
+    %   PDF generation is slow and needs a toolbox, so the build itself is
     %   exercised once and skipped where Report Generator is absent. The
     %   content checks read the chapter data directly and cost nothing.
 
@@ -68,9 +68,8 @@ classdef tUserGuide < matlab.unittest.TestCase
         end
 
         function itStatesTheCheckScopeCorrectly(testCase)
-            % The About dialog carried a wrong scope claim for months
-            % ("displays 9 of the 15"). The guide is the other place that
-            % states scope, and it must not repeat the mistake.
+            % A wrong scope claim ("displays 9 of the 15") must not appear
+            % here -- the guide is the other place that states scope.
             body = lower(tUserGuide.allText());
             testCase.verifySubstring(char(body), 'fifteen');
             testCase.verifyFalse(contains(body, 'nine of'), ...

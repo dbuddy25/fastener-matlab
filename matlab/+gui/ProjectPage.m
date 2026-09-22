@@ -1,14 +1,14 @@
 classdef ProjectPage < gui.Page
     %PROJECTPAGE  Project metadata (GUI_SPEC.md Section 3, "Project").
     %   Analyst / program / assembly / part number / environment / notes,
-    %   one per line. NEVER analyzed — engine.analyze takes no Project
+    %   one per line. Never analyzed — engine.analyze takes no Project
     %   input. This metadata flows only to reports and exports, so nothing
     %   here is required and nothing is validated beyond what the widgets
     %   enforce natively.
     %
     %   NO DATE CONTROL. A uidatepicker was dropped as not worth its cost:
     %   it has no supported blank state, so an unset date renders as today
-    %   and reads as a real entry. AppState.Project.date is NOT removed —
+    %   and reads as a real entry. AppState.Project.date is not removed —
     %   commit() preserves whatever the loaded case carried, so a file
     %   written elsewhere keeps its date through an edit here.
     %
@@ -106,11 +106,11 @@ classdef ProjectPage < gui.Page
             %   already hold, and programmatic Value sets fire no callback,
             %   so there is no re-entrant dirty call.
             %
-            %   Start from what is already there and overwrite ONLY the
+            %   Start from what is already there and overwrite only the
             %   fields this page owns. A case file can carry metadata this
-            %   page has no control for — `date` is exactly that, now the
-            %   picker is gone — and rebuilding the struct from the controls
-            %   alone would silently drop it on the first edit.
+            %   page has no control for — `date` is exactly that — and
+            %   rebuilding the struct from the controls alone would
+            %   silently drop it on the first edit.
             p = obj.State.Project;
             if ~isstruct(p)
                 p = struct();

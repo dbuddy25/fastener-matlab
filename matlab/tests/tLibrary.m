@@ -1,6 +1,6 @@
 classdef tLibrary < matlab.unittest.TestCase
-    %TLIBRARY  Phase 2.2 acceptance: pull the DABJ case's bolt + materials
-    %   out of the library by key.
+    %TLIBRARY  Pull the DABJ case's bolt + materials out of the library
+    %   by key.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -50,13 +50,13 @@ classdef tLibrary < matlab.unittest.TestCase
             % The catalogue's boltSpecs come from FF-S-86F Table VI
             % (coarse) and Table VII (fine), heat and corrosion resistant
             % steel = A286 per FF-S-86F 3.1.3. Table note 4/ says those
-            % loads ARE the machined-specimen allowable stress times the
+            % loads are the machined-specimen allowable stress times the
             % thread tensile stress area, and 3.2.4.1 fixes that stress at
-            % Ftu = 160 ksi / Fty = 120 ksi for ALL sizes -- so every entry
+            % Ftu = 160 ksi / Fty = 120 ksi for all sizes -- so every entry
             % must reconcile with this library's own At and A286 material
             % to within the spec's rounding. A transcription slip moves a
             % value by far more than 1%, which is what this catches; it is
-            % NOT a re-derivation, because the shipped numbers are the
+            % not a re-derivation, because the shipped numbers are the
             % spec's, not At*Ftu computed here.
             lib  = data.Library.load();
             m    = lib.material("A286");
@@ -177,7 +177,7 @@ classdef tLibrary < matlab.unittest.TestCase
         end
 
         function pullsBoltSpec(testCase)
-            % Plumbing test for the pull-by-key mechanism. Uses a LOCAL
+            % Plumbing test for the pull-by-key mechanism. Uses a local
             % entry with values that match no shipped catalogue row, so a
             % pass proves the lookup returned this entry rather than
             % coincidentally agreeing with the baseline A286 catalogue.
@@ -227,12 +227,12 @@ classdef tLibrary < matlab.unittest.TestCase
             % order is now the first NAS1351/NAS1352 entry.
             lib = data.Library.load();
             keys = lib.boltKeys();
-            % 25, not the original 32. Four went because neither NAS1351
-            % nor NAS1352 lists them - both specs skip dash 05 and dash 9,
-            % so a bolt keyed to those standards could not be procured to
-            % them. Three more (#1, #3 in both series) went as sizes this
-            % programme does not use. The catalogue is a procurement
-            % statement, not a completeness exercise.
+            % 25 of the 32, not all: four are missing because neither
+            % NAS1351 nor NAS1352 lists them - both specs skip dash 05 and
+            % dash 9, so a bolt keyed to those standards could not be
+            % procured to them. Three more (#1, #3 in both series) are
+            % absent as sizes this programme does not use. The catalogue
+            % is a procurement statement, not a completeness exercise.
             testCase.verifyGreaterThanOrEqual(numel(keys), 25);
             testCase.verifyEqual(keys(1), "NAS1351 #0-80");
             expected = [ ...
@@ -355,13 +355,9 @@ classdef tLibrary < matlab.unittest.TestCase
             % Backward compatibility: a library entry predating the
             % type/spec fields must still load, both defaulting to "".
             %
-            % The entry is CONSTRUCTED here rather than borrowed from
-            % library.json. This test used to read the DABJ bolt, which
-            % happened to carry no type/spec until that entry was labelled
-            % as a validation fixture -- at which point the test failed
-            % while nothing it was actually guarding had changed. A
-            % backward-compatibility guard must not depend on a shipped
-            % entry continuing to lack a field.
+            % The entry is constructed here rather than borrowed from
+            % library.json: a backward-compatibility guard must not depend
+            % on a shipped entry continuing to lack a field.
             testCase.verifyEqual(model.Bolt().Type, "");
             testCase.verifyEqual(model.Bolt().Spec, "");
 
@@ -377,18 +373,14 @@ classdef tLibrary < matlab.unittest.TestCase
 
         function seedTableMaterialValuesAreCorrect(testCase)
             % The catalog material keys carry the shipped allowables.
-            % (Formerly also asserted these were distinct from the DABJ
-            % fixture's "(DABJ)"-suffixed materials; those entries are gone
-            % now that validation.dabjSection9 builds the fixture inline,
-            % so that comparison no longer applies.)
             lib = data.Library.load();
             g = lib.material("Al 7075-T7351");
             testCase.verifyEqual(g.Ftu, 63000);
             testCase.verifyEqual(g.Fty, 49000);
             testCase.verifyEqual(g.Fbru, 76000);
             testCase.verifyEqual(lib.material("A286").Fsu, 93400);
-            % BeCu modulus is 1.84e7 psi (18.4 Msi); a 1.84e8 value is a
-            % decimal slip and is corrected in the shipped data.
+            % BeCu modulus is 1.84e7 psi (18.4 Msi); a 1.84e8 value would
+            % be a decimal slip, not the shipped value.
             testCase.verifyEqual(lib.material("BeCu UNS C17200").E, 1.84e7, ...
                 "AbsTol", 1);
         end
@@ -510,10 +502,10 @@ classdef tLibrary < matlab.unittest.TestCase
             s = re.boltSpec("1/4 Ti 160ksi");
             testCase.verifyEqual(s.RatedUltimateLoad, 5800);
             testCase.verifyEqual(s.RatedYieldLoad, 4300);
-            % Header unchanged; nuts, washers, AND inserts are now all
-            % managed like materials/bolts/boltSpecs -- this fixture
-            % library added no custom nuts, washers, or inserts, so
-            % save() (custom entries only) writes all three empty.
+            % Header unchanged; nuts, washers, and inserts are managed
+            % like materials/bolts/boltSpecs -- this fixture library added
+            % no custom nuts, washers, or inserts, so save() (custom
+            % entries only) writes all three empty.
             testCase.verifyEqual(re.SchemaVersion, 2);
             testCase.verifyEqual(string(re.Units.temperature), "degC");
             raw = jsondecode(fileread(path));
@@ -522,7 +514,7 @@ classdef tLibrary < matlab.unittest.TestCase
             testCase.verifyEmpty(raw.washers);
         end
 
-        % --- Origin provenance: baseline vs custom (GUI step 3 data layer) ---
+        % --- Origin provenance: baseline vs custom ---
 
         function shippedLibraryIsAllBaseline(testCase)
             lib = data.Library.load();
@@ -597,7 +589,7 @@ classdef tLibrary < matlab.unittest.TestCase
         end
 
         function addWithoutASourceIsRefused(testCase)
-            % NO CITATION, NO ENTRY. While the baseline is curated by
+            % No citation, no entry. While the baseline is curated by
             % editing library.json, git carries who changed a number and
             % why. Once the app writes entries that record has to live on
             % the entry — an allowable with no provenance is not usable in
@@ -630,7 +622,7 @@ classdef tLibrary < matlab.unittest.TestCase
         end
 
         function aWhitespaceOnlySourceIsNotASource(testCase)
-            % The guard is on CONTENT, not on the field existing — a form
+            % The guard is on content, not on the field existing — a form
             % that writes an untouched text box would otherwise satisfy it.
             lib = data.Library.load();
             e = testCase.sampleMaterial();
@@ -640,7 +632,7 @@ classdef tLibrary < matlab.unittest.TestCase
         end
 
         function readingNeverRequiresASource(testCase)
-            % Enforced on WRITE only. A user file written before this rule
+            % Enforced on write only. A user file written before this rule
             % existed must still load, or the guard strands the data it was
             % meant to protect.
             fx = testCase.applyFixture( ...
@@ -672,7 +664,7 @@ classdef tLibrary < matlab.unittest.TestCase
         end
 
         function duplicateKeepsTheCitationButTakesItsOwnStamp(testCase)
-            % The copy's NUMBERS are still the original's, so the original
+            % The copy's numbers are still the original's, so the original
             % citation is the honest one to carry. But the copy was made by
             % a person at a time, and the baseline it came from has no
             % stamp at all — so the stamp must be the copy's own.
@@ -691,10 +683,10 @@ classdef tLibrary < matlab.unittest.TestCase
 
         function approvalFieldsSurviveARoundTripUnwritten(testCase)
             % approvedBy/approvedUtc are schema-only: nothing in the tool
-            % signs an allowable off yet. They are here now because
-            % retrofitting them once sites hold real libraries means
-            % migrating real data. Prove the round trip preserves them, and
-            % that add does NOT invent them.
+            % signs an allowable off yet. They are included ahead of use
+            % because retrofitting them once sites hold real libraries
+            % would mean migrating real data. Prove the round trip
+            % preserves them, and that add does not invent them.
             fx = testCase.applyFixture( ...
                 matlab.unittest.fixtures.TemporaryFolderFixture);
             path = string(fullfile(fx.Folder, "approved.json"));
@@ -827,10 +819,10 @@ classdef tLibrary < matlab.unittest.TestCase
         function loadInstalledFallsBackToTheBaseline(testCase)
             % With no user library present, loadInstalled must be exactly
             % load(). The GUI, runBulk, runWorkbook and makeTemplate all go
-            % through it now, so a fallback that returned something else
-            % would change every headless run on a clean install.
+            % through it, so a fallback that returned something else would
+            % change every headless run on a clean install.
             %
-            % Guarded rather than assumed: if this machine happens to HAVE
+            % Guarded rather than assumed: if this machine happens to have
             % a user library, the assertion below would be testing the
             % overlay path and quietly passing for the wrong reason.
             testCase.assumeFalse(isfile(data.Library.userPath()), ...
@@ -872,7 +864,7 @@ classdef tLibrary < matlab.unittest.TestCase
 
         function customEntryShadowsBaselineKeyOnLoad(testCase)
             % The documented key-collision rule: a file entry whose key
-            % matches a shipped baseline key REPLACES it on load ("the file
+            % matches a shipped baseline key replaces it on load ("the file
             % wins") — one A286, and it is the file's custom one.
             fx = testCase.applyFixture( ...
                 matlab.unittest.fixtures.TemporaryFolderFixture);
@@ -1000,7 +992,7 @@ classdef tLibrary < matlab.unittest.TestCase
         function nutSpecsLabelsPairTokenWithName(testCase)
             % Second output is the dropdown's display label: drawing number
             % + short descriptor. The GUI puts these in Items and the
-            % TOKENS (first output) in ItemsData, so Value stays a token.
+            % tokens (first output) in ItemsData, so Value stays a token.
             lib = data.Library.load();
             [specs, labels] = lib.nutSpecs();
             testCase.verifyEqual(numel(labels), numel(specs));
@@ -1130,9 +1122,9 @@ classdef tLibrary < matlab.unittest.TestCase
 
         % --- Washers (managed section, seeded with NAS620 + NAS1149) ---
         % Geometry only (no material, no rated load) -- see data.Library.washer.
-        % CRITICAL DIFFERENCE FROM NUTS: washersFor resolves to MANY entries,
-        % not one, so most of these mirror the nut tests but read a struct
-        % ARRAY back.
+        % The critical difference from nuts: washersFor resolves to many
+        % entries, not one, so most of these mirror the nut tests but read
+        % a struct array back.
 
         function pullsWasherByKey(testCase)
             lib = data.Library.load();
@@ -1319,7 +1311,7 @@ classdef tLibrary < matlab.unittest.TestCase
 
         % --- Inserts (managed section, seeded with NASM33537) ---
         % Tapped-hole geometry only -- no material, no rated load, like
-        % washer(). UNLIKE washersFor, insertFor resolves to ONE entry (like
+        % washer(). Unlike washersFor, insertFor resolves to one entry (like
         % nutFor): diameter+tpi is unique because only one insert spec is
         % seeded, so there is no washersFor-style "many matches" case here.
 

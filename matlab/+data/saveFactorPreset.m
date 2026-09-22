@@ -1,5 +1,5 @@
 function file = saveFactorPreset(name, factors, file)
-%SAVEFACTORPRESET  Save a USER factor preset (Phase 3.7).
+%SAVEFACTORPRESET  Save a USER factor preset.
 %   data.saveFactorPreset(name, factors) saves `factors` under `name` into
 %   the user factor-presets file (default path: userFactorPresetsPath(),
 %   e.g. fullfile(userpath, "fastener_factor_presets.json"), or a

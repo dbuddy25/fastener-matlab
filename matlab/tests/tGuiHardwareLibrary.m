@@ -1,5 +1,5 @@
 classdef tGuiHardwareLibrary < matlab.uitest.TestCase
-    %TGUIHARDWARELIBRARY  Step 9 acceptance: the Materials & Hardware page.
+    %TGUIHARDWARELIBRARY  Tests for the Materials & Hardware page.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -11,21 +11,19 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
     %   source". Three things carry more weight than the rendering:
     %
     %     1. THE SOURCE CITATION REACHES THE SCREEN. It is the reason the
-    %        page exists — every shipped entry carries one and none of it
-    %        was visible from inside the tool before step 9.
+    %        page exists: every shipped entry carries one, and this page is
+    %        the only place in the tool that shows it.
     %     2. THE PAGE NEVER DIRTIES THE CASE. The hardware library is
     %        app-scoped and is not in the case file, so a library action
     %        that set IsDirty would stale the displayed Result and Bulk over
     %        something that cannot affect either.
-    %     3. THE SHELL'S BUILD/REFRESH CONTRACTS. Moved here from
-    %        tGuiShell, which asserted them through PlaceholderPage's
-    %        counters until this page removed the last placeholder. Against
-    %        a real page they are a stronger test than they were.
+    %     3. THE SHELL'S BUILD/REFRESH CONTRACTS. Tested here against a real
+    %        page rather than through PlaceholderPage's counters, which is
+    %        a stronger test.
     %
     %   NOTE ON THE PAGE ID: the rail label is "Materials & Hardware" but
-    %   the id is "HardwareLibrary" — it was that while the page was a
-    %   placeholder and FastenerApp.pageSpecs says the ids are the contract.
-    %   navigateTo and page() take the id, not the label.
+    %   the id is "HardwareLibrary", per FastenerApp.pageSpecs — the ids
+    %   are the contract. navigateTo and page() take the id, not the label.
     %
     %   NOTE ON .Enable / .Visible: these read back as
     %   matlab.lang.OnOffSwitchState, never char, so a bare
@@ -239,10 +237,9 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
         end
 
         function aLibraryChangeRefreshesThePageWithoutRenavigating(testCase)
-            % Nothing in +gui listened to LibraryChanged before step 9 —
-            % the event was declared and fired and had no subscribers at
-            % all. Without this the page would show the library as it was
-            % when the tab was first opened.
+            % Without this the page would show the library as it was when
+            % the tab was first opened, rather than reacting to
+            % LibraryChanged.
             before = size(testCase.Page.sectionTable("material").Data, 1);
 
             lib = testCase.App.State.Library;
@@ -346,9 +343,9 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
         end
 
         function anEntryWithNoSourceIsRefusedAndTheFormStaysOpen(testCase)
-            % The citation rule is data.Library's (step 9a). What matters
-            % here is that the form REPORTS it rather than swallowing it,
-            % and that it does not throw away everything already typed --
+            % The citation rule belongs to data.Library. What matters here
+            % is that the form reports it rather than swallowing it, and
+            % that it does not throw away everything already typed --
             % closing on a rejection means retyping eight fields to fix one.
             testCase.Page.openAddForm("material");
             testCase.addTeardown(@() testCase.Page.cancelForm());
@@ -466,12 +463,10 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
         end
     end
 
-    % ---- Shell contracts, moved from tGuiShell --------------------------
-    %   These pinned lazy construction and refresh-per-visit through
-    %   PlaceholderPage's counters. This page removing the last placeholder
-    %   is what retired that probe, so the assertions move here rather than
-    %   skipping quietly — against a page that really builds widgets and
-    %   really reads AppState, which is a stronger test than the original.
+    % ---- Shell build/refresh contracts -------------------------------------
+    %   These assert lazy construction and refresh-per-visit against a page
+    %   that really builds widgets and really reads AppState, rather than
+    %   through PlaceholderPage's counters.
     methods (Test)
         function theRailPageIsNotBuiltUntilVisited(testCase)
             % GUI_SPEC.md §10 rule 1. Over a remote session, building ten

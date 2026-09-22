@@ -1,5 +1,5 @@
 classdef tBoltLength < matlab.unittest.TestCase
-    %TBOLTLENGTH  Bolt.Length as a first-class input (GUI step 4.8):
+    %TBOLTLENGTH  Bolt.Length as a first-class input:
     %   - model.Bolt.Length defaults to NaN, and with the default every
     %     existing engine.stiffness result is UNCHANGED (the regression
     %     guard for the validated DABJ Example 8-b numbers).
@@ -62,7 +62,7 @@ classdef tBoltLength < matlab.unittest.TestCase
             % Precedence level 2: with BodyLengthInGrip = NaN, a supplied
             % Bolt.Length is used directly — no §4.7.4 estimate, so it
             % works WITHOUT a nut height (EngagementLength stays NaN here;
-            % the old fallback alone would error bodyLengthRequired).
+            % the fallback alone would error bodyLengthRequired).
             % HAND-DERIVED on the 8-b geometry: Lb = 0.94 in (fittings
             % 0.80 + washers 0.14); Bolt.Length = 1.30, ThreadLength = 0.5
             %   Ls = 1.30 - 0.5 = 0.80 in
@@ -129,11 +129,11 @@ classdef tBoltLength < matlab.unittest.TestCase
             % insert" together for the SAME 2·pitch protrusion term, so
             % Insert gets Lmin = grip + Le + 2·pitch, exactly like Nut —
             % see boltLengthCheck's header. Le itself is still the
-            % DERIVED CONVENTION (supplied EngagementLength, else 1.5·D;
+            % derived convention (supplied EngagementLength, else 1.5·D;
             % 5020B gives no formula for Le).
             % HAND-DERIVED on the 8-b geometry. NOTE THE GRIP: 8-b ships
-            % as a NUT joint whose grip is 0.94 in, but switching it to a
-            % threaded-in configuration DROPS ITS 0.062 in NUT WASHER --
+            % as a Nut joint whose grip is 0.94 in, but switching it to a
+            % threaded-in configuration drops the 0.062 in nut washer --
             % there is no nut for one to sit under -- so the grip here is
             % 0.40 + 0.40 + 0.078 = 0.878 in. 3/8-24 UNF, so pitch
             % p = 1/24 in and 2p = 2/24 = 0.083333... in:
@@ -354,15 +354,14 @@ classdef tBoltLength < matlab.unittest.TestCase
         end
 
         function aNutWasherOnAThreadedInJointIsNotPartOfTheGrip(testCase)
-            % REGRESSION. There is no nut on an Insert or TappedHole joint,
-            % so there is nothing for a nut washer to sit under, and one
-            % left set on the form must not lengthen the bolt.
+            % REGRESSION GUARD: there is no nut on an Insert or TappedHole
+            % joint, so there is nothing for a nut washer to sit under, and
+            % one left set on the form must not lengthen the bolt.
             %
-            % engine.stiffness has always read only HeadWasher on the
-            % threaded-in branch; this function counted the nut washer for
-            % every configuration, so the same joint got a stiffness
-            % computed without the washer and a required length inflated by
-            % it. Two engine functions describing different joints.
+            % engine.stiffness reads only HeadWasher on the threaded-in
+            % branch; boltLengthCheck's required-length breakdown must
+            % agree, or the same joint is described by two engine
+            % functions with different geometry.
             c = validation.dabjExample8b();
             j = c.Joint;
             % 8-b ships as a NUT joint -- switch it, or this test would be
@@ -384,8 +383,8 @@ classdef tBoltLength < matlab.unittest.TestCase
         end
 
         function aNutWasherOnANutJointStillCounts(testCase)
-            % The other half of the same rule -- the fix must not have
-            % dropped the washer everywhere.
+            % The other half of the same rule -- a through-bolted joint
+            % must still count its nut washer.
             c = validation.dabjExample8b();
             j = c.Joint;
             j.ThreadedMember.Type             = model.ThreadedMemberType.Nut;

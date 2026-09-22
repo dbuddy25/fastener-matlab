@@ -53,9 +53,9 @@ classdef tMarginView < matlab.unittest.TestCase
         end
 
         function theEnvelopeTakesTheWorstOfEachKind(testCase)
-            % THE test this class exists for. Column 1 is an ordinary
+            % The test this class exists for. Column 1 is an ordinary
             % margin: worst is the minimum. Column 2 is the ratio: worst is
-            % the MAXIMUM, because R <= 1 passes.
+            % the maximum, because R <= 1 passes.
             M = [0.5 0.4
                  0.2 1.3];
             env = gui.MarginView.envelope(M, [false true]);

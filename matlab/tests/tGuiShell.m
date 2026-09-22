@@ -1,5 +1,5 @@
 classdef tGuiShell < matlab.uitest.TestCase
-    %TGUISHELL  Step 1 acceptance: the shell's contract holds.
+    %TGUISHELL  The shell's contract holds.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -70,22 +70,10 @@ classdef tGuiShell < matlab.uitest.TestCase
     end
 
     % ---- Lazy construction ------------------------------------------------
-    %   MOVED TO tGuiHardwareLibrary. These three pinned the shell's
-    %   lazy-build and refresh-per-visit contracts through PlaceholderPage's
-    %   buildCount/refreshCount counters. Step 9 made Materials & Hardware
-    %   real, which removed the last placeholder and would have left all
-    %   three skipping quietly on the assumeNotEmpty in aPlaceholderPageId —
-    %   a contract silently untested rather than visibly broken, which is
-    %   the worse of the two.
-    %
-    %   They now run against gui.HardwareLibraryPage's own counters, which
-    %   is a STRONGER test than the placeholder version: it proves the
-    %   contracts hold for a page that really builds widgets and really
-    %   reads AppState, rather than for one whose build drew a label.
-    %
-    %   aPlaceholderPageId went with them: it existed only to feed these
-    %   three, and an unused private helper waiting for a placeholder that
-    %   may never come back is dead code, not foresight.
+    %   Lazy-build and refresh-per-visit contracts are pinned against
+    %   gui.HardwareLibraryPage's own buildCount/refreshCount counters in
+    %   tGuiHardwareLibrary, for a page that really builds widgets and
+    %   reads AppState rather than one whose build only draws a label.
 
     % ---- Dirty flag and title ---------------------------------------------
     methods (Test)
@@ -95,12 +83,11 @@ classdef tGuiShell < matlab.uitest.TestCase
             testCase.verifyTrue(startsWith(testCase.App.Fig.Name, ...
                 'Fastener Analysis Tool v'), ...
                 'A case with no file should show the version in the title.');
-            % The ACTUAL version, not just the letter v. This is the
+            % The actual version, not just the letter v. This is the
             % end-to-end guard on toolVersion reaching a surface a user
-            % reads: both shells used to cache it in a Constant property,
-            % which MATLAB evaluates once at class load, so a bumped
-            % version could sit stale in the title bar with nothing saying
-            % so.
+            % reads: a Constant property is evaluated once at class load,
+            % so a cached version could sit stale in the title bar with
+            % nothing saying so.
             testCase.verifyTrue(contains(testCase.App.Fig.Name, toolVersion()), ...
                 'The title must carry the CURRENT version, not a cached one.');
             testCase.verifyFalse(startsWith(testCase.App.Fig.Name, '*'));
@@ -154,7 +141,7 @@ classdef tGuiShell < matlab.uitest.TestCase
         end
 
         function applyCaseStructFiresEventsSoPagesRefresh(testCase)
-            % The other half: repopulation must still ANNOUNCE itself, or
+            % The other half: repopulation must still announce itself, or
             % every page renders stale content after File > Open.
             fired = false;
             lh = event.listener(testCase.App.State, 'JointChanged', ...
@@ -413,14 +400,14 @@ classdef tGuiShell < matlab.uitest.TestCase
     end
 
     % ---- Discarding unsaved work ------------------------------------------
-    %   THESE TESTS EXIST BECAUSE THEY COULD NOT. confirmDiscard used the
-    %   blocking uiconfirm, which halts inside the callback until a human
-    %   answers - so the first test to trigger File > New with a dirty case
-    %   would have hung the entire run rather than failed. The CloseFcn form
-    %   returns while the question is still on screen, which is what makes
-    %   the dirty path assertable at all.
+    %   These tests exist because they could not run against a blocking
+    %   uiconfirm: it halts inside the callback until a human answers, so
+    %   the first test to trigger File > New with a dirty case would hang
+    %   the entire run rather than fail. confirmDiscard instead uses the
+    %   CloseFcn form, which returns while the question is still on
+    %   screen - that is what makes the dirty path assertable at all.
     %
-    %   The dialog is NEVER answered here, per the rule in
+    %   The dialog is never answered here, per the rule in
     %   tGuiDefinedJoints: what gets asserted is that nothing changed while
     %   the question is outstanding. The dialog dies with the figure at
     %   teardown.

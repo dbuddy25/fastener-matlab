@@ -1,7 +1,7 @@
 function m = factorPresets()
-%FACTORPRESETS  Built-in (protected) factor presets, name -> model.Factors
-%   (Phase 3.7). These names can never be overwritten by
-%   data.saveFactorPreset — see that function's protected-name check.
+%FACTORPRESETS  Built-in (protected) factor presets, name -> model.Factors.
+%   These names can never be overwritten by data.saveFactorPreset — see
+%   that function's protected-name check.
 %
 %   Presets:
 %     "NASA-STD-5020B"            — the standard set used throughout this

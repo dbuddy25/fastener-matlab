@@ -1,51 +1,44 @@
 classdef tWorkbook < matlab.unittest.TestCase
-    %TWORKBOOK  Step 2c acceptance: engine.runWorkbook single-workbook bulk run.
-    %   The streamlined flow — data.makeTemplate generates ONE .xlsx, the
+    %TWORKBOOK  engine.runWorkbook single-workbook bulk run.
+    %   The streamlined flow — data.makeTemplate generates one .xlsx, the
     %   user fills the Joints/Elements/Settings sheets, engine.runWorkbook
-    %   runs it — must run end to end on a FRESH template with no edits
+    %   runs it — must run end to end on a fresh template with no edits
     %   (parse, resolve, analyze-or-report) without throwing.
     %
     %   The shipped example content is a representative demo joint
-    %   ("Sample four-bolt SHCS/nut joint") built from REAL catalog
+    %   ("Sample four-bolt SHCS/nut joint") built from real catalog
     %   hardware (NAS1351 3/8-24, A286, Al 7075-T7351) in a
     %   DABJ-Section-9-like configuration (bolt count, torque, factors) --
-    %   NOT the DABJ validation fixture itself, which library.json no
-    %   longer ships (see validation.dabjSection9, which builds that
-    %   fixture's geometry inline so the answer key no longer depends on
-    %   library content). It is no longer NAMED after the DABJ case either
-    %   -- it used to be "DABJ Sec. 9 class problem", which was actively
-    %   misleading once the hardware and derived allowables diverged from
-    %   the book.
+    %   not the DABJ validation fixture itself, which validation.dabjSection9
+    %   builds inline so the answer key does not depend on library content.
     %
-    %   The demo row's BoltSpec is blank, but library.json now ships a
+    %   The demo row's BoltSpec is blank, but library.json ships a
     %   boltSpec for its NAS1351 3/8-24 + A286 pairing, so the auto-lookup
-    %   HITS and BoltRatedUltimateLoad/BoltRatedYieldLoad arrive as the
-    %   FF-S-86F Table VII rated pair, 14,050 / 10,500 lbf.
-    %   boltTensileAllowable takes its "rated" basis rather than the
+    %   resolves it and BoltRatedUltimateLoad/BoltRatedYieldLoad arrive as
+    %   the FF-S-86F Table VII rated pair, 14,050 / 10,500 lbf.
+    %   boltTensileAllowable takes this rated basis rather than the
     %   derived At*Ftu convention (NASA-STD-5020B §4.4.2) or the Eq. 18
     %   yield estimate, which 5020B offers only when the fastener spec
-    %   defines no value. Tension-
-    %   Ultimate ALSO resolves to a real number on this row now: it carries
-    %   BodyLengthInGrip = 0.50 in and NutHeight = 0.328 in (see
-    %   data.makeTemplate's sampleNutJointRow), so engine.stiffness
+    %   defines no value. Tension-Ultimate also resolves to a real number:
+    %   the row carries BodyLengthInGrip = 0.50 in and NutHeight = 0.328 in
+    %   (see data.makeTemplate's sampleNutJointRow), so engine.stiffness
     %   computes phi instead of erroring; the rated Ptu_allow
-    %   (14,050 lbf) still puts the Fig. 8 preload gate at NOT-assured,
+    %   (14,050 lbf) still puts the Fig. 8 preload gate at not-assured,
     %   so the rupture branch (NASA-STD-5020B Eq. 10) governs and evaluates
     %   to a real margin -- see the hand-derivation in
-    %   workbookRunsFreshTemplateWithoutCrashing below. The SAME gate
+    %   workbookRunsFreshTemplateWithoutCrashing below. The same gate
     %   governs Tension-Yield (engine.marginTensionYield shares
     %   separationBeforeRuptureGate with Tension-Ultimate), so it takes
-    %   Eq. 16/17 too, resolving to a NEGATIVE margin (~-1.368): the
+    %   Eq. 16/17 too, resolving to a negative margin (~-1.368): the
     %   rated yield allowable (10,500 lbf) is itself below PpMax
     %   (11,006.78 lbf) -- a genuinely over-torqued joint, the same fact
     %   engine.preloadWatchdog already flags Critical on this row. The
-    %   exact published
-    %   DABJ §9 answer key (worst margin -0.65, governed by Slip) is pinned
-    %   separately, in code, by tests/tDabjCase.m and the
+    %   published DABJ §9 answer key (worst margin -0.65, governed by Slip)
+    %   is pinned separately, in code, by tests/tDabjCase.m and the
     %   dabjSection9RegressionUnchanged guards in tThreadShear.m/tBearing.m
     %   -- those use validation.dabjSection9's inline fixture, which
     %   supplies rated loads explicitly (so the fallback never triggers
-    %   there) AND its own complete frustum geometry.
+    %   there) and its own complete frustum geometry.
     %
     %   Also pins the outFile safety contract: runWorkbook refuses to write
     %   results into the workbook it just read.
@@ -75,9 +68,9 @@ classdef tWorkbook < matlab.unittest.TestCase
             % Fresh template -> one runWorkbook call -> must not throw, and
             % the row for element 1001 must at least resolve its per-bolt
             % loads correctly (that happens before the margin solver runs).
-            % See the class header: Tension-Yield/Interaction now fall back
+            % See the class header: Tension-Yield/Interaction fall back
             % to the derived allowable and resolve to real numbers, and
-            % Tension-Ultimate now resolves to a real rupture-branch margin
+            % Tension-Ultimate resolves to a real rupture-branch margin
             % too (stiffness geometry is available on this row) -- not an
             % error either way.
             f = testCase.generateWorkbook();
@@ -95,7 +88,7 @@ classdef tWorkbook < matlab.unittest.TestCase
             testCase.verifyEqual(T.Axial(idx), 5590, "AbsTol", 1e-9);
             testCase.verifyEqual(T.Shear(idx), 1560, "AbsTol", 1e-9);
 
-            % No more per-row error: the row now analyzes.
+            % The row analyzes without a per-row error.
             testCase.verifyEqual(T.Error(idx), "");
 
             % Same demo row (Axial 5590, Shear 1560, NAS1351 3/8-24 + A286)
@@ -103,9 +96,9 @@ classdef tWorkbook < matlab.unittest.TestCase
             % tExport.m's runBulkEndToEnd -- makeTemplate's default
             % Settings sheet carries the same FSU/FFU/FSY/FFY (see
             % +data/makeTemplate.m), so the same hand-derivation applies.
-            % TensionYield does NOT take Eq. 15 here: engine.marginTensionYield
+            % TensionYield does not take Eq. 15 here: engine.marginTensionYield
             % shares the Fig. 8 gate with Tension-Ultimate (below), and that
-            % gate is NOT assured on this row (PpMax 11,006.78 >
+            % gate is not assured on this row (PpMax 11,006.78 >
             % 0.75*Ptu_allow 10,537.5), so Eq. 16/17 governs instead.
             % HAND-DERIVED, longhand (phi = 0.394005, PpMax = 11,006.78,
             % n = 0.5 -- the same stiffness/preload chain the
@@ -121,7 +114,8 @@ classdef tWorkbook < matlab.unittest.TestCase
             % Pty_allow is itself below PpMax, so this is a genuinely
             % over-torqued joint (matches engine.preloadWatchdog's Critical
             % warning on this same row), not a defect -- Eq. 15 never
-            % subtracts preload, so it previously masked this.
+            % subtracts preload, so it would mask an over-torqued joint
+            % that Eq. 16/17 catches.
             expectedPtuAllow = 14050;   % FF-S-86F Tbl VII, NAS1351 3/8-24 + A286
             expectedPtyAllow = 10500;   % FF-S-86F Tbl VII rated yield (no Eq. 18)
             FSU = 1.4; FFU = 1.15; FSY = 1.25; FFY = 1.0;      % makeTemplate's default Settings sheet
@@ -134,15 +128,15 @@ classdef tWorkbook < matlab.unittest.TestCase
             testCase.verifyLessThan(T.TensionYield(idx), 0);   % over-torqued: assert the sign plainly
 
             % Interaction (NASA-STD-5020B Eq. 20/21 criterion, body in
-            % shear): T.InteractionR (renamed from "Interaction") now
-            % carries the real ratio R directly, sourced from
-            % Result.Margins("Interaction").R -- NOT .MS, which stays NaN
-            % by design for this row (Interaction is a pass/fail CRITERION,
-            % R <= 1, not a margin -- see engine.analyze's INTERACTION IS
-            % NOT A MARGIN note; engine.analyzeBulk's header explains the
-            % rename/resourcing). Verify it BOTH against the bulk table AND
-            % directly against engine.marginInteraction on the equivalent
-            % library joint, same raw catalog constants as above:
+            % shear): T.InteractionR carries the real ratio R directly,
+            % sourced from Result.Margins("Interaction").R -- not .MS,
+            % which stays NaN by design for this row (Interaction is a
+            % pass/fail criterion, R <= 1, not a margin -- see
+            % engine.analyze's INTERACTION IS NOT A MARGIN note;
+            % engine.analyzeBulk's header explains the resourcing).
+            % Verify it both against the bulk table and directly against
+            % engine.marginInteraction on the equivalent library joint,
+            % same raw catalog constants as above:
             %   Ptu = 1.4*1.15*5590 = 8,999.9      Psu = 1.4*1.15*1560 = 2,511.6
             %   PsuAllow = 93,400*pi/4*0.375^2     = 10,315.71
             %   Rt = 8,999.9/14,050   = 0.640562   Rs = 2,511.6/10,315.71 = 0.243473
@@ -156,7 +150,7 @@ classdef tWorkbook < matlab.unittest.TestCase
             expectedR = Rt^1.5 + Rs^2.5;   % = 0.541925
             testCase.verifyEqual(T.InteractionR(idx), expectedR, "AbsTol", 1e-6);
             testCase.verifyEqual(T.InteractionR(idx), 0.541925, "AbsTol", 1e-4);
-            % The independent cross-check must stand on the SAME allowable
+            % The independent cross-check must stand on the same allowable
             % the engine used, so it resolves the catalogued spec the way
             % the loader would rather than leaving the rating unset -- an
             % unrated joint here would silently derive At*Ftu and check
@@ -178,24 +172,23 @@ classdef tWorkbook < matlab.unittest.TestCase
             testCase.verifyEqual(ia.R, 0.541925, "AbsTol", 1e-4);
             testCase.verifyTrue(ia.Pass);       % R <= 1
 
-            % WorstMargin is the minimum across every ASSESSED true margin
+            % WorstMargin is the minimum across every assessed true margin
             % on this row (Separation/Bearing/NutStrength among them),
             % several of which depend on the full preload chain (Eq. 25/26)
             % and flange/nut geometry this comment does not re-derive -- not
             % independently pinnable here without risking a silent mismatch
             % against the engine's own computation. It is only known to be
-            % a real number, not NaN; it is NOT bounded by the Interaction
-            % ratio above (Interaction is excluded from this pick entirely
-            % now, so no such inequality holds any more).
+            % a real number, not NaN; it is not bounded by the Interaction
+            % ratio above, since Interaction is excluded from this pick
+            % entirely.
             testCase.verifyFalse(isnan(T.WorstMargin(idx)));
 
-            % Tension-Ultimate now resolves (BodyLengthInGrip/NutHeight are
+            % Tension-Ultimate resolves (BodyLengthInGrip/NutHeight are
             % populated on this row -- see the class header). HAND-DERIVED,
             % same chain as tests/tBulk.m's bulkRunsTemplateJointWithoutCrashing
             % (identical joint, identical settings-template factors/temps,
-            % identical Axial = 5590). ThermalRate is no longer an
-            % analyst-facing column, so this row's thermal preload comes from
-            % engine.stiffness + TM-106943 Eq. 10, the SAME geometry phi
+            % identical Axial = 5590). This row's thermal preload comes from
+            % engine.stiffness + TM-106943 Eq. 10, the same geometry phi
             % needs:
             %   engine.stiffness (L1 = 0.50, L2 = 0.25, grip 0.75 in, no
             %   washers, 30 deg frustum, NAS1351 3/8-24 + A286 + Al
@@ -210,8 +203,7 @@ classdef tWorkbook < matlab.unittest.TestCase
             %   (A286) = 1.65e-5; grip 0.75 in; dThot = 13.8889 degC ->
             %   Pth = 1,689,213*0.75*13.8889*6.7e-6 = 117.89 lbf.
             %   PpMax = Ppi_max(10,888.89) + Pth(117.89) = 11,006.78 lbf
-            %   (DOWN from the old ThermalRate=12.978 override's 11,069.14)
-            %   -- Fig. 8 gate NOT assured (11,006.78 >= 0.75*14,050 =
+            %   -- Fig. 8 gate not assured (11,006.78 >= 0.75*14,050 =
             %   10,537.5).
             %   NASA-STD-5020B Eq. 10: P'tu = (14,050-11,006.78)/(0.5*0.394005)
             %   = 15,447.62 lbf; Ptu = FSU*FFU*5590 = 8,999.9 lbf;

@@ -1,6 +1,5 @@
 function c = loadCase(file)
-%LOADCASE  Deserialize an analysis case JSON file written by data.saveCase
-%   (Phase 3.7).
+%LOADCASE  Deserialize an analysis case JSON file written by data.saveCase.
 %   c = data.loadCase(file) -> struct with:
 %       Joint     (1,1) model.Joint    — always present
 %       LoadCase  (1,1) model.LoadCase — present when saved

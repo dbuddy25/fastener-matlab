@@ -1,6 +1,6 @@
 classdef FastenerApp < handle
     %FASTENERAPP  The GUI shell: left rail, card area, menus, status, title.
-    %   Step 1 of the rebuild (GUI_SPEC.md Section 14). This class owns the
+    %   (GUI_SPEC.md Section 14.) This class owns the
     %   window and the navigation; it owns NO analysis logic and NO page
     %   content. Pages are gui.Page subclasses registered in pageSpecs()
     %   and built lazily on first navigation.
@@ -461,10 +461,7 @@ classdef FastenerApp < handle
             %   Bolt Sizing sits BEFORE Joint Config: size first, then
             %   define the joint. Help is on the menu bar, not the rail.
             %
-            %   Step 1 shipped the shell with a PlaceholderPage naming the
-            %   step that replaces it. Step 2 swaps in the three setup
-            %   pages below; steps 3+ do the same for the rest, one at a
-            %   time. The ids are the contract and must not change.
+            %   The ids are the contract and must not change.
             s = app.State;
             specs = { ...
                 "SETUP",        "", gui.ProjectPage(s); ...
@@ -680,14 +677,9 @@ classdef FastenerApp < handle
 
         function onHelpAbout(app)
             %ONHELPABOUT  Version and scope, as a plain info alert.
-            %   STATES THE CHECK SCOPE, and it used to state it wrongly:
-            %   "displays 9 of the 15 checks ... the other 6 are computed
-            %   and not displayed" was true of the first build and false
-            %   from the moment the results table showed all 15. A dialog
-            %   whose whole job is telling the analyst what the tool does
-            %   and does not cover is the worst place in the app for a
-            %   stale claim about coverage, so it is corrected here rather
-            %   than left for a reader to catch.
+            %   States the check scope accurately: this dialog's whole job
+            %   is telling the analyst what the tool covers, so a stale
+            %   claim here is worse than one anywhere else in the app.
             msg = sprintf([ ...
                 'Fastener Analysis Tool (MATLAB) v%s\n' ...
                 'NASA-STD-5020B bolted-joint margins.\n\n' ...
@@ -701,13 +693,9 @@ classdef FastenerApp < handle
 
         function onHelpUserGuide(app)
             %ONHELPUSERGUIDE  Build the guide PDF if needed, then open it.
-            %   IT USED TO OPEN USER_GUIDE.md. Handing an analyst a .md
-            %   file is wrong twice over -- on Windows it opens in Notepad
-            %   or in nothing, and it reads as source rather than as a
-            %   document -- and the content was wrong too: that file's
-            %   workflows are typed at the Command Window, which someone
-            %   running the packaged app never sees. report.userGuide
-            %   writes a PDF about the application instead.
+            %   A PDF, not a .md file: on Windows a .md opens in Notepad or
+            %   in nothing, and reads as source rather than as a document.
+            %   report.userGuide writes a PDF about the application instead.
             %
             %   GENERATED, NOT SHIPPED. Report Generator is already a
             %   dependency, so this costs the build nothing, removes a
@@ -816,11 +804,9 @@ classdef FastenerApp < handle
             app.rebuildRecentMenu();
             app.setStatus(sprintf('Opened %s', file));
 
-            % NOTE (step 3): the first build reported the library keys a
-            % case referenced but the library does not have, leaving
-            % required material dropdowns blank rather than substituting.
-            % That check belongs to the pages that own those dropdowns and
-            % lands with Joint Config.
+            % Library keys a case references but the library does not have
+            % are reported by the pages that own those dropdowns (Joint
+            % Config), not here.
         end
 
         function onFileSave(app)
@@ -875,19 +861,16 @@ classdef FastenerApp < handle
             %   Esc/close action: destroying work must never be the path of
             %   least resistance.
             %
-            %   CONTINUATION-PASSING, and it has to be. This used the
-            %   BLOCKING uiconfirm - the form that returns a choice - which
-            %   halts execution inside the callback until a human answers.
-            %   That deadlocks any programmatic driver, including the App
-            %   Testing Framework: the test cannot reach its answer because
-            %   the press that opened the dialog has never returned. Nothing
-            %   exercised File > New, so it sat silent; the first test to
-            %   touch it would have hung the whole ~8-minute run.
+            %   CONTINUATION-PASSING, and it has to be. The blocking form of
+            %   uiconfirm halts execution inside the callback until a human
+            %   answers, which deadlocks any programmatic driver, including
+            %   the App Testing Framework: the test cannot reach its answer
+            %   because the press that opened the dialog has never returned.
             %
-            %   The consequence is that this CANNOT return a boolean - the
-            %   answer arrives later, through the event. Every caller passes
-            %   what it wants done instead. Matches DefinedJointsPage and
-            %   JointConfigPage, which already use the CloseFcn form.
+            %   So this CANNOT return a boolean - the answer arrives later,
+            %   through the event. Every caller passes what it wants done
+            %   instead. Matches DefinedJointsPage and JointConfigPage,
+            %   which use the same CloseFcn form.
             if ~app.State.IsDirty
                 onProceed();
                 return
@@ -923,9 +906,9 @@ classdef FastenerApp < handle
             %   quit; the worst case is losing the confirmation, not being
             %   trapped in the application.
             %
-            %   Note the shape change: the window no longer closes when this
-            %   returns, because with a dirty case it returns while the
-            %   question is still on screen. Closing IS the continuation.
+            %   The window does not close when this returns: with a dirty
+            %   case it returns while the question is still on screen.
+            %   Closing IS the continuation.
             try
                 app.confirmDiscard('closing', @() app.closeNow());
             catch err
@@ -965,10 +948,9 @@ classdef FastenerApp < handle
     end
 
     % ---- Test seams -------------------------------------------------------
-    %   File > New is reachable from a test ONLY because confirmDiscard is
-    %   now the CloseFcn form: the call returns while the question is still
-    %   on screen. Under the blocking form these seams would have hung the
-    %   run rather than exposed anything.
+    %   File > New is reachable from a test because confirmDiscard uses the
+    %   CloseFcn form: the call returns while the question is still on
+    %   screen. The blocking form would hang the run instead.
     %
     %   Following the suite's rule (tGuiDefinedJoints, "Load / rename /
     %   delete"), tests DO NOT answer the dialog - they assert that nothing

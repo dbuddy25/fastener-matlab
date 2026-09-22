@@ -43,12 +43,6 @@ classdef DefinedJointsPage < gui.Page
     %   case state and already loads from a case file, so the orphaning is
     %   reachable today.)
     %
-    %   INCREMENT 1 shipped the list, the empty state and the count.
-    %   INCREMENT 2 added the summary. INCREMENT 3 (this one) adds load /
-    %   rename / delete. Joint Config was rebuilt this way after the
-    %   single-pass attempt failed -- each increment diagnosable from one
-    %   stack trace.
-    %
     %   Backed by AppState.JointLibrary, listens to JointLibraryChanged.
 
     properties (Access = private)
@@ -563,42 +557,28 @@ classdef DefinedJointsPage < gui.Page
 
         function tf = hasUnsavedJointWork(obj)
             %HASUNSAVEDJOINTWORK  Is there Joint Config work Load would lose?
-            %   PUBLIC so it can be tested directly. It decides whether the
-            %   Load confirm appears at all, and when it was only reachable
-            %   THROUGH that dialog a wrong answer showed up as "loading
-            %   does nothing" — a symptom three steps from its cause.
+            %   PUBLIC so it can be tested directly.
             %
             %   Two ways the answer is no:
             %     - nothing has been built yet, or
             %     - what is there is already stored under some name.
             %
-            %   ISEQUALN, NEVER ISEQUAL. This is the whole bug this method
-            %   was rewritten twice for. isequal(NaN, NaN) is FALSE, and an
+            %   ISEQUALN, NEVER ISEQUAL. isequal(NaN, NaN) is FALSE, and an
             %   unset joint is mostly NaN — BoltRatedUltimateLoad,
-            %   BodyLengthInGrip, NominalTorque, both washers' diameters.
-            %   So isequal called a joint different from ITSELF, the gate
-            %   answered "unsaved work" every time, and Load put up a
-            %   confirm it should never have shown. The symptom was a
-            %   button that appeared to do nothing. (matlab.unittest's own
-            %   verifyEqual uses isequaln, which is why the tests around
-            %   this never tripped over the same thing.)
+            %   BodyLengthInGrip, NominalTorque, both washers' diameters —
+            %   so isequal would call a joint different from itself.
             %
             %   "HAS ANYTHING BEEN EDITED" IS NOT THIS PAGE'S QUESTION TO
             %   ANSWER. AppState.IsDirty already means exactly that, is
             %   maintained by the one markDirty funnel every edit passes
-            %   through, and is cleared by File > New / Open. Two earlier
-            %   attempts here defined it a second time -- first by
-            %   comparing joints, then by comparing their serialized forms
-            %   against a blank -- and each got a different answer from the
-            %   flag sitting right there. A second definition of a state
-            %   the app already tracks is a second thing to keep correct.
+            %   through, and is cleared by File > New / Open. A second
+            %   definition of a state the app already tracks is a second
+            %   thing to keep correct.
             %
-            %   What this page DOES own is the library question, and it is
-            %   asked on the SERIALIZED form: data.toStruct is what File >
-            %   Save writes, so "already saved" is asked in the terms that
-            %   make it true. isequaln, never isequal -- an unset joint is
-            %   mostly NaN and isequal(NaN, NaN) is false, which had this
-            %   method calling a joint different from itself.
+            %   What this page DOES own is the library question, asked on
+            %   the SERIALIZED form: data.toStruct is what File > Save
+            %   writes, so "already saved" is asked in the terms that make
+            %   it true.
             here = gui.DefinedJointsPage.serialized(obj.State.Joint);
             if ~isempty(here)
                 lib = obj.State.JointLibrary;
@@ -633,13 +613,13 @@ classdef DefinedJointsPage < gui.Page
             %   WHY A SEAM RATHER THAN A TEST THAT ANSWERS THE DIALOG.
             %   matlab.uitest cannot press a button inside a uiconfirm, so
             %   a test can only get as far as "the confirm opened". That
-            %   leaves the branch that ACTUALLY DELETES unexercised — and a
+            %   leaves the branch that actually deletes unexercised — and a
             %   test that presses Delete and then asserts the library still
             %   holds every joint passes just as happily when the button is
-            %   wired to nothing at all. For a DESTRUCTIVE action that is
+            %   wired to nothing at all. For a destructive action that is
             %   the wrong thing to leave untested.
             %
-            %   It calls the REAL production continuation with the field
+            %   It calls the real production continuation with the field
             %   uiconfirm's CloseFcn actually delivers (evt.SelectedOption,
             %   a character vector matching one of Options). The name is
             %   passed the same way onDelete captures it, so the

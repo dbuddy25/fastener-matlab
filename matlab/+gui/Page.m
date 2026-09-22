@@ -10,7 +10,7 @@ classdef (Abstract) Page < handle
     %
     %   VIEWS ARE PLAIN HANDLE CLASSES, not
     %   matlab.ui.componentcontainer.ComponentContainer. That class exists
-    %   to make REUSABLE components that drop into App Designer; every page
+    %   to make reusable components that drop into App Designer; every page
     %   here is a singleton built in code, so it would be ceremony with no
     %   payoff. The Model half of MVC — one handle class, events, no
     %   view-to-view coupling — is adopted in full (GUI_SPEC.md Section 5).
@@ -21,12 +21,12 @@ classdef (Abstract) Page < handle
     %                         change one: pre-validation dialogs and tests
     %                         name pages by it.
     %       title()           string, the rail label
-    %       build(parent)     construct into the given grid cell, ONCE
+    %       build(parent)     construct into the given grid cell, once
     %       refresh()         re-read AppState; idempotent and cheap
     %       railStatus()      "" | "stale" | "loaded" — the rail glyph
     %
     %   LAZY CONSTRUCTION (GUI_SPEC.md Section 10 rule 1): build() is
-    %   called on FIRST NAVIGATION, not at startup. A meaningful share of
+    %   called on first navigation, not at startup. A meaningful share of
     %   users run over Remote Desktop, where render cost is the binding
     %   constraint; building ten pages' worth of widgets into the first
     %   paint is the single most expensive thing the shell could do. The
@@ -49,9 +49,9 @@ classdef (Abstract) Page < handle
         % The one shared model. Immutable: a page is bound to its AppState
         % at construction and can never be repointed at another.
         %
-        % Declared WITHOUT a (1,1) size constraint on purpose. A handle-class
+        % Declared without a (1,1) size constraint on purpose. A handle-class
         % property with size (1,1) and no explicit default makes MATLAB
-        % default-construct one at class load and SHARE it across every
+        % default-construct one at class load and share it across every
         % instance. The constructor assigns the real, scalar state.
         State gui.AppState
     end
@@ -131,7 +131,7 @@ classdef (Abstract) Page < handle
 
         function expandGroup(obj, titleSubstring)
             %EXPANDGROUP  Open a collapsible group by (partial) title.
-            %   Public because a control inside a COLLAPSED group is in an
+            %   Public because a control inside a collapsed group is in an
             %   invisible hierarchy, and matlab.uitest refuses to drive one
             %   - a test that types into a collapsed group errors rather
             %   than fails. So a test opens the group first, exactly as the
@@ -158,7 +158,7 @@ classdef (Abstract) Page < handle
 
         function g = groupNamed(obj, titleSubstring)
             %GROUPNAMED  One group's handles, by partial title.
-            %   ERRORS on an unknown name rather than returning empty: a
+            %   Errors on an unknown name rather than returning empty: a
             %   silent no-op surfaces much later as a test that cannot type
             %   into a field, with nothing pointing back here.
             arguments
@@ -188,8 +188,8 @@ classdef (Abstract) Page < handle
         end
 
         function s = railStatus(obj) %#ok<MANU>
-            %RAILSTATUS  The rail's status GLYPH for this page.
-            %   "" | "stale" | "loaded". This is the SECOND of the rail's
+            %RAILSTATUS  The rail's status glyph for this page.
+            %   "" | "stale" | "loaded". This is the second of the rail's
             %   two independent channels: the first, active-vs-idle, is
             %   carried by the state button's pressed rendering plus font
             %   weight. Status must never be expressed as the active
@@ -213,7 +213,7 @@ classdef (Abstract) Page < handle
             %   the analyst has to resolve, and inconsistent banner styling
             %   across pages reads as a bug even when each one is legible.
             %
-            %   Emphasis belongs in the WORDS ("GLOBAL — applies to every
+            %   Emphasis belongs in the words ("Global — applies to every
             %   joint"), not in per-page colors.
             lb = uilabel(parent, 'Text', text);
             lb.Layout.Row    = row;
@@ -238,7 +238,7 @@ classdef (Abstract) Page < handle
 
         function setStatus(obj, msg)
             %SETSTATUS  Write a one-line message to the shell's status bar.
-            %   The route every page uses for INFORMATIONAL outcomes —
+            %   The route every page uses for informational outcomes —
             %   "Saved preset X", "Loaded 42 elements". Errors belong in
             %   uialert; routine success does not.
             %
@@ -256,7 +256,7 @@ classdef (Abstract) Page < handle
 
         function showSection(obj)
             %SHOWSECTION  Ask the shell for the joint cross-section window.
-            %   The window is a SINGLETON owned by the shell, for the same
+            %   The window is a singleton owned by the shell, for the same
             %   reason navigation is: it outlives the page that opened it,
             %   and a page constructing its own would leak one per press.
             %   A no-op when unattached, like goToPage.
@@ -307,7 +307,7 @@ classdef (Abstract) Page < handle
                 return
             end
             obj.Root    = parent;
-            obj.IsBuilt = true;   % set BEFORE build() so a build that
+            obj.IsBuilt = true;   % set before build() so a build that
                                   % navigates cannot recurse into itself
             obj.build(parent);
         end
@@ -348,12 +348,10 @@ classdef (Abstract) Page < handle
             %   its uipanel + Layout lines with one call and leaves the
             %   uigridlayout that follows exactly as it was.
             %
-            %   BODIES ARE BUILT EAGERLY; THIS TOGGLES VISIBILITY ONLY.
-            %   Section 7.5 settled that and the reason is marshalling:
-            %   buildJoint reads EVERY control to assemble a model.Joint, so
-            %   a control that was never built is not a saving, it is a
-            %   joint with a missing field. (Section 10's "collapsed groups
-            %   stay unbuilt" predates that and is superseded by it.)
+            %   BODIES ARE BUILT EAGERLY; THIS TOGGLES VISIBILITY ONLY
+            %   (Section 7.5). buildJoint reads EVERY control to assemble a
+            %   model.Joint, so a control that was never built is not a
+            %   saving, it is a joint with a missing field.
             %
             %   The row height does the collapsing, not visibility alone: a
             %   'fit' row still reserves space for a hidden child, so the
@@ -386,7 +384,7 @@ classdef (Abstract) Page < handle
             host = uipanel(pg, 'BorderType', 'none');
             host.Layout.Row = 2;
 
-            % Reads the CURRENT state at click time rather than capturing a
+            % Reads the current state at click time rather than capturing a
             % flag, so the closure cannot go stale against expandGroup.
             hdr.ButtonPushedFcn = @(~, ~) gui.Page.setGroupCollapsed( ...
                 pg, hdr, host, titleText, strcmp(char(host.Visible), 'on'));
@@ -398,15 +396,13 @@ classdef (Abstract) Page < handle
         end
 
         function bindEdit(obj, control, callback)
-            %BINDEDIT  Wire an editable control so it CANNOT forget the dirty flag.
-            %   The first build's hardest-won lesson: a dirty feed wired on
-            %   only one page silently discards edits made on every other
-            %   page (CONVENTIONS.md A4). The fix there was a funnel every field builder used
-            %   unconditionally; this is that funnel, moved into the base
-            %   class so a new page gets it by inheriting rather than by
-            %   remembering.
+            %BINDEDIT  Wire an editable control so it cannot forget the dirty flag.
+            %   A dirty feed wired on only one page silently discards edits
+            %   made on every other page (CONVENTIONS.md A4). This is the
+            %   one funnel every editable control must go through, so a new
+            %   page gets it by inheriting rather than by remembering.
             %
-            %   Marks dirty FIRST, then runs the control's own callback.
+            %   Marks dirty first, then runs the control's own callback.
             %   The callback takes (src, evt), like any MATLAB callback.
             %
             %       obj.bindEdit(fld, @(~, ~) obj.onNameEdited());

@@ -15,9 +15,6 @@ function files = recentFiles(action, file)
 %   is what makes the caller render the "(no recent files)" placeholder
 %   rather than an empty submenu (CONVENTIONS.md A12).
 %
-%   NEW BUILD, not a port: Open Recent was specified in the first pass and
-%   deferred, so there is no earlier behavior to carry forward.
-%
 %   THREE RULES, all of which exist because the alternative is a menu that
 %   lies:
 %     1. Max 5 entries. A recent list is a shortcut, not a history.

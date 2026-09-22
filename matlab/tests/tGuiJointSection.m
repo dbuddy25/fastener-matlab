@@ -4,13 +4,13 @@ classdef tGuiJointSection < matlab.uitest.TestCase
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
     %
-    %   ALMOST EVERY TEST HERE DRIVES layout() AND NEVER OPENS A WINDOW.
+    %   Almost every test here drives layout() and never opens a window.
     %   That is the reason the geometry lives in a pure static: asserting
     %   "the nut washer is not drawn on an insert joint" against a picture
     %   means asserting against pixels, which is both slow and untestable in
     %   any useful sense. layout() turns the whole drawing into numbers.
     %
-    %   The handful of window tests check LIFECYCLE only - that the window
+    %   The handful of window tests check lifecycle only - that the window
     %   is a singleton and dies with the app. They assert nothing about what
     %   was painted.
 

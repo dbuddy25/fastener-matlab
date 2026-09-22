@@ -7,14 +7,6 @@ function app = fastenerTool()
 %
 %   It launches +gui.
 %
-%   WHAT THIS USED TO BE, because the gap is worth recording rather than
-%   quietly closing: it was a Phase 1 stub that printed a version banner,
-%   said "engine not built yet (Phase 1)", and returned. That stayed true
-%   in the file long after the engine, the validated single-joint path and
-%   both GUIs existed — so the documented entry point did nothing, and the
-%   real one was a launch function typed by hand. Found by a dead-code
-%   review, 2026-08-13.
-%
 %   The version banner is kept: it is the one line that tells a user which
 %   build they are about to run, and toolVersion() is the single
 %   definition of it (stamped on every PDF and workbook the tool writes).

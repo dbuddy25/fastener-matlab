@@ -4,32 +4,32 @@ classdef BulkAnalysisPage < gui.Page
     %   Joints supplies the joints, Element Mapping says which joint each
     %   element is, Element Forces supplies the loads, and this runs them.
     %
-    %   IT COMPUTES NOTHING. One engine call — engine.analyzeBulk — and
+    %   It computes nothing. One engine call — engine.analyzeBulk — and
     %   everything on screen is a rendering of the table it returns. The
     %   only arithmetic here is display: which rows to show, the worst
     %   value down a column, and how a number is spelled. Formatting and
     %   the ratio/margin distinction live in gui.MarginView, shared with
     %   the single-joint Results page so the two cannot drift.
     %
-    %   MARGIN COLUMNS ARE DISCOVERED, NEVER HARDCODED. Everything between
+    %   Margin columns are discovered, never hardcoded. Everything between
     %   `Shear` and `WorstMargin` in the results table is a margin, which
     %   is why analyzeBulk puts `Warnings` last: a trailing column is
     %   invisible to this discovery and needs no change here. A new engine
     %   check appears on screen on its own.
     %
-    %   THE CORE / SUPPLEMENTAL SPLIT IS ABOUT WHICH DOCUMENT REQUIRES A
-    %   CHECK, NOT ABOUT WHAT IS DISPLAYED. Core are the checks 5020B
+    %   The core/supplemental split is about which document requires a
+    %   check, not about what is displayed. Core are the checks 5020B
     %   itself gives equations for; supplemental are the ones it defers to
     %   TM-106943. The verdict line reports them separately so a bearing
-    %   failure cannot read as 5020B non-compliance — and counts BOTH
+    %   failure cannot read as 5020B non-compliance — and counts both
     %   groups regardless of which columns are on screen. "Show
     %   Supplemental" is a width concession in a twenty-column grid, not a
     %   claim about scope.
     %
-    %   WHAT MUST NEVER HAPPEN HERE, all of it learned the hard way:
+    %   What must never happen here:
     %     - the interaction ratio tested with a plain < 0. It passes iff
     %       R <= 1, the opposite direction, and a min() envelope across
-    %       load cases would take its BEST case and hide a failure.
+    %       load cases would take its best case and hide a failure.
     %     - counts taken over the filtered view. The verdict is a
     %       statement about the run, not about what is on screen.
     %     - a cancelled run reading as a clean verdict.
@@ -139,7 +139,7 @@ classdef BulkAnalysisPage < gui.Page
         end
 
         function refresh(obj)
-            %REFRESH  Sync from AppState.BulkTable. The ONLY populate path,
+            %REFRESH  Sync from AppState.BulkTable. The only populate path,
             %   and it never marks anything dirty or stale — reading a
             %   stale flag must not set one (A3).
             if isempty(obj.SummaryTable) || ~isvalid(obj.SummaryTable)
@@ -289,7 +289,7 @@ classdef BulkAnalysisPage < gui.Page
         end
 
         function renderVerdict(obj)
-            %RENDERVERDICT  The split count, over the FULL result set.
+            %RENDERVERDICT  The split count, over the full result set.
             T = obj.State.BulkTable;
             if isempty(T)
                 obj.VerdictLabel.Text = '';
@@ -318,7 +318,7 @@ classdef BulkAnalysisPage < gui.Page
             elseif any(coreFail) || any(suppFail) || any(errRows)
                 obj.VerdictLabel.FontColor = gui.palette('statusFail');
             elseif strlength(obj.CancelNote) > 0
-                % All-pass but INCOMPLETE. Amber, never green: a partial
+                % All-pass but incomplete. Amber, never green: a partial
                 % run must not read as a clean full verdict.
                 obj.VerdictLabel.FontColor = gui.palette('statusWarn');
             else
@@ -328,7 +328,7 @@ classdef BulkAnalysisPage < gui.Page
 
         function renderAfterFilter(obj)
             %RENDERAFTERFILTER  A display control moved. Tables only.
-            %   Emphatically NOT a refresh: filters never touch the verdict
+            %   Emphatically not a refresh: filters never touch the verdict
             %   counts, and a display interaction must never dirty or stale
             %   anything (A4).
             obj.renderTiers();
@@ -493,7 +493,7 @@ classdef BulkAnalysisPage < gui.Page
         end
 
         function styleTable(obj, t, d, marginCols)
-            %STYLETABLE  removeStyle first, then ONE batched addStyle per
+            %STYLETABLE  removeStyle first, then one batched addStyle per
             %   group (A8). Wrapped: styling is cosmetic and is never
             %   allowed to break the numbers.
             try
@@ -552,7 +552,7 @@ classdef BulkAnalysisPage < gui.Page
     % ---- Reading the results table ----------------------------------------
     methods (Access = private)
         function [core, supp] = marginGroups(obj)
-            %MARGINGROUPS  Discover the margin columns POSITIONALLY.
+            %MARGINGROUPS  Discover the margin columns positionally.
             %   Everything between Shear and WorstMargin. Never a hardcoded
             %   list, so an engine check added tomorrow shows up here on
             %   its own — which is exactly why analyzeBulk documents
@@ -608,7 +608,7 @@ classdef BulkAnalysisPage < gui.Page
         end
 
         function [coreFail, suppFail, errRows] = failureMasks(obj, T, core, supp)
-            %FAILUREMASKS  Per-row failure, by group, over the WHOLE table.
+            %FAILUREMASKS  Per-row failure, by group, over the whole table.
             errRows  = obj.errorMask(T);
             coreFail = obj.groupFailure(T, core) & ~errRows;
             suppFail = obj.groupFailure(T, supp) & ~errRows;
@@ -641,7 +641,7 @@ classdef BulkAnalysisPage < gui.Page
         end
 
         function r = selectedElementRow(obj)
-            %SELECTEDELEMENTROW  Index into the CURRENT By Element view.
+            %SELECTEDELEMENTROW  Index into the current By Element view.
             r = [];
             if isempty(obj.ElementTable) || ~isvalid(obj.ElementTable)
                 return
@@ -662,7 +662,7 @@ classdef BulkAnalysisPage < gui.Page
     methods (Access = private)
         function [problems, pages] = gateProblems(obj)
             %GATEPROBLEMS  Every reason the run cannot start, each with the
-            %   page that fixes it. The workflow's ONLY hard gate: order is
+            %   page that fixes it. The workflow's only hard gate: order is
             %   suggested everywhere else and enforced only here, at the
             %   moment of truth, always pointing at the fix.
             problems = strings(1, 0);
@@ -710,10 +710,10 @@ classdef BulkAnalysisPage < gui.Page
 
         function [elements, missing, skipped] = assemble(obj)
             %ASSEMBLE  Mapping x forces -> engine.analyzeBulk's contract.
-            %   THE MAPPING IS THE AUTHORITY on both the joint and the bolt
-            %   pattern; the force row supplies only the loads. Scale and
-            %   Reversible come from the row's load-case record, which is
-            %   where the user set them.
+            %   The mapping is the authority on both the joint and the
+            %   bolt pattern; the force row supplies only the loads. Scale
+            %   and Reversible come from the row's load-case record, which
+            %   is where the user set them.
             elements = struct('ElementId', {}, 'JointName', {}, ...
                 'LoadCaseName', {}, 'PatternId', {}, 'Forces', {}, ...
                 'ScaleFactor', {}, 'Reversible', {});
@@ -817,7 +817,7 @@ classdef BulkAnalysisPage < gui.Page
                     gui.BulkAnalysisPage.pageLabel(pages(i)));
             end
             labels{end} = 'Close';
-            % sprintf, not `newline + newline`: those are CHARS, and
+            % sprintf, not `newline + newline`: those are chars, and
             % adding them gives char(20), not a blank line.
             uiconfirm(obj.figureHandle(), ...
                 char(strjoin(problems, sprintf('\n\n'))), ...
@@ -837,8 +837,8 @@ classdef BulkAnalysisPage < gui.Page
 
         function runElements(obj, elements, progress)
             %RUNELEMENTS  Slice, run, reassemble, commit.
-            %   SLICED PURELY FOR PROGRESS AND CANCELLATION. The key is
-            %   (load case, pattern) — analyzeBulk's OWN pattern key — so a
+            %   Sliced purely for progress and cancellation. The key is
+            %   (load case, pattern) — analyzeBulk's own pattern key — so a
             %   slice never splits a joint-slip aggregation group, and the
             %   result is reassembled in the original element order. The
             %   sliced run is numerically identical to one call; every
@@ -919,10 +919,9 @@ classdef BulkAnalysisPage < gui.Page
         end
 
         function jl = stampedLibrary(obj)
-            %STAMPEDLIBRARY  The defined joints with the GLOBAL service
-            %   temperatures on them. Skipping this is how the thermal
-            %   preload term silently went to zero on the single-joint path
-            %   once already.
+            %STAMPEDLIBRARY  The defined joints with the global service
+            %   temperatures on them. Skipping this leaves the thermal
+            %   preload term silently at zero.
             jl = obj.State.JointLibrary;
             try
                 for i = 1:numel(jl)
@@ -970,14 +969,15 @@ classdef BulkAnalysisPage < gui.Page
             %SINGLEJOINTINPUTS  One element's joint and load case, exactly
             %   as the batch built them.
             %
-            %   THE JOINT-MODE SLIP STEP IS WHY THIS EXISTS. Eq. 84 needs
-            %   the whole bolt PATTERN's totals, and engine.analyze refuses
-            %   to run a SlipMode.Joint joint without them — so a
-            %   drill-down that handed it one element's loads threw, and
-            %   the button did nothing. Rebuilding the pattern here (and
-            %   applying the same nf check, and the same downgrade when it
-            %   fails) is what makes the drill-down show the row it was
-            %   opened from rather than a different analysis of it.
+            %   The joint-mode slip step is why this function exists.
+            %   Eq. 84 needs the whole bolt pattern's totals, and
+            %   engine.analyze refuses to run a SlipMode.Joint joint
+            %   without them — handing it one element's loads would throw
+            %   and leave the button looking like it does nothing.
+            %   Rebuilding the pattern here (applying the same nf check
+            %   and the same downgrade when it fails) makes the drill-down
+            %   show the row it was opened from, rather than a different
+            %   analysis of it.
             %
             %   model.Joint is a value class, so the SlipMode downgrade
             %   below touches this copy only; the library is untouched.
@@ -1027,13 +1027,13 @@ classdef BulkAnalysisPage < gui.Page
 
         function onDrillDown(obj)
             %ONDRILLDOWN  Re-run one element as a single joint.
-            %   Rebuilt from the CURRENT inputs rather than kept from the
+            %   Rebuilt from the current inputs rather than kept from the
             %   run — which is safe precisely because this is disabled
             %   while the results are stale, so the two agree.
             %
-            %   EVERY EXIT RECORDS WHY. A button that does nothing and says
-            %   nothing is a bug report with no information in it — the
-            %   analyst gets no reason and neither does a failing test.
+            %   Every exit records why: a button that does nothing and
+            %   says nothing is a bug report with no information in it —
+            %   the analyst gets no reason and neither does a failing test.
             obj.DrillReason = "";
             r = obj.selectedElementRow();
             if isempty(r)
@@ -1072,13 +1072,13 @@ classdef BulkAnalysisPage < gui.Page
                     'Factors', obj.State.Factors);
                 res = engine.analyze(inputs.Joint, inputs.LoadCase, inputs.Factors);
             catch err
-                % Wrapped WIDE on purpose: an uncaught error in a button
+                % Wrapped wide on purpose: an uncaught error in a button
                 % callback prints to the Command Window and looks, from the
                 % app, exactly like the button doing nothing.
                 obj.giveUpDrilling(string(err.message));
                 return
             end
-            % DELIBERATELY does not write State.Joint / State.LoadCase.
+            % Deliberately does not write State.Joint / State.LoadCase.
             % Results renders from the Result and its recorded inputs, so
             % nothing here needs them — and writing them would silently
             % replace whatever the analyst had on Joint Config, which is
@@ -1125,7 +1125,7 @@ classdef BulkAnalysisPage < gui.Page
             %   load case. Written out rather than reusing sliceKeys
             %   because that one deliberately omits the joint — it groups
             %   for progress, where a collision costs nothing, and this
-            %   groups for a MARGIN, where it would be wrong.
+            %   groups for a margin, where it would be wrong.
             n = numel(elements);
             mask = false(1, n);
             key = gui.BulkAnalysisPage.patternKey(e);
@@ -1154,7 +1154,7 @@ classdef BulkAnalysisPage < gui.Page
 
         function tf = readsAsFailure(txt)
             %READSASFAILURE  Does this rendered cell say "fail"?
-            %   Reads the TEXT the engine's number produced rather than
+            %   Reads the text the engine's number produced rather than
             %   re-thresholding the number: the cell was formatted by
             %   MarginView from a value already classified there, and a
             %   second threshold here is exactly the drift A2 forbids.
@@ -1243,7 +1243,7 @@ classdef BulkAnalysisPage < gui.Page
         end
 
         function runSilently(obj)
-            %RUNSILENTLY  The run path with NO progress dialog.
+            %RUNSILENTLY  The run path with no progress dialog.
             %   uiprogressdlg is modal, and a stray one blocks every
             %   gesture that follows — the same hazard as a file picker.
             %   Tests drive the run through here; one test presses the
@@ -1284,7 +1284,7 @@ classdef BulkAnalysisPage < gui.Page
 
         function selectElement(obj, row)
             %SELECTELEMENT  Select a By Element row, as a user would.
-            %   Brings that tier to the front FIRST. A user cannot select a
+            %   Brings that tier to the front first. A user cannot select a
             %   row on a tab they are not looking at, and a control on an
             %   unselected tab is not in a visible hierarchy — which is
             %   also what matlab.uitest refuses to drive.

@@ -3,7 +3,7 @@ function c = dabjExample8b()
 %   c = validation.dabjExample8b() returns a struct encoding the DABJ
 %   (Design and Analysis of Bolted Joints, Instar/ATI, Dec 2025) Example
 %   8-b worked stiffness problem — the answer key for engine.stiffness
-%   (Phase 3.1a: 30° conical frustum, through-bolt/nut configuration).
+%   (30° conical frustum, through-bolt/nut configuration).
 %
 %   Fields:
 %       Name      "DABJ Example 8-b (joint stiffness)"

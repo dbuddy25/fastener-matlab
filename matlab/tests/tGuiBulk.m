@@ -1,5 +1,5 @@
 classdef tGuiBulk < matlab.uitest.TestCase
-    %TGUIBULK  Step 8 acceptance: the Bulk Analysis page.
+    %TGUIBULK  Tests for the Bulk Analysis page.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -121,9 +121,9 @@ classdef tGuiBulk < matlab.uitest.TestCase
     % ---- The assembly -----------------------------------------------------
     methods (Test)
         function theJointAndPatternComeFromTheMappingNotTheForces(testCase)
-            % Step 6 and 7's ownership rule, asserted where it takes
-            % effect: a force row carries neither field, and the mapping is
-            % the only place either can be set.
+            % The ownership rule, asserted where it takes effect: a force
+            % row carries neither field, and the mapping is the only place
+            % either can be set.
             testCase.setUpCase(PatternId = "PLATE-1");
 
             els = testCase.Page.assembled();
@@ -185,9 +185,9 @@ classdef tGuiBulk < matlab.uitest.TestCase
         end
 
         function theGlobalServiceTemperaturesReachTheRun(testCase)
-            % The thermal preload term was silently zero on the single-joint
-            % path for weeks because nothing stamped these. A bulk run that
-            % skipped them would be wrong the same way and just as quietly.
+            % A bulk run that skips the global service temperatures would
+            % leave the thermal preload term silently zero, and just as
+            % quietly wrong.
             %
             %   SEPARATION, not Tension-Ultimate: Ptu = FSU*FFU*PtL carries
             %   no preload term, so a temperature change would legitimately
@@ -468,10 +468,11 @@ classdef tGuiBulk < matlab.uitest.TestCase
         end
 
         function drillingIntoAJointModeSlipRowStillOpens(testCase)
-            % engine.analyze REFUSES a SlipMode.Joint joint without
+            % engine.analyze refuses a SlipMode.Joint joint without
             % joint-level limit loads, and analyzeBulk supplies those from
-            % the bolt pattern. A drill-down that handed it one element's
-            % loads threw, and the button did nothing at all.
+            % the bolt pattern. Handing the drill-down only one element's
+            % loads would throw and leave the button appearing to do
+            % nothing.
             testCase.setUpCase();
             testCase.assertEqual(testCase.App.State.JointLibrary(1).Joint.SlipMode, ...
                 model.SlipMode.Joint, ...
@@ -498,10 +499,9 @@ classdef tGuiBulk < matlab.uitest.TestCase
 
             testCase.press(testCase.Page.drillButton());
 
-            % The drill-down must have RUN for this to mean anything —
-            % Joint.Name is trivially unchanged if nothing happened, and
-            % this test passed that way while the drill-down was silently
-            % doing nothing at all.
+            % The drill-down must have run for this to mean anything:
+            % Joint.Name would be trivially unchanged if nothing happened,
+            % which would pass vacuously without the assertion above.
             testCase.assertEqual(testCase.Page.drillReason(), "", ...
                 'The drill-down reported a reason for giving up.');
             testCase.assertNotEmpty(testCase.App.State.Result);

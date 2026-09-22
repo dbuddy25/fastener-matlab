@@ -1,5 +1,5 @@
 classdef tGuiHelp < matlab.uitest.TestCase
-    %TGUIHELP  Step 10 acceptance: the Help menu and the References window.
+    %TGUIHELP  The Help menu and the References window.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")

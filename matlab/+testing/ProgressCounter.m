@@ -8,16 +8,14 @@ classdef ProgressCounter < matlab.unittest.plugins.TestRunnerPlugin
     %   WHY. The full suite takes ~12 minutes on the machine that runs it,
     %   which is not the machine it is written on. A row of identical dots
     %   says the run is alive but not how far along it is, so there was no
-    %   way to tell a slow run from a hung one without waiting it out —
-    %   which is exactly the guess that was made, wrongly, on 2026-08-13.
+    %   way to tell a slow run from a hung one without waiting it out.
     %
-    %   DELIBERATELY JUST THE COUNT AND THE NAME. An earlier version drew a
-    %   filling bar in eighths-of-a-cell and carried elapsed + ETA on every
-    %   line. It was more arithmetic than the question deserved: 770 bars
-    %   scrolling past is a lot of ink for one number you can already read,
-    %   and per-line timing is noise when the only timing anyone acts on is
-    %   the total — which runTests already prints in its summary. The name
-    %   stays because it is what a stalled run points at.
+    %   DELIBERATELY JUST THE COUNT AND THE NAME, not a progress bar or
+    %   per-line timing: 770 bars scrolling past is a lot of ink for one
+    %   number you can already read, and per-line timing is noise when the
+    %   only timing anyone acts on is the total — which runTests already
+    %   prints in its summary. The name stays because it is what a stalled
+    %   run points at.
     %
     %   FAILURES ARE MARKED INLINE as well as in the end-of-run block that
     %   runTests prints. Seeing "** FAILED" at test 143 of 770 means you can

@@ -29,18 +29,15 @@ classdef ShearTransferCondition
     %                                  said bending matters and given nothing
     %                                  to compute it from.
     %
-    %   ⚠️ THIS SELECTS THE WORDING, NOT WHETHER A MOMENT IS USED. A supplied
-    %   LoadCase.BoltBendingLimitMoment is included on EVERY value above.
-    %   §4.4.4's exemption is scoped to bending "caused by the shear loading"
-    %   (p33), so it justifies not DERIVING a shear-induced moment — it never
-    %   justified discarding one the analyst handed over, which may come from
-    %   prying, eccentric tension or flange rotation. CloseTolerance dropped
-    %   a supplied moment until the 2026-08-13 equation audit.
+    %   This enum selects the wording, not whether a moment is used: a
+    %   supplied LoadCase.BoltBendingLimitMoment is included on every value
+    %   above. §4.4.4's exemption is scoped to bending "caused by the shear
+    %   loading" (p33), so it justifies not deriving a shear-induced moment —
+    %   it never justifies discarding one the analyst handed over, which may
+    %   come from prying, eccentric tension or flange rotation.
     %
-    %   Two things this doc claimed that were already false when written:
-    %   bolt bending IS implemented (engine.private.boltBendingStress, since
-    %   Phase 3.9 — there is an M*c/I, fbu = 32*Mbu/(pi*d^3)), and
-    %   ClearanceOrGapped is not an unconditional NotEvaluated.
+    %   Bolt bending is implemented in engine.private.boltBendingStress
+    %   (M*c/I, fbu = 32*Mbu/(pi*d^3)).
     enumeration
         NotDeclared
         CloseToleranceOrInterference

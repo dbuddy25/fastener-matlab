@@ -1,27 +1,20 @@
 classdef MarginView
-    %MARGINVIEW  How a margin is RENDERED and REDUCED, in one place.
+    %MARGINVIEW  How a margin is rendered and reduced, in one place.
     %   Pure statics, no state, no widgets. Results and Bulk both come
     %   through here so the two can never disagree about what a number
     %   looks like or which direction "worse" runs (CONVENTIONS.md A8:
     %   "Formatting helpers are shared across Results and Bulk so the two
     %   can never drift").
     %
-    %   That drift was real and already latent: the first build's bulk tab
-    %   rendered margins as %+.2g and the ratio as "R = %.3g (<=1)", while
-    %   the rebuilt Results page renders %+.2f and "R = %.2f (<= 1)".
-    %   Porting the old formatters verbatim would have put two spellings of
-    %   the same number in one application. The gui spellings win, and
-    %   they live here.
-    %
-    %   THE INTERACTION RATIO IS THE WHOLE REASON THIS IS A MODULE.
-    %   NASA-STD-5020B Eq. 20-23 reports R, passing iff R <= 1 — the
-    %   OPPOSITE direction from MS >= 0. Every consumer that formats,
-    %   colours or aggregates a margin MATRIX keys off isRatio rather than
-    %   testing the name again, so a second ratio-type check some day is a
-    %   one-line change here and nowhere else (CONVENTIONS.md A2).
+    %   The interaction ratio is why this module exists. NASA-STD-5020B
+    %   Eq. 20-23 reports R, passing iff R <= 1 — the opposite direction
+    %   from MS >= 0. Every consumer that formats, colours or aggregates a
+    %   margin matrix keys off isRatio rather than testing the name again,
+    %   so a second ratio-type check is a one-line change here and nowhere
+    %   else (CONVENTIONS.md A2).
     %
     %   Nothing here re-thresholds anything the engine decided. passFail
-    %   exists because a bulk TABLE carries raw numbers rather than the
+    %   exists because a bulk table carries raw numbers rather than the
     %   Status strings a Result carries; where a Status exists, use it.
 
     properties (Constant)
@@ -91,7 +84,7 @@ classdef MarginView
         end
 
         function tf = isRatio(names)
-            %ISRATIO  True where a column is a RATIO, not a margin.
+            %ISRATIO  True where a column is a ratio, not a margin.
             %   "InteractionR" today. THE one place that list lives: every
             %   path that aggregates, colours or formats a margin matrix
             %   asks here instead of re-testing the name.
@@ -101,16 +94,16 @@ classdef MarginView
 
         function env = envelope(M, ratioMask)
             %ENVELOPE  Column-wise worst case over a set of rows.
-            %   An ordinary margin's worst case is its MINIMUM. A ratio's
-            %   worst case is its MAXIMUM — R <= 1 passes, so a larger R
+            %   An ordinary margin's worst case is its minimum. A ratio's
+            %   worst case is its maximum — R <= 1 passes, so a larger R
             %   has used more of the envelope.
             %
-            %   THIS IS THE FUNCTION THE MODULE EXISTS FOR. A plain min()
-            %   across a mixed matrix silently takes the BEST-case R across
-            %   load cases, which hides a real interaction failure from the
-            %   Joint Summary tier and from any export built on it. The bug
-            %   would show as a joint that passes in summary and fails when
-            %   you open it.
+            %   This is the function the module exists for: a plain min()
+            %   across a mixed matrix would silently take the best-case R
+            %   across load cases, hiding a real interaction failure from
+            %   the Joint Summary tier and any export built on it. The bug
+            %   would show as a joint that passes in summary and fails
+            %   when opened.
             arguments
                 M         double
                 ratioMask (1,:) logical

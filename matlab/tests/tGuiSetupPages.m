@@ -1,5 +1,5 @@
 classdef tGuiSetupPages < matlab.uitest.TestCase
-    %TGUISETUPPAGES  Step 2 acceptance: Project, Factors, Temp Loads.
+    %TGUISETUPPAGES  Project, Factors, Temp Loads.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")

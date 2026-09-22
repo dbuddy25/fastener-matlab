@@ -1,5 +1,5 @@
 classdef tBearing < matlab.unittest.TestCase
-    %TBEARING  Phase 3.2 acceptance: the three member-strength checks —
+    %TBEARING  Acceptance tests for the three member-strength checks —
     %   engine.marginBearing (NASA TM-106943 Eq. 72-74), engine.marginShearTearout
     %   (Eq. 69-71), and engine.marginBearingUnderHead (Eq. 75 area + Eq. 74
     %   MS form) — all required by NASA-STD-5020B §4.4.2, which prints no
@@ -10,7 +10,7 @@ classdef tBearing < matlab.unittest.TestCase
     %   example — it compares allowables, not margins); the tear-out and
     %   under-head checks have no public worked example and are pinned with
     %   HAND-DERIVED arithmetic, documented inline. The DABJ §9 answer key
-    %   is re-run through analyze() to prove Phase 3.2 does not disturb it.
+    %   is re-run through analyze() to prove these checks do not disturb it.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -57,16 +57,14 @@ classdef tBearing < matlab.unittest.TestCase
         end
 
         function bearingSaysWhenTheYieldCriterionCouldNotRun(testCase)
-            % THE ROW USED TO GO QUIET. Method promises "both criteria", but
-            % with no Fbry the yield branch simply never appends a candidate
-            % and the Detail read "Governing: layer 1 (...), ultimate" - which
-            % is indistinguishable from a genuine both-criteria minimum where
-            % ultimate happened to win.
+            % Method promises "both criteria", but with no Fbry the yield
+            % branch never appends a candidate, and Detail reading
+            % "Governing: layer 1 (...), ultimate" is indistinguishable
+            % from a genuine both-criteria minimum where ultimate happened
+            % to win -- so the row must disclose the gap explicitly.
             %
-            % Not hypothetical: NO material in the shipped library carries
-            % Fbry, so this was every bearing row ever produced. Caught by a
-            % legacy-spreadsheet comparison whose bearing YIELD margin had no
-            % counterpart here (TOOL_DIFFERENCES.md 8.6).
+            % Not hypothetical: no material in the shipped library carries
+            % Fbry, so this is every bearing row (TOOL_DIFFERENCES.md 8.6).
             fm = model.Material(Name="Al 6061-T6 (no Fbry)", ...
                 Ftu=42000, Fty=35000, Fsu=27000, Fbru=67000, E=10.0e6);
             b = model.Bolt(Designation="1/4-28", NominalDiameter=0.25, ...
@@ -82,17 +80,16 @@ classdef tBearing < matlab.unittest.TestCase
             testCase.verifyEqual(r.MS, 3.313, "AbsTol", 0.01, ...
                 'Disclosure must not move the number.');
 
-            % ...and now the row says what it could not assess, and when
-            % that could have mattered.
+            % The row also says what it could not assess, and when that
+            % could have mattered.
             testCase.verifySubstring(r.Detail, "YIELD criterion not assessed");
             testCase.verifySubstring(r.Detail, "Fbry unset");
             testCase.verifySubstring(r.Detail, "OPTIMISTIC");
 
-            % The threshold is DERIVED FROM THE FACTORS IN USE, not a
-            % literal. Hardcoding one is what broke this test first time
-            % round: FFY defaults to 1.0 while FFU defaults to 1.15, so the
-            % ratio is 0.776 at model defaults and 0.893 on a joint that
-            % sets FFY = FFU = 1.15. A number pinned here would also rot
+            % The threshold is derived from the factors in use, not a
+            % literal: FFY defaults to 1.0 while FFU defaults to 1.15, so
+            % the ratio is 0.776 at model defaults and 0.893 on a joint
+            % that sets FFY = FFU = 1.15. A hardcoded number here would rot
             % silently the next time a default moves.
             thr = (fac.FFY * fac.FSY) / (fac.FFU * fac.FSU);
             testCase.verifySubstring(r.Detail, sprintf('%.3f', thr));
@@ -101,11 +98,11 @@ classdef tBearing < matlab.unittest.TestCase
         end
 
         function bearingStaysSilentWhenBothCriteriaRan(testCase)
-            % COMPANION TO THE ABOVE, and the reason it is here: an assertion
-            % that a warning APPEARS proves nothing unless something proves it
-            % can also be ABSENT. Give the same layer an Fbry and the note
-            % must go away entirely - otherwise every row would carry a
-            % caveat and the caveat would stop meaning anything.
+            % Companion to the above: an assertion that a warning appears
+            % proves nothing unless something proves it can also be
+            % absent. Give the same layer an Fbry and the note must go
+            % away entirely -- otherwise every row would carry a caveat
+            % and the caveat would stop meaning anything.
             fm = model.Material(Name="Al 6061-T6 (with Fbry)", ...
                 Ftu=42000, Fty=35000, Fsu=27000, ...
                 Fbru=67000, Fbry=65300, E=10.0e6);
@@ -119,8 +116,7 @@ classdef tBearing < matlab.unittest.TestCase
 
             testCase.verifyFalse(contains(r.Detail, "not assessed"), ...
                 'With both allowables present the row carries no caveat.');
-            % Fbry/Fbru = 0.975 > 0.893, so ultimate still governs - which is
-            % the case that made this bug invisible in the field.
+            % Fbry/Fbru = 0.975 > 0.893, so ultimate still governs here too.
             testCase.verifySubstring(r.Detail, "ultimate");
         end
 
@@ -270,9 +266,9 @@ classdef tBearing < matlab.unittest.TestCase
             % thermal excursion -> PpMax = 2,500 lbf; PtL = 3,000 lbf;
             % n = 0.5 (fixture).
             %
-            % NASA-STD-5020B Fig. 8 GATE, checked first (this is now the
-            % gate-ASSURED test — see bearingUnderHeadGateNotAssuredClampedLoad
-            % for the NOT-assured/clamped branch):
+            % NASA-STD-5020B Fig. 8 gate, checked first (this is the
+            % gate-assured test — see bearingUnderHeadGateNotAssuredClampedLoad
+            % for the not-assured/clamped branch):
             %   Ptu_allow (system, bolt-tension mode, no rating set) =
             %     At*Ftu = 0.0878*160000 = 14,048 lbf
             %   1. Ec(10e6) > Eb/3(29e6/3 = 9,666,667)          -> true
@@ -314,9 +310,9 @@ classdef tBearing < matlab.unittest.TestCase
         end
 
         function bearingUnderHeadGateNotAssuredClampedLoad(testCase)
-            % Covers the CLAMPED branch (Fig. 8 gate NOT assured) that
-            % bearingUnderHeadHandDerived no longer exercises now that its
-            % own numbers turn out to satisfy the gate. Same Example 8-b
+            % Covers the CLAMPED branch (Fig. 8 gate NOT assured) --
+            % bearingUnderHeadHandDerived's numbers satisfy the gate, so
+            % this test exercises the other branch. Same Example 8-b
             % geometry, but the preload is raised so the gate's preload
             % condition fails while everything else about the fixture is
             % unchanged:
@@ -342,10 +338,10 @@ classdef tBearing < matlab.unittest.TestCase
             %        = 29874.629/15809.991 - 1 = +0.8896
             %   MS_y = 94000*0.2468977666/15628.875 - 1
             %        = 23208.390/15628.875 - 1 = +0.4850          (governs)
-            % Yield now governs (it did not before Part 1): the factored
-            % term is small next to PpMax, so the two denominators are
-            % close, and the ultimate/yield ALLOWABLE ratio (121000/94000)
-            % dominates over the small denominator ratio.
+            % Yield governs here, unlike the gate-assured case above: the
+            % factored term is small next to PpMax, so the two denominators
+            % are close, and the ultimate/yield allowable ratio
+            % (121000/94000) dominates over the small denominator ratio.
             c = validation.dabjExample8b();
             j = c.Joint;
             j.FlangeStack(1).HoleDiameter  = 0.397;
@@ -370,7 +366,7 @@ classdef tBearing < matlab.unittest.TestCase
         end
 
         function dabjSection9RegressionUnchanged(testCase)
-            % Phase 3.2 must not disturb the DABJ §9 answer key: WorstMargin
+            % These checks must not disturb the DABJ §9 answer key: WorstMargin
             % and GoverningCheck stay at the deliberate slip failure (-0.65).
             % Tear-out and under-head report NotEvaluated (the §9 fixture
             % has no EdgeDistance, no HoleDiameter, and no frustum

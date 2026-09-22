@@ -1,17 +1,17 @@
 classdef tStiffness < matlab.unittest.TestCase
-    %TSTIFFNESS  Phase 3.1 acceptance: engine.stiffness (30° conical
-    %   frustum, through-bolt configuration) reproduces the DABJ Example
-    %   8-b published stiffnesses (validation.dabjExample8b): Kb = 2.39e6,
+    %TSTIFFNESS  engine.stiffness (30° conical frustum, through-bolt
+    %   configuration) reproduces the DABJ Example 8-b published
+    %   stiffnesses (validation.dabjExample8b): Kb = 2.39e6,
     %   Kc = 4.73e6 lbf/in, Phi = 0.336. Insert/tapped-hole joints are
     %   covered against a SECOND answer key, DABJ Table 8-3 (slide 8-26),
-    %   via the shortened grip L = t1 + D/2. MIXED FLANGE MODULI (Job B,
-    %   TOOL_DIFFERENCES.md Section 7.5) are covered by self-checks only --
+    %   via the shortened grip L = t1 + D/2. MIXED FLANGE MODULI
+    %   (TOOL_DIFFERENCES.md Section 7.5) are covered by self-checks only --
     %   no external fixture exists -- via the thickness-weighted
     %   harmonic-mean member modulus Ebar (NASA TM-106943 Eq. 34):
     %   mixedModulusReducesToUniform, mixedModulusSplitInvariance,
     %   mixedModulusBounded, mixedModulusMonotonic, and
-    %   mixedModulusThermalPreloadAndAnalyzeRun. Phase 3.1b wiring
-    %   is exercised here too: the stiffness-based thermal preload path
+    %   mixedModulusThermalPreloadAndAnalyzeRun. Also exercised here:
+    %   the stiffness-based thermal preload path
     %   (thermalFromStiffness) and the Eq. 10 tension rupture branch
     %   (tensionRuptureBranch) — both against HAND-DERIVED numbers, not
     %   book values. Also covers the Eq. 16/17 bolt-yield rupture branch
@@ -183,9 +183,8 @@ classdef tStiffness < matlab.unittest.TestCase
         function threadedInThermalPreloadRuns(testCase)
             % REGRESSION: engine.preload calls engine.stiffness on the
             % thermal path, and engine.analyze / engine.summary do NOT guard
-            % that call — so before the threaded-in frustum existed, ANY
-            % insert or tapped-hole joint with a temperature excursion threw
-            % and failed the whole analysis. It must now simply compute.
+            % that call, so an insert or tapped-hole joint with a
+            % temperature excursion must simply compute rather than throw.
             j = tStiffness.threadedInJoint(0.375, 0.0878, 0.523, 0.750, 0.078);
             j.BodyLengthInGrip = 0.50;
             j.PreloadSpec = model.PreloadSpec( ...
@@ -295,14 +294,13 @@ classdef tStiffness < matlab.unittest.TestCase
         end
 
         function mixedModulusThermalPreloadAndAnalyzeRun(testCase)
-            % REGRESSION: before Job B, engine.stiffness refused any mixed-
-            % modulus flange stack with engine:stiffness:mixedModulusDeferred,
-            % which propagated (unguarded) through engine.preload's thermal
-            % path and failed the WHOLE analysis for a temperature-excursion
-            % joint -- exactly the failure mode Job A fixed for threaded-in
-            % joints. Confirm both engine.preload and engine.analyze now
-            % simply compute on a mixed-modulus joint with a thermal
-            % excursion.
+            % REGRESSION: engine.stiffness must not refuse a mixed-modulus
+            % flange stack, since a refusal would propagate unguarded
+            % through engine.preload's thermal path and fail the WHOLE
+            % analysis for a temperature-excursion joint -- the same
+            % failure mode fixed for threaded-in joints above. Confirm both
+            % engine.preload and engine.analyze simply compute on a
+            % mixed-modulus joint with a thermal excursion.
             c = validation.dabjExample8b();
             j = c.Joint;
             j.FlangeStack(2).Material = model.Material( ...
@@ -362,12 +360,7 @@ classdef tStiffness < matlab.unittest.TestCase
             %      = 11,780,972.5 / 1.51551
             %      = 7,773,616 lbf/in  (approx; RelTol below covers the
             %        rounding in this longhand chain)
-            %   By contrast, the pre-fix code (hardcoded 1.81 regardless
-            %   of angle) would have returned
-            %      1.81*10e6*0.375 / (2*0.75775) = 4,478,698 lbf/in,
-            %   about 42% low — consistent with the ~43%-low estimate for
-            %   45 deg used to justify this fix. Kb is angle-independent
-            %   (unaffected by this bug either way), so only Kc is checked.
+            %   Kb is angle-independent, so only Kc is checked.
             c = validation.dabjExample8b();
             j = c.Joint;
             j.FrustumAngle = 45;
@@ -379,7 +372,7 @@ classdef tStiffness < matlab.unittest.TestCase
         end
 
         function thermalFromStiffness(testCase)
-            % Phase 3.1b: with no ThermalRate override, engine.preload
+            % With no ThermalRate override, engine.preload
             % computes the thermal preload change from the joint stiffness
             % per NASA TM-106943 (Chambers) Eq. 10 —
             % Pth = (Kb·Kc/(Kb+Kc))·L·ΔT·(αj − αb).
@@ -390,13 +383,12 @@ classdef tStiffness < matlab.unittest.TestCase
             % engine.stiffness), so kSeries = 2.3892e6*4.7352e6/7.1244e6 =
             % 1.5880e6 lbf/in.
             %
-            % REBASELINED 2026-08-13. L is now the WASHER-INCLUSIVE clamped
-            % length kb spans (engine.stiffness's Lbolt), and the washers
-            % are in the member CTE sum with their own material — TM-106943
-            % Eq. 10 carries ONE L, shared by its Eq. 6 bolt term and Eq. 7
-            % joint term, so the span the bolt stretches over is the span
-            % the members expand over. This test read 400.2 lbf on
-            % L = grip = 0.80 with the washers thermally absent.
+            % L is the WASHER-INCLUSIVE clamped length kb spans
+            % (engine.stiffness's Lbolt), and the washers are in the member
+            % CTE sum with their own material — TM-106943 Eq. 10 carries
+            % ONE L, shared by its Eq. 6 bolt term and Eq. 7 joint term, so
+            % the span the bolt stretches over is the span the members
+            % expand over.
             %
             % Ex 8-b washers: 0.078 + 0.062 = 0.140 in, so L = 0.94 in.
             % They are given a STEEL material here (CTE 1.17e-5, the
@@ -410,9 +402,8 @@ classdef tStiffness < matlab.unittest.TestCase
             %
             % NOTE THE DIRECTION. A steel washer expands LESS than the
             % A-286 bolt (1.17e-5 vs 1.69e-5), so counting it REDUCES the
-            % CTE mismatch: the old number was 17% too high. Ignoring
-            % washers was arithmetically identical to assuming every washer
-            % shares the BOLT's CTE — see
+            % CTE mismatch -- omitting washers is arithmetically identical
+            % to assuming every washer shares the BOLT's CTE — see
             % washersOfBoltMaterialReproduceTheOldThermalNumber below.
             c = validation.dabjExample8b();
             j = c.Joint;
@@ -438,15 +429,15 @@ classdef tStiffness < matlab.unittest.TestCase
         end
 
         function washersOfBoltMaterialReproduceTheOldThermalNumber(testCase)
-            % WHAT THE OLD CODE WAS ACTUALLY ASSUMING. Dropping the washers
-            % from the CTE sum while kb spanned them is algebraically
-            % identical to giving every washer the BOLT's CTE:
+            % ALGEBRAIC EQUIVALENCE CHECK. Dropping the washers from the
+            % CTE sum while kb spans them is identical to giving every
+            % washer the BOLT's CTE:
             %   k·L·dT·[(sum(a_i t_i) + a_b·tW)/L − a_b]
             %     = k·dT·[sum(a_i t_i) − a_b·tFit]        (L = tFit + tW)
-            % which is the old expression exactly. So set both washers to
-            % the fixture's own bolt material and the pin must land back on
-            % the historical 400.2 lbf — proving the change is targeted at
-            % the CTE difference and introduces no spurious shift.
+            % So setting both washers to the fixture's own bolt material
+            % must land the pin on 400.2 lbf, proving the change is
+            % targeted at the CTE difference and introduces no spurious
+            % shift.
             c = validation.dabjExample8b();
             j = c.Joint;
             j.PreloadSpec = model.PreloadSpec( ...
@@ -467,14 +458,12 @@ classdef tStiffness < matlab.unittest.TestCase
         end
 
         function aMissingWasherCTERefusesRatherThanSilentlyZeroing(testCase)
-            % THE SILENT FAILURE THIS REPLACED. model.Material.CTE used to
-            % default to ZERO, so a material with no coefficient was read
-            % as "does not expand" — a physical claim, not an absence —
-            % and the thermal term produced a confident number from data
-            % nobody had supplied. CTE now defaults to NaN so the absence
-            % is detectable, and this guard refuses rather than letting
-            % the NaN reach Pth, where max([NaN NaN 0]) = 0 would make the
-            % term vanish instead. TFSR 5 fails loudly either way now.
+            % CTE defaults to NaN so a material with no coefficient is
+            % detectable rather than read as "does not expand" — a
+            % physical claim, not an absence. This guard refuses rather
+            % than letting the NaN reach Pth, where max([NaN NaN 0]) = 0
+            % would make the term vanish instead. TFSR 5 requires the
+            % failure to be loud.
             %
             % The Ex 8-b fixture supplies washer THICKNESSES but no washer
             % MATERIAL, so it is exactly the case: a real 0.140 in of
@@ -508,7 +497,7 @@ classdef tStiffness < matlab.unittest.TestCase
         end
 
         function tensionRuptureBranch(testCase)
-            % Phase 3.1b: when the Fig. 8 gate fails, the ultimate-tension
+            % When the Fig. 8 gate fails, the ultimate-tension
             % margin switches to NASA-STD-5020B Eq. 10 —
             % P'tu = (Ptu_allow - Pp_max)/(n·phi), MS = P'tu/Ptu - 1 —
             % with phi from engine.stiffness.
@@ -547,7 +536,7 @@ classdef tStiffness < matlab.unittest.TestCase
         end
 
         function boltYieldRuptureBranch(testCase)
-            % Task 2: when the Fig. 8 gate fails, the bolt YIELD margin
+            % When the Fig. 8 gate fails, the bolt YIELD margin
             % switches to NASA-STD-5020B Eq. 16/17 — the yield analogue of
             % the ultimate side's Eq. 7/10 (tensionRuptureBranch above),
             % sharing the SAME gate evaluation.
@@ -583,7 +572,7 @@ classdef tStiffness < matlab.unittest.TestCase
         end
 
         function edgeDistanceVerifiedAssuresGate(testCase)
-            % Task 1: when EVERY flange layer records EdgeDistance, the
+            % When EVERY flange layer records EdgeDistance, the
             % Fig. 8 e/D condition is TESTED, not assumed. Both layers get
             % e/D = 0.60/0.375 = 1.60 >= 1.5 -- condition holds and Trace
             % must say VERIFIED (not ASSUMED). Preload kept small (direct
@@ -616,7 +605,7 @@ classdef tStiffness < matlab.unittest.TestCase
         end
 
         function edgeDistanceVerifiedFailingBreaksGate(testCase)
-            % Task 1: a KNOWN e/D below 1.5 fails the condition outright --
+            % A KNOWN e/D below 1.5 fails the condition outright --
             % an unrecorded layer could not un-fail it, so this is decisive
             % evidence, not an assumption. One layer set to e/D =
             % 0.30/0.375 = 0.80 < 1.5; every other Fig. 8 condition still
@@ -655,7 +644,7 @@ classdef tStiffness < matlab.unittest.TestCase
         end
 
         function edgeDistanceUnknownIsAssumedNotVerified(testCase)
-            % Task 1: no flange layer records EdgeDistance (the default,
+            % No flange layer records EdgeDistance (the default,
             % unconfigured NaN) -> the e/D condition is ASSUMED satisfied,
             % not verified -- and Trace must say so. Same DABJ Example 8-b
             % geometry, unmodified (no EdgeDistance set anywhere), with the
@@ -694,11 +683,11 @@ classdef tStiffness < matlab.unittest.TestCase
             %
             %   THE WASHER CARRIES A MATERIAL even though Table 8-3 needs
             %   only its thickness. Washers are rigid in the frustum, so
-            %   this cannot move any kc/kb/phi pin — but since 2026-08-13
-            %   they ARE in the thermal CTE sum (TM-106943 Eq. 10 spans the
-            %   washer-inclusive clamped length), and engine.preload
-            %   refuses a thermal run with a coefficient missing. Steel,
-            %   because that is what a washer is.
+            %   this cannot move any kc/kb/phi pin — but they ARE in the
+            %   thermal CTE sum (TM-106943 Eq. 10 spans the washer-inclusive
+            %   clamped length), and engine.preload refuses a thermal run
+            %   with a coefficient missing. Steel, because that is what a
+            %   washer is.
             bm = model.Material(Name="A-286 (Table 8-3, E=29e6)", ...
                 Ftu=160000, Fty=120000, Fsu=95000, E=29e6, CTE=1.69e-5);
             fm = model.Material(Name="Aluminum (Table 8-3, E=10e6)", ...

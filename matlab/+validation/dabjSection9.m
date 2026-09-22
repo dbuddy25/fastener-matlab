@@ -95,17 +95,11 @@ function c = dabjSection9()
 %   -------------------------------------------------------------------------
 
 % ---- Bolt / materials / spec allowables, built INLINE (not from the ------
-% shared library -- see the module-level rationale in this file's header:
-% this fixture used to
-% pull a temporary "3/8-24 UNF" / "A-286 (DABJ)" / "Al 7075-T7351 (DABJ)" /
-% "3/8 A-286 160ksi" boltSpec set out of library.json; those four entries
-% have been REMOVED from the shipped library so the answer key no longer
-% depends on library content. Every property below is transcribed exactly
-% from those now-deleted entries (values unchanged), with each entry's own
-% "source" provenance carried over as a comment so the numbers stay
-% traceable to DABJ. Ptu-allow 15,200 / Pty-allow 11,400 (the former
-% boltSpec's rated loads) are now literal constants, used directly below
-% and in ThreadedMember/BoltRatedUltimateLoad/BoltRatedYieldLoad.
+% shared library) so the answer key does not depend on library content.
+% Each entry below carries its original library "source" provenance as a
+% comment so the numbers stay traceable to DABJ. Ptu-allow 15,200 /
+% Pty-allow 11,400 are literal constants, used directly below and in
+% ThreadedMember/BoltRatedUltimateLoad/BoltRatedYieldLoad.
 %
 % Bolt "3/8-24 UNF" (former library.json source): "Standard 3/8-24 UNF
 % thread geometry (At = 0.0878 in^2, minor dia 0.3209 in, basic pitch dia

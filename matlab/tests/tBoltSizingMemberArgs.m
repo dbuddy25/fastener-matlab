@@ -9,7 +9,7 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
     %   an Insert that loses its Library silently drops to a different
     %   allowable basis while reporting the wrong reason.
     %
-    %   Both are PURE and need no app or GUI instance at all:
+    %   Both are pure and need no app or GUI instance at all:
     %       engine.boltSizingMemberArgs(memberType, library, nutSpec, member)
     %       engine.boltSizingMemberSelectionReady(memberType, nutSpec, memberMaterialChosen)
     %   This file is the test surface for those two helpers, plus an
@@ -35,8 +35,8 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
         % ---- boltSizingMemberArgs ------------------------------------------
 
         function noneReturnsEmptyArgsTodaysCallShape(testCase)
-            % "None (bolt-only)" -> memberType empty -> {} -- TODAY'S exact
-            % 6-arg engine.boltSizingSweep call shape, unchanged.
+            % "None (bolt-only)" -> memberType empty -> {} -- exactly the
+            % 6-arg engine.boltSizingSweep call shape.
             nvArgs = engine.boltSizingMemberArgs( ...
                 model.ThreadedMemberType.empty(1, 0));
             testCase.verifyEqual(nvArgs, {});
@@ -60,13 +60,13 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
         end
 
         function insertForcesTemplateTypeRegardlessOfInputType(testCase)
-            % The template's OWN Type is deliberately wrong here (Nut) --
+            % The template's own Type is deliberately wrong here (Nut) --
             % boltSizingMemberArgs must still force it to the requested
             % memberType (Insert), never trust/propagate whatever Type the
             % caller's template happened to carry. This is exactly the
             % property that keeps a Nut selection from ever reaching
             % engine.boltSizingSweep's ThreadedMember branch (which itself
-            % REJECTS Type Nut there).
+            % rejects Type Nut there).
             tm = model.ThreadedMember(Type = model.ThreadedMemberType.Nut, ...
                 Material = model.Material(), RatedUltimateLoad = 500);
             nvArgs = engine.boltSizingMemberArgs( ...
@@ -92,14 +92,14 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             % The caller that fills the template (not
             % itself testable here without a live GUI) builds an Insert
             % template with EngagementRatio (never EngagementLength -- see
-            % that method); it no longer sets ShearEngagementArea at all --
+            % that method); it does not set ShearEngagementArea at all --
             % analysts cannot type it (NASA-STD-5020B Section 4.4.1 wants a
-            % SPECIFIED insert catalogue geometry, not a typed area), so
+            % specified insert catalogue geometry, not a typed area), so
             % the GUI leaves it at the model default (NaN) and
             % engine.marginInsert derives it from StiPitchDiameter instead.
             % boltSizingMemberArgs itself, though, is a pure pass-through
             % of whatever ThreadedMember template a caller hands it: a
-            % template built WITH a ShearEngagementArea (as here, via the
+            % template built with a ShearEngagementArea (as here, via the
             % model constructor directly -- the API/test seam
             % model.ThreadedMember.ShearEngagementArea still supports)
             % must still survive unchanged, alongside the forced Type --
@@ -128,13 +128,9 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             % Library.insertFor -- and its per-row lookup is guarded on a
             % Library actually being supplied.
             %
-            % Regression guard: this path previously passed only
-            % {'ThreadedMember', member}, so from the Bolt Sizing tab every
-            % swept row silently lost the computed-area basis AND refused
-            % with "no insert is catalogued for this thread size" -- a
-            % refusal reason that names the wrong cause. The engine's own
-            % guards permit Library alongside a template; only NutSpec and
-            % ThreadedMember are mutually exclusive.
+            % Regression guard: the engine's own guards permit Library
+            % alongside a template; only NutSpec and ThreadedMember are
+            % mutually exclusive.
             lib = data.Library.load();
             tm  = model.ThreadedMember(Material = model.Material(), ...
                 EngagementRatio = 1.5);
@@ -156,19 +152,19 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
         end
 
         function insertTemplateNeverCarriesAStiPitchDiameter(testCase)
-            % StiPitchDiameter is catalogue-derived by EXACT bolt thread
-            % size (data.Library.insertFor), but this ONE ThreadedMember
-            % template is applied across EVERY bolt in the library sweep
+            % StiPitchDiameter is catalogue-derived by exact bolt thread
+            % size (data.Library.insertFor), but this one ThreadedMember
+            % template is applied across every bolt in the library sweep
             % (onBoltSizingSweep), each with its own NominalDiameter/
             % ThreadsPerInch -- exactly the collision EngagementRatio
             % (a ratio, not an absolute value) exists to avoid for
-            % Engagement Le. StiPitchDiameter has no ratio form, so
-            % The caller that fills the template never
-            % populates it on the template (it would be correct for at
-            % most one row of the sweep); it stays the model default NaN.
+            % Engagement Le. StiPitchDiameter has no ratio form, so the
+            % caller that fills the template never populates it on the
+            % template (it would be correct for at most one row of the
+            % sweep); it stays the model default NaN.
             % boltSizingMemberArgs is a pure pass-through here too -- it
             % forces Type only and must not invent or clear the field on
-            % its own, so a template built WITH a value (however
+            % its own, so a template built with a value (however
             % artificial for this template-across-many-sizes context)
             % still passes it through unchanged.
             tmDefault = model.ThreadedMember(Material = model.Material(), ...
@@ -236,8 +232,8 @@ classdef tBoltSizingMemberArgs < matlab.unittest.TestCase
             % TensionUltBasis containing "System"/"nut thread shear". This
             % test checks (field-by-field, matching this suite's
             % established convention -- no whole-table isequal anywhere in
-            % tBoltSizing.m/tBulk.m) that boltSizingMemberArgs' OUTPUT,
-            % spliced into the SAME engine call, reproduces that same
+            % tBoltSizing.m/tBulk.m) that boltSizingMemberArgs' output,
+            % spliced into the same engine call, reproduces that same
             % already-pinned result -- proving the GUI's args-translation
             % layer cannot silently diverge from a direct Library+NutSpec
             % call, without re-deriving the number by hand a second time.

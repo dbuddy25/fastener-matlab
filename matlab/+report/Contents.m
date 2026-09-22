@@ -8,7 +8,6 @@
 %                         by design — the analyzeBulk table is already
 %                         export-ready; this is the stable public entry
 %                         point.
-%                         ✅ Phase 3.6 (tests/tExport.m).
 %
 %   singleJointReport  - Single-joint PDF report: title page, inputs,
 %                         preload, design loads, the 15-row margins table
@@ -24,7 +23,5 @@
 %                         citations only — full step-by-step symbolic
 %                         derivations are a follow-up (see the function's
 %                         header comment).
-%                         ✅ Phase 3.8 (tests/tPdfReport.m, skip-guarded
-%                         when Report Generator is absent).
 %
 %   Reference: ARCHITECTURE.md.

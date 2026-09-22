@@ -6,17 +6,16 @@ classdef ElementMappingPage < gui.Page
     %   WHY THIS PAGE EXISTS AT ALL. A force export knows element ids and
     %   forces; it does not know the analyst's joint naming. So
     %   data.loadElementWorkbook returns JointName "" on every row on
-    %   purpose, and engine.analyzeBulk writes a per-row Error naming THIS
+    %   purpose, and engine.analyzeBulk writes a per-row Error naming this
     %   page when a joint name is missing. Nothing in the bulk workflow can
     %   run until these rows exist.
     %
-    %   A VIEW OVER AppState.Mapping, which already existed, was already
-    %   serialized into the case file's "mapping.elements" key, and is
-    %   already retargeted by DefinedJointsPage when a joint is renamed.
-    %   This page adds no storage and computes no margin.
+    %   A view over AppState.Mapping, serialized into the case file's
+    %   "mapping.elements" key and retargeted by DefinedJointsPage when a
+    %   joint is renamed. This page adds no storage and computes no margin.
     %
     %   THE THREE THINGS A MAPPING ROW CARRIES
-    %     Element ID  a STRING, not a number - data.loadElements and
+    %     Element ID  a string, not a number - data.loadElements and
     %                 data.loadElementWorkbook both stringify ids, so a
     %                 numeric mapping could not be joined to imported
     %                 forces without a str2double that drops non-numeric
@@ -24,7 +23,7 @@ classdef ElementMappingPage < gui.Page
     %     Joint Name  the library key. Case-insensitive, because letting
     %                 "JT-A" and "jt-a" coexist is a mapping trap
     %                 (CONVENTIONS.md A13).
-    %     Pattern ID  the physical joint INSTANCE, optional. Blank is
+    %     Pattern ID  the physical joint instance, optional. Blank is
     %                 meaningful rather than missing: engine.analyzeBulk
     %                 falls back to the joint name as the pattern key, so
     %                 two brackets sharing one joint definition need
@@ -39,7 +38,7 @@ classdef ElementMappingPage < gui.Page
     %   editable instead.
     %
     %   Backed by AppState.Mapping. Listens to ElementsChanged (its own
-    %   writes, and the forces import once step 7 lands) and
+    %   writes, and the forces import from Element Forces) and
     %   JointLibraryChanged (the joint picker and the unknown-name check
     %   both track the library).
 
@@ -61,7 +60,7 @@ classdef ElementMappingPage < gui.Page
         BulkAddToolbarButton
         ClearAllButton
 
-        % Set of unknown joint names the warn bar was dismissed for. A NEW
+        % Set of unknown joint names the warn bar was dismissed for. A new
         % unknown name re-shows it; the same one stays hidden.
         WarnDismissedKey (1,1) string = ""
 
@@ -128,7 +127,7 @@ classdef ElementMappingPage < gui.Page
                  'file carries element IDs and forces, not joint names. ' ...
                  'Case-scoped: the mapping is saved in the case file.']);
 
-            % Cell styles built ONCE and batch-applied after a removeStyle
+            % Cell styles built once and batch-applied after a removeStyle
             % on every refresh, the discipline the margin table uses.
             obj.StyleDup = uistyle( ...
                 'BackgroundColor', gui.palette('bannerWarnBg'), ...
@@ -152,7 +151,7 @@ classdef ElementMappingPage < gui.Page
         end
 
         function refresh(obj)
-            %REFRESH  Sync the whole page from AppState. The ONLY populate
+            %REFRESH  Sync the whole page from AppState. The only populate
             %   path: every mutation, every library change and every
             %   File > Open funnels through here, so a rejected edit
             %   reverts by construction rather than by an undo branch.
@@ -264,7 +263,7 @@ classdef ElementMappingPage < gui.Page
         end
 
         function buildTable(obj, parent, row)
-            %BUILDTABLE  gui's first EDITABLE uitable.
+            %BUILDTABLE  gui's first editable uitable.
             %   Page.bindEdit does not reach this: it wires
             %   ValueChangedFcn-style controls, and a uitable reports edits
             %   through CellEditCallback. So onCellEdited calls markDirty
@@ -280,7 +279,7 @@ classdef ElementMappingPage < gui.Page
             t.ColumnFormat   = {'char', 'char', 'char', 'logical'};
             t.ColumnEditable = [true true true true];
             % Row selection, stated rather than left to the default: the
-            % bulk-assign row acts on WHOLE rows, and "assign to selected
+            % bulk-assign row acts on whole rows, and "assign to selected
             % rows" reads wrong if clicking one cell selects one cell.
             % Editing is independent of selection type.
             t.SelectionType = 'row';
@@ -383,7 +382,7 @@ classdef ElementMappingPage < gui.Page
         end
 
         function applyStyles(obj, dupMask, unknownOrBlank)
-            % removeStyle first, then ONE addStyle per group with an Nx2
+            % removeStyle first, then one addStyle per group with an Nx2
             % [row col] index matrix. Wrapped, because a styling failure
             % must not take the page down: the summary line and the warn
             % bar below say the same thing in words.
@@ -449,7 +448,7 @@ classdef ElementMappingPage < gui.Page
         end
 
         function renderWarnBar(obj, rows, unknownMask)
-            %RENDERWARNBAR  Dismissal holds only while the unknown SET is
+            %RENDERWARNBAR  Dismissal holds only while the unknown set is
             %   unchanged — a new bad name re-shows the bar. Dismissing
             %   never touches the summary line, which stays red.
             names   = obj.jointNames(rows);
@@ -558,8 +557,8 @@ classdef ElementMappingPage < gui.Page
 
         function idx = findJoint(obj, name)
             %FINDJOINT  Library index for a joint name ([] = none).
-            %   Case-insensitive ON PURPOSE — the library key is the name,
-            %   and letting "JT-A" and "jt-a" coexist is a mapping trap.
+            %   Case-insensitive — letting "JT-A" and "jt-a" coexist is a
+            %   mapping trap (CONVENTIONS.md A13).
             idx = [];
             lib = obj.State.JointLibrary;
             if isempty(lib)
@@ -589,7 +588,7 @@ classdef ElementMappingPage < gui.Page
 
         function ids = forceElementIds(obj)
             %FORCEELEMENTIDS  Unique element ids from the imported forces.
-            %   Empty until Element Forces (step 7) fills AppState.Elements.
+            %   Empty until Element Forces fills AppState.Elements.
             ids = strings(1, 0);
             el  = obj.State.Elements;
             if ~isstruct(el) || ~isfield(el, 'Rows') || isempty(el.Rows)
@@ -617,7 +616,7 @@ classdef ElementMappingPage < gui.Page
     % ---- Writing state ----------------------------------------------------
     methods (Access = private)
         function commit(obj, rows, statusMsg)
-            %COMMIT  THE write path: state, dirty, status. One place, so no
+            %COMMIT  The write path: state, dirty, status. One place, so no
             %   mutation can forget the dirty flag (the uitable's
             %   CellEditCallback cannot use Page.bindEdit).
             obj.State.Mapping = rows;    % fires ElementsChanged -> refresh
@@ -639,7 +638,7 @@ classdef ElementMappingPage < gui.Page
             end
             created = strings(1, 0);
             lib = obj.State.JointLibrary;
-            % Checked against the LOCAL library, not against State: nothing
+            % Checked against the local library, not against State: nothing
             % is written back until the loop ends, so asking State would
             % let "Bracket" and "bracket" in the same list both be created
             % — the case-insensitive collision this check exists to stop.
@@ -653,7 +652,7 @@ classdef ElementMappingPage < gui.Page
                     continue
                 end
                 existing(end + 1) = t; %#ok<AGROW>
-                % A stub is deliberately a NAME and nothing else. Seeding
+                % A stub is deliberately a name and nothing else. Seeding
                 % geometry would put numbers in front of an analyst that
                 % nobody chose, and the required-field gate on Joint
                 % Config is what makes the placeholder obvious.
@@ -689,7 +688,7 @@ classdef ElementMappingPage < gui.Page
                         obj.editJointName(rows, r, evt);
                         return   % continuation may still be outstanding
                     case 3
-                        % Pattern ID: BLANK IS LEGAL and means "this joint
+                        % Pattern ID: blank is legal and means "this joint
                         % name is one pattern", so only the shape is
                         % checked, not the presence.
                         rows(r).PatternId = obj.validatedPattern(evt);
@@ -779,7 +778,7 @@ classdef ElementMappingPage < gui.Page
         end
 
         function askUnknownJoint(obj, name, continuation)
-            %ASKUNKNOWNJOINT  Create All / Skip / Cancel, NON-BLOCKING.
+            %ASKUNKNOWNJOINT  Create All / Skip / Cancel, non-blocking.
             %   uiconfirm's return-value form blocks, and a blocking
             %   confirm deadlocks the App Testing Framework — the press
             %   that opened it never returns. Every confirm in gui is
@@ -898,15 +897,10 @@ classdef ElementMappingPage < gui.Page
         function rowsIdx = selectedRows(obj)
             %SELECTEDROWS  Row indices behind the table's Selection.
             %   buildTable pins SelectionType = 'row', so Selection is a
-            %   list of row indices and nothing else. Read it as one.
-            %
-            %   THIS USED TO GUESS THE SHAPE — treating an Nx2 Selection as
-            %   cell selection and taking column 1 — which was wrong in the
-            %   exact case the page exists for: selecting rows 1 and 3
-            %   gives [1 3], a 1x2, which the guess read as the single cell
-            %   (row 1, column 3). Assign then wrote one row and silently
-            %   skipped the other. Defensiveness against a shape the table
-            %   cannot produce cost the feature its main use.
+            %   list of row indices and nothing else. Read it as one —
+            %   never as an Nx2 [row col] cell selection, which would read
+            %   selecting rows 1 and 3 ([1 3], a 1x2) as the single cell
+            %   (row 1, column 3) and silently drop one of the two rows.
             rowsIdx = unique(obj.Table.Selection(:));
         end
     end
@@ -919,7 +913,7 @@ classdef ElementMappingPage < gui.Page
 
         function onImportFromForces(obj)
             %ONIMPORTFROMFORCES  Bootstrap the mapping from imported forces.
-            %   The ids pre-fill the SAME dialog, because a mapping row
+            %   The ids pre-fill the same dialog, because a mapping row
             %   cannot have a blank joint name — so the user must pick one,
             %   and that prompt is exactly what this dialog is.
             ids = obj.forceElementIds();
@@ -935,7 +929,7 @@ classdef ElementMappingPage < gui.Page
         function openBulkAddDialog(obj, prefill, dialogName)
             %OPENBULKADDDIALOG  Joint picker + paste area.
             %   uiconfirm has no input controls, so this is the page's one
-            %   custom dialog. It is a SEPARATE uifigure rather than a
+            %   custom dialog. It is a separate uifigure rather than a
             %   modal blocking call: the Add button runs a callback and the
             %   dialog closes itself, so nothing here can deadlock a test.
             choices = obj.jointChoices();
@@ -959,7 +953,7 @@ classdef ElementMappingPage < gui.Page
                           fp(2) + max(0, (fp(4) - 420) / 2), 460, 420];
 
             dg = uigridlayout(d, [6 1]);
-            % FIXED heights for the two WordWrap labels, not 'fit'. A
+            % Fixed heights for the two WordWrap labels, not 'fit'. A
             % wrapping label in a 'fit' row can chase its own height —
             % wrapping changes the height, the height changes the layout,
             % the layout re-wraps — and the window then sits there
@@ -1013,7 +1007,7 @@ classdef ElementMappingPage < gui.Page
                 'ButtonPushedFcn', @(~, ~) obj.closeBulkDialog());
             cancelBtn.Layout.Column = 3;
 
-            % The detection line restates what Add will do BEFORE it runs —
+            % The detection line restates what Add will do before it runs —
             % the dialog must never silently guess which shape it got.
             ta.ValueChangedFcn = @(~, ~) ...
                 gui.ElementMappingPage.updateDetectLabel(ta, dd, det);
@@ -1035,7 +1029,7 @@ classdef ElementMappingPage < gui.Page
 
         function onBulkAddCommit(obj, dlg, ta, dd)
             %ONBULKADDCOMMIT  Parse the paste, close, then apply.
-            %   WRAPPED, and the dialog closes on the way out either way.
+            %   Wrapped, and the dialog closes on the way out either way.
             %   An uncaught error here prints to the Command Window and
             %   leaves the dialog standing with its buttons apparently
             %   dead — the user sees a stuck window and no reason for it.
@@ -1066,7 +1060,7 @@ classdef ElementMappingPage < gui.Page
 
         function applyPairs(obj, ids, names, errs, what)
             %APPLYPAIRS  Add/update rows, reconciling unknown joint names.
-            %   Existing ids are REASSIGNED, new ones appended — the same
+            %   Existing ids are reassigned, new ones appended — the same
             %   loop for a paste and for a CSV merge.
             if isempty(ids)
                 obj.reportImport(what, 0, 0, errs);
@@ -1136,7 +1130,7 @@ classdef ElementMappingPage < gui.Page
             end
             msg = sprintf('%s\n\n%d error(s):\n%s%s', head, numel(errs), ...
                 strjoin(shown, newline), tail);
-            % An import that produced NOTHING is the dangerous case: it
+            % An import that produced nothing is the dangerous case: it
             % must not read as a clean run just because it did not throw.
             icon = 'warning';
             if nAdded + nUpdated == 0
@@ -1262,7 +1256,7 @@ classdef ElementMappingPage < gui.Page
             rows = obj.rows();
             lines = "element_id,joint_name,pattern_id";
             if isempty(rows)
-                % An EMPTY mapping exports the SHAPE, with the joints this
+                % An empty mapping exports the shape, with the joints this
                 % case actually has listed — the cheapest possible answer
                 % to "what columns does it want?".
                 lines(end + 1) = "# One row per FE element. pattern_id is optional:";
@@ -1297,7 +1291,7 @@ classdef ElementMappingPage < gui.Page
     methods (Static, Access = private)
         function [ids, names, pats, errs] = parseMappingCsv(file)
             %PARSEMAPPINGCSV  element_id, joint_name[, pattern_id].
-            %   Rows are processed INDEPENDENTLY: mapping 200 elements must
+            %   Rows are processed independently: mapping 200 elements must
             %   survive one bad row, so a failure becomes an entry in errs
             %   (with its line number) and the rest still import.
             %
@@ -1362,7 +1356,7 @@ classdef ElementMappingPage < gui.Page
 
         function tf = looksLikeHeader(fields)
             %LOOKSLIKEHEADER  Is this first line column names, or data?
-            % Lower FIRST, then strip: stripping [^a-z_] from mixed case
+            % Lower first, then strip: stripping [^a-z_] from mixed case
             % would eat every capital and turn "Element_ID" into "lement_".
             key = regexprep(lower(char(strtrim(fields(1)))), '[^a-z_]', '');
             tf  = ismember(string(key), ...
@@ -1415,7 +1409,7 @@ classdef ElementMappingPage < gui.Page
         function [ids, errs] = parseIdTokens(txt)
             %PARSEIDTOKENS  Pasted text -> element ids + per-token errors.
             %   Splits on commas / spaces / tabs / newlines. Invalid tokens
-            %   are reported INDIVIDUALLY while the valid ones still parse:
+            %   are reported individually while the valid ones still parse:
             %   one typo must not discard a 200-element paste. Duplicates
             %   collapse to the first occurrence, order preserved.
             ids  = strings(1, 0);
@@ -1442,23 +1436,22 @@ classdef ElementMappingPage < gui.Page
             %   res.mode: "empty" | "ids" (one column of element IDs) |
             %   "pairs" (two columns, ID + joint name).
             %
-            %   DETECTION RULE, deterministic, and the dialog's live line
-            %   restates the outcome so it can never silently guess:
-            %     - A line is a PAIR line when it splits at the FIRST
+            %   The detection rule is deterministic, and the dialog's live
+            %   line restates the outcome so it can never silently guess:
+            %     - A line is a pair line when it splits at the first
             %       column separator (tab, comma, or 2+ spaces — tab is
             %       what Excel pastes) into a first field plus a nonblank
-            %       remainder that is not itself just more NUMBERS. So
+            %       remainder that is not itself just more numbers. So
             %       "101, 102, 103" stays an ID line and "101, JT-A" is a
             %       pair.
-            %     - ANY pair line switches the whole paste to "pairs";
+            %     - Any pair line switches the whole paste to "pairs";
             %       ragged lines without a joint name then become
             %       individual line errors rather than silently half-working.
             %
-            %   THE CORNER, stated because element IDs are strings here and
-            %   the old numeric build did not have it: a comma-separated
-            %   line of NON-NUMERIC ids ("E-1, E-2") is indistinguishable
-            %   from an ID + joint-name pair and reads as a pair. Put
-            %   non-numeric ids one per line, or import a CSV.
+            %   THE CORNER: a comma-separated line of non-numeric ids
+            %   ("E-1, E-2") is indistinguishable from an ID + joint-name
+            %   pair and reads as a pair. Put non-numeric ids one per line,
+            %   or import a CSV.
             res = struct('mode', "empty", 'ids', strings(1, 0), ...
                 'pairIds', strings(1, 0), 'pairNames', strings(1, 0), ...
                 'errs', strings(1, 0));
@@ -1523,7 +1516,7 @@ classdef ElementMappingPage < gui.Page
                 res.pairIds(end + 1)   = id; %#ok<AGROW>
                 res.pairNames(end + 1) = restTok(i); %#ok<AGROW>
             end
-            % Within one paste the LAST assignment of an id wins, matching
+            % Within one paste the last assignment of an id wins, matching
             % how a later line overrides an earlier one when reading down.
             [~, keep] = unique(flip(res.pairIds), 'stable');
             keep = sort(numel(res.pairIds) + 1 - keep);
@@ -1667,7 +1660,7 @@ classdef ElementMappingPage < gui.Page
         end
 
         function b = bulkAddButton(obj)
-            %BULKADDBUTTON  The TOOLBAR button that opens the dialog.
+            %BULKADDBUTTON  The toolbar button that opens the dialog.
             b = obj.BulkAddToolbarButton;
         end
 
@@ -1682,13 +1675,13 @@ classdef ElementMappingPage < gui.Page
         %   WHY A SEAM RATHER THAN A TEST THAT ANSWERS THE DIALOG.
         %   matlab.uitest cannot press a button inside a uiconfirm, so a
         %   test can only get as far as "the confirm opened". That leaves
-        %   the branch that DOES THE WORK unexercised — and a test that
+        %   the branch that does the work unexercised — and a test that
         %   presses Clear All and then asserts nothing was cleared passes
         %   just as happily when the button is wired to nothing at all.
         %   That is exactly the vacuous shape this file's other guards
         %   exist to avoid, so the continuation gets a seam of its own.
         %
-        %   It calls the REAL production continuation with the field
+        %   It calls the real production continuation with the field
         %   uiconfirm's CloseFcn actually delivers (evt.SelectedOption, a
         %   character vector matching one of Options). Nothing is
         %   re-implemented here: pass 'Cancel' and the same code that runs
@@ -1719,7 +1712,7 @@ classdef ElementMappingPage < gui.Page
         function editCell(obj, row, col, value)
             %EDITCELL  Drive one cell edit the way the widget would.
             %   matlab.uitest has no cell-edit gesture, so this builds the
-            %   event the CellEditCallback receives and runs the REAL
+            %   event the CellEditCallback receives and runs the real
             %   callback — a seam, not a stand-in for the logic.
             obj.onCellEdited(struct( ...
                 'Indices',      [row col], ...
@@ -1743,7 +1736,7 @@ classdef ElementMappingPage < gui.Page
         function openBulkAdd(obj)
             %OPENBULKADD  Open the paste dialog without a button gesture.
             %   Needed because matlab.uitest cannot reliably press a
-            %   control on the MAIN window while a second uifigure holds
+            %   control on the main window while a second uifigure holds
             %   focus — the press goes nowhere and the test sees a no-op
             %   rather than an error. Anything that has to open the dialog
             %   while one is already up drives it through here.
@@ -1763,7 +1756,7 @@ classdef ElementMappingPage < gui.Page
         end
 
         function b = bulkDialogAddButton(obj)
-            %BULKDIALOGADDBUTTON  The Add button INSIDE the dialog.
+            %BULKDIALOGADDBUTTON  The Add button inside the dialog.
             b = obj.BulkAddButton;
         end
 

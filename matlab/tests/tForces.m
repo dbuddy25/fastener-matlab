@@ -1,5 +1,5 @@
 classdef tForces < matlab.unittest.TestCase
-    %TFORCES  Phase 3.5a acceptance: engine.resolveForces (bolt-axis
+    %TFORCES  engine.resolveForces (bolt-axis
     %   projection of a FEM element's 6-DOF force vector — single-fastener
     %   CBUSH projection, no bolt-pattern moment distribution) and
     %   engine.loadCaseFromForces (forces → model.LoadCase per-bolt
@@ -40,7 +40,7 @@ classdef tForces < matlab.unittest.TestCase
 
         function momentsToBending(testCase)
             % Axis Z: Bending = hypot(MX,MY) = hypot(3,4) = 5; the torsion
-            % MZ (moment ABOUT the bolt axis) is ignored — a huge MZ must
+            % MZ (moment about the bolt axis) is ignored — a huge MZ must
             % not change any output.
             F = struct("FX", 0, "FY", 0, "FZ", 0, ...
                        "MX", 3, "MY", 4, "MZ", 1e6);
@@ -88,10 +88,9 @@ classdef tForces < matlab.unittest.TestCase
     % ---- Bending reaches the LoadCase --------------------------------------
     methods (Test)
         function loadCaseCarriesTheBendingMoment(testCase)
-            % REGRESSION for a value that was computed and thrown away.
-            % resolveForces has always derived Bending from the transverse
-            % moments; loadCaseFromForces built a LoadCase without it, so
-            % it died one line after being computed. Axis Z, MX 3 / MY 4 ->
+            % loadCaseFromForces must carry the bending moment
+            % resolveForces derives from the transverse moments into the
+            % resulting LoadCase, not drop it. Axis Z, MX 3 / MY 4 ->
             % hypot = 5 in-lbf, and MZ (torsion) is still ignored.
             F = struct("FX", 30, "FY", 40, "FZ", 500, ...
                        "MX", 3, "MY", 4, "MZ", 1e6);

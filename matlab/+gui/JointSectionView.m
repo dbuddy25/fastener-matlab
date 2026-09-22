@@ -15,19 +15,19 @@ classdef JointSectionView < handle
     %   DataAspectRatio forbids cheating the width. Repainting on
     %   JointChanged recovers what inline hosting was for.
     %
-    %   IT DRAWS IN DATA COORDINATES, never pixels; a pixel-scaling layer
-    %   would be ~170 lines.
-    %   x is RADIAL (0 on the centerline,
-    %   symmetric), y is AXIAL in inches measured DOWN from the under-head
-    %   bearing plane, with the axis YDir reversed so the head sits at the
-    %   top and the stack reads head-to-tail like Joint Config's left column.
+    %   Coordinates are in data units (inches), never pixels; a
+    %   pixel-scaling layer would be ~170 lines. x is radial (0 on the
+    %   centerline, symmetric); y is axial, measured down from the
+    %   under-head bearing plane, with the axis YDir reversed so the head
+    %   sits at the top and the stack reads head-to-tail like Joint
+    %   Config's left column.
     %
     %   THREE DIMENSIONS IN THIS DRAWING ARE NOT DATA. The model carries no
     %   bolt head height, no head across-flats and no nut hex geometry, and
     %   neither does the library - see HeadHeightFactor below. They are
     %   drawing conventions, they are listed in the window's own note line,
     %   and nothing computed from them is ever shown as a number. A flange
-    %   drawn to an assumed half-width gets a DASHED outer edge so an
+    %   drawn to an assumed half-width gets a dashed outer edge so an
     %   invented dimension can never be read as a measured one.
     %
     %   IT COMPUTES NO ENGINEERING VALUES. Grip and thread engagement come
@@ -58,7 +58,7 @@ classdef JointSectionView < handle
 
         % Type sizes. Set explicitly rather than left to the uiaxes default,
         % which renders small enough to be unreadable at the window's
-        % opening size - the first thing anyone said about this view.
+        % opening size.
         AxisFontSize  = 11
         LabelFontSize = 11
         AnnotFontSize = 10
@@ -135,7 +135,7 @@ classdef JointSectionView < handle
             % data units on both axes means a to-scale section falls out of
             % drawing in inches.
             obj.Ax.DataAspectRatio = [1 1 1];
-            % Head at the top. y counts DOWN the stack from the under-head
+            % Head at the top. y counts down the stack from the under-head
             % bearing plane, which is how the joint is described everywhere
             % else in this app.
             obj.Ax.YDir     = 'reverse';
@@ -217,7 +217,7 @@ classdef JointSectionView < handle
 
         function paintClampedStack(obj, g)
             %PAINTCLAMPEDSTACK  Washers, flanges and the threaded host.
-            %   Everything here is an ANNULUS in section: two rectangles,
+            %   Everything here is an annulus in section: two rectangles,
             %   left and right of a real clearance hole. Drawing one solid
             %   block and putting the bolt on top of it would hide exactly
             %   the thing this view exists to show - whether the hole and
@@ -303,9 +303,8 @@ classdef JointSectionView < handle
             plot(obj.Ax, f.R, f.Y, '--', 'Color', col, 'LineWidth', 1);
             plot(obj.Ax, -f.R, f.Y, '--', 'Color', col, 'LineWidth', 1);
 
-            % Named, and carrying its angle. Two dashed lines on a diagram
-            % of a bolt are not self-evidently a compression cone - the
-            % first person to see this asked what they were.
+            % Named, and carrying its angle: two dashed lines on a diagram
+            % of a bolt are not self-evidently a compression cone.
             text(obj.Ax, f.R(2), f.Y(2), sprintf('  compression cone %g deg', ...
                 f.Angle), 'FontSize', gui.JointSectionView.AnnotFontSize, ...
                 'Color', col, 'VerticalAlignment', 'middle');
@@ -313,7 +312,7 @@ classdef JointSectionView < handle
 
         function paintEngagement(obj, g)
             %PAINTENGAGEMENT  Where the threads stop inside the parent.
-            %   The parent's own depth is a convention; THIS line is data,
+            %   The parent's own depth is a convention; this line is data,
             %   and it is the number that governs thread shear. Drawn so the
             %   two can never be confused for each other.
             if ~g.Engagement.Ok
@@ -329,7 +328,7 @@ classdef JointSectionView < handle
 
         function paintLoadingPlane(obj, g)
             %PAINTLOADINGPLANE  n x grip, measured from the grip top.
-            %   Turns RED when it lands outside the grip, which is one of
+            %   Turns red when it lands outside the grip, which is one of
             %   the four things this view exists to catch.
             if ~g.LoadingPlane.Ok
                 return
@@ -358,7 +357,7 @@ classdef JointSectionView < handle
             %
             %   Grip and engagement come from engine.boltLengthCheck rather
             %   than being recomputed here - one implementation, one answer.
-            % Built field by field, NOT in one struct(...) call: a struct
+            % Built field by field, not in one struct(...) call: a struct
             % array passed as a value there does not mean what it looks
             % like it means, and Bands is a struct array.
             g              = struct();
@@ -455,13 +454,13 @@ classdef JointSectionView < handle
             end
             % HOST HEIGHT IS NOT ENGAGEMENT, except for a nut.
             %   A nut ends where its threads end, so its height IS Le.
-            %   A parent - tapped or insert-carrying - is a BODY of material
+            %   A parent - tapped or insert-carrying - is a body of material
             %   that the bolt bites Le into. Drawing it at Le made a tapped
             %   plate look like foil the bolt barely caught.
             %
             % Its thickness t2 is not modelled anywhere (engine.stiffness
             % says so in as many words and assumes h = min(D/2, t2/2) = D/2,
-            % i.e. that t2 >= D). So the drawn depth is a CONVENTION resting
+            % i.e. that t2 >= D). So the drawn depth is a convention resting
             % on the engine's own assumption: at least D, and always enough
             % material past the last engaged thread to read as a body.
             if isNut
@@ -513,7 +512,7 @@ classdef JointSectionView < handle
             % ---- extents ----
             outerR = max([bands.OuterR, g.Bolt.HeadR, memberOuter]);
             g.YTop    = g.Bolt.HeadTop;
-            % TotalLength, not ShankLength: the latter is now the unthreaded
+            % TotalLength, not ShankLength: the latter is the unthreaded
             % run, and clipping the axis to it would cut off the threads.
             g.YBottom = max(memberBottom, g.Bolt.TotalLength);
             pad = 0.25 * D;
@@ -530,8 +529,7 @@ classdef JointSectionView < handle
         function tf = washerPresent(w)
             %WASHERPRESENT  model.Washer has no Present flag.
             %   A washer is absent iff it is untouched at its model default:
-            %   zero thickness and both diameters unset. Matches the
-            %   predicate the first build settled on.
+            %   zero thickness and both diameters unset.
             tf = w.Thickness > 0 || ~isnan(w.OuterDiameter) || ...
                  ~isnan(w.InnerDiameter);
         end
@@ -646,7 +644,7 @@ classdef JointSectionView < handle
 
         function t = threadProfile(joint, D, yTop, len, minorR)
             %THREADPROFILE  Real thread teeth, when the thread data supports them.
-            %   NOT a convention: pitch is model.Bolt.Pitch (a Dependent
+            %   Not a convention: pitch is model.Bolt.Pitch (a Dependent
             %   property, = 1/ThreadsPerInch) and the crest and root radii
             %   are NominalDiameter and MinorDiameter. Every tooth is at its
             %   true axial position, so a 28-TPI thread draws 28 teeth to
@@ -719,7 +717,7 @@ classdef JointSectionView < handle
 
         function lp = loadingPlane(joint, gripTop, gripBottom, halfWidth)
             %LOADINGPLANE  n x grip, from the grip top.
-            %   The model stores only the FACTOR n, never a location, so the
+            %   The model stores only the factor n, never a location, so the
             %   position is this drawing's convention. n > 1 puts the plane
             %   below the grip, which is a real thing to notice.
             lp = struct('Ok', false, 'Y', NaN, 'Outside', false, ...

@@ -7,7 +7,7 @@ classdef ElementForcesPage < gui.Page
     %   tested reader and the GUI adds no parsing of its own. What the page
     %   adds is everything a reader has no place to do: Merge vs Replace
     %   against existing data, per-load-case Scale and Reversible (post-load
-    %   mutation, and USER INPUT that never comes from the file), the
+    %   mutation, and user input that never comes from the file), the
     %   min/max range preview, and continuous cross-validation against the
     %   Element Mapping — which needs two datasets at once.
     %
@@ -55,7 +55,7 @@ classdef ElementForcesPage < gui.Page
         % Summary columns after the four fixed ones, in Forces field order.
         Components = ["FX", "FY", "FZ", "MX", "MY", "MZ"]
 
-        % Sheets an import is EXPECTED to skip. The exported template ships
+        % Sheets an import is expected to skip. The exported template ships
         % a README, so treating its absence from the data as a warning
         % would train the user to ignore warnings.
         InstructionSheets = ["README", "Notes", "Instructions"]
@@ -122,7 +122,7 @@ classdef ElementForcesPage < gui.Page
         end
 
         function refresh(obj)
-            %REFRESH  Sync the whole page from AppState. The ONLY populate
+            %REFRESH  Sync the whole page from AppState. The only populate
             %   path. Never marks dirty — repopulating is not editing.
             if isempty(obj.SummaryTable) || ~isvalid(obj.SummaryTable)
                 return
@@ -296,7 +296,7 @@ classdef ElementForcesPage < gui.Page
             obj.SummaryTable.Visible = matlab.lang.OnOffSwitchState(hasRows);
             obj.Banner.Visible       = matlab.lang.OnOffSwitchState(~hasRows);
 
-            % Restore the selection BY NAME, and fall back to the first
+            % Restore the selection by name, and fall back to the first
             % case so the detail pane below is never blankly unexplained
             % while data exists.
             idx = obj.caseIndex(obj.SelectedCase);
@@ -461,8 +461,8 @@ classdef ElementForcesPage < gui.Page
             if sev == "error"
                 return   % DATA MISMATCH leads. See below.
             end
-            % The counting header goes in front of a list of GAPS, where no
-            % single line is the headline. It must NOT go in front of a
+            % The counting header goes in front of a list of gaps, where no
+            % single line is the headline. It must not go in front of a
             % DATA MISMATCH: that line says the mapping and the force file
             % describe different models, and pushing a generic "4 issue(s)"
             % above it demotes the one finding that matters to item one of
@@ -536,8 +536,8 @@ classdef ElementForcesPage < gui.Page
 
         function M = scaledMatrix(obj, name, scale)
             %SCALEDMATRIX  One load case's rows -> N x 6, times its scale.
-            %   THE ONLY place display scaling happens. This is
-            %   PRESENTATION, not analysis: the stored rows stay unscaled,
+            %   The only place display scaling happens. This is
+            %   presentation, not analysis: the stored rows stay unscaled,
             %   and at bulk-run time the same scale is handed to the engine
             %   as each row's ScaleFactor, which engine.loadCaseFromForces
             %   applies. So the screen matches what the engine will use
@@ -560,7 +560,7 @@ classdef ElementForcesPage < gui.Page
     % ---- Writing state ----------------------------------------------------
     methods (Access = private)
         function commit(obj, st, statusMsg)
-            %COMMIT  THE write path: state, dirty, status.
+            %COMMIT  The write path: state, dirty, status.
             %   The summary table reports edits through CellEditCallback,
             %   which Page.bindEdit does not reach, so the dirty flag is
             %   set here rather than by the funnel.
@@ -639,7 +639,7 @@ classdef ElementForcesPage < gui.Page
     % ---- Import / template / clear ----------------------------------------
     methods (Access = private)
         function onImport(obj)
-            %ONIMPORT  Pick a file, then hand off. The picker is SEPARATED
+            %ONIMPORT  Pick a file, then hand off. The picker is separated
             %   from startImport because uigetfile is a blocking native
             %   dialog: a test that pressed this button would hang rather
             %   than fail, so everything worth testing lives past it.
@@ -670,7 +670,7 @@ classdef ElementForcesPage < gui.Page
             notes = gui.ElementForcesPage.triage(info);
 
             if isempty(el)
-                % Sheets parsed, zero usable rows. THE dangerous case: it
+                % Sheets parsed, zero usable rows. The dangerous case: it
                 % did not throw, so nothing else will say it failed.
                 msg = sprintf(['"%s" parsed %d force sheet(s) but 0 ' ...
                     'usable rows.\n\nRows with a blank element_id are ' ...
@@ -731,7 +731,7 @@ classdef ElementForcesPage < gui.Page
                     updated = updated + 1;
                 end
                 % A load case seen for the first time starts at the
-                % defaults. On Merge an existing record KEEPS its
+                % defaults. On Merge an existing record keeps its
                 % user-edited scale and flag — the file has no say in
                 % either, and silently resetting them would change results.
                 if isempty(st.Cases) || ...
@@ -866,7 +866,7 @@ classdef ElementForcesPage < gui.Page
 
         function notes = triage(info)
             %TRIAGE  Per-sheet import notes, split by whether they matter.
-            %   An instructions sheet is EXPECTED to be skipped — the
+            %   An instructions sheet is expected to be skipped — the
             %   exported template ships a README — so it is mentioned
             %   neutrally and never escalates the icon. Any other skipped
             %   sheet is a warning with its reason, because a load-case
@@ -991,20 +991,13 @@ classdef ElementForcesPage < gui.Page
             %ANSWERCLEARALL  Answer the Clear All confirm, as a user would.
             %   choice is 'Clear All' or 'Cancel'.
             %
-        %   WHY A SEAM RATHER THAN A TEST THAT ANSWERS THE DIALOG.
-        %   matlab.uitest cannot press a button inside a uiconfirm, so a
-        %   test can only get as far as "the confirm opened". That leaves
-        %   the branch that DOES THE WORK unexercised — and a test that
-        %   presses Clear All and then asserts nothing was cleared passes
-        %   just as happily when the button is wired to nothing at all.
-        %   That is exactly the vacuous shape this file's other guards
-        %   exist to avoid, so the continuation gets a seam of its own.
-        %
-        %   It calls the REAL production continuation with the field
-        %   uiconfirm's CloseFcn actually delivers (evt.SelectedOption, a
-        %   character vector matching one of Options). Nothing is
-        %   re-implemented here: pass 'Cancel' and the same code that runs
-        %   when a user cancels runs, so both branches are reachable.
+            %   A seam, not a test that answers the dialog: matlab.uitest
+            %   cannot press a button inside a uiconfirm, so a test can only
+            %   confirm the dialog opened, leaving the branch that does the
+            %   work unexercised. This calls the real production
+            %   continuation with the field uiconfirm's CloseFcn delivers
+            %   (evt.SelectedOption), so both the Clear All and Cancel paths
+            %   run the same code a user would trigger.
             %
             %   n is recomputed here exactly as onClearAll computes it at
             %   dialog time, so the status line a test reads is the one a

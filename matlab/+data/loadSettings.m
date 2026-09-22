@@ -15,7 +15,7 @@ function s = loadSettings(file, sheet)
 %   engine.runWorkbook pulls the Settings sheet out of the single
 %   multi-sheet workbook.
 %
-%   FILE FORMAT — a TWO-COLUMN (key, value) table, one setting per row
+%   FILE FORMAT — a two-column (key, value) table, one setting per row
 %   (template with the exact keys: templates/settings_template.csv):
 %
 %       Setting,Value
@@ -30,7 +30,7 @@ function s = loadSettings(file, sheet)
 %   are simply ignored, so the file needs no fixed header and tolerates
 %   decoration. Missing temperature keys default to 20 degC.
 %
-%   These settings are GLOBAL: engine.runBulk applies the three
+%   These settings are global: engine.runBulk applies the three
 %   temperatures to every Joint (ReferenceTemperature = NominalTempC,
 %   MaxTemperature = HotTempC, MinTemperature = ColdTempC) and passes the
 %   Factors to the analysis — the joint table itself carries neither.

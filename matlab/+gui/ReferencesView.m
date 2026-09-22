@@ -1,5 +1,5 @@
 classdef ReferencesView < handle
-    %REFERENCESVIEW  The documents this tool's numbers rest on (GUI step 10).
+    %REFERENCESVIEW  The documents this tool's numbers rest on.
     %   Lists every entry of data.referenceDocuments with its citation, its
     %   role in the document hierarchy, and what the tool takes from it.
     %   Where a local copy exists in the configured references folder, the

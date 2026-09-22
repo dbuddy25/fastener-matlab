@@ -7,8 +7,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     %   NOTE ON .Enable / .Visible: these read back as
     %   matlab.lang.OnOffSwitchState, never char, so a bare
     %   verifyEqual(x.Enable, 'on') fails on class mismatch while the values
-    %   agree. Compare char(...) or logical(...). This cost a full round of
-    %   false failures on the first attempt at this page.
+    %   agree. Compare char(...) or logical(...).
     %
     %   NOTE ON choose(): it matches a dropdown's Items - the display text a
     %   user clicks - not its ItemsData. Pass the label.
@@ -121,11 +120,10 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     % ---- buildJoint is TOTAL ----------------------------------------------
     methods (Test)
         function commitSucceedsWithEveryRequiredSelectionStillBlank(testCase)
-            % THE defect that sank the first attempt: buildJoint asserted
-            % required selections and threw, so on an incomplete form no
-            % commit ever succeeded - State.Joint stayed blank, Save wrote
-            % that blank, and repopulation wiped the form. An incomplete
-            % form is the normal state while working.
+            % buildJoint must never throw on missing required selections:
+            % an incomplete form is the normal state while working, and a
+            % throw here would leave State.Joint blank, corrupt Save, and
+            % wipe the form on repopulation.
             p = testCase.Page;
             testCase.type(p.jointNameField(), "Partially filled");
 
@@ -185,10 +183,10 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function aRowWithNoMaterialYetStillCountsTowardTheGrip(testCase)
-            % The reverted build dropped a row until its material was
-            % chosen, so the grip read zero while the analyst was still
-            % picking materials. The thickness is real; the layer belongs
-            % in the grip. Missing allowables are the engine's to report.
+            % The thickness alone puts a layer in the grip, even with no
+            % material chosen yet: the thickness is real, the layer
+            % belongs in the grip, and missing allowables are the
+            % engine's to report.
             p = testCase.Page;
             testCase.type(p.flangeThickness(1), '0.25');
             testCase.verifyNumElements(testCase.App.State.Joint.FlangeStack, 1);
@@ -208,7 +206,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function aLayerLeavesTheStackWhenItsThicknessIsCleared(testCase)
-            % Thickness is the ONLY thing that puts a layer in the stack -
+            % Thickness is the only thing that puts a layer in the stack -
             % there is no separate Active state that can disagree with it.
             p = testCase.Page;
             testCase.type(p.flangeThickness(2), '0.5');
@@ -230,7 +228,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
         function aTypedZeroInFlangeGeometryDoesNotTakeTheCommitDown(testCase)
             % model.FlangeLayer's HoleDiameter and EdgeDistance are
-            % mustBePositiveOrNaN, so a typed 0 THROWS - which would abort
+            % mustBePositiveOrNaN, so a typed 0 throws - which would abort
             % the commit and silently drop every edit after it, breaking
             % the guarantee that buildJoint is total. Zero means "not
             % supplied", same as blank.
@@ -256,9 +254,9 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     % ---- Threaded member ---------------------------------------------------
     methods (Test)
         function memberTypeOffersExactlyTheThreeEnumMembers(testCase)
-            % There is no None. The reverted build had a case for one, which
-            % threw on every switch away from Nut because MATLAB evaluates a
-            % case expression only when it is reached.
+            % There is no None case. MATLAB evaluates a switch's case
+            % expression only when it is reached, so a bad case for a
+            % member nothing ever selects would go undetected.
             items = testCase.Page.memberTypeDropDown().Items;
             testCase.verifyNumElements(items, 3);
             testCase.verifyTrue(all(ismember( ...
@@ -281,12 +279,10 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function anInsertResolvesItsStiGeometryFromTheCatalogue(testCase)
-            % THE reason insert pull-out read as "no data" on every GUI
-            % analysis: the STI lookup lived only in data.loadJointLibrary,
-            % so a joint built here carried a NaN STI diameter,
-            % engine.marginInsert had no area to work from, and the check
-            % came back NotEvaluated while library.json held the entry all
-            % along. 0.2825 in is NASM33537-2500-20's class-3B pitch
+            % The STI lookup must be reachable from a GUI-built joint, not
+            % only from data.loadJointLibrary - otherwise the joint carries
+            % a NaN STI diameter and engine.marginInsert has no area to
+            % work from. 0.2825 in is NASM33537-2500-20's class-3B pitch
             % diameter minimum.
             p = testCase.Page;
             testCase.choose(p.boltDropDown(), 'NAS1352 1/4-20');
@@ -314,12 +310,12 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function crossingEngagementModesDoesNotStrandTheOldValue(testCase)
-            % engine.resolveEngagementLength is TYPE-AGNOSTIC — a ratio
+            % engine.resolveEngagementLength is type-agnostic — a ratio
             % wins whenever it is set, whatever the member type — so a
             % ratio typed for an Insert that survived a switch to Nut would
             % be read as this member's geometry and silently govern the
             % thread-shear area. commitJoint prevents it structurally by
-            % setting exactly one of the pair and NaNing the other on EVERY
+            % setting exactly one of the pair and NaNing the other on every
             % commit, keyed on the type.
             %
             % Drives the real dropdown callback.
@@ -357,8 +353,8 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
         function theMemberRatedLoadReachesTheModel(testCase)
             % 5020B Sec. 4.4.1 caps the computed allowable at the load
-            % rating, and until now that rating was reachable from the bulk
-            % CSV and from nowhere in the app.
+            % rating, which must be settable from the app, not only from
+            % the bulk CSV.
             p = testCase.Page;
             testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
             testCase.type(p.memberRatedField(), '1350');
@@ -428,7 +424,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function onlyTheTypesOwnEngagementPropertyIsMarshalled(testCase)
-            % Each value has to be entered while ITS OWN type is selected -
+            % Each value has to be entered while its own type is selected -
             % the other control is disabled, and matlab.uitest refuses to
             % type into a disabled component exactly as a user cannot. That
             % refusal is the greying working, not a limitation to route
@@ -526,11 +522,11 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function sameAsHeadMirrorsTheHeadWasherAndGreysTheNutGroup(testCase)
-            % The head values must be entered BEFORE ticking: Same as Head
+            % The head values must be entered before ticking: Same as Head
             % greys the nut group, and matlab.uitest refuses to type into a
             % disabled component exactly as a user cannot.
             p = testCase.Page;
-            % The nut washer group starts FOLDED (Section 7.5) and
+            % The nut washer group starts folded (Section 7.5) and
             % matlab.uitest will not drive a control inside one.
             p.expandGroup("Washer under nut");
             h = p.headWasher();
@@ -554,7 +550,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
         function headEditsPropagateLiveWhileSameAsHeadIsTicked(testCase)
             p = testCase.Page;
-            % The nut washer group starts FOLDED (Section 7.5) and
+            % The nut washer group starts folded (Section 7.5) and
             % matlab.uitest will not drive a control inside one.
             p.expandGroup("Washer under nut");
             h = p.headWasher();
@@ -571,7 +567,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
         function untickingSameAsHeadKeepsTheMirroredValues(testCase)
             p = testCase.Page;
-            % The nut washer group starts FOLDED (Section 7.5) and
+            % The nut washer group starts folded (Section 7.5) and
             % matlab.uitest will not drive a control inside one.
             p.expandGroup("Washer under nut");
             h = p.headWasher();
@@ -590,7 +586,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
         function sameAsHeadIsOnlyOfferedOnceThereIsANutWasher(testCase)
             p = testCase.Page;
-            % The nut washer group starts FOLDED (Section 7.5) and
+            % The nut washer group starts folded (Section 7.5) and
             % matlab.uitest will not drive a control inside one.
             p.expandGroup("Washer under nut");
             testCase.verifyEqual(char(p.sameAsHeadCheck().Enable), 'off', ...
@@ -631,11 +627,11 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     % ---- Bolt length readout -----------------------------------------------
     methods (Test)
         function readoutCarriesItsFixedLinesAndNeverBlanks(testCase)
-            % NO LONGER A FIXED LINE COUNT. The readout itemises the minimum
-            % bolt length, so a washer present or absent changes the number
-            % of lines. What is invariant is that the four fixed lines are
+            % The readout itemises the minimum bolt length, so a washer
+            % present or absent changes the number of lines - there is no
+            % fixed line count. What is invariant is that four lines are
             % always there - grip, the minimum, the verdict, and L1 - and
-            % that none of them renders blank.
+            % none of them renders blank.
             txt = testCase.Page.boltLengthLabel().Text;
             testCase.verifyFalse(any(cellfun(@isempty, txt)), ...
                 'No line may render blank; unknown shows an em dash (A1).');
@@ -647,7 +643,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function theReadoutSaysWhenStiffnessCannotRun(testCase)
-            % THE line that predicts whether tension margins will evaluate.
+            % The line that predicts whether tension margins will evaluate.
             % A blank form cannot resolve L1, and the analyst needs to know
             % that here rather than from a NotEvaluated row after Analyze.
             testCase.verifyTrue( ...
@@ -658,10 +654,9 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
         function aCataloguedBoltAndLengthDeriveL1WithoutAnOverride(testCase)
             % REGRESSION for the whole point of seeding Table II's minimum
-            % basic thread length: engine.stiffness has always derived L1
-            % from Bolt.Length - ThreadLength, and only ever lacked the
-            % input. A real single-joint run used to lose its tension
-            % margins to this.
+            % basic thread length: engine.stiffness derives L1 from
+            % Bolt.Length - ThreadLength, and only ever lacked the input -
+            % without it, a single-joint run loses its tension margins.
             p = testCase.Page;
             testCase.choose(p.boltDropDown(), 'NAS1351 3/8-24');
             testCase.choose(p.boltMaterialDropDown(), 'A286');
@@ -678,7 +673,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
         function aTypedL1IsReportedAsTheOverrideItIs(testCase)
             p = testCase.Page;
-            % Advanced starts COLLAPSED (Section 7.5), and matlab.uitest
+            % Advanced starts collapsed (Section 7.5), and matlab.uitest
             % refuses a control in an invisible hierarchy - so open it
             % first, exactly as the user would have to.
             p.expandGroup("Advanced");
@@ -696,7 +691,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function anUnevaluatedCheckNamesItsCauseInAmber(testCase)
-            % A1: a check that CANNOT RUN is amber and says why. Muted grey
+            % A1: a check that cannot run is amber and says why. Muted grey
             % would read as "nothing to report", which is the opposite.
             p = testCase.Page;
             testCase.verifyNotEqual(testCase.readoutLine("Not evaluated"), "", ...
@@ -805,7 +800,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function aRatedLoadOfZeroIsKeptNotDiscarded(testCase)
-            % BoltRatedUltimateLoad is mustBeNONNEGATIVEOrNaN, unlike the
+            % BoltRatedUltimateLoad is mustBeNonnegativeOrNaN, unlike the
             % geometry fields: zero is a legitimate rating, so it must not
             % be silently converted to "not supplied".
             testCase.Page.expandGroup("Advanced");
@@ -825,7 +820,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function frustumAngleDefaultsToThirtyAndRefusesInvalidValues(testCase)
-            % The one property here with NO NaN state: model.Joint requires
+            % The one property here with no NaN state: model.Joint requires
             % 0 < angle < 90 always, so the widget refuses out-of-range
             % input rather than letting marshalling be handed something the
             % model will reject.
@@ -923,7 +918,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     % ---- Actions: required-field gating, Analyze, Save ----------------------
     methods (Test)
         function analyzeIsHeldUntilEveryRequiredSelectionIsMade(testCase)
-            % The gate lives HERE, not in buildJoint - which is exactly why
+            % The gate lives here, not in buildJoint - which is exactly why
             % an incomplete form still commits without complaint.
             p = testCase.Page;
             testCase.verifyEqual(char(p.analyzeButton().Enable), 'off', ...
@@ -971,7 +966,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function analyzeEnablesOnceTheFormIsComplete(testCase)
-            % "Complete" now means what the ENGINE needs, not just the
+            % "Complete" means what the engine needs, not just the
             % hardware: a clamped layer, a preload and an applied load are
             % each required before a run can say anything.
             p = testCase.Page;
@@ -983,10 +978,10 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function hardwareAloneNoLongerEnablesAnalyze(testCase)
-            % REGRESSION. The gate used to pass on hardware alone, so
-            % Analyze enabled and the run came back with every margin
-            % NotEvaluated -- a button that promised an answer and
-            % delivered a page of dashes.
+            % REGRESSION: hardware alone must not enable Analyze. Enabling
+            % it without a preload or an applied load returns a run where
+            % every margin comes back NotEvaluated -- a button that
+            % promises an answer and delivers a page of dashes.
             p   = testCase.Page;
             lib = testCase.App.State.Library;
             mats = lib.materialKeys();
@@ -1014,11 +1009,10 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function aMaterialAddedToTheLibraryAppearsWithoutARestart(testCase)
-            % Until step 9 NOTHING in +gui listened to LibraryChanged --
-            % the event was declared, fired, and had no subscribers at all.
             % These dropdowns are populated once at build, so a material
-            % added on the Materials & Hardware page was invisible here
-            % until the app was restarted.
+            % added on the Materials & Hardware page is invisible here
+            % unless LibraryChanged is actually subscribed to, not just
+            % declared and fired.
             p   = testCase.Page;
             lib = testCase.App.State.Library;
             before = numel(p.boltMaterialDropDown().Items);
@@ -1039,7 +1033,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             % Setting Items can drop the current Value, and MATLAB fires no
             % callback when it does -- so a naive repopulation silently
             % reselects whatever sorts first and the joint changes material
-            % underneath the analyst. THIS is the reason for save/restore.
+            % underneath the analyst. This is the reason for save/restore.
             p    = testCase.Page;
             mats = testCase.App.State.Library.materialKeys(Role = "bolt");
             testCase.assumeGreaterThan(numel(mats), 0);
@@ -1090,15 +1084,15 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         function analyzeIsGatedOnEdgeDistance(testCase)
             % NASA-STD-5020B Figure 8's first decision box needs e/D, and
             % with no edge distance the engine's gate treats that condition
-            % as passing and marks it ASSUMED. Assumed-pass is NOT neutral:
-            % an assured gate selects the SEPARATED design bolt load, which
+            % as passing and marks it Assumed. Assumed-pass is not neutral:
+            % an assumed gate selects the separated design bolt load, which
             % is normally smaller than the clamped form, so nine rows'
             % margins come out higher on no evidence.
             %
             % The engine cannot refuse -- neither validation fixture supplies
             % an edge distance, DABJ §9 included, and making it mandatory
-            % there would destroy the published +0.69/+0.63. So the entry
-            % path enforces it instead, and this pins that split.
+            % there would destroy the published +0.69/+0.63. The entry
+            % path enforces it instead, pinning that split.
             p = testCase.Page;
             testCase.fillRunnableJoint();
             testCase.assertTrue(p.analyzeButton().Enable == "on" || ...
@@ -1115,10 +1109,11 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function typingTheLastLoadEnablesAnalyzeImmediately(testCase)
-            % The load case is a SECOND commit funnel, and only the joint
-            % one used to re-run the gate. Without the gate on both,
-            % typing the load that completes the form would leave Analyze
-            % disabled until an unrelated joint edit happened to run it.
+            % The load case is a second commit funnel, and the gate must
+            % re-run on both, not just the joint one. Without the gate on
+            % both, typing the load that completes the form would leave
+            % Analyze disabled until an unrelated joint edit happened to
+            % run it.
             p   = testCase.Page;
             lib = testCase.App.State.Library;
             mats = lib.materialKeys();
@@ -1129,7 +1124,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             testCase.choose(p.flangeMaterial(1), char(mats(1)));
             % Edge distance is a required joint input (analyze gates on it,
             % per analyzeIsGatedOnEdgeDistance) — this test fills the form
-            % by hand rather than through fillMinimalJoint, so it has to
+            % by hand rather than through fillRunnableJoint, so it has to
             % supply it too or the gate never gets as far as the loads.
             testCase.type(p.flangeEdge(1), '0.75');
             testCase.type(p.nominalTorqueField(), '50');
@@ -1142,8 +1137,9 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function analyzeHandsAResultToAppState(testCase)
-            % The gate's required set and the ENGINE's have converged --
-            % what enables the button is now what a run needs.
+            % The gate's required set matches what the engine needs to
+            % run -- what enables the button is exactly what produces a
+            % margin.
             p = testCase.Page;
             testCase.fillRunnableJoint();
 
@@ -1159,7 +1155,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         function savingWithNoNameIsRefused(testCase)
             % The refusal is a non-blocking uialert, so nothing needs
             % dismissing - the teardown's figure delete takes it with the
-            % window. Asserting the LIBRARY rather than driving the dialog
+            % window. Asserting the library rather than driving the dialog
             % keeps this testing the behaviour that matters.
             testCase.press(testCase.Page.saveJointButton());
             testCase.verifyEmpty(testCase.App.State.JointLibrary, ...
@@ -1183,7 +1179,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             % A13: letting "JT-A" and "jt-a" coexist is a mapping trap,
             % because element mapping keys on the name.
             %
-            % This asserts the DETECTION, not the dialog. The confirm is
+            % This asserts the detection, not the dialog. The confirm is
             % non-blocking, so the second save opens it and returns without
             % writing anything - the library must still hold one entry. The
             % answer path is exercised by commitSavedJoint directly rather
@@ -1206,11 +1202,10 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     % ---- Live readouts follow their inputs ---------------------------------
     methods (Test)
         function theBoltLengthReadoutFollowsAnInsertEngagementRatio(testCase)
-            % The ratio field was bound straight to commitJoint, so the
-            % four-line readout sat stale while an insert's engagement
-            % changed under it. Engagement feeds the required bolt length -
-            % every control that does must refresh the readout.
-            % A bolt FIRST. An insert's Le is EngagementRatio x the bolt's
+            % Engagement feeds the required bolt length - every control
+            % that does must refresh the readout.
+            %
+            % A bolt first: an insert's Le is EngagementRatio x the bolt's
             % nominal diameter, so with no bolt chosen the diameter is NaN
             % and the readout correctly reports unknown however the ratio
             % changes - the em dash is right, not stale. That distinction
@@ -1223,7 +1218,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             testCase.choose(p.boltDropDown(), char(bolts(1)));
             testCase.choose(p.memberTypeDropDown(), 'Helical Insert');
             testCase.type(p.engagementRatioField(), '1.5');
-            % The engagement ADDEND, found by name. It is shown whenever it
+            % The engagement addend, found by name. It is shown whenever it
             % is known, even on a form whose total is not computable yet,
             % which is what makes this assertable without a full joint.
             before = testCase.readoutLine("Thread engagement Le");
@@ -1252,7 +1247,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
     end
     % ---- Library cascades ---------------------------------------------------
-    %   choose() matches Items - the display LABEL a user clicks - while the
+    %   choose() matches Items - the display label a user clicks - while the
     %   pickers carry bare tokens in ItemsData. Every choose below therefore
     %   passes a label, and the helpers return labels for that reason.
     methods (Test)
@@ -1298,11 +1293,10 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function aLoadedCaseKeepsItsNutFamilyInsteadOfDowngradingToCustom(testCase)
-            % REGRESSION, the nut half of the washer round-trip defect.
             % model.ThreadedMember records the nut's material and
             % engagement length but not which catalogue nut supplied them,
-            % so a reload used to come back on Custom with the fields
-            % unlocked.
+            % so a reload must re-derive the family rather than falling
+            % back to Custom with the fields unlocked.
             p = testCase.Page;
             [boltKey, specLabel, nut] = testCase.firstResolvableNutSpec();
             testCase.assumeNotEmpty(specLabel);
@@ -1398,7 +1392,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function aWasherFamilyListsItsSizesAndTheChosenOneFillsTheGeometry(testCase)
-            % washersFor returns MANY matches at one bolt size - that is the
+            % washersFor returns many matches at one bolt size - that is the
             % difference from the nut cascade, and why a second picker
             % exists at all.
             p = testCase.Page;
@@ -1424,11 +1418,10 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function aLoadedCaseKeepsItsWasherFamilyInsteadOfDowngradingToCustom(testCase)
-            % REGRESSION. Saving a case and reloading it used to downgrade
-            % every washer to Custom: model.Washer records geometry only,
-            % with no catalogue key, and the load path reset the pickers
-            % and stopped there. The family is now re-derived by asking
-            % the catalogue which part has exactly this geometry.
+            % model.Washer records geometry only, with no catalogue key,
+            % so a reload must re-derive the family by asking the
+            % catalogue which part has exactly this geometry, rather than
+            % downgrading every washer to Custom.
             p = testCase.Page;
             [boltKey, specLabel, matches] = testCase.firstMultiSizeWasherSpec();
             testCase.assumeNotEmpty(specLabel);
@@ -1439,8 +1432,9 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             testCase.choose(w.Spec, specLabel);
             testCase.assertEqual(char(w.OD.Enable), 'off');
 
-            % An EXTERNAL joint assignment is exactly what loading a case
-            % file does -- it is the path that was losing the family.
+            % An external joint assignment is exactly what loading a case
+            % file does, so it is the path this family recovery must
+            % survive.
             saved = testCase.App.State.Joint;
             testCase.App.State.Joint = model.Joint();
             testCase.assertEqual(string(w.Spec.Value), "Custom", ...
@@ -1456,7 +1450,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function handTypedWasherGeometryStaysCustomOnReload(testCase)
-            % The reselect must RECOGNISE catalogue geometry, not snap
+            % The reselect must recognise catalogue geometry, not snap
             % nearby numbers onto a part. Geometry that matches nothing
             % has to come back as what it is.
             p = testCase.Page;
@@ -1516,7 +1510,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             testCase.choose(p.boltDropDown(), other);
 
             % Either the family still resolves at the new size, or it
-            % reverted to Custom - what must NOT happen is the old nut's
+            % reverted to Custom - what must not happen is the old nut's
             % numbers sitting there locked under a different bolt.
             if strcmp(char(p.nutSpecDropDown().Value), 'Custom')
                 testCase.verifyEqual(char(p.engagementLengthField().Enable), 'on', ...
@@ -1554,7 +1548,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     end
 
     % ---- Cascade helpers ----------------------------------------------------
-    %   All of these return DISPLAY LABELS for choose(), never tokens.
+    %   All of these return display labels for choose(), never tokens.
     % ---- Collapsible groups (GUI_SPEC.md Section 7.5) ---------------------
     methods (Test)
         function advancedAndTheNutWasherStartFolded(testCase)

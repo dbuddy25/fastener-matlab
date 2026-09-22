@@ -1,5 +1,5 @@
 classdef tGuiElementForces < matlab.uitest.TestCase
-    %TGUIELEMENTFORCES  Step 7 acceptance: the Element Forces page.
+    %TGUIELEMENTFORCES  Tests for the Element Forces page.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -15,20 +15,18 @@ classdef tGuiElementForces < matlab.uitest.TestCase
     %
     %   The behaviours this page owes:
     %     - cross-validated against the mapping; unmapped IDs called out
-    %     - ZERO USABLE ELEMENTS IS THE DANGEROUS CASE — it must not look
+    %     - zero usable elements is the dangerous case — it must not look
     %       like success
     %     - an empty load case must never scan like a populated one
     %     - sheets parsed with zero usable rows must not read as a clean
     %       import
     %     - ": 101, 102" ID suffix when <= 5 IDs, omitted otherwise
     %
-    %   ONE BULLET IS DELIBERATELY NOT IMPLEMENTED, and it is not an
-    %   oversight: "IDs that can never be mapped, called out distinctly."
-    %   That category existed because the mapping keyed on positive
-    %   integers, so a non-numeric force id was permanently unmappable.
-    %   Mapping ids are strings now (step 6), so every force id CAN be
-    %   mapped and an id present in one dataset and not the other is just
-    %   a gap. The distinction has no referent left.
+    %   One bullet from that list is deliberately not implemented: "IDs
+    %   that can never be mapped, called out distinctly." Mapping ids are
+    %   strings, so every force id can be mapped, and an id present in one
+    %   dataset and not the other is just a gap — the distinction has no
+    %   referent.
 
     properties
         App
@@ -86,7 +84,7 @@ classdef tGuiElementForces < matlab.uitest.TestCase
         end
 
         function theRangeColumnsReportMinAndMax(testCase)
-            % These columns ARE the sanity check: a units or column error
+            % These columns are the sanity check: a units or column error
             % shows up here as an absurd range and nowhere else.
             testCase.loadForces();
             d = testCase.Page.summaryTable().Data;
@@ -96,7 +94,7 @@ classdef tGuiElementForces < matlab.uitest.TestCase
         end
 
         function theRangeColumnsFollowTheScale(testCase)
-            % Scale is applied to what is DISPLAYED as well as to what the
+            % Scale is applied to what is displayed as well as to what the
             % engine is handed, so the screen matches the analysis.
             testCase.loadForces();
             testCase.Page.editCell(1, 2, 2);
@@ -258,7 +256,7 @@ classdef tGuiElementForces < matlab.uitest.TestCase
         end
 
         function forcesCoveringNoneOfTheMappingIsAnERROR(testCase)
-            % THE dangerous case: the file parsed perfectly and describes a
+            % The dangerous case: the file parsed perfectly and describes a
             % different model. It must not share a severity with "some
             % elements are missing".
             testCase.setMapping(["9001", "9002"]);
@@ -271,8 +269,8 @@ classdef tGuiElementForces < matlab.uitest.TestCase
         end
 
         function fullAgreementReadsAsClean(testCase)
-            % ONE load case here on purpose. "No gaps" means every mapped
-            % element has forces in EVERY case, so the two-case fixture —
+            % One load case here on purpose. "No gaps" means every mapped
+            % element has forces in every case, so the two-case fixture —
             % where Liftoff has no 1003 and Landing has no 1001 — is a
             % genuine per-case gap and correctly is not clean.
             testCase.App.State.Elements = tGuiElementForces.forcesState( ...
@@ -370,7 +368,7 @@ classdef tGuiElementForces < matlab.uitest.TestCase
         end
 
         function aNewLoadCaseStartsAtTheDefaults(testCase)
-            % Scale and Reversible are USER INPUT and have no column in the
+            % Scale and Reversible are user input and have no column in the
             % file, so a case seen for the first time starts at 1 / false.
             f = testCase.tempFile(".xlsx");
             tGuiElementForces.writeWorkbook(f, {"Liftoff", [1001 1 2 3 0 0 0]});
@@ -436,7 +434,7 @@ classdef tGuiElementForces < matlab.uitest.TestCase
         function aSheetWithNoRowsIsReportedRatherThanDeclaringACase(testCase)
             % Sheets parsed with zero usable rows must not read as a clean
             % import. They cannot declare a load case — the reader returns
-            % no rows to carry the sheet name — so the import REPORT is
+            % no rows to carry the sheet name — so the import report is
             % where the emptiness surfaces, and it escalates the icon.
             f = testCase.tempFile(".xlsx");
             tGuiElementForces.writeWorkbook(f, ...
@@ -516,7 +514,7 @@ classdef tGuiElementForces < matlab.uitest.TestCase
         end
 
         function answeringClearAllActuallyClears(testCase)
-            % THE OTHER HALF of clearAllAsksFirst: that test cannot tell a
+            % The other half of clearAllAsksFirst: that test cannot tell a
             % correctly-gated Clear All from a button wired to nothing,
             % because both leave the rows in place. This drives the real
             % continuation and asserts the rows are gone.
@@ -560,8 +558,8 @@ classdef tGuiElementForces < matlab.uitest.TestCase
         end
 
         function aCaseFileCarryingTheOldRowFieldsStillOpens(testCase)
-            % patternId / jointName used to live on a force row and older
-            % case files still carry them. They are ignored, not rejected.
+            % Older case files may carry patternId / jointName on a force
+            % row. They are ignored, not rejected.
             f = testCase.tempFile(".json");
             tGuiElementForces.writeRaw(f, ...
                 ['{"format":"fastener-analysis-matlab-v1","forces":{' ...

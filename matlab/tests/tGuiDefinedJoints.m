@@ -1,5 +1,5 @@
 classdef tGuiDefinedJoints < matlab.uitest.TestCase
-    %TGUIDEFINEDJOINTS  Step 5 acceptance: the Defined Joints page.
+    %TGUIDEFINEDJOINTS  Tests for the Defined Joints page.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -198,9 +198,8 @@ classdef tGuiDefinedJoints < matlab.uitest.TestCase
     %   Dialogs are NEVER driven from these tests. The confirms use the
     %   CloseFcn form so the press returns immediately, and what gets
     %   asserted is that NOTHING changed while the question is outstanding
-    %   -- the dialog itself dies with the figure at teardown. The rule the
-    %   suite learned the hard way: a test that tries to answer a dialog is
-    %   a test that can hang the whole run.
+    %   -- the dialog itself dies with the figure at teardown. A test that
+    %   tries to answer a dialog directly can hang the whole run.
     methods (Test)
         function theActionsAreDisabledWithoutASelection(testCase)
             testCase.verifyEqual(char(testCase.Page.loadButton().Enable), 'off');
@@ -218,9 +217,9 @@ classdef tGuiDefinedJoints < matlab.uitest.TestCase
 
         function aFreshJointConfigHasNothingToLose(testCase)
             % The gate that decides whether Load asks first. Tested
-            % DIRECTLY: when it was only reachable through the dialog, a
-            % wrong answer here surfaced as "loading does nothing", which
-            % is three steps from the cause.
+            % directly rather than only through the dialog: a wrong answer
+            % here would otherwise surface as "loading does nothing",
+            % three steps from the cause.
             testCase.verifyFalse(testCase.Page.hasUnsavedJointWork(), ...
                 'A blank Joint Config is a fresh start, not work to lose.');
         end
@@ -465,9 +464,9 @@ classdef tGuiDefinedJoints < matlab.uitest.TestCase
 
         function lib = libraryNamed(names)
             %LIBRARYNAMED  A joint-library array with the given names.
-            %   The Joint payload is a default model.Joint: increment 1
-            %   renders names only, and a fully configured joint here
-            %   would suggest the list depends on joint content.
+            %   The Joint payload is a default model.Joint: this renders
+            %   names only, and a fully configured joint here would
+            %   suggest the list depends on joint content.
             names = string(names);
             lib = struct('Name', {}, 'Joint', {});
             for i = 1:numel(names)

@@ -1,15 +1,15 @@
 classdef tGuiElementMapping < matlab.uitest.TestCase
-    %TGUIELEMENTMAPPING  Step 6 acceptance: the Element Mapping page.
+    %TGUIELEMENTMAPPING  Tests for the Element Mapping page.
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
     %   or, while iterating:
     %       runTests("ElementMapping")
     %
-    %   The page is a VIEW over AppState.Mapping and owns no storage, so
+    %   The page is a view over AppState.Mapping and owns no storage, so
     %   what is worth asserting is: that it renders what state holds, that
     %   every mutation goes back through state (and marks the case dirty),
-    %   and — the part this page exists for — that a BROKEN mapping can
+    %   and — the part this page exists for — that a broken mapping can
     %   never be mistaken for a working one. A duplicate element ID or a
     %   joint name that is not in the library both produce wrong bulk
     %   results silently, so each has to be visible in three places at
@@ -26,7 +26,7 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
     %   WHY CELL EDITS GO THROUGH page.editCell RATHER THAN A GESTURE.
     %   matlab.uitest has press/type/choose for controls, and no gesture
     %   for a uitable cell edit. editCell builds the event the widget would
-    %   send and runs the REAL CellEditCallback — a seam, not a substitute
+    %   send and runs the real CellEditCallback — a seam, not a substitute
     %   for the logic under test.
 
     properties
@@ -81,9 +81,9 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
         end
 
         function thePatternColumnRoundTripsThroughTheTable(testCase)
-            % Pattern ID is the whole reason step 6 touched the schema:
-            % without it one joint name is one bolt pattern and Eq. 84's
-            % nf check fails on repeated instances.
+            % Pattern ID exists because without it one joint name is one
+            % bolt pattern, and Eq. 84's nf check fails on repeated
+            % instances.
             testCase.setLibrary("Bracket");
             m = [gui.AppState.mappingRow("1001", "Bracket", "PLATE-1"), ...
                  gui.AppState.mappingRow("1002", "Bracket", "PLATE-2")];
@@ -128,7 +128,7 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
         function aDuplicateElementIdIsFlaggedAndCounted(testCase)
             % A duplicate resolves to whichever row is found first, so it
             % silently analyses one element twice and another never. It is
-            % ALLOWED (blocking it would fight CSV import and paste) and
+            % allowed (blocking it would fight CSV import and paste) and
             % therefore has to be loud.
             testCase.setLibrary("Bracket");
             testCase.setMapping(["1001", "1001", "1002"], "Bracket");
@@ -206,7 +206,7 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
         end
 
         function aNewUnknownJointNameReShowsADismissedBar(testCase)
-            % Dismissal is keyed on the SET of unknown names. A new problem
+            % Dismissal is keyed on the set of unknown names. A new problem
             % is a new thing to read, not one already acknowledged.
             testCase.setLibrary("Bracket");
             testCase.setMapping("1001", "Nowhere");
@@ -309,7 +309,7 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
         end
 
         function editingThePatternIdAcceptsBlank(testCase)
-            % Blank is MEANINGFUL here — it says this joint name is one
+            % Blank is meaningful here — it says this joint name is one
             % bolt pattern — so it cannot be validated away like a name.
             testCase.setLibrary("Bracket");
             testCase.App.State.Mapping = ...
@@ -415,9 +415,9 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
         end
 
         function nonNumericIdsOnSeparateLinesStayIds(testCase)
-            % The documented corner: element IDs are strings now, so a
-            % COMMA-SEPARATED line of non-numeric ids is indistinguishable
-            % from an ID + name pair. One per line is unambiguous.
+            % Element IDs are strings, so a comma-separated line of
+            % non-numeric ids is indistinguishable from an ID + name pair.
+            % One per line is unambiguous.
             res = testCase.Page.detectPaste(sprintf('E-1001\nE-1002'));
             testCase.verifyEqual(res.mode, "ids");
             testCase.verifyEqual(res.ids, ["E-1001", "E-1002"]);
@@ -456,9 +456,9 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
 
         function bulkAddSurvivesOneBadRowInTwoHundred(testCase)
             % Mapping 200 elements must survive one bad row.
-            %   Pairs mode, because that is where a line CAN be bad now:
-            %   with string element IDs almost any token is a legal ID, so
-            %   the recoverable failure is a line with no joint name.
+            %   Pairs mode, because that is where a line can be bad: with
+            %   string element IDs almost any token is a legal ID, so the
+            %   recoverable failure is a line with no joint name.
             testCase.setLibrary("Bracket");
             lines = compose("%d\tBracket", (1001:1200)');
             lines(50) = "1050";        % no joint name on this one
@@ -503,7 +503,7 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
         end
 
         function reopeningTheDialogNeverLeavesTwo(testCase)
-            % The SECOND open goes through openBulkAdd rather than a press.
+            % The second open goes through openBulkAdd rather than a press.
             % With a dialog already up it holds focus, and matlab.uitest
             % cannot reliably press a control on the main window from
             % behind it — the gesture is a silent no-op, so the test would
@@ -569,7 +569,7 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
 
         function importFromForcesPreFillsTheDialogWithTheIds(testCase)
             % It bootstraps the mapping, but a row may not have a blank
-            % joint name — so it pre-fills the SAME dialog and the user
+            % joint name — so it pre-fills the same dialog and the user
             % picks the joint. That prompt is the point.
             testCase.setLibrary("Bracket");
             testCase.App.State.Elements = tGuiElementMapping.forcesWith( ...
@@ -676,10 +676,10 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
         end
 
         function answeringClearAllActuallyClears(testCase)
-            % THE OTHER HALF of clearAllAsksFirst, and the reason that test
+            % The other half of clearAllAsksFirst, and the reason that test
             % is not enough on its own: "nothing was cleared" is equally
             % true when the button is wired to nothing at all. This drives
-            % the real continuation and asserts the work HAPPENED.
+            % the real continuation and asserts the work happened.
             testCase.setLibrary("Bracket");
             testCase.setMapping(["1001", "1002"], "Bracket");
             testCase.assertEqual(numel(testCase.App.State.Mapping), 2, ...
@@ -694,7 +694,7 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
         end
 
         function cancellingClearAllLeavesTheMappingAlone(testCase)
-            % Cancel runs the SAME continuation with the other answer, so
+            % Cancel runs the same continuation with the other answer, so
             % the guard inside onClearAllAnswered is exercised rather than
             % assumed. Without this, a continuation that ignored the answer
             % entirely would still pass the test above.
@@ -724,9 +724,9 @@ classdef tGuiElementMapping < matlab.uitest.TestCase
         end
 
         function aCaseFileWrittenBeforePatternIdsStillOpens(testCase)
-            % The format shipped without patternId. Rejecting a file that
-            % predates a field would make every saved case a liability the
-            % first time the schema moves.
+            % A case file may lack patternId entirely. Rejecting one that
+            % predates the field would make every saved case a liability
+            % the moment the schema moves again.
             f = testCase.tempFile(".json");
             tGuiElementMapping.writeRaw(f, ...
                 ['{"format":"fastener-analysis-matlab-v1",' ...

@@ -1,4 +1,4 @@
-%RUN_BULK_EXAMPLE  Headless bulk analysis, end to end (Phase 3.6 reference).
+%RUN_BULK_EXAMPLE  Headless bulk analysis, end to end.
 %   The "how to use the tool with no GUI" script: loads the bundled
 %   template tables (the joint template's first row is a sample four-bolt
 %   SHCS/nut joint built from real catalog hardware, NOT the DABJ Sec. 9

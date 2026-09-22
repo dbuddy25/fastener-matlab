@@ -1,6 +1,6 @@
 classdef tCaseIO < matlab.unittest.TestCase
-    %TCASEIO  Phase 3.7 acceptance: case save/load (JSON round-trip via
-    %   data.toStruct/fromStruct) + factor presets (built-in + user).
+    %TCASEIO  Case save/load (JSON round-trip via data.toStruct/fromStruct)
+    %   + factor presets (built-in + user).
     %
     %   Run from the matlab/ folder with:
     %       results = runtests("tests")
@@ -16,7 +16,7 @@ classdef tCaseIO < matlab.unittest.TestCase
 
     methods (Test)
         function caseRoundTripsLossless(testCase)
-            % The strongest round-trip proof: re-analyze BOTH the original
+            % The strongest round-trip proof: re-analyze both the original
             % and the save->load copy of the DABJ Section 9 case and verify
             % every published margin still matches, to a tight tolerance.
             c = validation.dabjSection9();
@@ -42,7 +42,7 @@ classdef tCaseIO < matlab.unittest.TestCase
                 testCase.verifyEqual(ms2, ms1, "AbsTol", 1e-9, ...
                     sprintf("Margin ""%s"" drifted across the JSON round-trip.", names(i)));
             end
-            % Interaction is NOT a margin (MS = NaN by design -- see
+            % Interaction is not a margin (MS = NaN by design -- see
             % engine.analyze's INTERACTION IS NOT A MARGIN note), so it is
             % excluded from the generic MS round-trip loop above (NaN is
             % not reliably "AbsTol"-equal to NaN); check its real result
@@ -87,7 +87,7 @@ classdef tCaseIO < matlab.unittest.TestCase
         end
 
         function factorPresetNamesListsBuiltInsAndUserPresets(testCase)
-            % The enumerator must see BOTH stores. Built-in-only would be
+            % The enumerator must see both stores. Built-in-only would be
             % the failure mode that matters: a caller could save a user
             % preset and then be unable to list it.
             f = string(tempname) + ".json";
@@ -147,13 +147,11 @@ classdef tCaseIO < matlab.unittest.TestCase
         end
 
         function flangeLayerNameRoundTrips(testCase)
-            % Port-omission guard: the GUI Joint Config grid didn't expose
-            % FlangeLayer.Name until this change. data.toStruct/fromStruct
-            % are generic (any settable property "just works"), so this is
-            % really a regression guard on that genericness, not new
-            % serialization code — but it's cheap and it's the one seam
-            % nothing else asserted. Cover both a set name and the blank
-            % default, since blank is a legitimate value, not a missing one.
+            % Regression guard on data.toStruct/fromStruct's genericness
+            % (any settable property "just works") rather than new
+            % serialization code -- cheap, and the one seam nothing else
+            % asserts. Covers both a set name and the blank default, since
+            % blank is a legitimate value, not a missing one.
             fm = model.Material(Name="Al 7075-T7351", Ftu=68000, Fty=57000, ...
                                 Fsu=39000, Fbru=121000, Fbry=94000, ...
                                 E=10.3e6, CTE=23.2e-6);

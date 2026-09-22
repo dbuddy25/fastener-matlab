@@ -1,5 +1,5 @@
 function f = factorPreset(name, userFile)
-%FACTORPRESET  model.Factors for a built-in OR user preset name (Phase 3.7).
+%FACTORPRESET  model.Factors for a built-in OR user preset name.
 %   f = data.factorPreset(name) looks up `name` in the built-in presets
 %   (data.factorPresets) first, then the user presets file (default path:
 %   userFactorPresetsPath() — see data.saveFactorPreset). A user preset can

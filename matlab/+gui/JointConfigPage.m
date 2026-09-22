@@ -1,25 +1,14 @@
 classdef JointConfigPage < gui.Page
     %JOINTCONFIGPAGE  Define one joint and its limit loads (GUI_SPEC.md 3).
-    %   Rebuilt in verified increments after the first attempt was reverted:
-    %   one 2,276-line pass produced a page that could only be checked by
-    %   watching a failure count move. Each increment here ends with the
-    %   suite green before the next begins.
-    %
-    %   BUILT SO FAR: the page shell, Identity + Bolt, both washers, the
-    %   flange stack with its grip readout, and the threaded member - laid
-    %   out in PHYSICAL STACK ORDER, which is what the page's own banner
-    %   promises. Later: the right column, the actions, and last and alone,
-    %   the library auto-fill cascades.
+    %   The left column lays out the physical stack top to bottom -
+    %   Identity + Bolt, both washers, the flange stack with its grip
+    %   readout, and the threaded member - matching the page's own banner.
     %
     %   BUILDJOINT IS TOTAL — it always returns a model.Joint and never
-    %   throws. This is the design decision the first attempt got wrong. It
-    %   asserted every required selection up front, so on an incomplete form
-    %   NO commit succeeded: AppState.Joint stayed at its blank default,
-    %   File > Save wrote that blank, and any repopulation from state wiped
-    %   what the analyst had typed. An incomplete form is the NORMAL state
-    %   while working, so marshalling has to tolerate it. Required-field
-    %   enforcement belongs on the Analyze path alone, where the answer
-    %   actually has to be trustworthy.
+    %   throws. An incomplete form is the NORMAL state while working, so
+    %   marshalling has to tolerate it. Required-field enforcement belongs
+    %   on the Analyze path alone, where the answer actually has to be
+    %   trustworthy.
     %
     %   Backed by AppState.Joint; every edit fires JointChanged.
 
@@ -207,10 +196,8 @@ classdef JointConfigPage < gui.Page
             obj.listenTo('JointChanged', @() obj.refresh());
             obj.listenTo('LoadCaseChanged', @() obj.refresh());
             % A material added on the Materials & Hardware page has to reach
-            % these pickers, or it is invisible until the app restarts. This
-            % page's dropdowns are populated once at build, and until step 9
-            % NOTHING in +gui subscribed to LibraryChanged at all -- the
-            % event was declared, fired, and had no listeners.
+            % these pickers, or it is invisible until the app restarts — the
+            % dropdowns are populated once at build.
             obj.listenTo('LibraryChanged', @() obj.refreshLibraryDropdowns());
             obj.refresh();
         end
@@ -291,9 +278,7 @@ classdef JointConfigPage < gui.Page
             % resolved numbers rather than which family produced them, so
             % the picker cannot be restored from the file — but the
             % catalogue can be asked which part has exactly these
-            % dimensions, and an exact hit is evidence enough. This used
-            % to stop at the reset, which meant saving a case and
-            % reloading it silently downgraded every washer to Custom.
+            % dimensions, and an exact hit is evidence enough.
             obj.resetSpecPickers();
             obj.applyWasher(obj.HeadWasher, j.HeadWasher);
             obj.applyWasher(obj.NutWasher,  j.NutWasher);
@@ -361,13 +346,8 @@ classdef JointConfigPage < gui.Page
             outer.Padding     = [6 6 6 6];
 
             % NO "Active" COLUMN. A layer is in the stack when it has a
-            % thickness - that is the whole rule. The reverted build carried
-            % an Active checkbox as a second, independent way to say the
-            % same thing, and the two states had to be kept in step: the
-            % deserializer unticked every row for an empty stack, which
-            % silently undid the pre-ticked first row and made typing a
-            % thickness do nothing. One source of truth removes the bug and
-            % a column. To park a layer, clear its thickness.
+            % thickness - that is the whole rule, and the only source of
+            % truth for it. To park a layer, clear its thickness.
             heads = {'Layer', 'Name', 'Material', 't (in)', ...
                      'Hole (in)', 'Edge (in)', 'Tear-out'};
             tips  = { ...
@@ -636,11 +616,7 @@ classdef JointConfigPage < gui.Page
             obj.bindEdit(obj.EngagementLengthField, @(~, ~) obj.onEngagementEdited());
 
             % The threaded member's OWN rated load — an insert's rated
-            % pull-out or a nut's spec-rated ultimate. It was reachable
-            % from the bulk CSV (HelicoilRatedLoad) and from nowhere in the
-            % app, so the ceiling NASA-STD-5020B Sec. 4.4.1 puts on the
-            % computed allowable ("limited to the load rating") could not
-            % be applied to a joint built here at all. The label follows
+            % pull-out or a nut's spec-rated ultimate. The label follows
             % the member type, because the same property means two
             % different things and an analyst should never have to know
             % that.
@@ -672,8 +648,7 @@ classdef JointConfigPage < gui.Page
             %   LAST in the left column, and deliberately so: the adequacy
             %   readout depends on the flange stack, BOTH washers and the
             %   threaded member's engagement, so it has to sit below every
-            %   input it consumes. The first build put a readout above two
-            %   of its own inputs.
+            %   input it consumes.
             panel = obj.collapsibleGroup(parent, row, "Bolt length", false);
 
             b = uigridlayout(panel, [2 3]);
@@ -731,15 +706,11 @@ classdef JointConfigPage < gui.Page
             b.RowSpacing  = 4;
             b.Padding     = [6 6 6 6];
 
-            % L1 IS NOW A TRUE OVERRIDE, and this comment used to say the
-            % opposite. It claimed L1 could not be automatic because no
-            % seeded bolt carried a thread length -- true when written,
-            % false since NAS1351/NAS1352 Table II's minimum basic thread
-            % length was seeded onto all 25 catalogue bolts. Lt is keyed on
-            % SIZE, not on the ordered length, which is what made it
-            % catalogue data after all (GUI_SPEC.md 7.2d, corrected).
-            % engine.stiffness has always had the derivation; it was only
-            % ever missing the input.
+            % L1 IS A TRUE OVERRIDE. NAS1351/NAS1352 Table II's minimum
+            % basic thread length Lt is seeded onto all 25 catalogue bolts,
+            % keyed on SIZE rather than the ordered length, so it counts as
+            % catalogue data (GUI_SPEC.md 7.2d). engine.stiffness derives
+            % L1 from it when this field is left blank.
             obj.BodyLengthField = obj.addLabelledText(b, 1, ...
                 'Unthreaded body length L1 (in)', ...
                 ['L1 - the UNTHREADED shank length inside the clamp, used ' ...
@@ -752,7 +723,7 @@ classdef JointConfigPage < gui.Page
                  'Lt is a MINIMUM thread length, so a derived L1 is the ' ...
                  'longest shank the part can have.']);
             % Refreshes the readout, not just the model: the bolt length
-            % group now reports WHICH L1 is in force, so typing one here
+            % group reports WHICH L1 is in force, so typing one here
             % changes what that line has to say. Committing alone would
             % leave it claiming a derived value the override had just
             % replaced.
@@ -795,8 +766,7 @@ classdef JointConfigPage < gui.Page
         function buildPreloadGroup(obj, parent, row)
             %BUILDPRELOADGROUP  model.PreloadSpec, torque-controlled.
             %   Method is hard-set to TorqueControl and has no selector:
-            %   this team's workflow is always torque-controlled, and the
-            %   first build removed the selector for the same reason.
+            %   this team's workflow is always torque-controlled.
             %   CreepLoss and ThermalRate have no controls either - the
             %   model keeps them for headless and fixture use.
             panel = obj.collapsibleGroup(parent, row, "Preload (torque-controlled)", false);
@@ -955,19 +925,10 @@ classdef JointConfigPage < gui.Page
             obj.LoadingPlaneField.Value = 1.0;
             obj.bindEdit(obj.LoadingPlaneField, @(~, ~) obj.commitJoint());
 
-            % GUI_SPEC.md 7.2f left this control out while bending was
-            % unimplemented, on the reasoning that a "verified" member the
-            % analyst could pick would have joints claiming a verification
-            % nobody performed. The static note that stood here instead was
-            % wired to nothing, and it had a worse consequence than a
-            % missing control: NotDeclared was the ONLY value gui could
-            % produce, so the ClearanceOrGapped path -- the whole reason
-            % the enum exists -- was unreachable from this GUI.
+            % The default is NotDeclared, so nothing claims a verification
+            % by accident; picking a value is a positive act by the
+            % analyst.
             %
-            % The default is still NotDeclared, so nothing claims a
-            % verification by accident. Picking a value is now a positive
-            % act by the analyst, which is what the original objection
-            % actually wanted.
             % LABELLED FOR THE DECISION, NOT THE ENUM. "Shear transfer
             % condition" names the mechanism; what an analyst is actually
             % deciding is whether bending is accounted for, so the control
@@ -1265,12 +1226,10 @@ classdef JointConfigPage < gui.Page
             obj.Refreshing = true;
             c = onCleanup(@() obj.clearRefreshing()); %#ok<NASGU>
             obj.State.LoadCase = obj.buildLoadCase();
-            % The gate reads the LOAD CASE too now, so this funnel has to
-            % re-run it. There are two commit funnels, not one, and only
-            % commitJoint used to call the gate -- which was fine while
-            % the gate asked about hardware alone. Without this, typing
-            % the load that completes the form would leave Analyze
-            % disabled until some unrelated joint edit happened to run it.
+            % The gate reads the LOAD CASE too, so this funnel has to
+            % re-run it as well. Without it, typing the load that completes
+            % the form would leave Analyze disabled until some unrelated
+            % joint edit happened to run it.
             obj.validateRequired();
         end
 
@@ -1343,15 +1302,6 @@ classdef JointConfigPage < gui.Page
             %   CATALOGUE-DERIVED, never analyst-typed: resolved from the
             %   bolt's own thread size through data.Library.insertFor,
             %   exactly as data.loadJointLibrary does for a bulk row.
-            %
-            %   IT HAD TO BE DONE HERE TOO. The lookup lived only in the
-            %   headless loader, so an insert joint built in the app carried
-            %   a NaN STI diameter, engine.marginInsert had no area to work
-            %   from, and insert pull-out came back NotEvaluated on every
-            %   single GUI analysis — the check reading as "no data" when
-            %   the catalogue had the entry all along. Same shape as the
-            %   service temperatures (engine.applyTemperatures): a mapping
-            %   that existed on one path only.
             %
             %   NaN when the catalogue has no entry for the size (#0-80,
             %   #5-44 — no helical insert is manufactured for them), which
@@ -1449,9 +1399,9 @@ classdef JointConfigPage < gui.Page
         end
 
         function onSameAsHeadToggled(obj)
-            %ONSAMEASHEADTOGGLED  Ticking mirrors now; unticking keeps what
-            %   was mirrored and hands editing back. It NEVER blanks the
-            %   values - that is the whole point of the harvested behavior.
+            %ONSAMEASHEADTOGGLED  Ticking mirrors immediately; unticking
+            %   keeps what was mirrored and hands editing back. It NEVER
+            %   blanks the values - that is the whole point.
             if obj.SameAsHeadCheck.Value
                 obj.mirrorHeadToNut();
             end
@@ -1771,10 +1721,10 @@ classdef JointConfigPage < gui.Page
 
         function reselectNutSpec(obj, member)
             %RESELECTNUTSPEC  Recover the nut family a loaded joint came from.
-            %   Same defect and same remedy as reselectWasherSpec:
-            %   model.ThreadedMember records the nut's MATERIAL and
-            %   ENGAGEMENT LENGTH but not which catalogue nut supplied
-            %   them, so a saved-and-reloaded case used to come back on
+            %   Same rationale as reselectWasherSpec: model.ThreadedMember
+            %   records the nut's MATERIAL and ENGAGEMENT LENGTH but not
+            %   which catalogue nut supplied them, so without this
+            %   re-derivation a saved-and-reloaded case would come back on
             %   Custom with the fields unlocked.
             %
             %   No reverse-lookup helper is needed on the library here.
@@ -2021,10 +1971,7 @@ classdef JointConfigPage < gui.Page
 
             % model.ThreadedMemberType has exactly THREE members - Nut,
             % Insert, TappedHole. There is no None: a joint always threads
-            % into something. The reverted build had a `case
-            % model.ThreadedMemberType.None` here, which threw on every
-            % switch to Insert or Tapped Hole because MATLAB evaluates a
-            % case expression only when it is reached.
+            % into something.
             if t == model.ThreadedMemberType.Nut
                 obj.MemberMaterialLabel.Text = 'Nut material';
             else
@@ -2124,8 +2071,7 @@ classdef JointConfigPage < gui.Page
             % without stating edge distances, so ASSUMED is what the worked
             % example itself does. Enforcement therefore belongs on the entry
             % path, where a real joint is being described by someone who can
-            % read it off a drawing. Dan, 2026-08-14: "user has to enter edge
-            % distance."
+            % read it off a drawing.
             anyLayer = false;
             for i = 1:gui.JointConfigPage.MaxFlangeLayers
                 if obj.parsePositive(obj.FlangeThickness{i}) > 0
@@ -2151,11 +2097,10 @@ classdef JointConfigPage < gui.Page
                 end
             end
 
-            % THE GATE NOW MATCHES WHAT THE ENGINE NEEDS, which it did not
-            % before: hardware alone let Analyze enable, and the run then
-            % came back with every margin NotEvaluated. A button that
-            % promises an answer and delivers a page of dashes is worse
-            % than one that says what is missing.
+            % THE GATE MATCHES WHAT THE ENGINE NEEDS: hardware alone is not
+            % enough to promise a usable result. A button that promises an
+            % answer and delivers a page of dashes is worse than one that
+            % says what is missing.
             %
             % Each of these three makes the analysis undefined rather than
             % merely trivial:
@@ -2274,11 +2219,7 @@ classdef JointConfigPage < gui.Page
             %   carries model.Joint's 20/20/20 degC defaults.
             %
             %   Stamping them here, at the moment of analysis, is exactly
-            %   what engine.runBulk and engine.runWorkbook do. Until this
-            %   existed the single-joint path never applied them at all:
-            %   editing Temp & Loads changed the summary bar and nothing
-            %   else, and every run produced a thermal preload term of
-            %   exactly zero.
+            %   what engine.runBulk and engine.runWorkbook do.
             %
             %   Through engine.applyTemperatures rather than three property
             %   writes here, so the settings -> joint mapping stays in one
@@ -2713,9 +2654,7 @@ classdef JointConfigPage < gui.Page
             %   labels = what the analyst reads. An enum member with no
             %   label falls back to its raw name rather than disappearing
             %   from the list, so adding one to model.ShearTransferCondition
-            %   can never silently make a state unreachable from the GUI -
-            %   which is precisely how ClearanceOrGapped came to be
-            %   unreachable in the first place.
+            %   can never silently make a state unreachable from the GUI.
             data = gui.JointConfigPage.enumItems('model.ShearTransferCondition');
             labels = data;
             % 5020B's own framing: 4.4.4 exempts bending for close and
@@ -2982,9 +2921,9 @@ classdef JointConfigPage < gui.Page
 
         function j = analysisJoint(obj)
             %ANALYSISJOINT  Exactly the joint Analyze would hand the engine.
-            %   Seamed because the bug it guards was invisible from
-            %   outside: the run succeeded, the margins looked plausible,
-            %   and only the thermal term was silently zero.
+            %   Seamed because a missing temperature stamp is invisible
+            %   from outside: the run still succeeds and the margins still
+            %   look plausible, with only the thermal term silently zero.
             j = obj.jointForAnalysis();
         end
 
