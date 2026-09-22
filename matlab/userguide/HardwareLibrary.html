@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Materials &amp; Hardware — Fastener Tool User Guide</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<nav aria-label="Guide">
+<a class="home" href="index.html">Fastener Tool — User Guide</a>
+<h2>SETUP</h2><ul>
+<li><a href="Project.html">Project</a></li>
+<li><a href="Factors.html">Factors</a></li>
+<li><a href="TempLoads.html">Temp Loads</a></li>
+</ul>
+<h2>SINGLE JOINT</h2><ul>
+<li><a href="BoltSizing.html">Bolt Sizing</a></li>
+<li><a href="JointConfig.html">Joint Config</a></li>
+<li><a href="Results.html">Single Joint Results</a></li>
+</ul>
+<h2>BULK</h2><ul>
+<li><a href="DefinedJoints.html">1 · Defined Joints</a></li>
+<li><a href="ElementMapping.html">2 · Element Mapping</a></li>
+<li><a href="ElementForces.html">3 · Element Forces</a></li>
+<li><a href="BulkAnalysis.html">4 · Bulk Analysis</a></li>
+</ul>
+<h2>REFERENCE</h2><ul>
+<li><a href="HardwareLibrary.html" aria-current="page">Materials &amp; Hardware</a></li>
+</ul>
+<h2>ABOUT THE TOOL</h2><ul>
+<li><a href="limits.html">What the tool does not do</a></li>
+<li><a href="sources.html">Where the numbers come from</a></li>
+</ul>
+</nav>
+<main>
+<p class="crumb">REFERENCE</p>
+<h1>Materials &amp; Hardware</h1>
+<p>Browse the materials and hardware the tool knows, and the cited source behind every value. Add custom entries.</p>
+<p><img class="shot" src="img/HardwareLibrary.png" alt="The Materials &amp; Hardware page" onerror="this.remove()"></p>
+<h2>Fields</h2>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="" data-field="Source"><td>Source</td><td>Filter by origin: Baseline (ships with the tool), Drop-in (JSON files in your <code>fastener_library</code> folder) or Custom (added here).</td></tr>
+</table>
+<h2>What you'll see</h2>
+<ul>
+<li>Six tabs: Materials, Bolts, Bolt Specs, Nuts, Washers, Inserts.</li>
+<li>The <strong>Source</strong> column cites the standard and table behind each entry. Check it first when a number surprises you.</li>
+<li>Baseline and drop-in entries are read-only.</li>
+<li><strong>Duplicate as Custom</strong> opens a pre-filled form. Change the values and give their source; a citation is required.</li>
+<li>This library is shared by every case and is <strong>not</strong> saved in the case file. <strong>Save Library</strong> writes your custom entries.</li>
+<li>A corrected baseline in a later release still reaches you: shipped values load underneath your custom ones.</li>
+</ul>
+<p class="next">Next: <a href="limits.html">What the tool does not do</a></p>
+</main>
+</body>
+</html>

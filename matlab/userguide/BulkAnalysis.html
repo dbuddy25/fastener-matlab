@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulk Analysis — Fastener Tool User Guide</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<nav aria-label="Guide">
+<a class="home" href="index.html">Fastener Tool — User Guide</a>
+<h2>SETUP</h2><ul>
+<li><a href="Project.html">Project</a></li>
+<li><a href="Factors.html">Factors</a></li>
+<li><a href="TempLoads.html">Temp Loads</a></li>
+</ul>
+<h2>SINGLE JOINT</h2><ul>
+<li><a href="BoltSizing.html">Bolt Sizing</a></li>
+<li><a href="JointConfig.html">Joint Config</a></li>
+<li><a href="Results.html">Single Joint Results</a></li>
+</ul>
+<h2>BULK</h2><ul>
+<li><a href="DefinedJoints.html">1 · Defined Joints</a></li>
+<li><a href="ElementMapping.html">2 · Element Mapping</a></li>
+<li><a href="ElementForces.html">3 · Element Forces</a></li>
+<li><a href="BulkAnalysis.html" aria-current="page">4 · Bulk Analysis</a></li>
+</ul>
+<h2>REFERENCE</h2><ul>
+<li><a href="HardwareLibrary.html">Materials &amp; Hardware</a></li>
+</ul>
+<h2>ABOUT THE TOOL</h2><ul>
+<li><a href="limits.html">What the tool does not do</a></li>
+<li><a href="sources.html">Where the numbers come from</a></li>
+</ul>
+</nav>
+<main>
+<p class="crumb">BULK · 4 of 4</p>
+<h1>Bulk Analysis</h1>
+<p>Run every mapped element and review the results in three tabs: Joint Summary, By Load Case and By Element.</p>
+<p><img class="shot" src="img/BulkAnalysis.png" alt="The Bulk Analysis page" onerror="this.remove()"></p>
+<h2>Fields</h2>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="" data-field="Failures Only"><td>Failures Only</td><td>Show only failing rows. <strong>On by default.</strong> Display only; counts and export include everything.</td></tr>
+<tr data-group="" data-field="Show Supplemental"><td>Show Supplemental</td><td>Also show the TM-106943 columns (bearing, tear-out, thread checks). Display only.</td></tr>
+<tr data-group="" data-field="Cap MS &gt; 5"><td>Cap MS > 5</td><td>Show margins above 5 as <code>&gt;+5</code>. Display only.</td></tr>
+</table>
+<h3>By Load Case</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="By Load Case" data-field="Load Case"><td>Load Case</td><td>The load case the tab shows.</td></tr>
+</table>
+<h2>What you'll see</h2>
+<ul>
+<li><strong>Failures Only is ticked on first view</strong>, so a passing run shows an empty table. Untick it to see every row.</li>
+<li><strong>Run Bulk Analysis</strong> checks first that joints, mapping and forces line up, and offers to go to the page that needs fixing.</li>
+<li>The Interaction column is a ratio R (fails above 1), never a margin.</li>
+<li><strong>Show in Single Joint Analysis</strong> re-runs the selected element on the Results page from the current inputs.</li>
+<li><strong>Export…</strong> always writes the complete result set, whatever the filters show.</li>
+<li>The joint filter in the toolbar narrows every tab to one joint (display only).</li>
+</ul>
+<p class="next">Next: <a href="HardwareLibrary.html">Materials &amp; Hardware</a></p>
+</main>
+</body>
+</html>

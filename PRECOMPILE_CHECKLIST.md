@@ -224,6 +224,8 @@ Error paths are read by an analyst on a deadline.
 - [ ] Custom library entry survived a full restart (H).
 - [ ] Anything found here is fixed, or consciously accepted.
 
+**Capture the guide screenshots:** `captureUserGuideScreens` (in `matlab/tools/`) writes `userguide/img/`, which the build bundles.
+
 **Then build, expecting the first one to fail.** From the `matlab/` folder, with
 MATLAB Compiler licensed:
 

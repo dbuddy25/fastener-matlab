@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Joint Config — Fastener Tool User Guide</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<nav aria-label="Guide">
+<a class="home" href="index.html">Fastener Tool — User Guide</a>
+<h2>SETUP</h2><ul>
+<li><a href="Project.html">Project</a></li>
+<li><a href="Factors.html">Factors</a></li>
+<li><a href="TempLoads.html">Temp Loads</a></li>
+</ul>
+<h2>SINGLE JOINT</h2><ul>
+<li><a href="BoltSizing.html">Bolt Sizing</a></li>
+<li><a href="JointConfig.html" aria-current="page">Joint Config</a></li>
+<li><a href="Results.html">Single Joint Results</a></li>
+</ul>
+<h2>BULK</h2><ul>
+<li><a href="DefinedJoints.html">1 · Defined Joints</a></li>
+<li><a href="ElementMapping.html">2 · Element Mapping</a></li>
+<li><a href="ElementForces.html">3 · Element Forces</a></li>
+<li><a href="BulkAnalysis.html">4 · Bulk Analysis</a></li>
+</ul>
+<h2>REFERENCE</h2><ul>
+<li><a href="HardwareLibrary.html">Materials &amp; Hardware</a></li>
+</ul>
+<h2>ABOUT THE TOOL</h2><ul>
+<li><a href="limits.html">What the tool does not do</a></li>
+<li><a href="sources.html">Where the numbers come from</a></li>
+</ul>
+</nav>
+<main>
+<p class="crumb">SINGLE JOINT</p>
+<h1>Joint Config</h1>
+<p>Define the joint: bolt, washers, flange stack, threaded member, preload and loads. Then press <strong>Analyze Single Joint</strong>.</p>
+<p><img class="shot" src="img/JointConfig.png" alt="The Joint Config page" onerror="this.remove()"></p>
+<h2>Fields</h2>
+<h3>Bolt</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Bolt" data-field="Joint name"><td>Joint name</td><td>A label. Never analysed.</td></tr>
+<tr data-group="Bolt" data-field="Bolt"><td>Bolt</td><td>Fastener from the library. Required.</td></tr>
+<tr data-group="Bolt" data-field="Bolt material"><td>Bolt material</td><td>Required.</td></tr>
+<tr data-group="Bolt" data-field="Bolt count nf"><td>Bolt count nf</td><td>Fasteners in the pattern.</td></tr>
+</table>
+<h3>Washer under bolt head</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Washer under bolt head" data-field="Washer present"><td>Washer present</td><td>Untick for no washer (not a zero-thickness washer). Its OD is the bearing face diameter.</td></tr>
+<tr data-group="Washer under bolt head" data-field="Washer spec"><td>Washer spec</td><td>A washer family. Picking a size fills and locks OD, ID and thickness. <code>Custom</code> unlocks them.</td></tr>
+<tr data-group="Washer under bolt head" data-field="Washer size"><td>Washer size</td><td>The family's sizes at this bolt diameter, thinnest first. Enabled once a spec is picked.</td></tr>
+<tr data-group="Washer under bolt head" data-field="Washer material"><td>Washer material</td><td>Required when the washer is present: its CTE enters the thermal preload (TM-106943 Eq. 10).</td></tr>
+<tr data-group="Washer under bolt head" data-field="Outer diameter (in)"><td>Outer diameter (in)</td><td>Bearing face and frustum contact diameter. Blank = unspecified.</td></tr>
+<tr data-group="Washer under bolt head" data-field="Inner diameter (in)"><td>Inner diameter (in)</td><td>Carried for completeness; not used by the engine.</td></tr>
+<tr data-group="Washer under bolt head" data-field="Thickness (in)"><td>Thickness (in)</td><td>Adds to the clamped length.</td></tr>
+</table>
+<h3>Flange stack (clamped layers only - not the threaded member)</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="Name"><td>Name</td><td>Optional layer label. Never analysed.</td></tr>
+<tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="Material"><td>Material</td><td>Layer material. Fsu drives tear-out; Fbru / Fbry drive bearing.</td></tr>
+<tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="t (in)"><td>t (in)</td><td>Layer thickness.</td></tr>
+<tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="Hole (in)"><td>Hole (in)</td><td>Clearance hole diameter. Blank = bearing not evaluated.</td></tr>
+<tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="Edge (in)"><td>Edge (in)</td><td>Hole centre to free edge. Blank = tear-out not evaluated.</td></tr>
+<tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="Tear-out"><td>Tear-out</td><td>Run the shear tear-out check on this layer.</td></tr>
+</table>
+<h3>Washer under nut</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Washer under nut" data-field="Washer present"><td>Washer present</td><td>Untick for no washer (not a zero-thickness washer). Its OD is the bearing face diameter.</td></tr>
+<tr data-group="Washer under nut" data-field="Same as under head"><td>Same as under head</td><td>Mirror the head washer and grey this group. Unticking keeps the values and unlocks them.</td></tr>
+<tr data-group="Washer under nut" data-field="Washer spec"><td>Washer spec</td><td>A washer family. Picking a size fills and locks OD, ID and thickness. <code>Custom</code> unlocks them.</td></tr>
+<tr data-group="Washer under nut" data-field="Washer size"><td>Washer size</td><td>The family's sizes at this bolt diameter, thinnest first. Enabled once a spec is picked.</td></tr>
+<tr data-group="Washer under nut" data-field="Washer material"><td>Washer material</td><td>Required when the washer is present: its CTE enters the thermal preload (TM-106943 Eq. 10).</td></tr>
+<tr data-group="Washer under nut" data-field="Outer diameter (in)"><td>Outer diameter (in)</td><td>Bearing face and frustum contact diameter. Blank = unspecified.</td></tr>
+<tr data-group="Washer under nut" data-field="Inner diameter (in)"><td>Inner diameter (in)</td><td>Carried for completeness; not used by the engine.</td></tr>
+<tr data-group="Washer under nut" data-field="Thickness (in)"><td>Thickness (in)</td><td>Adds to the clamped length.</td></tr>
+</table>
+<h3>Threaded member</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Threaded member" data-field="Type"><td>Type</td><td>What the bolt threads into: Nut, Helical Insert or Tapped Hole.</td></tr>
+<tr data-group="Threaded member" data-field="Nut spec"><td>Nut spec</td><td>A nut family, resolved at this bolt's thread. Fills and locks material and engagement. <code>Custom</code> unlocks them. Nut only.</td></tr>
+<tr data-group="Threaded member" data-field="Nut material"><td>Nut material</td><td>The material carrying the internal thread. Reads <em>Parent (host) material</em> for an insert or tapped hole.</td></tr>
+<tr data-group="Threaded member" data-field="Engagement (x bolt D)"><td>Engagement (x bolt D)</td><td>Insert engagement as a multiple of bolt diameter, e.g. 1.5. Helical Insert only.</td></tr>
+<tr data-group="Threaded member" data-field="Engagement length Le (in)"><td>Engagement length Le (in)</td><td>Nut thread height or tapped-hole depth, in inches. Blank = thread checks not evaluated. Nut and Tapped Hole only.</td></tr>
+<tr data-group="Threaded member" data-field="Nut rated ultimate (lbf)"><td>Nut rated ultimate (lbf)</td><td>Nut: the spec-rated ultimate, which <strong>is</strong> the nut's ultimate allowable (5020B §4.4.1). Insert (<em>Rated pull-out</em>): the specified internal-thread allowable. Blank = no rating.</td></tr>
+</table>
+<h3>Bolt length</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Bolt length" data-field="Overall bolt length (in)"><td>Overall bolt length (in)</td><td>Under-head to tip. Pick a catalogued length or type any other. Blank = the 5020B §4.7.4 estimate (grip + nut height + 2 × pitch).</td></tr>
+</table>
+<h3>Advanced / overrides</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Advanced / overrides" data-field="Unthreaded body length L1 (in)"><td>Unthreaded body length L1 (in)</td><td>Shank length inside the clamp, for bolt stiffness. Blank = derived from bolt length and catalogue thread length.</td></tr>
+<tr data-group="Advanced / overrides" data-field="Bolt rated ultimate (lbf)"><td>Bolt rated ultimate (lbf)</td><td>Spec-rated Ptu-allow. Blank = At × Ftu.</td></tr>
+<tr data-group="Advanced / overrides" data-field="Bolt rated yield (lbf)"><td>Bolt rated yield (lbf)</td><td>Spec-rated Pty-allow. Blank = 5020B Eq. 18.</td></tr>
+<tr data-group="Advanced / overrides" data-field="Frustum half-angle (deg)"><td>Frustum half-angle (deg)</td><td>Member-stiffness cone half-angle. Default 30.</td></tr>
+</table>
+<h3>Preload (torque-controlled)</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Preload (torque-controlled)" data-field="Nominal torque (in-lbf)"><td>Nominal torque (in-lbf)</td><td>Effective torque, above running torque. Required.</td></tr>
+<tr data-group="Preload (torque-controlled)" data-field="Torque tolerance +/- (frac)"><td>Torque tolerance ± (frac)</td><td>How accurately the wrench is set: 40 ± 2 in-lbf is 0.05 (5020B §4.3.1).</td></tr>
+<tr data-group="Preload (torque-controlled)" data-field="Nut factor K"><td>Nut factor K</td><td>Torque-to-preload nut factor.</td></tr>
+<tr data-group="Preload (torque-controlled)" data-field="Preload uncertainty +/- (Gamma)"><td>Preload uncertainty ± (Γ)</td><td>Scatter in torque-to-preload (5020B Eq. 3–5). 0.25 is usual for unlubricated fasteners.</td></tr>
+<tr data-group="Preload (torque-controlled)" data-field="Relaxation fraction"><td>Relaxation fraction</td><td>Short-term preload relaxation.</td></tr>
+<tr data-group="Preload (torque-controlled)" data-field="Separation critical joint"><td>Separation critical joint</td><td>Selects the minimum-preload equation: 5020B Eq. 4 (ticked) or Eq. 5.</td></tr>
+</table>
+<h3>Applied loads (single joint)</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Applied loads (single joint)" data-field="Case name"><td>Case name</td><td>A label for the load case. Never analysed.</td></tr>
+<tr data-group="Applied loads (single joint)" data-field="Bolt tensile limit PtL"><td>Bolt tensile limit PtL</td><td>Most-loaded bolt tension, lbf.</td></tr>
+<tr data-group="Applied loads (single joint)" data-field="Bolt shear limit PsL"><td>Bolt shear limit PsL</td><td>Most-loaded bolt shear, lbf.</td></tr>
+<tr data-group="Applied loads (single joint)" data-field="Bolt bending limit MbL"><td>Bolt bending limit MbL</td><td>Bending <strong>moment</strong>, in-lbf. Always used when entered (5020B Eq. 20/22).</td></tr>
+<tr data-group="Applied loads (single joint)" data-field="Joint tensile total"><td>Joint tensile total</td><td>Joint-level tension, lbf. Shown for joint-mode slip only (5020B Eq. 84). Not bolt count × per-bolt load.</td></tr>
+<tr data-group="Applied loads (single joint)" data-field="Joint shear total"><td>Joint shear total</td><td>Joint-level shear, lbf. Shown for joint-mode slip only.</td></tr>
+</table>
+<h3>Analysis assumptions</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Analysis assumptions" data-field="Shear plane"><td>Shear plane</td><td>Threads or body. Sets the shear area (Eq. 12 / 13) and interaction exponents (Eq. 20–23). Threads is conservative.</td></tr>
+<tr data-group="Analysis assumptions" data-field="Slip mode"><td>Slip mode</td><td>Single fastener (Eq. 86) or joint (Eq. 84).</td></tr>
+<tr data-group="Analysis assumptions" data-field="Friction coefficient"><td>Friction coefficient</td><td>Faying-surface friction. Zero = slip not evaluated.</td></tr>
+<tr data-group="Analysis assumptions" data-field="Bolt axis"><td>Bolt axis</td><td>FE axis the bolt lies along. Bulk runs use it to split element forces into tension and shear.</td></tr>
+<tr data-group="Analysis assumptions" data-field="Loading-plane factor n"><td>Loading-plane factor n</td><td>n = Llp / L. 1.0 is conservative.</td></tr>
+<tr data-group="Analysis assumptions" data-field="Bolt bending (4.4.4)"><td>Bolt bending (4.4.4)</td><td>Records the 5020B §4.4.4 exemption when no moment is entered. <em>Accounted for</em> (clearance or gap) leaves Interaction not evaluated until a moment is supplied.</td></tr>
+</table>
+<h2>What you'll see</h2>
+<ul>
+<li>Required dropdowns start <strong>blank</strong>. A material is never picked for you.</li>
+<li>Picking a nut or washer spec fills and <strong>locks</strong> the dependent fields. <code>Custom</code> unlocks them. If the spec has no match at this bolt size it reverts to Custom and the status bar says why.</li>
+<li>Changing the bolt re-resolves the nut and both washer specs.</li>
+<li>Changing the threaded-member type clears the engagement field that no longer applies. A ratio is never read as inches.</li>
+<li>The Bolt length readout itemises grip, minimum length and which L1 is in force, and updates as you edit.</li>
+<li><strong>Analyze Single Joint</strong> lists what is still missing rather than refusing silently.</li>
+<li><strong>View Cross-Section</strong> works on a half-built joint and redraws as you edit.</li>
+<li><strong>Save to Defined Joints</strong> adds the joint to this case for bulk runs. Names collide ignoring case: <code>JT-A</code> overwrites <code>jt-a</code> after a confirm.</li>
+<li>Advanced / overrides starts collapsed.</li>
+</ul>
+<p class="next">Next: <a href="Results.html">Single Joint Results</a></p>
+</main>
+</body>
+</html>

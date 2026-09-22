@@ -109,6 +109,16 @@ th { background: var(--nav-bg); }
   margin: 1rem 0;
 }
 
+h3 { margin: 1.4rem 0 0.2rem; font-size: 1rem; }
+
+img.shot {
+  max-width: 100%;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+
+table.fields td:first-child { width: 14rem; font-weight: 500; }
+
 .next { margin-top: 2.5rem; padding-top: 0.75rem; border-top: 1px solid var(--rule); }
 
 @media (max-width: 700px) {

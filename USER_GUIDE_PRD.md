@@ -1,6 +1,6 @@
 # PRD — In-App User Guide
 
-Status: **approved 2026-09-22; phase (a) built, phase (b) next.** Delete this file once phase (d) ships;
+Status: **approved 2026-09-22; phases (a) and (b) built, (c) next.** Delete this file once phase (d) ships;
 live rules move into `GUI_SPEC.md` and `CONVENTIONS.md`.
 
 ## 1. Problem
@@ -162,26 +162,17 @@ the engine's row names, so adding a check without documenting it fails.
 - No JavaScript is required to read any page. Search is left to the browser's
   Ctrl+F.
 
-## 7. Docs-build pipeline
+## 7. Field tables and screenshots
 
-A new script **`matlab/tools/buildUserGuide.m`**, run by Dan on Windows before
-each release (it cannot run on the Mac side).
+Nothing generated on Windows comes back to the repo (Dan, 2026-09-22), so:
 
-| Step | Output |
+| Piece | How |
 |---|---|
-| Build `fastenerTool` headless, then drive it into scripted states, reusing the `tGui*` fixture setup | — |
-| Load a neutral sample joint (a plain two-plate joint with a nut; no course-book case), so Joint Config and Results show real numbers | — |
-| `exportapp` each rail page | `matlab/userguide/img/<pageId>.png` |
-| Walk each page's component tree; every control with a non-empty `Tooltip` becomes a row. Pair it with its label (the `uilabel` in the same grid row, the column to the left, the `addLabelledText` pattern in `JointConfigPage.m`). Group by the page's collapsible group title | `matlab/userguide/fragments/<pageId>-fields.html` |
-| Splice each fragment into its `<pageId>.html` between marker comments | updated page HTML |
-
-The output is **committed**, so every guide change shows up as a reviewable diff.
-
-**Consequence:** tooltips become the field documentation. Phase (b) includes a
-tooltip review, and from then on a tooltip edit counts as a docs edit.
-
-**Controls without a label or a tooltip**: the script lists them and does not
-fail. The drift test (§9) decides what is allowed.
+| Field tables | **Hand-written** in each `<pageId>.html`, one `<tr data-group="…" data-field="…">` per field. `data-field` is the harvested name (e.g. `FF`); the visible cell may read better ("Fitting factor (FF)") |
+| Drift test | `tGuiUserGuide` builds every page and compares `gui.harvestFields` with those rows, both ways. The failure lists every difference; paste it back and the guide is fixed on the Mac |
+| Harvester | `gui.harvestFields(page)`: a checkbox's own Text; else a bold row-1 column header (table-style grids such as the flange stack); else the label directly left in the same row. Unnamed controls and read-only text areas are skipped. Controls in separate windows (Hardware Library's add form, Bulk Add) are outside the page and documented in prose only |
+| Screenshots | `matlab/tools/captureUserGuideScreens.m`, run on Windows before `mcc`, loads the template sample joint (not a course-book case) and writes `userguide/img/<pageId>.png`. **Gitignored**; bundled with the exe. Pages hide a missing image |
+| Import formats | Element Forces' required columns are pinned by `tUserGuide`: the documented set must import, and dropping any one must fail |
 
 ## 8. App integration
 
@@ -241,8 +232,8 @@ One push per phase, and a green `runTests` before the next one.
 | Phase | Ships | Done when |
 |---|---|---|
 | **(a) Skeleton** | `matlab/userguide/` with CSS, `index.html`, `limits.html`, `sources.html`, `Results.html` (hand-written, including the 15-check table); `gui.userGuidePath`; Help menu rewired; old PDF code deleted, `tUserGuide` rewritten; link/image/offline/15-row tests | Dan opens it from Help in MATLAB **and** in a test `.exe` |
-| **(b) Build script** | `tools/buildUserGuide.m`, `gui.harvestFields`, screenshots + field fragments for all 11 pages, remaining page templates with Purpose/Next stubs; tooltip review | Dan runs the script; fragments and images committed |
-| **(c) "?" links + drift test** | `gui.Page` helper, per-page test, drift test | `runTests` green; every "?" opens its page |
+| **(b) All pages + drift test** | Every rail page written (purpose, fields, what you'll see, import formats); `gui.harvestFields`; `tGuiUserGuide`; `tools/captureUserGuideScreens.m` | Full `runTests` green |
+| **(c) "?" links** | `gui.Page` helper opening `<pageId>.html`, and its test | `runTests` green; every "?" opens its page |
 | **(d) Prose pass** | "Purpose" and "What you'll see" for each page, written with Dan one page at a time | Dan signs off each page |
 
 ## 12. Resolved decisions (2026-09-22)

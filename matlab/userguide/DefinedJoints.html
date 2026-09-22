@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Defined Joints — Fastener Tool User Guide</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<nav aria-label="Guide">
+<a class="home" href="index.html">Fastener Tool — User Guide</a>
+<h2>SETUP</h2><ul>
+<li><a href="Project.html">Project</a></li>
+<li><a href="Factors.html">Factors</a></li>
+<li><a href="TempLoads.html">Temp Loads</a></li>
+</ul>
+<h2>SINGLE JOINT</h2><ul>
+<li><a href="BoltSizing.html">Bolt Sizing</a></li>
+<li><a href="JointConfig.html">Joint Config</a></li>
+<li><a href="Results.html">Single Joint Results</a></li>
+</ul>
+<h2>BULK</h2><ul>
+<li><a href="DefinedJoints.html" aria-current="page">1 · Defined Joints</a></li>
+<li><a href="ElementMapping.html">2 · Element Mapping</a></li>
+<li><a href="ElementForces.html">3 · Element Forces</a></li>
+<li><a href="BulkAnalysis.html">4 · Bulk Analysis</a></li>
+</ul>
+<h2>REFERENCE</h2><ul>
+<li><a href="HardwareLibrary.html">Materials &amp; Hardware</a></li>
+</ul>
+<h2>ABOUT THE TOOL</h2><ul>
+<li><a href="limits.html">What the tool does not do</a></li>
+<li><a href="sources.html">Where the numbers come from</a></li>
+</ul>
+</nav>
+<main>
+<p class="crumb">BULK · 1 of 4</p>
+<h1>Defined Joints</h1>
+<p>Review the joints saved in this case with <strong>Save to Defined Joints</strong>. The bulk run analyses each mapped element against one of these.</p>
+<p><img class="shot" src="img/DefinedJoints.png" alt="The Defined Joints page" onerror="this.remove()"></p>
+<h2>Fields</h2>
+<p>This page has no named input fields. Select a joint in the list; edit its name in the box below the list.</p>
+<h2>What you'll see</h2>
+<ul>
+<li>The list is saved in the case file. Materials &amp; Hardware is the other library, and it is shared by every case.</li>
+<li>The summary shows only the identifying fields. Press <strong>Load</strong> to see the whole joint on Joint Config.</li>
+<li><strong>Rename</strong> moves every element mapped to the old name with it. Names collide ignoring case.</li>
+<li><strong>Delete</strong> states how many mapped elements will be left without a joint before asking.</li>
+</ul>
+<p class="next">Next: <a href="ElementMapping.html">Element Mapping</a></p>
+</main>
+</body>
+</html>

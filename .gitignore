@@ -35,3 +35,4 @@ Thumbs.db
 # document dropped in never needs a .gitignore edit to stay unpublished.
 references/
 *.pdf
+matlab/userguide/img/

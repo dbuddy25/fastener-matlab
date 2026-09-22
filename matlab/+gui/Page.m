@@ -312,6 +312,11 @@ classdef (Abstract) Page < handle
             obj.build(parent);
         end
 
+        function r = rootContainer(obj)
+            %ROOTCONTAINER  The card build() filled; empty until built.
+            r = obj.Root;
+        end
+
         function setVisible(obj, tf)
             %SETVISIBLE  Show or hide the page's card.
             %   Visibility toggling, never construct/destroy: rebuilding a

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Factors — Fastener Tool User Guide</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<nav aria-label="Guide">
+<a class="home" href="index.html">Fastener Tool — User Guide</a>
+<h2>SETUP</h2><ul>
+<li><a href="Project.html">Project</a></li>
+<li><a href="Factors.html" aria-current="page">Factors</a></li>
+<li><a href="TempLoads.html">Temp Loads</a></li>
+</ul>
+<h2>SINGLE JOINT</h2><ul>
+<li><a href="BoltSizing.html">Bolt Sizing</a></li>
+<li><a href="JointConfig.html">Joint Config</a></li>
+<li><a href="Results.html">Single Joint Results</a></li>
+</ul>
+<h2>BULK</h2><ul>
+<li><a href="DefinedJoints.html">1 · Defined Joints</a></li>
+<li><a href="ElementMapping.html">2 · Element Mapping</a></li>
+<li><a href="ElementForces.html">3 · Element Forces</a></li>
+<li><a href="BulkAnalysis.html">4 · Bulk Analysis</a></li>
+</ul>
+<h2>REFERENCE</h2><ul>
+<li><a href="HardwareLibrary.html">Materials &amp; Hardware</a></li>
+</ul>
+<h2>ABOUT THE TOOL</h2><ul>
+<li><a href="limits.html">What the tool does not do</a></li>
+<li><a href="sources.html">Where the numbers come from</a></li>
+</ul>
+</nav>
+<main>
+<p class="crumb">SETUP</p>
+<h1>Factors</h1>
+<p>Set the fitting factor and the four factors of safety your program levies. They apply to every analysis in the case.</p>
+<p><img class="shot" src="img/Factors.png" alt="The Factors page" onerror="this.remove()"></p>
+<h2>Fields</h2>
+<h3>Fitting Factor</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Fitting Factor" data-field="FF"><td>Fitting factor (FF)</td><td>One factor multiplying every factor of safety: ultimate, yield, separation and slip (5020B §4.2.2). A minimum of 1.15 is recommended for ultimate.</td></tr>
+</table>
+<h3>Factors of Safety</h3>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="Factors of Safety" data-field="FSy"><td>Yield (FSy)</td><td>Yield factor of safety.</td></tr>
+<tr data-group="Factors of Safety" data-field="FSu"><td>Ultimate (FSu)</td><td>Ultimate factor of safety.</td></tr>
+<tr data-group="Factors of Safety" data-field="FSsep"><td>Separation (FSsep)</td><td>Separation factor of safety.</td></tr>
+<tr data-group="Factors of Safety" data-field="FSslip"><td>Slip (FSslip)</td><td>Slip factor of safety.</td></tr>
+</table>
+<h2>What you'll see</h2>
+<ul>
+<li>The engine keeps four fitting factors (ultimate, yield, separation, slip); this page shows one.</li>
+<li>A loaded case with <strong>unequal</strong> fitting factors keeps them, and a banner says so. Editing FF replaces all four with the one value.</li>
+<li>The tool warns when FF is below 1.15 on a separation-critical joint.</li>
+</ul>
+<p class="next">Next: <a href="TempLoads.html">Temp Loads</a></p>
+</main>
+</body>
+</html>

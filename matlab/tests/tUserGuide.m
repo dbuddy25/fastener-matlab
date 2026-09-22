@@ -30,7 +30,8 @@ classdef tUserGuide < matlab.unittest.TestCase
                 txt  = fileread(fullfile(folder, f));
                 refs = regexp(txt, '(?:href|src)="([^"]*)"', 'tokens');
                 refs = string(cellfun(@(c) c{1}, refs, 'UniformOutput', false));
-                refs = refs(~startsWith(refs, ["#", "mailto:"]) & refs ~= "");
+                % img/ is build output (tools/captureUserGuideScreens), gitignored.
+                refs = refs(~startsWith(refs, ["#", "mailto:", "img/"]) & refs ~= "");
                 refs = extractBefore(refs + "#", "#");
                 for r = refs(:)'
                     targets(end + 1, 1) = r; %#ok<AGROW>
@@ -70,7 +71,44 @@ classdef tUserGuide < matlab.unittest.TestCase
         end
     end
 
+    methods (Test)
+        function theForceWorkbookColumnsAreWhatTheReaderNeeds(testCase)
+            % The guide's "Required: Yes" columns for Import Workbook... must
+            % be enough for the reader, and each one must be necessary.
+            txt = fileread(gui.userGuidePath("ElementForces.html"));
+            rows = regexp(txt, '<tr><td>(.*?)</td><td>Yes</td>', 'tokens');
+            cols = strings(1, 0);
+            for i = 1:numel(rows)
+                c = regexp(rows{i}{1}, '<code>([^<]+)</code>', 'tokens');
+                cols = [cols, string(cellfun(@(x) x{1}, c, 'UniformOutput', false))]; %#ok<AGROW>
+            end
+            testCase.assertNumElements(cols, 7, ...
+                "Could not read the required columns from ElementForces.html.");
+
+            dir0 = testCase.applyFixture( ...
+                matlab.unittest.fixtures.TemporaryFolderFixture).Folder;
+            ok = fullfile(dir0, "ok.xlsx");
+            tUserGuide.writeForces(ok, cols);
+            el = data.loadElementWorkbook(ok);
+            testCase.verifyNumElements(el, 1, ...
+                "A workbook with exactly the documented columns did not import.");
+
+            for k = 1:numel(cols)
+                f = fullfile(dir0, "no_" + k + ".xlsx");
+                tUserGuide.writeForces(f, cols([1:k-1, k+1:end]));
+                testCase.verifyError(@() data.loadElementWorkbook(f), ...
+                    "data:loadElementWorkbook:noForceSheets", ...
+                    sprintf('The guide calls "%s" required, but the reader imports without it.', cols(k)));
+            end
+        end
+    end
+
     methods (Static, Access = private)
+        function writeForces(file, cols)
+            vals = num2cell([1001, 1:numel(cols) - 1]);
+            writecell([cellstr(cols); vals], file, 'Sheet', 'Liftoff');
+        end
+
         function [names, folder] = guideFiles(patterns)
             folder = fileparts(gui.userGuidePath());
             names = strings(1, 0);

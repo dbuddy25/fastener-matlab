@@ -10,23 +10,23 @@
 <nav aria-label="Guide">
 <a class="home" href="index.html">Fastener Tool — User Guide</a>
 <h2>SETUP</h2><ul>
-<li><span class="unwritten" title="Not written yet">Project</span></li>
-<li><span class="unwritten" title="Not written yet">Factors</span></li>
-<li><span class="unwritten" title="Not written yet">Temp Loads</span></li>
+<li><a href="Project.html">Project</a></li>
+<li><a href="Factors.html">Factors</a></li>
+<li><a href="TempLoads.html">Temp Loads</a></li>
 </ul>
 <h2>SINGLE JOINT</h2><ul>
-<li><span class="unwritten" title="Not written yet">Bolt Sizing</span></li>
-<li><span class="unwritten" title="Not written yet">Joint Config</span></li>
+<li><a href="BoltSizing.html">Bolt Sizing</a></li>
+<li><a href="JointConfig.html">Joint Config</a></li>
 <li><a href="Results.html" aria-current="page">Single Joint Results</a></li>
 </ul>
 <h2>BULK</h2><ul>
-<li><span class="unwritten" title="Not written yet">1 · Defined Joints</span></li>
-<li><span class="unwritten" title="Not written yet">2 · Element Mapping</span></li>
-<li><span class="unwritten" title="Not written yet">3 · Element Forces</span></li>
-<li><span class="unwritten" title="Not written yet">4 · Bulk Analysis</span></li>
+<li><a href="DefinedJoints.html">1 · Defined Joints</a></li>
+<li><a href="ElementMapping.html">2 · Element Mapping</a></li>
+<li><a href="ElementForces.html">3 · Element Forces</a></li>
+<li><a href="BulkAnalysis.html">4 · Bulk Analysis</a></li>
 </ul>
 <h2>REFERENCE</h2><ul>
-<li><span class="unwritten" title="Not written yet">Materials &amp; Hardware</span></li>
+<li><a href="HardwareLibrary.html">Materials &amp; Hardware</a></li>
 </ul>
 <h2>ABOUT THE TOOL</h2><ul>
 <li><a href="limits.html">What the tool does not do</a></li>
@@ -38,6 +38,12 @@
 <h1>Single Joint Results</h1>
 <p>Every check the engine computes, one row each: the margin, its status, and the equation that produced it. Select a row to see the inputs behind it.</p>
 
+<p><img class="shot" src="img/Results.png" alt="The Single Joint Results page" onerror="this.remove()"></p>
+<h2>Fields</h2>
+<table class="fields">
+<tr><th>Field</th><th>What it sets</th></tr>
+<tr data-group="" data-field="Cap MS &gt; 5"><td>Cap MS &gt; 5</td><td>Show margins above 5 as <code>&gt;+5</code>. Display only; untick to see the number.</td></tr>
+</table>
 <h2>Reading a row</h2>
 <table>
 <tr><th>Status</th><th>Means</th></tr>
