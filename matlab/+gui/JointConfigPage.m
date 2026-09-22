@@ -603,9 +603,7 @@ classdef JointConfigPage < gui.Page
                      'specified by length CLASS, not an absolute inch ' ...
                      'value (NASM33537 Rev 4 Sec 6.1). Helical Insert only.']);
             % onEngagementEdited, not commitJoint: engagement feeds the
-            % required bolt length, so the readout has to follow it. Binding
-            % straight to commitJoint left the four-line readout stale while
-            % an insert's engagement changed under it.
+            % required bolt length, so the readout has to follow it.
             obj.bindEdit(obj.EngagementRatioField, @(~, ~) obj.onEngagementEdited());
 
             [obj.EngagementLengthField, obj.EngagementLengthLabel] = ...

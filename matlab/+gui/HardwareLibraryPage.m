@@ -6,10 +6,9 @@ classdef HardwareLibraryPage < gui.Page
     %
     %   WHY THE SOURCE COLUMN IS THE POINT OF THIS PAGE. Every one of the
     %   186 shipped entries carries a cited source — which standard, which
-    %   table, which assumption — and until now none of it was visible from
-    %   inside the tool. An analyst looking at a margin could not answer
-    %   "where did this allowable come from?" without opening library.json
-    %   in a text editor. That is the question a reviewer asks first.
+    %   table, which assumption. This page answers "where did this
+    %   allowable come from?" without opening library.json — the question
+    %   a reviewer asks first.
     %
     %   APP-SCOPED, NOT CASE-SCOPED, and this page must never blur that:
     %       Materials & Hardware  = data.Library — baseline plus custom,

@@ -175,7 +175,7 @@ classdef tStiffness < matlab.unittest.TestCase
             testCase.verifyEqual(sIn.Kc,  4.5402454e6, "RelTol", 1e-5);
             testCase.verifyEqual(sNut.Kc, 4.2580477e6, "RelTol", 1e-5);
 
-            % phi stays well below the old blanket phi = 1 — the whole point.
+            % phi stays well below a blanket phi = 1.
             testCase.verifyEqual(sIn.Phi, 0.352038, "AbsTol", 1e-5);
             testCase.verifySubstring(sNut.Method, "through-bolt");
         end

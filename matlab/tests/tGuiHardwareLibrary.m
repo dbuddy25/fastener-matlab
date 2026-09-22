@@ -101,9 +101,7 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
     % ---- The source citation ----------------------------------------------
     methods (Test)
         function everySectionCarriesASourceColumn(testCase)
-            % The reason the page exists. An analyst could not previously
-            % answer "where did this allowable come from?" without opening
-            % library.json in a text editor.
+            % The reason the page exists: provenance visible in the tool.
             for id = testCase.Page.sectionIds()
                 cols = string(testCase.Page.sectionTable(id).ColumnName);
                 testCase.verifyTrue(any(cols == "Source"), ...
