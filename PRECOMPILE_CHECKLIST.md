@@ -1,8 +1,8 @@
 # Pre-compile manual checklist
 
 **Run this in MATLAB, before `mcc`.** It is deliberately *not* a re-run of the
-automated suite. The 842 tests already build every page programmatically and
-make ~850 assertions about them; repeating that by hand proves nothing new.
+automated suite. The automated suite already builds every page programmatically and
+makes hundreds of assertions about them; repeating that by hand proves nothing new.
 
 What this covers is the complement — what a programmatic test **structurally
 cannot see**:
@@ -27,8 +27,8 @@ cannot see**:
 - [ ] **No library-failure alert on startup.** If one appears, stop — the status
       bar locks, and File → Save *and* Analyze are both disabled. Nothing below
       this line will work.
-- [ ] Rail shows all ten entries under SETUP / SINGLE JOINT / BULK / REFERENCE.
-- [ ] Click all ten. Each builds on first visit, nothing throws, nothing renders
+- [ ] Rail shows all eleven entries under SETUP / SINGLE JOINT / BULK / REFERENCE.
+- [ ] Click all eleven. Each builds on first visit, nothing throws, nothing renders
       blank or half-height. *Pages build lazily — first click is the real test.*
 - [ ] Active entry is pressed + bold, one at a time.
 - [ ] **Resize: drag narrow, drag wide, maximize.** No overlap, no clipping,
@@ -132,12 +132,10 @@ disturbs. **Record the behavior now** so you can tell a build regression from a
 pre-existing gap.
 
 - [ ] **Help → About** shows a version.
-- [ ] **Help → User Guide.** **This has never executed anywhere.** Report
-      Generator is absent from the test machine, so `tUserGuide/itBuildsAPdf`
-      skips — that is the 1 incomplete in the 842. If you have Report Generator,
-      this is its first-ever run: progress dialog, then the PDF opens from
-      `prefdir`. If you don't, the guard at `+report/userGuide.m:51` reports
-      "unavailable". **Write down which one you got.**
+- [ ] **Help → User Guide.** With Report Generator: progress dialog, then the
+      PDF opens from `prefdir`. Without it, the guard in `+report/userGuide.m`
+      reports "unavailable". (`tUserGuide/itBuildsAPdf` skips on a machine
+      without the toolbox — that is the suite's 1 incomplete.)
 - [ ] **Results → Save PDF Report...** Opens in a real viewer, carries the
       version stamp, margins match section B. *Slowest action in the app —
       `report.singleJointReport` re-runs `engine.analyze` internally.*
@@ -222,7 +220,7 @@ Error paths are read by an analyst on a deadline.
 
 ## Before you compile
 
-- [ ] `runTests` — full suite, still **841 pass / 0 fail / 1 incomplete**.
+- [ ] `runTests` — full suite, **0 fail**, the same pass count as the last green push.
 - [ ] Every section-B margin matched.
 - [ ] You wrote down what Help → User Guide did.
 - [ ] Custom library entry survived a full restart (H).

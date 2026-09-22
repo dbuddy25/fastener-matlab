@@ -14,7 +14,7 @@ analysis tool, deployable as a standalone Windows executable.
 - **`UNITS.md`** — the unit contract: English units (in, lbf, psi) with
   temperature in °C and CTE in 1/°C. Single source of truth for units.
 - **`VALIDATION.md`** — the validation coverage matrix: every check/scenario, its
-  answer-key source, and whether it's validated ✅ / hand-derived ✍️ / pending ⏳.
+  answer-key source, and whether it's validated ✅ / hand-derived ✍️.
   A living doc — every new check adds a row.
 - **`COMPLIANCE.md`** — requirement-by-requirement status against NASA-STD-5020B.
 - **`TOOL_DIFFERENCES.md`** — design decisions and open questions.
@@ -27,10 +27,10 @@ networked database (the library is local JSON files).
 ```
 matlab/
 ├── fastenerTool.m     entry point — prints the version banner and opens the GUI (`+gui`)
-├── +model/            domain types: Bolt, Material, Joint, enums (Phase 1)
-├── +engine/           analysis math — the core (Phases 2–3); bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook, Step 2c)
-├── +data/             library loader (`data.Library` + `library/` — one JSON per part, plus user drop-in files; Phase 2.2); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`, Phase 3.7); factor presets (`factorPreset`/`saveFactorPreset`, Phase 3.7)
-├── +report/           XLSX export (`report.exportResults`, Phase 3.6); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
+├── +model/            domain types: Bolt, Material, Joint, enums 
+├── +engine/           analysis math — the core; bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook, Step 2c)
+├── +data/             library loader (`data.Library` + `library/` — one JSON per part, plus user drop-in files); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`, Phase 3.5b); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets, Step 2b); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`); factor presets (`factorPreset`/`saveFactorPreset`)
+├── +report/           XLSX export (`report.exportResults`); single-joint PDF report (`report.singleJointReport`, Phase 3.8, via MATLAB Report Generator)
 ├── +gui/             THE GUI (`gui.launch`, GUI_SPEC.md) — what `fastenerTool`
 │                      opens. Programmatic uifigure, rail + card over AppState,
 │                      eleven pages.
@@ -48,7 +48,7 @@ runTests                     % the FULL suite -- note the capital T. `runtests`
                              % (lowercase) is MATLAB's own and skips this
                              % project's end-of-run failure summary
 
-% construct a joint (Phase 1 acceptance):
+% construct a joint:
 b = model.Bolt(Designation="#10-32 UNF", NominalDiameter=0.190, ...
                Series=model.ThreadSeries.UNF, ThreadsPerInch=32, ...
                TensileStressArea=0.0200);
@@ -127,48 +127,16 @@ is fine.
 
 ## Status
 
-**Phases 1–3 complete; Phase 4 (GUI) substantially complete.** The tool runs
-end to end: define a joint from library-backed dropdowns, analyze it, or map
-FEM element IDs to joints, import forces one load case per sheet, run the
-batch and export a formatted workbook.
+The tool runs end to end: define a joint from library-backed dropdowns and
+analyze it, or map FEM element IDs to joints, import forces one load case per
+sheet, run the batch and export a formatted workbook. Launch it with
+`cd matlab; fastenerTool`.
 
-Launch it with `cd matlab; fastenerTool`.
-
-**What's left**, in the order it matters:
-
-1. **Phase 5 packaging** — MATLAB Compiler to a standalone Windows `.exe`,
-   built by hand on a machine with the toolbox. `PRECOMPILE_CHECKLIST.md`
-   carries the manual pre-compile pass, the `mcc` line (the `+data/library`
-   folder must be added by hand — dependency analysis cannot see data), and the
-   five checks that distinguish a packaging problem from a code one.
-2. **UN vs UNJ thread form** — seeded stress areas may be ~8% conservative;
-   see `VALIDATION.md`. Conservative, but it matters for sizing.
-
-**Phase 4 is complete.** Step 9 landed Materials & Hardware — all six library
-sections browsable with their source citations visible, custom entries added or
-duplicated from a baseline row, persisted per installation (`GUI_SPEC.md` §16).
-Step 10 added the Help menu. `Help → References` lists every document the tool's numbers rest
-on; most are copyrighted and are **not** shipped, so it carries the citations
-and opens your own local copies (`GUI_SPEC.md` §3).
-
-Separation-before-rupture on the threaded member — once listed here as the last
-real engineering gap — is done: all three thread rows take their design load
-from `engine.boltDesignLoad`, which applies the Fig. 8 gate through the shared
-`separationBeforeRuptureGate` helper.
-
-> **Phase 3.4 is dead, not deferred.** The planned second validation wave was
-> to draw on non-public case data; that data is not going into this repository.
-> Those checks are verified locally with only the outcome recorded (verified,
-> agreement within X%, inputs not in repo). See `VALIDATION.md` and
-> `TOOL_DIFFERENCES.md`.
+**What's left:** packaging as a standalone Windows `.exe` with MATLAB Compiler.
+`PRECOMPILE_CHECKLIST.md` carries the manual pre-compile pass, the `mcc` line
+(the `+data/library` folder must be added by hand — dependency analysis cannot
+see data), and the five checks that distinguish a packaging problem from a code
+one.
 
 `TOOL_DIFFERENCES.md` records every place this tool takes a deliberate position
 where the standard leaves a choice open — what it does, and why.
-
-### How it got here
-
-The phase-by-phase build history used to be restated here in full. It is not
-any more: `ARCHITECTURE.md` owns that narrative and is updated as each step
-lands, and keeping a second copy in the front door meant two places to update
-and one of them silently rotting — which is exactly what happened to the launch
-command above. For the per-package detail see `ARCHITECTURE.md`.

@@ -332,7 +332,7 @@ read-only in the app. There are two ways to add hardware without touching it:
 ## 8. Where to learn more
 
 - **`VALIDATION.md`** — every check, its answer-key source, and whether it's validated ✅ /
-  hand-derived ✍️ / pending ⏳.
+  hand-derived ✍️.
 - **`ARCHITECTURE.md`** — how the pieces fit together.
 - **`UNITS.md`** — the unit contract (inch, lbf, psi, °C).
 - **`COMPLIANCE.md`** — requirement-by-requirement status against NASA-STD-5020B.

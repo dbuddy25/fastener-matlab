@@ -23,7 +23,7 @@ than converting temperature once at the GUI boundary.
 ## The temperature rule
 - The **engine works internally in °C**; thermal preload uses `ΔT(°C) × CTE(1/°C)`.
 - The GUI may let the user enter/display °F, but it **converts to °C at the boundary** —
-  the engine never sees Fahrenheit (GUI unit toggle: Phase 4.12).
+  the engine never sees Fahrenheit (no unit toggle is built; the GUI is °C)
 - CTE and temperature must always share the °C basis. A CTE given in in/in/°F is wrong
   here; multiply a per-°F CTE by **1.8** to get 1/°C.
 
