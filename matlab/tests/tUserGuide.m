@@ -106,7 +106,7 @@ classdef tUserGuide < matlab.unittest.TestCase
     methods (Static, Access = private)
         function writeForces(file, cols)
             vals = num2cell([1001, 1:numel(cols) - 1]);
-            writecell([cellstr(cols); vals], file, 'Sheet', 'Liftoff');
+            writecell([cellstr(cols); vals], file, 'Sheet', 'Quasistatic');
         end
 
         function [names, folder] = guideFiles(patterns)

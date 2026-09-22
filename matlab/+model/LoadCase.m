@@ -5,7 +5,7 @@ classdef LoadCase
     %   NOT simply BoltCount × per-bolt; leave a joint-level load NaN to mean
     %   "engine derives from BoltCount × per-bolt."
     %
-    %   lc = model.LoadCase(Name="Liftoff", BoltTensileLimitLoad=1200, ...
+    %   lc = model.LoadCase(Name="Quasistatic", BoltTensileLimitLoad=1200, ...
     %                       BoltShearLimitLoad=400);
     %
     %   BoltShearLimitLoad is per shear plane, not the bolt's total shear.

@@ -140,7 +140,7 @@ classdef tBulkParsers < matlab.unittest.TestCase
             % template analyzes cleanly end-to-end (see tWorkbook)
             testCase.verifyEqual(el(1).ElementId, "1001");
             testCase.verifyEqual(el(1).JointName, "Sample four-bolt SHCS/nut joint");
-            testCase.verifyEqual(el(1).LoadCaseName, "Liftoff");
+            testCase.verifyEqual(el(1).LoadCaseName, "Quasistatic");
             testCase.verifyEqual(el(1).PatternId, "PLATE-1");
             testCase.verifyEqual(el(1).Forces.FX, 1560);
             testCase.verifyEqual(el(1).Forces.FY, 0);
