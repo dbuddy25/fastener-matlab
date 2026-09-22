@@ -749,7 +749,7 @@ edits the copy. Protection without an escape hatch just makes people angry.
 **Skip admin mode.** Duplicate-as-custom covers ~95% of the need, and curating
 the shipped baseline is better done by editing the seed file directly. The
 admin tier, checksums and the packaging-path split are still only designed, in
-`TOOL_DIFFERENCES.md` §7.8.
+`TOOL_DIFFERENCES.md` §7.9.
 
 **Any library change must refresh dependent dropdowns**, or a newly added
 material is invisible until restart. Built: `JointConfigPage` subscribes to

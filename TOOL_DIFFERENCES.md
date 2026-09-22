@@ -188,23 +188,18 @@ and avoids inventing a `Pb`-based yield criterion the standard never asks for.
 Printing a yield MS on that row is a separate decision; the allowable already
 exists, only the row is missing.
 
-### 2.4 Bolt Sizing yield now takes the system minimum — CLOSED 2026-09-18
-`engine.boltSizingSweep`'s `MS_TensionYield` used to be `At·Fty` (5020B Eq. 18),
-bolt-only, unconditionally, while `engine.marginTensionYield` takes `Pty-allow`
-from the §4.4.2 system minimum. The screen could therefore Pass a size on yield
-that a full `engine.analyze()` run then failed on a nut- or insert-governed
-`Pty-allow`. It was left that way on purpose while nothing called the sweep, with
-the rule that anyone adding a caller must close it first.
+### 2.4 Bolt Sizing screens on the same allowables as the analysis
+`engine.boltSizingSweep` takes tension-ultimate and tension-yield from the
+§4.4.2 system minimum (`engine.systemTensileAllowable` /
+`systemTensileYieldAllowable`, the same functions the margins ask) whenever a
+threaded member is resolved for the row, and says which mode governed in the
+`TensionUltBasis` / `TensionYieldBasis` columns. With no member context — the
+GUI's Bolt Sizing page is bolt-only by design — both are the bolt's own
+`At·Ftu` / `At·Fty`, and the columns say so.
 
-The gui Bolt Sizing page is that caller, so it is closed: with a member resolved
-for the row the sweep asks `engine.systemTensileYieldAllowable`, the same function
-the margin asks, and a new `TensionYieldBasis` column says which mode governed.
-It stays bolt-only — and says so — with no context, no matching member, or a
-member with no yield mode (a rating carries no yield information).
-
-**Still open, and stated on the page:** the interaction gate has no bending term
-(`Rb`), because no moment is known at sizing time, so the screen is optimistic
-for clearance-fit or gapped shear joints. Closing it means a moment input.
+**Still open:** the interaction gate has no bending term (`Rb`), because no
+moment is known at sizing time, so the screen is optimistic for clearance-fit or
+gapped shear joints. The page's banner says so.
 
 ---
 
@@ -291,56 +286,20 @@ field (never inside `MS`, which stays `NaN` for this row by design) and, in the
 bulk table, on a column named `InteractionR` (not `"Interaction"`) so nothing
 downstream can mistake it for an ordinary margin.
 
-**An earlier, now-superseded revision:** for a time, this function instead solved
-for a load-scale factor `a` and reported `MS = a − 1`, passing when `MS ≥ 0` like
-every other column — a DIFFERENT quantity on the ordinary margin scale. That `a`
-reading is still available as a secondary, informational field
-(`marginInteraction`'s `.a`), but it is no longer what `MS`/the bulk column
-reports.
+A load-scale factor `a` (the multiplier on both loads at which `R` reaches 1)
+is available as a secondary field, `marginInteraction`'s `.a`, but it is never
+what `MS` or the bulk column reports.
 
-> ⚠️ **A trap that nearly shipped, in both directions.** While the `MS = a − 1`
-> revision was current, applying an `R ≤ 1` pass rule to that column would have
-> coloured a failing `MS = −0.4` green and a passing `MS = +3` red, on every row
-> of every bulk run. Now that the column reports `R`, the opposite mistake is the
-> live risk: treating the `InteractionR` column (or the Interaction row anywhere
-> else — the Results table, PDF, Bulk grid) like an ordinary `MS ≥ 0` margin
-> would silently invert it, since `R = 1.2` is a FAILURE while `MS = 1.2` would
-> be a comfortable pass. Every surface that renders this row now keys pass/fail
-> off `R ≤ 1` explicitly (`gui.MarginView.isRatio`/`passFail`/`envelope`, `report.singleJointReport`'s `rowValueText`) rather than
-> reusing the generic `MS`-scale logic. The lesson from both directions: verify
-> what a quantity *is*, and which direction "pass" runs, before reusing a rule
-> about it.
-> `engine.boltSizingSweep`'s preliminary sizing screen is a DIFFERENT kind
-> of exception now: it reports NO interaction number at all — not `R`, not a
-> margin, and not its former `a − 1` solve-for-a convention. It mirrors
-> `engine.marginInteraction`'s direct `R` evaluation internally (it never
-> calls that function itself — it requires a preload the sizing screen
-> doesn't have yet) purely to gate `Status`; a row that fails only that gate
-> carries the reason in its `Notes` column rather than a number in any
-> column, so there is no column left to mistake for an ordinary `MS ≥ 0`
-> margin. This is unaffected by the tension-ultimate rework immediately
-> below: interaction stays bolt-only (mirroring `engine.marginInteraction`'s
-> own deliberate choice) regardless of whether the row's `MS_TensionUlt`
-> used the bolt-only or the system allowable.
-
-> `engine.boltSizingSweep`'s `MS_TensionUlt` is no longer UNCONDITIONALLY
-> bolt-only. It still defaults to the bolt-only `Ptu_allow = At*Ftu` when no
-> threaded-member context is supplied — but when the caller supplies
-> `Library`+`NutSpec` (per-size nut resolution) or a fixed `ThreadedMember`
-> template (Insert/TappedHole), each candidate size resolves its OWN
-> matching member and `Ptu_allow` comes from `engine.systemTensileAllowable`,
-> exactly as `engine.marginTensionUlt` computes it — closing the defect where
-> a size could Pass this preliminary screen and then fail Tension-Ultimate in
-> a full `engine.analyze()` run once the actual nut/insert was chosen. A
-> `TensionUltBasis` column names which allowable governed each row. Tension-
-> yield and shear are NOT part of this change — they stay bolt-only always,
-> mirroring `engine.marginTensionYield`'s and `engine.marginInteraction`'s
-> own bolt-only rules. See `engine.boltSizingSweep`'s header and
-> `VALIDATION.md`'s coverage-gaps note for the hand-derived pins.
->
-> The GUI's Bolt Sizing page calls `engine.boltSizingSweep` bolt-only (the six
-> positional args, no threaded-member context). That is one legitimate screening
-> mode, and the simple one the page is for.
+> ⚠️ **The trap runs in both directions.** Treating the `InteractionR` column,
+> or the Interaction row on any surface, like an ordinary `MS ≥ 0` margin
+> silently inverts it: `R = 1.2` is a FAILURE where `MS = 1.2` would be a
+> comfortable pass. Every surface that renders this row keys pass/fail off
+> `R ≤ 1` explicitly (`gui.MarginView.isRatio`/`passFail`/`envelope`,
+> `report.singleJointReport`'s `rowValueText`), never the generic `MS` logic.
+> `engine.boltSizingSweep` reports NO interaction number at all — not `R`, not
+> a margin. It evaluates `R` internally, bolt-only, purely to gate `Status`; a
+> row that fails only that gate carries the reason in its `Notes` column, so
+> there is no column to mistake for a margin. See §2.4.
 
 ### 6.2 Temperatures are global, not per joint
 Temperature lives on Project & Factors, not on each joint — analyses are
@@ -404,7 +363,7 @@ set n = 1.0" from "nobody touched it." A warning when the gate fails *only* on
 
 ## 7. Open questions
 
-### 7.1 UN vs UNJ tensile stress area — ✅ RESOLVED, no change needed
+### 7.1 UN vs UNJ tensile stress area — decided, no change
 **NAS1351/NAS1352 specify UNRF/UNF** (procurement drawings call UNRF-3A), **not
 UNJ**. UNR mandates a rounded external-thread root but keeps UN basic
 major/pitch/minor diameters, so the ASME B1.1 UN stress areas the library carries
@@ -485,7 +444,7 @@ deliberate gap rather than an oversight, but it is a gap: a parent thread in a
 soft alloy can yield well before it strips. Closing it needs a stated yield
 convention for the parent thread, not just data.
 
-### 7.4 Bolt bending — absent end to end
+### 7.4 Bolt bending
 **5020B:** the bending stress term appears in **all four** interaction criteria —
 `fbu/Ftu` inside the tension bracket for Eq. 20 and Eq. 22, and a separate
 `fbu/Fbu` term for the plastic-bending variants Eq. 21 and Eq. 23. §4.4.4 makes
@@ -499,7 +458,7 @@ squarely inside that condition. The standard also notes that including the term
 is conservative, and that the criteria without it rest on MSFC combined-load
 tests of A-286 3/8-24 fasteners (NASA/TM-2012-217454).
 
-**This tool: IMPLEMENTED (2026-08-10) for Eq. 20/22.** `fbu` is computed and
+**This tool: Eq. 20/22.** `fbu` is computed and
 added to `Rt` **inside** the tension bracket:
 `R = Rs^es + (Rt + Rb)^et`, `Rb = fbu/Ftu`.
 
@@ -516,29 +475,26 @@ added to `Rt` **inside** the tension bracket:
 term in Eq. 20/22 "is considered to be conservative" — the reachable option is
 the conservative one.
 
-**A supplied moment is ALWAYS used — corrected 2026-08-13.** This section
-previously read *"`CloseToleranceOrInterference` **ignores** it and records that
-it did"*, on the argument that using a moment on a joint the analyst declared
-exempt would override a recorded engineering determination. That over-applied
-§4.4.4. The exemption is scoped, in the standard's own words (p33), to bending
-*"caused by the **shear loading**"* — a supplied moment may come from prying,
-eccentric tension or flange rotation, none of which it covers — and the very
-next paragraph is unqualified: *"along with **any applicable bending**, analysis
-should account for interaction of the combined loading."* "Typically there is no
-need to **account for**" excuses you from deriving a shear-induced moment you do
-not have; it is not licence to discard one you were handed. §4.4.4 also calls
-including the term conservative, so using it is never wrong.
+**A supplied moment is ALWAYS used.** §4.4.4's exemption is scoped, in the
+standard's own words (p33), to bending *"caused by the **shear loading**"* — a
+supplied moment may come from prying, eccentric tension or flange rotation, none
+of which it covers — and the very next paragraph is unqualified: *"along with
+**any applicable bending**, analysis should account for interaction of the
+combined loading."* "Typically there is no need to **account for**" excuses you
+from deriving a shear-induced moment you do not have; it is not licence to
+discard one you were handed. §4.4.4 also calls including the term conservative,
+so using it is never wrong.
 
-`Joint.ShearTransferCondition` therefore now selects **the wording, not the
+`Joint.ShearTransferCondition` therefore selects **the wording, not the
 arithmetic** — it controls only what happens when NO moment is supplied:
 `CloseToleranceOrInterference` reads VERIFIED, `NotDeclared` reads ASSUMED, and
 `ClearanceOrGapped` reports NotEvaluated because the analyst has said bending
 matters and supplied nothing to compute it from.
 
-The old rationale — bulk resolves a moment from the FE moments for *every*
-element, and FE moments on a stiff connection are frequently an idealisation
-artefact — is a real engineering concern. It argues for the **analyst** not
-supplying the moment, not for the tool discarding it on their behalf.
+Bulk resolves a moment from the FE moments for *every* element, and FE moments
+on a stiff connection are frequently an idealisation artefact. That is a real
+concern, and it argues for the **analyst** not supplying the moment, not for
+the tool discarding it on their behalf.
 
 **Derived convention: which section.** 5020B defines `fbu` as linear-elastic but
 never says which diameter. The section follows the **shear plane** — body for
@@ -547,72 +503,19 @@ shear allowable in these same criteria. Nominal `D` throughout would put bending
 on a section 5020B has just said is not the critical one when the threads are in
 the shear plane.
 
-**Historical — what it looked like before**, so the three levels the gap used to
-span stay on record:
+The determination is recorded, never silently assumed:
 
-| Layer | State |
+| `ShearTransferCondition` | With no moment supplied |
 |---|---|
-| `model.LoadCase` | no bending field |
-| `engine.resolveForces` → `loadCaseFromForces` | bending IS derived from the FE moments, then discarded — `resolveForces`' own docstring calls it "informational — the LoadCase carries no bending field" |
-| `engine.designLoads` / `marginInteraction` | no `fbu` term |
+| `NotDeclared` (default) | `R = Rt^et + Rs^es`; the §4.4.4 exemption reads ASSUMED |
+| `CloseToleranceOrInterference` | Same `R`; the analyst has confirmed the exemption holds, so it reads VERIFIED |
+| `ClearanceOrGapped` | The analyst has said bending matters and supplied nothing to compute it from: NotEvaluated, not a wrong number |
 
-So the forces pipeline already computes the quantity and drops it one step later.
-(That old note claimed gui's Applied Loads group already had a Bending row per
-`GUI_PORT_SPEC.md` §3. **It did not** — `buildLoadsGroup` had exactly five rows,
-none of them bending, and gui had no `ShearTransferCondition` control either, so
-the `ClearanceOrGapped` path was unreachable from the new GUI entirely. Both are
-addressed with this work.)
-
-**DECIDED (2026-07-31): omitted deliberately, deferred to a later version.
-SUPERSEDED (2026-08-10) — built; see above.**
-No bending physics (`M·c/I`) is implemented anywhere in this tool. §4.4.4 makes
-the omission conditional, though, not an unconditional simplification — so the
-gap that remained after the 2026-07-31 decision was that nothing recorded
-*which* case a given joint was in.
-
-**UPDATED (2026-08-04): the condition is now an explicit, recorded
-determination, not a silent global assumption.** `model.Joint` gained
-`ShearTransferCondition` (`model.ShearTransferCondition`: `NotDeclared` default,
-`CloseToleranceOrInterference`, `ClearanceOrGapped`), and `engine.marginInteraction`
-branches on it:
-
-| `ShearTransferCondition` | Behavior |
-|---|---|
-| `NotDeclared` (default) | Computes `R = Rt^et + Rs^es` exactly as before (byte-identical to every existing fixture). `Method`/`Detail` state the §4.4.4 exemption is **ASSUMED, not verified**, and name the property to set. |
-| `CloseToleranceOrInterference` | Same computation, same `R` — the analyst has confirmed §4.4.4's exemption condition holds (interference/close-tolerance fit, no shear across a gap/spacer). `Method`/`Detail` state the exemption is **VERIFIED**. |
-| `ClearanceOrGapped` | The analyst has confirmed §4.4.4's exemption does **not** apply. Bending still is not implemented, so the criterion cannot be evaluated conservatively: `R = NaN`, `Pass = false`, **NotEvaluated, no throw**. `Detail` explains why. |
-
-This mirrors the existing ASSUMED/VERIFIED pattern for the Fig. 8 `e/D`
-precondition (`engine.private.separationBeforeRuptureGate`) — same vocabulary,
-same idea: an unrecorded input degrades the result from "verified" to "assumed,"
-it does not silently pick a side. `NotDeclared` is still the default (nothing
-forces an analyst to declare it), so a joint that IS clearance-fit or gapped and
-is never told so still reads the fbu=0 result — but now with an ASSUMED, not
-VERIFIED, label on it, and a `ClearanceOrGapped` declaration turns that into an
-honest NotEvaluated rather than a wrong number. Bending physics itself
-(`M·c/I`) is still not built — see the three still-open decisions below.
-
-**The three scoped decisions, as resolved when it was built:**
-1. ~~**Eq. 20/22 or Eq. 21/23**~~ — **RESOLVED: Eq. 20/22.** Bending inside the tension bracket against `Ftu`,
-   or broken out against `Fbu` (allowable flexural stress) crediting plastic
-   bending. `Fbu` is not in the material table, so Eq. 20/22 is both the
-   reachable option and the conservative one.
-2. ~~**How `fbu` is computed**~~ — **RESOLVED: section follows the shear plane.**
-   `M·c/I`. The straightforward form takes the full
-   nominal diameter (`c = D/2`, `I = πD⁴/64`) regardless of shear plane. For a
-   threads-in-shear joint the stressed section is the minor diameter, and 5020B
-   is pointed that tension and shear peak at the same section there — so nominal
-   `D` is arguably unconservative in that configuration.
-3. ~~Whether the joint declares its fit class~~ — **DONE** (this update):
-   `Joint.ShearTransferCondition`, wired through `engine.marginInteraction` and
-   the Joint Config GUI panel.
-
-The plumbing is already half-present: `resolveForces` derives a bending value and
-`loadCaseFromForces` discards it, and the GUI's Applied Loads group has a Bending
-input with no model field behind it.
+This mirrors the ASSUMED/VERIFIED pattern of the Fig. 8 `e/D` precondition
+(`engine.private.separationBeforeRuptureGate`): an unrecorded input degrades the
+result from "verified" to "assumed", it does not silently pick a side.
 
 ### 7.5 Stiffness's mixed-modulus flange stack: harmonic-mean, not exact
-`engine.stiffness` used to refuse two configurations. Both now compute.
 Threaded-in joints (inserts, tapped holes) use the same symmetric back-to-back
 frustum fed a shortened grip, `L = t1 + D/2` (Shigley & Mischke; see also DABJ
 slide 8-23), with `kb` dropping the threaded end's `+0.4D` in favour of
@@ -628,12 +531,8 @@ slide 8-23), with `kb` dropping the threaded end's `+0.4D` in favour of
   tapped member is thinner than the bolt diameter.
 
 **A mixed-modulus flange stack** (e.g. a steel fitting bolted to an aluminium
-panel) used to error outright with `engine:stiffness:mixedModulusDeferred` —
-no `phi`, no Eq. 10 rupture branch, no stiffness-dependent thread design load,
-and with any temperature excursion `engine.preload` threw and the whole
-analysis failed. That joint is ordinary, not exotic. It now computes via a
-thickness-weighted harmonic-mean member modulus (
-NASA TM-106943 Eq. 34, cited because NASA-STD-5020B Eq. 9 takes `kc` as a given
+panel) computes via a thickness-weighted harmonic-mean member modulus
+(NASA TM-106943 Eq. 34, cited because NASA-STD-5020B Eq. 9 takes `kc` as a given
 input and never prints how to compute it for a mixed stack):
 
     Ebar = tFit / sum(t_i / E_i)        over the clamped flange layers
@@ -689,7 +588,7 @@ simultaneously shrinking the thermal term
 `(Kb*Kc/(Kb+Kc))*L*dT*(alphaJ - alphaB)` and so raising `PpMin`
 (UNCONSERVATIVE for separation and slip) — opposite directions in the same run.
 
-### 7.3 Should a manufacturer's rated insert PULL-OUT load be an input? — OPEN
+### 7.7 Should a manufacturer's rated insert PULL-OUT load be an input? — OPEN
 
 Raised 2026-09-09 by the spreadsheet comparison (§8.2).
 
@@ -722,7 +621,7 @@ is a trap if the rating and the modelled parent ever disagree.
 `RatedUltimateLoad` — plus a precedence rule stated the way the nut path states
 its own, and the derived value kept visible for comparison.
 
-### 7.7 Eq. 84's eccentric-load disqualifier is not enforced — OPEN
+### 7.8 Eq. 84's eccentric-load disqualifier is not enforced — OPEN
 
 5020B's joint-slip Eq. 84 says that for an eccentric shear load *"these
 equations cannot be used"*. That is a disqualifier, not a modelling
@@ -732,7 +631,7 @@ refuse joint-mode slip, the same way the existing `nf` guard already refuses it
 (§3.1). Not built. Until it is, an eccentric pattern gets an Eq. 84 slip margin
 the standard says it should not have.
 
-### 7.8 Library admin tier — designed, not built
+### 7.9 Library admin tier — designed, not built
 
 Today there are three sources: the shipped baseline (`+data/library/`), user
 drop-in files, and the user's saved custom entries. A program-controlled **admin**
@@ -758,7 +657,7 @@ designed but not built. The rules it must meet:
 
 **Undecided:** whether a tool upgrade may overwrite a site-approved value.
 
-### 7.9 Insert pull-out geometry — three open points
+### 7.10 Insert pull-out geometry — three open points
 
 - **The coefficient family is wide.** RP-1228 gives a tapped-hole pull-out
   coefficient of 0.333, TM-106943 gives 0.625, this tool uses 0.75 (§1.5),
@@ -770,7 +669,7 @@ designed but not built. The rules it must meet:
   arrives it enters as the *specified* area, which already takes precedence over
   the computed form — no rework needed.
 
-### 7.10 Shear tear-out: ultimate and yield nearly coincide on Al 7075-T7351
+### 7.11 Shear tear-out: ultimate and yield nearly coincide on Al 7075-T7351
 
 At the template factors, `Fsu/(FFU·FSU)` = 22,592 and `Fsy/(FFY·FSY)` = 22,632
 per unit shear area: ultimate governs by 0.18%. A modest change to the factor set
@@ -793,7 +692,7 @@ Every entry ends in one of three places — a decision (the tool is right and he
 is the argument), a bug (fixed, with the commit), or an unresolved item that is
 still open. Nothing sits here as "probably fine".
 
-### Status, first pass complete (2026-09-08)
+### Status
 
 One real joint, single-fastener and worst-of-set. **Every margin difference
 reduced to three causes**, and two whole rows agree exactly.
@@ -801,7 +700,7 @@ reduced to three causes**, and two whole rows agree exactly.
 | # | Row(s) | Cause | Size | Verdict |
 |---|---|---|---|---|
 | 8.1 | Interaction | bolt vs system `Ptu_allow` in `Rt` | R 0.28 vs 0.32 | DECISION — tool right, no change |
-| 8.2 | Tension-Ultimate, Tension-Yield | insert pull-out allowable | +4.0% / +4.1% | **REOPENED** — slope/intercept vs computed area; gap exceeds §1.5's stated spread |
+| 8.2 | Tension-Ultimate, Tension-Yield | insert pull-out allowable | +4.0% / +4.1% | OPEN — slope/intercept vs computed area; gap exceeds §1.5's stated spread |
 | 8.3 | Shear-Ultimate (and `Rs`) | bolt `Fsu` library value | +1.07% | OPEN — data provenance |
 | 8.4 | Separation, Slip | — | 0.00% | AGREE EXACTLY |
 
@@ -884,27 +783,17 @@ The resulting form was checked against 27 sizes x 5 length classes of
 manufacturer pull-out data and sits **1.6%-10.4% below every point**. 4.1% is
 inside that band.
 
-**CONFIRMED 2026-09-09, and this closes.** The spreadsheet carries **no shear
-area at all** — only a flat ultimate pull-out load of 3,796.5 lbf, a catalogue
-value. So the two are not two computations of the same thing: one is a
-manufacturer rating, the other is this tool deriving its own number from
-geometry, by a form built to sit below exactly that kind of rating. 4.1% is
-inside the 1.6%-10.4% band. **Working as designed; no change.**
-
-**What it exposes, though, is a gap worth deciding on (see §7.3).** The tool has
-nowhere to PUT a manufacturer's rated pull-out load. `ShearEngagementArea` takes
-an area, and `RatedUltimateLoad` on an insert is the internal-thread allowable —
-`model.ThreadedMember` says so explicitly, "NOT pull-out". A catalogue pull-out
-value can therefore only enter by being back-solved into an area, which launders
-a rated load as geometry and destroys its provenance. Do not do that.
-
-**REOPENED — the "closes" above rests on a wrong reading.** The 3,796.5 lbf is
-not a flat catalogue rating: it is **parent pull-out computed by the Heli-Coil
-68-2 slope/intercept method**, `P = m*Fsu_parent + b` — the same failure mode as
-the tool's row, by the form §1.5 deliberately rejected. §1.5 predicts the two
-forms differ by "roughly 1-2%, in either direction"; observed is **4.1%**. §1.5
-bounds only the INTERCEPT (~2.2% at 30 ksi); it never bounds slope `m` against
+**What the 3,796.5 lbf is.** Parent pull-out computed by the Heli-Coil 68-2
+slope/intercept method, `P = m*Fsu_parent + b` — the same failure mode as the
+tool's row, by the form §1.5 deliberately rejected. §1.5 predicts the two forms
+differ by "roughly 1-2%, in either direction"; observed is **4.1%**. §1.5 bounds
+only the INTERCEPT (~2.2% at 30 ksi); it never bounds slope `m` against the
 computed area `As`, which are independent quantities.
+
+The tool also has nowhere to PUT a manufacturer's rated pull-out load —
+`ShearEngagementArea` takes an area, and `RatedUltimateLoad` on an insert is the
+internal-thread allowable. Back-solving an area from a load launders a rating as
+geometry; do not. That gap is §7.8.
 
 **Next action — one number:** the spreadsheet's parent `Fsu` for Al 6061-T6
 (tool: 27,000 psi). If it differs, part of the 4.1% is materials data. If it
@@ -984,16 +873,14 @@ flange material at all. Whether to add a product-form axis is a schema decision
 for the materials pass, and it should be settled before real program data is
 loaded.
 
-### 8.6 Bearing: the tool checked ultimate only, and did not say so — FIXED (disclosure)
-
-Found by the comparison, and the most consequential thing it turned up.
+### 8.6 Bearing: yield has never evaluated, and now says so
 
 The spreadsheet reports a bearing **yield** margin (+3.71 on the joint
-examined). The tool reported +3.31 and named it "ultimate". `marginBearing`
-implements both criteria correctly and takes the worse — but **0 of the 28
-materials in `library.json` carry `fbry`**, while all 28 carry `fbru`. The yield
-branch has therefore never executed, on any joint, and the row said nothing
-about it while `Method` promised "both criteria".
+examined); the tool reports +3.31, ultimate. `marginBearing` implements both
+criteria and takes the worse — but **0 of the 28 shipped materials carry
+`fbry`**, while all 28 carry `fbru`, so the yield branch has never executed on
+any joint. `Detail` names every criterion that could not be formed and, for a
+missing `Fbry`, prints the threshold below.
 
 **When it matters.** The two criteria divide the same `Fbr*Abr` product by
 different factor pairs, so yield governs exactly when
@@ -1007,16 +894,9 @@ So the same material can sit either side of it depending only on the fitting
 factors, which is why `Detail` prints the value in force rather than a literal.
 
 The joint examined back-solves to `Fbry` ~ 65,300 against `Fbru` = 67,000, a
-ratio of **0.975** — above the 0.893 in force there, so ultimate governs, the
-tool's +3.31 is correct, and that is precisely why this was invisible. On a
-material whose ratio falls below the threshold the tool would report the
-**higher** ultimate margin with nothing indicating a criterion was missing:
-silently optimistic.
-
-**Fixed (disclosure only).** `Detail` now names every layer/criterion that could
-not be formed and, for a missing `Fbry`, prints the threshold above. No margin
-changes value. Same principle as `systemTensileAllowable`'s `Complete` flag: a
-minimum taken over an incomplete set has to announce itself.
+ratio of **0.975** — above the 0.893 in force there, so ultimate governs and the
+tool's +3.31 is right. On a material whose ratio falls below the threshold the
+ultimate margin alone is optimistic, which is why the caveat is printed.
 
 **Still open (data).** `fbry` is absent library-wide and populating it belongs to
 the materials pass, with sources — see §8.3. Until then every bearing row
@@ -1065,31 +945,3 @@ The margin alone names nothing. What worked:
    until it was aligned. See §6.4.
 
 ---
-
-## Feynman summary
-
-Every entry above is a place where the tool had a choice and took one side, so
-the file is really a list of choices and their reasons.
-
-A nut is capped at its rated strength, because a nut spreads under load and a
-calculated engagement area flatters it. An insert's strength belongs to the metal
-it is screwed into, not to the insert, so pull-out is computed against the parent
-material — and against yield as well as ultimate. Pull-out is an area times a
-stress, a straight line through the origin, because zero engagement area has to
-mean zero capacity; a chart fit with an intercept does not obey that. Preload
-changes with temperature, so that term is computed rather than assumed away.
-There is one system tensile allowable and one Figure 8 gate, not two — a second
-pull-out gate would count the same failure twice.
-
-Three things the tool does not do, on purpose and with the reason written down:
-bolt bending is omitted (no `M·c/I` anywhere) — §4.4.4 conditionally exempts
-close-tolerance/interference fits, and `Joint.ShearTransferCondition` now makes
-that determination explicit per joint (ASSUMED by default, VERIFIED when
-declared close-tolerance/interference, NotEvaluated rather than a silent wrong
-number when declared clearance/gapped); tapped-hole yield is not evaluated; and
-a flange stack of two different moduli is refused outright rather than answered
-with a frustum that does not apply to it.
-
-The one open item that could change a number you care about: pairing DABJ's rated
-loads with a UNRF NAS entry mismatches the thread area by ~8% — safe in the
-allowable, but it would push a sizing study toward a bigger bolt than you need.
