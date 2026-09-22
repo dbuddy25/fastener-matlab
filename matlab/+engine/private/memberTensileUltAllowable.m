@@ -23,8 +23,7 @@ function a = memberTensileUltAllowable(joint)
 %         FALLBACK. When ThreadedMember.RatedUltimateLoad is supplied it IS
 %         the allowable: EffUlt = RatedUltimateLoad, per NASA-STD-5020B
 %         §4.4.1 p26 ("based on the strength specified for that item rather
-%         than on thread-stripping analysis"). It was a lower-of CEILING
-%         until 2026-08-14; see the Nut case for why that was wrong.
+%         than on thread-stripping analysis").
 %       rated basis (no area available) — EffUlt = RatedUltimateLoad alone,
 %         per NASA-STD-5020B §4.4.1.
 %
@@ -121,14 +120,6 @@ switch joint.ThreadedMember.Type
         % rating of the nut" — which is satisfied automatically once the
         % rating IS the basis.
         %
-        % This used to compute Fsu·As and apply the rating as a lower-of
-        % CEILING, so a nut whose tested rating exceeded the computed area
-        % form reported the computed number — the very thread-stripping
-        % figure p26 says not to base the assessment on, and in the
-        % direction that costs margin. Changed 2026-08-14 on Dan's call
-        % ("use the rating of nut if available... comply with 5020");
-        % CONVENTIONS.md and TOOL_DIFFERENCES.md §1.1 updated to match.
-        %
         % A supplied rating therefore needs NO material data at all. Fsu is
         % required only for the fallback, when no rating was given. (The
         % YIELD side is untouched and still needs area + Fsy — a rating is
@@ -142,7 +133,7 @@ switch joint.ThreadedMember.Type
                 Fsu = joint.ThreadedMember.Material.Fsu;
                 if ~isnan(Fsu)
                     % Computed for COMPARISON only — never used as the
-                    % allowable now. Surfaced so a reviewer can see how far
+                    % allowable. Surfaced so a reviewer can see how far
                     % the spec value sits from the thread-shear estimate;
                     % a large gap either way is worth a second look at the
                     % engagement length or the rating itself.
@@ -202,9 +193,9 @@ switch joint.ThreadedMember.Type
         % shear engagement area times the parent's allowable shear stress —
         % so a specified area is honoured here and is the tier a
         % manufacturer-published area would enter through. It is not
-        % analyst input: no GUI control or workbook column sets it (see
-        % commit 0846e0e, which removed both because an area typed against
-        % the wrong bolt size could silently govern). computeInsertArea's
+        % analyst input: no GUI control or workbook column sets it, because
+        % an area typed against the wrong bolt size could silently govern.
+        % computeInsertArea's
         % own reason, when it cannot form an area, distinguishes "no insert
         % is catalogued for this thread size" from an
         % incomplete-but-catalogued configuration — see that helper's header.
@@ -351,16 +342,6 @@ function [As, areaSrc, reason] = computeInsertArea(joint)
 %     - Bolt.ThreadsPerInch is NaN/<=0: no pitch to form p.
 %     - Le - 1.125*p <= 0: the derived install-offset guard — refuses
 %       rather than emit a non-positive area.
-%
-%   Call graph:
-%       Precedents (calls)      resolveEngagementLength (private).
-%       Dependents (called by)  memberTensileUltAllowable (Insert case, this file).
-%       Tests                   tests/tThreadShear.m —
-%                               insertComputedAreaGovernsWhenUnspecified,
-%                               insertSuppliedAreaWinsOverCatalogueGeometry,
-%                               insertComputedAreaRatingStillCaps,
-%                               insertUncataloguedSizeVsIncompleteConfigRefusal,
-%                               insertComputedAreaGuardRefusesNonPositiveArea.
 
 arguments
     joint (1,1) model.Joint

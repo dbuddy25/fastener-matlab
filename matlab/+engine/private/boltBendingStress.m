@@ -42,17 +42,6 @@ function b = boltBendingStress(joint, Mbu)
 %       Basis      "body" | "minor" | "none"
 %       Note       string: the arithmetic, for the margin Detail.
 %       Reason     string: why not assessed ("" when Assessed).
-%
-%   Call graph:
-%       Precedents (calls)      none — reads model.Bolt / model.Joint
-%                               getters directly.
-%       Dependents (called by)  engine.marginInteraction.
-%       Tests                   tests/tDabjCase.m (the bending trio),
-%                               tests/tBoltAllowable.m (Ftu/geometry
-%                               unavailable paths).
-%
-%   Validation status/coverage: VALIDATION.md, Margin checks row 13b
-%   (hand-calc — 5020B prints no worked bending example).
 
 arguments
     joint (1,1) model.Joint

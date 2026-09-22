@@ -10,18 +10,7 @@ function tf = samePath(a, b)
 %
 %   SHARED by engine.runWorkbook's and engine.runBulk's outFile-vs-input
 %   guards — the one place this comparison lives, so the two entry points
-%   cannot drift (this consolidates what used to be a private copy local
-%   to runWorkbook.m).
-%
-%   Call graph:
-%       Precedents (calls)      (leaf) — no engine.* dependencies.
-%       Dependents (called by)  engine.runWorkbook, engine.runBulk.
-%       Tests                   tests/tWorkbook.m
-%                               workbookRefusesInPlaceOutput; tests/tExport.m
-%                               runBulkRefusesJointFileAsOutput,
-%                               runBulkRefusesElementsFileAsOutput,
-%                               runBulkRefusesSettingsFileAsOutput,
-%                               runBulkDistinctOutFileStillWorks.
+%   cannot drift.
 if isfile(a) && isfile(b)
     da = dir(a);
     db = dir(b);

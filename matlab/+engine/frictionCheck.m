@@ -68,16 +68,6 @@ function r = frictionCheck(joint)
 %       Severity   "" | "Warning"
 %       Method     the citation
 %       Detail     one line naming the value, the limit and the condition
-%
-%   Call graph:
-%       Precedents (calls)      none.
-%       Dependents (called by)  engine.analyze (Result.Warnings).
-%       Tests                   tests/tDabjCase.m — muAboveTheCeilingWarns,
-%                               muInTheBareMetalBandNamesTheCondition,
-%                               muAtOrBelowPointOneIsSilent,
-%                               ignoredSlipNeverWarnsAboutFriction.
-%
-%   Validation status/coverage: see COMPLIANCE.md (TFSR 14).
 
 arguments
     joint (1,1) model.Joint

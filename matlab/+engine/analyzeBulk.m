@@ -144,31 +144,6 @@ function T = analyzeBulk(jointLibrary, elements, factors)
 %       T   = engine.analyzeBulk(jl, el, factors);
 %       writetable(T, "margins.xlsx");
 %
-%   Call graph:
-%       Precedents (calls)      engine.loadCaseFromForces (per element),
-%                               engine.resolveForces (directly, in the
-%                               engine.jointPatternTotals, for joint-mode
-%                               pattern aggregation), engine.analyze
-%                               (per element).
-%       Dependents (called by)  engine.runBulk, engine.runWorkbook,
-%                               gui.BulkAnalysisPage (per-row path).
-%       Tests                   tests/tBulk.m
-%                               bulkRunsTemplateJointWithoutCrashing,
-%                               bulkJointSlipFromPatternAggregation,
-%                               bulkPatternIdSplitsAndNfCheck,
-%                               bulkHandlesMissingJoint,
-%                               bulkResultsTableShape,
-%                               bulkFailingInteractionVisibleButNeverGoverns,
-%                               bulkHandlesDuplicateJointName;
-%                               tests/tBulkParsers.m
-%                               analyzeBulkBlankJointNameMessage.
-%
-%   Validation status/coverage: VALIDATION.md's Structural/non-numeric
-%   table, rows "Bulk end-to-end" and "Bulk joint-slip pattern
-%   aggregation" — the latter pins the DABJ §9 joint-slip regression
-%   (−0.65, governing) through the pattern-aggregation path this function
-%   builds.
-
 arguments
     jointLibrary (1,:) struct
     elements     (1,:) struct

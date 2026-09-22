@@ -47,17 +47,6 @@ function r = resolveEngagementLength(joint)
 %              into its own Method/Detail (e.g. "Le = EngagementRatio*D =
 %              1.5*0.1900 = 0.2850 in (EngagementRatio overrides
 %              EngagementLength 0.3000 in)"); "" when Basis is "none"
-%
-%   Call graph:
-%       Precedents (calls)      (leaf) — model.Joint / model.ThreadedMember /
-%                               model.Bolt getters only.
-%       Dependents (called by)  memberTensileUltAllowable (private),
-%                               engine.marginBoltThreadShear,
-%                               engine.boltLengthCheck, engine.stiffness.
-%       Tests                   tests/tBoltLength.m — ratio-only,
-%                               length-only, both-set (ratio wins),
-%                               neither-set (NaN); tests/tBoltSizing.m —
-%                               two candidate sizes, one ratio, two Le.
 
 arguments
     joint (1,1) model.Joint

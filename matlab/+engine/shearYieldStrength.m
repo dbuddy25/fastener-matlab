@@ -15,20 +15,16 @@ function r = shearYieldStrength(material)
 %   cited as "Eq. 63" — always name the document.
 %     - Both NaN -> Fsy = NaN (the caller reports NotEvaluated).
 %
-%   WHERE THE EQUATION COMES FROM — corrected 2026-08-13. This function
-%   used to cite only "the von Mises (distortion-energy) yield criterion"
-%   as though 5020B printed no equation for it, and three callers stated
-%   that no equation number was claimed. NASA-STD-5020B DOES print it, as
+%   WHERE THE EQUATION COMES FROM. NASA-STD-5020B prints this relation as
 %   Eq. 63 on p66, Appendix A.8 ("Theoretical Treatment of Interaction
-%   Equations"), derived there from Eq. 61 and Eq. 62. Under CONVENTIONS.md's
+%   Equations"), derived there from Eq. 61 and Eq. 62. Per CONVENTIONS.md's
 %   document hierarchy — "Where 5020B provides the equation, cite 5020B" —
-%   citing prose while the standard prints the equation is exactly the
-%   failure the rule exists to catch. Found by the 2026-08-13 equation
-%   audit.
+%   citing prose in place of the standard's own printed equation number is
+%   the failure that rule exists to catch.
 %
 %   The REQUIREMENT to use a failure theory at all is separate, and both
-%   citations belong together. NASA-STD-5020B §4.4.2, p31 (NOT p30, as
-%   several call sites said): "Because shear yield strength is not a
+%   citations belong together. NASA-STD-5020B §4.4.2, p31: "Because shear
+%   yield strength is not a
 %   standard material property, when evaluating the margin of safety under
 %   yield design loads and performing combined loads analysis, the normal
 %   and shear components of stress should be transformed into principal
@@ -65,20 +61,6 @@ function r = shearYieldStrength(material)
 %       Basis    string for Detail/Method surfacing: says supplied vs
 %                "estimated as Fty/sqrt(3) (von Mises)" with the number,
 %                or why it is unavailable
-%
-%   Call graph:
-%       Precedents (calls)      model.Material — a leaf; no engine.*
-%                               dependencies.
-%       Dependents (called by)  engine.marginInsert, engine.marginNutStrength.
-%       Tests                   tests/tThreadShear.m —
-%                               shearYieldSuppliedAndDerived (direct,
-%                               supplied/derived/unavailable); exercised
-%                               indirectly by nutDerivedFsyFlagged and
-%                               insertAreaDerivedFsyFlagged.
-%
-%   Validation status/coverage: no dedicated VALIDATION.md row — the
-%   cross-check above is kept in full rather than pointed at a row that
-%   doesn't exist.
 
 arguments
     material (1,1) model.Material

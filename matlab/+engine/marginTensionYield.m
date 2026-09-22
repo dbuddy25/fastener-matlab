@@ -48,13 +48,12 @@ function r = marginTensionYield(joint, preload, designLoads)
 %   yielding occurs before separation, PtL is the limit tensile load,
 %   Pty-allow is the allowable tensile load of the material, ...". The
 %   system phrase there belongs to P'ty; the NEXT clause defines Pty-allow
-%   as "of the material", naming neither the bolt nor the system. This
-%   file cited that sentence as though it defined Pty-allow, which was a
-%   misquote (found 2026-08-13), and reading it the other way — "of the
-%   material" means the bolt — is equally unsupported. p13 is the text
-%   that settles it; p14 lists Pty-allow itself with NO owner named, and
-%   lists Ptu-allow the same way even though §4.4.1 proves that one is the
-%   system's. Silence in the symbol list is not evidence for the bolt.
+%   as "of the material", naming neither the bolt nor the system, and
+%   reading it the other way — "of the material" means the bolt — is
+%   equally unsupported. p13 is the text that settles it; p14 lists
+%   Pty-allow itself with NO owner named, and lists Ptu-allow the same way
+%   even though §4.4.1 proves that one is the system's. Silence in the
+%   symbol list is not evidence for the bolt.
 %
 %   §4.4.2 p29 ("The assessment for yield design loads will address all
 %   elements of the threaded fastening system...") is real but does NOT
@@ -80,15 +79,15 @@ function r = marginTensionYield(joint, preload, designLoads)
 %   engine.systemTensileYieldAllowable for both, and for why a spec-RATED
 %   nut or insert contributes no yield mode at all.
 %
-%   THE MINIMUM IS NOT THE SAME AS THE MINIMUM OVER THE PER-MODE ROWS, and
-%   that is the reason this had to move rather than being left to
-%   Result.WorstMargin. The per-mode member yield rows (engine.marginInsert,
-%   engine.marginNutStrength) divide by boltDesignLoad's Pb, which on the
-%   not-assured branch is PpMax + FF*FS*n*phi*PtL; Eq. 17 SUBTRACTS PpMax
-%   first and then divides by n*phi. The two forms are different functions
-%   of the same allowable, so no min() over the rows can reproduce Eq. 17's
-%   number. They do always agree in SIGN, which is why this correction
-%   moves magnitudes and attribution, not pass/fail verdicts.
+%   THE MINIMUM IS NOT THE SAME AS THE MINIMUM OVER THE PER-MODE ROWS. The
+%   per-mode member yield rows (engine.marginInsert, engine.marginNutStrength)
+%   divide by boltDesignLoad's Pb, which on the not-assured branch is
+%   PpMax + FF*FS*n*phi*PtL; Eq. 17 SUBTRACTS PpMax first and then divides
+%   by n*phi. The two forms are different functions of the same allowable,
+%   so no min() over the rows can reproduce Eq. 17's number — this margin
+%   must be computed here rather than derived from Result.WorstMargin. They
+%   do always agree in SIGN, so the difference is in magnitude and
+%   attribution, not pass/fail verdicts.
 %
 %   NotEvaluated (MS = NaN) when NO mode of the system can be assessed —
 %   the bolt has neither a rating nor the Eq. 18 inputs (Ptu_allow itself
@@ -115,40 +114,6 @@ function r = marginTensionYield(joint, preload, designLoads)
 %               evaluated) — mirrors engine.marginTensionUlt's field of the
 %               same purpose, so a caller can report the allowable without
 %               re-deriving it
-%
-%   Call graph:
-%       Precedents (calls)      engine.systemTensileYieldAllowable (which
-%                               calls boltTensileAllowable and
-%                               memberTensileYldAllowable),
-%                               separationBeforeRuptureGate (private
-%                               helper, +engine/private/ — SHARED with
-%                               engine.marginTensionUlt / engine.boltDesignLoad
-%                               / engine.marginBearingUnderHead),
-%                               engine.stiffness (wrapped in try/catch,
-%                               not-assured branch only).
-%       Dependents (called by)  engine.analyze.
-%       Tests                   tests/tDabjCase.m — boltYieldMarginMatchesDABJ
-%                               ("rated" basis, assured branch, DABJ §9
-%                               answer key, Eq. 15);
-%                               tests/tStiffness.m — boltYieldRuptureBranch
-%                               (not-assured branch, Eq. 16/17, hand-derived);
-%                               tests/tBoltAllowable.m —
-%                               ratedOnlyUsesSpecRatingEverywhere,
-%                               derivedOnlyUsesAtFtuAndEq18,
-%                               mixedBasisYieldUsesRatedUltimateNotAtFty,
-%                               unavailableFtyNaNLeavesYieldNotEvaluatedButUltimateFine
-%                               (Eq. 18 fallback + NotEvaluated paths, via
-%                               the shared boltTensileAllowable resolution;
-%                               all on gate-ASSURED fixtures, Eq. 15;
-%                               their Nut member carries neither a rating
-%                               nor an engagement length, so the system
-%                               minimum is bolt-only there by construction);
-%                               tests/tSystemAllowable.m — the system
-%                               allowable's own modes, and the hand-derived
-%                               member-governed Eq. 16/17 pin.
-%
-%   Validation status/coverage: see VALIDATION.md (Margin checks, row 2, 2r,
-%   plus the hand-derived member-governed system-yield row).
 
 arguments
     joint       (1,1) model.Joint
@@ -159,10 +124,9 @@ end
 % THE FASTENING SYSTEM's yield allowable, not the bolt's alone —
 % NASA-STD-5020B p30 defines Eq. 17's term as "the fastening SYSTEM'S
 % allowable yield tensile load", and §4.4.2 p29 scopes the yield assessment
-% to "all elements of the threaded fastening system". Exactly how
+% to "all elements of the threaded fastening system" — exactly how
 % engine.marginTensionUlt consumes engine.systemTensileAllowable in Eq. 6 /
-% Eq. 10; the bolt-only resolution this row used before is still in there,
-% as mode 1 of the minimum.
+% Eq. 10; the bolt-only resolution is mode 1 of this minimum.
 sys      = engine.systemTensileYieldAllowable(joint);
 PtyAllow = sys.PtyAllow;
 

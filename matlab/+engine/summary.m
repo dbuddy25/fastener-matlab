@@ -18,17 +18,8 @@ function T = summary(joint, loadCase, factors)
 %       c = validation.dabjSection9();
 %       T = engine.summary(c.Joint, c.LoadCase, c.Factors)
 %
-%   Call graph:
-%       Precedents (calls)      engine.preload — the SAME call engine.analyze
-%                               makes (no re-derivation), so this table's
-%                               preload band can never disagree with
-%                               analyze()'s.
-%       Dependents (called by)  report.singleJointReport.
-%       Tests                   tests/tSummary.m summaryBuildsTable,
-%                               summaryHasKeyInputs.
-%
-%   Validation status/coverage: VALIDATION.md's Structural/non-numeric
-%   table, row "Inputs summary table".
+%   engine.preload — the SAME call engine.analyze makes (no re-derivation),
+%   so this table's preload band can never disagree with analyze()'s.
 
 arguments
     joint    (1,1) model.Joint

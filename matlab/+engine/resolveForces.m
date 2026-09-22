@@ -18,28 +18,11 @@ function r = resolveForces(F, axis)
 %       Bending  RSS of the two transverse moments, in-lbf. Carried onto
 %                LoadCase.BoltBendingLimitMoment by
 %                engine.loadCaseFromForces and used for the
-%                NASA-STD-5020B Eq. 20/22 fbu term — no longer
-%                informational, and no longer discarded.
+%                NASA-STD-5020B Eq. 20/22 fbu term.
 %   Torsion (the moment ABOUT the bolt axis) is ignored.
 %
 %   For axis = Z:  Axial = FZ, Shear = hypot(FX,FY), Bending = hypot(MX,MY).
 %   Axis X and Y are analogous.
-%
-%   Call graph:
-%       Precedents (calls)      (leaf) — no engine.* dependencies.
-%       Dependents (called by)  engine.analyzeBulk (directly, in the local
-%                               groupTotals helper, for joint-mode pattern
-%                               totals), engine.loadCaseFromForces. NOT
-%                               called directly by gui pages — the
-%                               GUI reaches it only through
-%                               engine.loadCaseFromForces.
-%       Tests                   tests/tForces.m resolvesAlongZ,
-%                               resolvesAlongX, momentsToBending (the
-%                               MZ-ignored / hand-derived 3-4-5, 6-8-10
-%                               triangle checks).
-%
-%   Validation status/coverage: VALIDATION.md's Structural/non-numeric
-%   table, row "Bulk / force resolution".
 
 arguments
     F    (1,1) struct

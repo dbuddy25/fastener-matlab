@@ -75,43 +75,13 @@ function s = stiffness(joint)
 %             Returned so a caller needing "the span the bolt stretches
 %             over" takes it from here rather than re-deriving it — the
 %             thermal preload term (TM-106943 Eq. 10) needs exactly this
-%             span and used to recompute a washer-EXCLUSIVE one, which is
-%             the defect fixed 2026-08-13. Note Lc (below) is a DIFFERENT
-%             and legitimately shorter span: washers are rigid in the
-%             frustum, so they add bolt length without adding member
-%             compliance.
+%             span. Note Lc (below) is a DIFFERENT and legitimately shorter
+%             span: washers are rigid in the frustum, so they add bolt
+%             length without adding member compliance.
 %       Lc    frustum length actually used for kc, in (traceability —
 %             tFit for a nut joint, tFit + D/2 for a threaded-in joint)
 %       Method  string: the governing frustum forms used, incl. the
 %             h = D/2 assumption on the threaded-in branch
-%
-%   Call graph:
-%       Precedents (calls)      model.Joint, model.Bolt, model.Material,
-%                               resolveEngagementLength (private, level-3 L1
-%                               fallback only) — otherwise a leaf; no other
-%                               engine.* dependencies.
-%       Dependents (called by)  engine.preload, engine.boltDesignLoad,
-%                               engine.marginTensionUlt,
-%                               engine.marginTensionYield,
-%                               engine.marginBearingUnderHead. NOT
-%                               gui pages — the GUI's only engine
-%                               entry point is engine.analyze; its several
-%                               "engine.stiffness" mentions are tooltip
-%                               text, not calls.
-%       Tests                   tests/tStiffness.m —
-%                               stiffnessMatchesDABJ8b (DABJ Ex 8-b
-%                               Kb/Kc/Phi + traceability intermediates);
-%                               bodyLengthFallbackComputed (L1 levels 2/3);
-%                               threadedInMatchesDabjTable83 (both Table 8-3
-%                               rows, Kc + Lb); threadedInShortensGripAndDropsPoint4D
-%                               (branch selection vs the nut case);
-%                               threadedInThermalPreloadRuns (the path that
-%                               used to throw); mixedModulusReducesToUniform,
-%                               mixedModulusSplitInvariance,
-%                               mixedModulusBounded, mixedModulusMonotonic,
-%                               mixedModulusThermalPreloadAndAnalyzeRun.
-%
-%   Validation status/coverage: see VALIDATION.md (Stiffness, rows 1-4).
 
 arguments
     joint (1,1) model.Joint

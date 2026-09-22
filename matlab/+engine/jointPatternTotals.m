@@ -13,17 +13,17 @@ function [PtJ, PsJ] = jointPatternTotals(group, axis)
 %   SlipMode.Joint, and the ones engine.analyze REFUSES to proceed without
 %   (LoadCase.JointTensile/JointShearLimitLoad).
 %
-%   WHY THIS IS PUBLIC. It was a local helper inside engine.analyzeBulk,
-%   reachable from the batch path and nothing else — so the GUI's
-%   "Show in Single Joint Analysis" drill-down, which re-runs ONE element
-%   of a bulk row, could not reproduce that row: analyze threw on the
-%   missing joint-level loads and the button silently did nothing. A view
-%   that re-derived the totals itself would be the GUI doing analysis, so
-%   the aggregation moved here instead and both callers share it. This is
-%   the same extraction, for the same reason, as engine.applyTemperatures.
+%   WHY THIS IS PUBLIC. The GUI's "Show in Single Joint Analysis"
+%   drill-down re-runs ONE element of a bulk row and needs the same
+%   joint-level totals (LoadCase.JointTensile/JointShearLimitLoad)
+%   engine.analyzeBulk builds for SlipMode.Joint — engine.analyze refuses
+%   to proceed without them. A view that re-derived the totals itself
+%   would be the GUI doing analysis, so the aggregation lives here and
+%   both callers share it. This is the same extraction, for the same
+%   reason, as engine.applyTemperatures.
 %
-%   Moments are not summed, and that is a narrower statement than it used
-%   to be: transverse moments DO feed a real bending term per element
+%   Moments are not summed: transverse moments DO feed a real bending term
+%   per element
 %   (LoadCase.BoltBendingLimitMoment -> the Eq. 20/22 fbu), but summing
 %   them across a PATTERN is a different quantity that Eq. 84 does not
 %   define — that equation takes the resultant force only. So bending is
@@ -33,17 +33,6 @@ function [PtJ, PsJ] = jointPatternTotals(group, axis)
 %   group — struct array of the pattern's elements, each with Forces
 %           (FX/FY/FZ), ScaleFactor and Reversible.
 %   axis  — model.BoltAxis.
-%
-%   Call graph:
-%       Precedents (calls)      engine.resolveForces.
-%       Dependents (called by)  engine.analyzeBulk (joint-mode slip),
-%                               gui.BulkAnalysisPage (drill-down).
-%       Tests                   tests/tBulk.m
-%                               (bulkJointSlipFromPatternAggregation pins
-%                               the DABJ Sec. 9 number through this path).
-%
-%   Validation status/coverage: VALIDATION.md, joint-slip row — the totals
-%   reproduce the book's joint resultant (Solutions-22, option 1).
 
 arguments
     group (1,:) struct

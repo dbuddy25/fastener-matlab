@@ -19,8 +19,6 @@ function r = marginShearTearout(joint, loadCase, factors)
 %   The working equations are NASA TM-106943 (Chambers) Eq. 69-71:
 %       As   = 2 * t * (e - D/2)      (two shear planes hole -> edge, Eq. 70)
 %       Pult = Fsu * As               (tear-out allowable, Eq. 69)
-%   (These two were labelled the other way round until the 2026-08-13
-%   audit read TM-106943 p19: Eq. 69 is the allowable, Eq. 70 the area.)
 %       MS   = Pult / (FFU*FSU*V) - 1 (Eq. 71)
 %   evaluated for each flange layer that has CheckShearTearout = true AND
 %   a configured EdgeDistance. The reported margin is the WORST (minimum)
@@ -48,7 +46,7 @@ function r = marginShearTearout(joint, loadCase, factors)
 %   folds each member's As·Fsy into Tension-Yield. That covers TENSILE
 %   modes. Tear-out is shear-driven and falls through it entirely, so
 %   nothing else in the engine was assessing the clamped parts for yield
-%   under shear. Found by the 2026-08-14 margin review.
+%   under shear.
 %
 %   V = loadCase.BoltShearLimitLoad (most-loaded bolt), D =
 %   joint.Bolt.NominalDiameter, e = layer EdgeDistance (hole center to
@@ -67,25 +65,6 @@ function r = marginShearTearout(joint, loadCase, factors)
 %       Method  string: governing equation citation
 %       Detail  string: governing layer + its e/D (or the not-evaluated
 %               reason), with the e/D < 1.5 caution when applicable
-%
-%   Call graph:
-%       Precedents (calls)      engine.shearYieldStrength (for the §4.4.2
-%                               yield criterion — the same helper the nut
-%                               and insert rows use). Otherwise joint/model
-%                               getters, loadCase.BoltShearLimitLoad and
-%                               factors.
-%       Dependents (called by)  engine.analyze.
-%       Tests                   tests/tBearing.m —
-%                               shearTearoutHandDerived (two-layer
-%                               hand-derived MS pin);
-%                               tearoutCautionBelowValidity (e/D < 1.5
-%                               caution-flag pin);
-%                               tearoutYieldCriterionCanGovern,
-%                               tearoutYieldUsesDerivedFsyAndSaysSo,
-%                               tearoutSkipsYieldWithNoYieldData
-%                               (the §4.4.2 p29 yield criterion).
-%
-%   Validation status/coverage: see VALIDATION.md (Margin checks, row 4).
 
 arguments
     joint    (1,1) model.Joint

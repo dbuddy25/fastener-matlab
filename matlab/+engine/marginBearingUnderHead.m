@@ -28,7 +28,7 @@ function r = marginBearingUnderHead(joint, loadCase, factors, preload)
 %   here exactly as it does to engine.boltDesignLoad's design load:
 %
 %   CLAMPED branch (Fig. 8 gate NOT assured — rupture assumed, or the gate
-%   could not be assessed; TODAY'S behavior, unchanged):
+%   could not be assessed):
 %       Pb = Pp_max + n·phi·PtL           (NASA-STD-5020B Eq. 8)
 %   with n = joint.LoadingPlaneFactor, phi from engine.stiffness (5020B
 %   Eq. 9), and PtL = loadCase.BoltTensileLimitLoad.
@@ -42,23 +42,22 @@ function r = marginBearingUnderHead(joint, loadCase, factors, preload)
 %   formula below):
 %       Pb = PtL
 %
-%   DESIGN-LOAD NOTE (deliberate, UNCHANGED by the gate above): NASA-STD-
-%   5020B §4.4.5 is explicit that preload itself is never factored: "If
-%   rupture occurs before separation, preload also acts on the bolt and
-%   should be included when assessing the performance of the fastened
-%   joint. In this case, a factor of safety is not applied to preload."
-%   So on the CLAMPED branch, FF·FS multiplies only the EXTERNAL term —
+%   DESIGN-LOAD NOTE (applies regardless of which gate branch above
+%   governs): NASA-STD-5020B §4.4.5 is explicit that preload itself is
+%   never factored: "If rupture occurs before separation, preload also
+%   acts on the bolt and should be included when assessing the
+%   performance of the fastened joint. In this case, a factor of safety
+%   is not applied to preload." So on the CLAMPED branch, FF·FS multiplies
+%   only the EXTERNAL term —
 %       MS = Fbr·Abr / (PpMax + FF·FS·n·phi·PtL) - 1
 %   matching engine.boltDesignLoad's thread-check design load exactly (see
-%   that file for the same §4.4.5 reasoning). This SHRINKS the design-load
-%   denominator versus factoring the whole Pb (preload included), so
-%   margins on this branch are LESS conservative than before — that is the
-%   correct reading of the cited equation, not a relaxation of intent. The
-%   SEPARATED branch is unaffected: it has no preload term at all
-%   (Pb = PtL), so FF·FS·Pb was already §4.4.5-correct and is unchanged.
-%   engine.boltDesignLoad is still deliberately NOT called here (scope
-%   would otherwise drift in by accident); separationBeforeRuptureGate is
-%   reused directly instead.
+%   that file for the same §4.4.5 reasoning). This shrinks the design-load
+%   denominator versus factoring the whole Pb (preload included) — that is
+%   the correct reading of the cited equation, not a relaxation of intent.
+%   The SEPARATED branch has no preload term at all (Pb = PtL), so
+%   FF·FS·Pb is already §4.4.5-correct there. engine.boltDesignLoad is
+%   deliberately NOT called here (scope would otherwise drift in by
+%   accident); separationBeforeRuptureGate is reused directly instead.
 %
 %   Sides evaluated (each for BOTH criteria, ultimate Fbru with FFU*FSU
 %   and yield Fbry with FFY*FSY, using that side's flange material):
@@ -79,31 +78,6 @@ function r = marginBearingUnderHead(joint, loadCase, factors, preload)
 %       Method  string: governing equation citation
 %       Detail  string: which Fig. 8 gate branch produced Pb, then the
 %               governing side + criterion (or the not-evaluated reason)
-%
-%   Call graph:
-%       Precedents (calls)      engine.stiffness (wrapped in try/catch —
-%                               never allowed to crash this function),
-%                               separationBeforeRuptureGate (private
-%                               helper, +engine/private/ — SHARED with
-%                               engine.boltDesignLoad / engine.marginTensionUlt).
-%       Dependents (called by)  engine.analyze.
-%       Tests                   tests/tBearing.m —
-%                               bearingUnderHeadHandDerived (DABJ Ex 8-b
-%                               geometry, head-side hand-derived MS pin —
-%                               the Fig. 8 gate is ASSURED on this
-%                               fixture's own numbers, so Pb = PtL; see the
-%                               test's derivation comment for why);
-%                               bearingUnderHeadGateNotAssuredClampedLoad
-%                               (Fig. 8 gate NOT assured, hand-derived,
-%                               Pb = PpMax + n·phi·PtL — covers the
-%                               CLAMPED branch, which the fixture above no
-%                               longer exercises now that it is assured);
-%                               dabjSection9RegressionUnchanged (confirms
-%                               this row stays NotEvaluated on the §9
-%                               fixture — no HoleDiameter/frustum geometry
-%                               — and does not disturb the answer key).
-%
-%   Validation status/coverage: see VALIDATION.md (Margin checks, row 6).
 
 arguments
     joint    (1,1) model.Joint
@@ -156,8 +130,8 @@ if gate.Assessed && gate.Assured
     branchNote = "SEPARATED branch (Fig. 8 gate assured: " + gate.Trace + "): " + ...
         "Pb = PtL (no preload/n·phi — members carry no load once separated)";
 else
-    % CLAMPED branch (Fig. 8 gate NOT assured, or not assessable; TODAY'S
-    % behavior, unchanged): NASA-STD-5020B Eq. 8 — Pb = Pp_max + n·φ·PtL.
+    % CLAMPED branch (Fig. 8 gate NOT assured, or not assessable):
+    % NASA-STD-5020B Eq. 8 — Pb = Pp_max + n·φ·PtL.
     % Pb here is the (unfactored) bolt axial design load, kept for Detail
     % reporting; per §4.4.5 ("a factor of safety is not applied to
     % preload") the MS denominator factors only the external n·phi·PtL

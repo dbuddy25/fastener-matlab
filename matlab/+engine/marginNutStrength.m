@@ -37,8 +37,8 @@ function r = marginNutStrength(joint, loadCase, factors, preload)
 %       basic pitch diameter, tabulated in its Table VI (Eq. 80 is that
 %       section's MS form); this code deliberately does NOT use Eq. 81,
 %       computing instead from the actual nut material and engagement (a
-%       supplied rating still participates as a ceiling — see RATING AS A
-%       CEILING below). NASA-STD-5020B prints no thread-shear-area
+%       supplied rating still participates — see RATING IS THE ALLOWABLE
+%       below). NASA-STD-5020B prints no thread-shear-area
 %       equation. The area is ALWAYS the computed 0.75·pi·E·Le:
 %       joint.ThreadedMember.ShearEngagementArea is deliberately NOT read
 %       on the nut path, because §4.4.1 gives a nut a rated LOAD and
@@ -72,41 +72,23 @@ function r = marginNutStrength(joint, loadCase, factors, preload)
 %       n·phi (NASA-STD-5020B Eq. 6 principle). Detail names which branch
 %       produced the numbers actually used.
 %
-%       RATING AS A CEILING (NASA-STD-5020B §4.4.1 p27): "Nuts should be
-%       limited to the load rating of the nut." That sentence, on its own,
-%       is what supports the cap.
-%
-%       ⚠️ THE SECOND SENTENCE THIS USED TO CITE ARGUES SOMETHING STRONGER
-%       THAN THE CAP, and citing it here misread it (found 2026-08-13).
-%       §4.4.1 p26 reads: "Assessment of a procured item such as a nut or a
-%       threaded insert should be based on the strength specified for that
-%       item RATHER THAN on thread-stripping analysis. Such items can
-%       expand under load, reducing the thread engagement areas." Read
-%       plainly, that does not say "compute an area and cap it with the
-%       rating" — it says a procured nut's allowable IS its rating and the
-%       thread-stripping computation should not be the basis at all. This
-%       tool deliberately diverges: CONVENTIONS.md specifies a COMPUTED
-%       ultimate/yield pair with the rating as a ceiling, which keeps a
-%       yield criterion available (a rating carries no yield information)
-%       and degrades safely when no rating is supplied. The divergence is
-%       recorded in TOOL_DIFFERENCES.md §1.1. What is corrected here is the
-%       JUSTIFICATION: p26 is not evidence for the ceiling, it is the
-%       sentence the ceiling is a departure from. The dilation argument it
-%       makes — a computed engagement area is OPTIMISTIC — is real and is
-%       exactly why the cap is lower-of.
-%
-%       So a supplied joint.ThreadedMember.RatedUltimateLoad does not
-%       compete with the area form; it CAPS it:
-%           ultimate allowable = min(As·Fsu, RatedUltimateLoad)
-%       and Detail names which source governs. Lower-of means a stale or
-%       mismatched rating can only cost margin, never grant it. The
-%       ceiling applies to the ULTIMATE criterion only — the rating is an
-%       ultimate allowable; the yield criterion is a different limit state
-%       (onset of permanent deformation) the ultimate rating says nothing
-%       about, and with any factor set where FFY·FSY <= FFU·FSU a
-%       rating-capped yield criterion could never govern below the
-%       rating-capped ultimate anyway (R/PbYield − 1 >= R/Pb − 1). The
-%       choice is deliberate, not incidental.
+%       RATING IS THE ALLOWABLE, NOT A CEILING. NASA-STD-5020B §4.4.1 p26:
+%       "Assessment of a procured item such as a nut or a threaded insert
+%       should be based on the strength specified for that item rather than
+%       on thread-stripping analysis. Such items can expand under load,
+%       reducing the thread engagement areas." A supplied
+%       joint.ThreadedMember.RatedUltimateLoad therefore REPLACES the
+%       computed Fsu·As form:
+%           ultimate allowable = rating, when supplied, else As·Fsu
+%       and Detail names which source governs (the computed form is carried
+%       alongside for comparison when both exist — CONVENTIONS.md,
+%       TOOL_DIFFERENCES.md §1.1). The dilation p26 describes — a computed
+%       engagement area is optimistic — is exactly why a supplied rating
+%       governs rather than merely bounding the computed value. This
+%       applies to the ULTIMATE criterion only — the rating is an ultimate
+%       allowable; the yield criterion is a different limit state (onset of
+%       permanent deformation) a rating carries no information about, so it
+%       always needs the computed area and Fsy.
 %
 %   (2) FLAT SPEC-RATED fallback (runs only when NO area is available —
 %       PitchDiameter and the resolved Le (via resolveEngagementLength) not
@@ -115,10 +97,7 @@ function r = marginNutStrength(joint, loadCase, factors, preload)
 %       NASA-STD-5020B §4.4.1 (nut limited to its load rating):
 %           MS = RatedUltimateLoad / Pb − 1    (TM-106943 Eq. 65 MS form)
 %       ULTIMATE-ONLY — a rating carries no yield information, so no yield
-%       criterion is formed on this path (Detail says so). DABJ §9
-%       exercises this basis (RatedUltimateLoad = 15,200 lbf, no area); see
-%       VALIDATION.md's DABJ §9 + Phase 3.3 interplay note for why that
-%       fixture still stays NotEvaluated.
+%       criterion is formed on this path (Detail says so).
 %
 %   In both bases the design bolt loads come from engine.boltDesignLoad
 %   (NASA-STD-5020B Eq. 8 form). Same thread-family design-load convention
@@ -162,41 +141,19 @@ function r = marginNutStrength(joint, loadCase, factors, preload)
 %                 loads, because either criterion may be the one that
 %                 governed and a reader needs to see why the other did not.
 %
-%   Call graph:
-%       Precedents (calls)      engine.boltDesignLoad, engine.shearYieldStrength,
-%                               memberTensileUltAllowable (private).
-%       Dependents (called by)  engine.analyze.
-%       Tests                   tests/tThreadShear.m —
-%                               nutStrengthHandDerived, nutYieldGovernsHandDerived,
-%                               nutSuppliedAreaIsIgnored,
-%                               nutRatingCeilingGoverns, nutRatingNotLimiting,
-%                               nutRatingOnlyFallback, nutDerivedFsyFlagged
-%                               (area/yield/ceiling pins);
-%                               dabjNutRatingFallbackStaysNotEvaluated
-%                               (DABJ §9 regression guard, direct call);
-%                               dabjSection9RegressionUnchanged (§9 answer
-%                               key unchanged, via engine.analyze).
+%   YIELD CRITERION SCOPE. TM-106943 Eq. 80 (p24) scopes its own
+%   thread-shear modes to "the margin of safety ... for ultimate strength
+%   only, to determine the limiting mode of failure" — no yield margin is
+%   asked for. NASA-STD-5020B §4.4.2 (p29) separately requires the yield
+%   assessment to "address all elements of the threaded fastening system,"
+%   but that is discharged by engine.systemTensileYieldAllowable, which
+%   folds this member's As·Fsy into the Tension-Yield row's Pty_allow.
 %
-%   Validation status/coverage: see VALIDATION.md (Margin checks, row 8).
-
-%
-%   ⚠️ THE YIELD CRITERION IS SUPPLEMENTAL TO BOTH DOCUMENTS, and the
-%   margin review (2026-08-14) established that it should say so. TM-106943
-%   Eq. 80, p24, scopes its own thread-shear modes explicitly: "The margin
-%   of safety should be calculated for all three modes of failure, FOR
-%   ULTIMATE STRENGTH ONLY, to determine the limiting mode of failure." So
-%   TM does not ask for a yield margin on this row. NASA-STD-5020B §4.4.2
-%   p29 separately requires the yield assessment to "address all elements
-%   of the threaded fastening system" — but that obligation is discharged
-%   by engine.systemTensileYieldAllowable, which folds this member's
-%   As·Fsy into the Tension-Yield row's Pty_allow.
-%
-%   This row's yield criterion is therefore EXTRA: neither TM's method nor
-%   5020B's requirement, but per-mode visibility that both allow and
-%   neither asks for. It is kept because a governing yield mode is worth
-%   naming rather than leaving buried inside a system minimum — and it is
-%   labelled here so nobody mistakes it for TM's. engine.marginTappedParentThread
-%   is the consistent one: ultimate only, exactly as Eq. 80 says.
+%   This row's yield criterion is therefore supplemental to both documents
+%   — neither TM's method nor 5020B's requirement — kept because a
+%   governing yield mode is worth naming rather than left buried inside a
+%   system minimum. engine.marginTappedParentThread is the consistent one:
+%   ultimate only, exactly as Eq. 80 says.
 arguments
     joint    (1,1) model.Joint
     loadCase (1,1) model.LoadCase
@@ -280,17 +237,16 @@ Fsu = nut.Fsu;                            % nut ultimate shear strength, psi
 sy  = engine.shearYieldStrength(nut);     % supplied Fsy, or Fty/sqrt(3) von Mises estimate
 
 % WHICH MATERIAL DATA IS ACTUALLY REQUIRED depends on whether a rating was
-% supplied, because since 2026-08-14 the rating IS the ultimate allowable
-% rather than a ceiling on a computed one (NASA-STD-5020B §4.4.1 p26 — see
+% supplied, because the rating IS the ultimate allowable rather than a
+% ceiling on a computed one (NASA-STD-5020B §4.4.1 p26 — see
 % memberTensileUltAllowable):
 %   ULTIMATE  needs the rating, OR the computed form's Fsu. Not both.
 %   YIELD     always needs Fsy (or Fty to estimate it) — a rating is an
 %             ultimate quantity and says nothing about the onset of
 %             permanent deformation.
-% So a rated nut with no material properties at all still gets an ultimate
-% margin and reports the yield side as unassessable, which is strictly more
-% than the old rule gave (it refused both). What is NOT allowed is silence:
-% whichever criterion cannot be formed is named in Detail.
+% A rated nut with no material properties at all still gets an ultimate
+% margin and reports the yield side as unassessable. What is not allowed is
+% silence: whichever criterion cannot be formed is named in Detail.
 if ~ua.Assessed && isnan(sy.Fsy)
     r = notEval(methodArea, ...
         "Not evaluated: " + ua.Reason + "; and no yield criterion either " + ...
@@ -347,9 +303,9 @@ MSy = allowYld / d.PbYield - 1;
 
 % Worst criterion governs (marginBearing shape) — named in Detail.
 %
-% MSy CAN BE NaN and must not swallow a valid ultimate. Since the rating
-% became the ultimate basis, a rated nut with no Fsy (or no area to apply it
-% to) has an assessable ULTIMATE and no yield criterion at all. A bare
+% MSy CAN BE NaN and must not swallow a valid ultimate. Because the rating
+% can be the ultimate basis, a rated nut with no Fsy (or no area to apply it
+% to) can have an assessable ULTIMATE with no yield criterion at all. A bare
 % `MSu <= MSy` comparison is false against NaN, so it would fall to the else
 % branch and report the whole row NotEvaluated — throwing away a margin the
 % standard says we have. Take the ultimate alone in that case and say so.

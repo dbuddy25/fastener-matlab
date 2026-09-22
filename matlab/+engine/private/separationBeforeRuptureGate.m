@@ -4,7 +4,7 @@ function g = separationBeforeRuptureGate(joint, preload)
 %   implementation of the separation-before-rupture decision tree, shared
 %   by engine.marginTensionUlt (which reports it as the Tension-Ultimate /
 %   Separation-before-rupture rows) and engine.boltDesignLoad (which uses
-%   it to choose the Phase 3.3 thread-check design-load form) — one
+%   it to choose the thread-check design-load form) — one
 %   evaluation of the gate, so the tension row and the four thread rows
 %   can never disagree about which branch applies.
 %
@@ -66,28 +66,6 @@ function g = separationBeforeRuptureGate(joint, preload)
 %       Trace           string: condition-by-condition trace (the assured
 %                       description, or the failing-condition list, or the
 %                       not-assessed reason)
-%
-%   Call graph:
-%       Precedents (calls)      engine.systemTensileAllowable.
-%       Dependents (called by)  engine.marginTensionUlt, engine.boltDesignLoad,
-%                               engine.marginBearingUnderHead.
-%       Tests                   tests/tSystemAllowable.m — weakNutFlipsFig8Gate
-%                               (system vs. bolt Ptu_allow flips Assured);
-%                               tests/tStiffness.m — tensionRuptureBranch,
-%                               boltYieldRuptureBranch (preload condition
-%                               fails -> not Assured, ultimate + yield sides);
-%                               edgeDistanceVerifiedAssuresGate,
-%                               edgeDistanceVerifiedFailingBreaksGate,
-%                               edgeDistanceUnknownIsAssumedNotVerified (the
-%                               e/D condition itself: verified pass, verified
-%                               fail, unknown-so-assumed);
-%                               tests/tDabjCase.m — tensionUltMarginMatchesDABJ,
-%                               dabjAnswerKeyUnchanged (DABJ §9, all conditions
-%                               hold -> Assured) — all exercised indirectly
-%                               through the calling margin functions; no test
-%                               calls this private helper directly.
-%
-%   Validation status/coverage: see VALIDATION.md (Margin checks, row 12).
 
 arguments
     joint   (1,1) model.Joint
@@ -106,26 +84,18 @@ end
 % spec rating is unset, so PtuAllow is NaN only if NO tensile mode of the
 % system — bolt included — can be assessed at all.
 % Ptu_allow HERE IS THE FASTENING SYSTEM'S, and that is SETTLED — do not
-% "correct" it to the bolt's. NASA-STD-5020B p63, the sentence closing
-% A.5's derivation, is explicit about what Figure 8's threshold symbol
-% means:
-%   "Figure 8 states the criterion that dp/de > 0.25 to draw the
-%    conclusion that a joint would separate before THE FASTENING SYSTEM
-%    RUPTURES when the maximum preload is no greater than 85 percent of
-%    THE FASTENING SYSTEM'S ALLOWABLE ULTIMATE TENSILE LOAD."
-% Corroborated on p61: Figure 8 "allows engineers to quickly recognize
-% designs that clearly would separate under applied tensile load before
-% THE FASTENING SYSTEM ruptures", and A.5's own instruction for measuring
-% dp/de says to test the bolt with its mating internally threaded part
-% "in case the hardware combination leads to THREAD STRIPPING as the mode
-% of failure" — so nut stripping is a rupture mode this gate screens for,
-% not one it ignores.
+% "correct" it to the bolt's. NASA-STD-5020B p63 states the criterion in
+% terms of "THE FASTENING SYSTEM'S ALLOWABLE ULTIMATE TENSILE LOAD",
+% corroborated by p61 (recognizing designs that separate before "THE
+% FASTENING SYSTEM ruptures") and by A.5's instruction to test dp/de with
+% the mating internally threaded part "in case the hardware combination
+% leads to THREAD STRIPPING" — so nut stripping is a rupture mode this
+% gate screens for, not one it ignores.
 %
 % p62's "75/85 percent of THE BOLT'S ultimate tensile strength" describes
-% the specific FE study behind the figure (Figure 10: a single A-286 bolt
-% in aluminium, where bolt strength WAS system strength). p63 then states
-% the general criterion in system terms. A 2026-08-13 audit read p62 and
-% stopped there, and briefly concluded this line was wrong; it is not.
+% the specific FE study behind the figure (a single A-286 bolt in
+% aluminium, where bolt strength WAS system strength); p63 then states the
+% general criterion in system terms.
 sys = engine.systemTensileAllowable(joint);
 PtuAllow = sys.PtuAllow;
 if isnan(PtuAllow)

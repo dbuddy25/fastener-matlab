@@ -29,14 +29,6 @@ function s = eqInput(symbol, value, units, source)
 %   breakdown named in Source. Recursing would restate the design-loads and
 %   preload panels inside all fifteen margin rows.
 %
-%   Call graph:
-%       Precedents (calls)      (leaf).
-%       Dependents (called by)  engine.marginSeparation,
-%                               engine.marginNutStrength, engine.analyze
-%                               (the entry() default), engine.Result (the
-%                               empty Margins prototype).
-%       Tests                   tests/tEqInput.m
-%
 %   Example:
 %       engine.eqInput("PpMin", 6469.75, "lbf", "engine.preload (5020B Eq. 2)")
 

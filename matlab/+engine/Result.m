@@ -137,30 +137,6 @@ classdef Result
     %   row) — report.singleJointReport and the GUI read r.Warnings
     %   directly, never through asTable().
     %
-    %   Call graph:
-    %       Precedents (calls)      (leaf).
-    %       Dependents (called by)  engine.analyze (the only constructor
-    %                               call site).
-    %       Tests                   no dedicated tests/tResult.m —
-    %                               exercised via tests/tDabjCase.m
-    %                               analyzeReproducesAllDABJMargins,
-    %                               tests/tSystemAllowable.m
-    %                               dabjAnswerKeyUnchanged, tests/tBearing.m
-    %                               dabjSection9RegressionUnchanged,
-    %                               tests/tCaseIO.m caseRoundTripsLossless,
-    %                               tests/tBulk.m
-    %                               bulkFailingInteractionVisibleButNeverGoverns,
-    %                               tests/tThreadShear.m
-    %                               dabjNutRatingFallbackStaysNotEvaluated /
-    %                               dabjSection9RegressionUnchanged (the
-    %                               same fixtures that exercise
-    %                               engine.analyze, since Result is only
-    %                               ever built there).
-    %
-    %   Validation status/coverage: VALIDATION.md's Structural/non-numeric
-    %   table, row "Solver `analyze()` + `Result` (15-row)" — shared with
-    %   engine.analyze; there is no row for Result in isolation.
-
     properties
         JointName      (1,1) string = ""
         CaseName       (1,1) string = ""
@@ -204,10 +180,9 @@ classdef Result
         % TRUE for every row but one — see engine.analyze's SUPPLEMENTAL
         % note. Bolt-thread shear is the exception: §4.7.4 handles thread
         % stripping by design rule, not by a computed margin, and 5020B
-        % prints no thread-shear-area equation anywhere. It became far more
-        % likely to govern when its area was corrected to TM Eq. 63 as
-        % printed, so a report naming it needs to say it sits outside the
-        % standard — otherwise a reader may redesign to satisfy a
+        % prints no thread-shear-area equation anywhere. A report naming it
+        % needs to say it sits outside the standard — otherwise a reader
+        % may redesign to satisfy a
         % requirement that does not exist, or rest a compliance statement
         % on a check 5020B never levied.
         %

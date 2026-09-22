@@ -57,16 +57,6 @@ function r = fittingFactorCheck(joint, factors)
 %       Method     the citation
 %       Detail     one line naming the value, the threshold and the
 %                  section to review
-%
-%   Call graph:
-%       Precedents (calls)      none.
-%       Dependents (called by)  engine.analyze (Result.Warnings).
-%       Tests                   tests/tDabjCase.m —
-%                               separationCriticalWithLowFittingFactorWarns,
-%                               separationCriticalAtOnePointOneFiveIsSilent,
-%                               nonSeparationCriticalNeverWarnsOnFittingFactor.
-%
-%   Validation status/coverage: see COMPLIANCE.md (TFSR 4 / §4.2.2).
 
 arguments
     joint   (1,1) model.Joint

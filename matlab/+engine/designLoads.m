@@ -14,24 +14,11 @@ function d = designLoads(loadCase, factors)
 %       Pty   design yield tension       = FSY  * FFY  * PtL
 %       Psu   design ultimate shear      = FSU  * FFU  * PsL
 %       Psep  separation load            = FSSep* FFSep* PtL
-%   where PtL = loadCase.BoltTensileLimitLoad and
-%         PsL = loadCase.BoltShearLimitLoad (most-loaded bolt).
+%       Mbu   design ultimate bending moment (in-lbf) = FSU * FFU * MbL
+%   where PtL = loadCase.BoltTensileLimitLoad,
+%         PsL = loadCase.BoltShearLimitLoad (most-loaded bolt), and
+%         MbL = loadCase.BoltBendingLimitMoment.
 %
-%   Validated against the DABJ Section 9 class problem (p. 9-6, via
-%   validation.dabjSection9): Ptu 9,000 / Pty 6,990 / Psu 2,510 /
-%   Psep 5,590 lbf (book-rounded; exact 8,999.9 / 6,987.5 / 2,511.6 / 5,590).
-%
-%   Call graph:
-%       Precedents (calls)      model.LoadCase, model.Factors — a leaf; no
-%                               engine.* dependencies.
-%       Dependents (called by)  engine.analyze.
-%       Tests                   tests/tDabjCase.m — designLoadsMatchDABJ.
-%
-%   Validation status/coverage: no dedicated VALIDATION.md row (Ptu/Pty/
-%   Psu/Psep are exercised as inputs to the Margin-checks rows 1/2/3/10
-%   rather than as a named feature of their own) — the DABJ §9 numbers
-%   above are kept in full rather than pointed at a row that doesn't exist.
-
 arguments
     loadCase (1,1) model.LoadCase
     factors  (1,1) model.Factors
@@ -45,12 +32,12 @@ d = struct( ...
     "Psep", factors.FSSep * factors.FFSep * loadCase.BoltTensileLimitLoad, ...  % NASA-STD-5020B separation load (FSSep*FFSep*PtL)
     "Mbu",  factors.FSU   * factors.FFU   * loadCase.BoltBendingLimitMoment);  % design ultimate bending MOMENT, IN-LBF (FSU*FFU*MbL)
 
-% Mbu IS IN-LBF, not lbf -- the only field here that is not a force. It
+% Mbu is in in-lbf, not lbf -- the only field here that is not a force. It
 % takes the same FSU*FFU pair as Ptu and Psu because bending enters the
-% ULTIMATE interaction criterion (NASA-STD-5020B Eq. 20/22) alongside them,
+% ultimate interaction criterion (NASA-STD-5020B Eq. 20/22) alongside them,
 % and 5020B defines fbu as "the design ultimate bending stress".
 %
-% The MOMENT stops here; the STRESS fbu does not belong in this function.
+% The moment stops here; the stress fbu does not belong in this function.
 % fbu = 32*Mbu/(pi*d^3) needs a bolt diameter, and this function takes only
 % a LoadCase and Factors -- deliberately, since its whole job is applying
 % FS*FF to limit loads. engine.marginInteraction owns the geometry step

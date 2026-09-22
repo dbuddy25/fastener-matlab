@@ -6,50 +6,43 @@ function r = marginInsertInternal(joint, loadCase, factors, preload)
 %   engages it. Only evaluated when
 %   joint.ThreadedMember.Type == Insert; otherwise MS = NaN.
 %
-%   THE STANDARD NAMES TWO, AND THEY ARE DIFFERENT FAILURES (§4.4.1, p27):
-%     "Many threaded inserts have two allowable tensile loads that should
-%      be considered: the minimum allowed tensile load capability of the
-%      insert internal threads, and the minimum allowed tensile load for
-%      pullout of the insert from the parent material. One or both may be
-%      provided in the insert specification (or the procurement
-%      specification). The lower value should be used for strength
-%      analysis."
-%   This function is the FIRST. engine.marginInsert is the second
-%   (pull-out). Each carries its own row, and the lower governs through
-%   engine.analyze's WorstMargin — which is exactly "the lower value should
-%   be used" without either mode being hidden inside the other.
+%   TWO DIFFERENT ALLOWABLES (§4.4.1 p27): an insert can have both a
+%   minimum tensile load capability of its own internal threads and a
+%   minimum tensile load for pull-out from the parent material, and "the
+%   lower value should be used for strength analysis." This function is the
+%   first (internal-thread). engine.marginInsert is the second (pull-out).
+%   Each carries its own row, and the lower governs through engine.analyze's
+%   WorstMargin — exactly what the standard directs, without either mode
+%   being hidden inside the other.
 %
-%   IT IS A SPECIFIED VALUE, NEVER A COMPUTED ONE. §4.4.1 p26:
-%     "Assessment of a procured item such as a nut or a threaded insert
-%      should be based on the strength specified for that item rather than
-%      on thread-stripping analysis. Such items can expand under load,
-%      reducing the thread engagement areas."
-%   So this row reads ThreadedMember.RatedUltimateLoad — the manufacturer's
-%   or procurement specification's value — and computes NO thread-shear
-%   area for the insert's own threads. With no rating supplied there is
-%   nothing to check and the row is NotEvaluated, which is the honest
-%   outcome: the standard says the value should come from the spec, and the
-%   tool will not invent one.
+%   SPECIFIED, NEVER COMPUTED. §4.4.1 p26 directs that assessment of a
+%   procured item such as an insert "should be based on the strength
+%   specified for that item rather than on thread-stripping analysis"
+%   (such items can expand under load, reducing the thread engagement
+%   areas). So this row reads ThreadedMember.RatedUltimateLoad — the
+%   manufacturer's or procurement specification's value — and computes no
+%   thread-shear area for the insert's own threads. With no rating supplied
+%   there is nothing to check and the row is NotEvaluated: the standard
+%   says the value should come from the spec, and the tool will not invent
+%   one.
 %
-%   EXPECT THIS ROW TO READ NotEvaluated ON HELICAL WIRE INSERTS, and do
-%   NOT "fix" it. Reviewed with Dan 2026-08-14: the internal-thread
-%   allowable is simply not published for a wire insert — the wire engages
-%   over the full length and the parent gives out first, so it is not the
-%   governing mode. NASM33537 carries geometry only, this project's
-%   library carries no rating field, and Dan's own spreadsheet has none
-%   either. §4.4.1 anticipates exactly this: "One OR BOTH may be provided
-%   in the insert specification." Deriving a number here to make the row
-%   non-blank would violate p26 outright.
+%   EXPECT THIS ROW TO READ NotEvaluated ON HELICAL WIRE INSERTS — that is
+%   not a defect. The internal-thread allowable is simply not published for
+%   a wire insert: the wire engages over the full length and the parent
+%   gives out first, so it is not the governing mode, and no rating field
+%   exists to fall back on. §4.4.1 anticipates this directly — "one or both
+%   may be provided in the insert specification" — so deriving a number
+%   here to make the row non-blank would violate p26 outright.
 %
 %   The row still earns its place: KEY-LOCKED inserts (MIL-I-45914A, the
 %   source of TM-106943's Table IV areas) do publish an internal-thread
 %   rating, so this check is live for that product even though it is not
 %   for Heli-Coils.
 %
-%   ⚠️ DO NOT enter Heli-Coil TB 68-2 tensile-strength numbers here. Those
-%   are PULL-OUT strength — the quantity engine.marginInsert computes from
-%   the parent — and filing them under the internal-thread heading is the
-%   exact mix-up the §4.4.1 row swap (7f78ade) corrected.
+%   DO NOT enter Heli-Coil TB 68-2 tensile-strength numbers here — those
+%   are PULL-OUT strength (engine.marginInsert's quantity, computed from
+%   the parent), and filing them under the internal-thread heading would be
+%   exactly the mix-up §4.4.1's two-allowable split exists to prevent.
 %
 %   ULTIMATE ONLY, deliberately. A specification rating is an ultimate
 %   quantity; §4.4.2 requires yield design loads but supplies no yield
@@ -68,15 +61,6 @@ function r = marginInsertInternal(joint, loadCase, factors, preload)
 %   Returned struct fields (same shape as engine.marginInsert, so both
 %   insert rows are interchangeable to a caller):
 %       MS, Method, Detail, Rating, Pb, PbYield, As, Pult, AllowYld
-%
-%   Call graph:
-%       Precedents (calls)      engine.boltDesignLoad.
-%       Dependents (called by)  engine.analyze ("Insert internal-thread").
-%       Tests                   tests/tThreadShear.m (the insert block).
-%
-%   Validation status/coverage: VALIDATION.md, Margin checks row 9 — the
-%   arithmetic is one division; what is worth checking is that the right
-%   allowable lands on the right row.
 
 arguments
     joint    (1,1) model.Joint

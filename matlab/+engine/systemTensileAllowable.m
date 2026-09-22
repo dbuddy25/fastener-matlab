@@ -37,16 +37,14 @@ function s = systemTensileAllowable(joint)
 %   ensure the minimum number of engaged complete threads such that the
 %   fastener would fail in tension before threads would strip."
 %
-%   THAT EXCLUSION MATTERS AND THIS HEADER USED TO OMIT IT (quoting from
-%   "should be selected..." onward, found 2026-08-13). §4.7.4's design
-%   rule covers TAPPED HOLES only, so it cannot on its own justify leaving
-%   bolt external-thread shear out of the minimum for a nut or insert
-%   joint. The conclusion survives on a different sentence, which this
-%   header also cites — §4.4.1 p26: assessment of a procured nut or insert
-%   "should be based on the strength specified for that item rather than
-%   on thread-stripping analysis". So: tapped holes are covered by §4.7.4,
-%   nuts and inserts by §4.4.1 p26, and the exclusion holds for both — but
-%   by two different routes, not one.
+%   THAT EXCLUSION MATTERS. §4.7.4's design rule covers TAPPED HOLES only,
+%   so it cannot on its own justify leaving bolt external-thread shear out
+%   of the minimum for a nut or insert joint. The conclusion survives on a
+%   different sentence — §4.4.1 p26: assessment of a procured nut or
+%   insert "should be based on the strength specified for that item
+%   rather than on thread-stripping analysis". So: tapped holes are
+%   covered by §4.7.4, nuts and inserts by §4.4.1 p26, and the exclusion
+%   holds for both — but by two different routes, not one.
 %
 %   Combined with §4.4.1 directing spec ratings for procured items, and the fact
 %   that 5020B prints no thread-shear-area equation anywhere, the standard
@@ -72,25 +70,6 @@ function s = systemTensileAllowable(joint)
 %     Complete      logical: true only if EVERY applicable mode was assessed
 %     Note          one-line trace for Detail/Decision strings — names the
 %                   governing mode and flags an incomplete assessment
-%
-%   Call graph:
-%       Precedents (calls)      boltTensileAllowable, memberTensileUltAllowable
-%                               (both private helpers, +engine/private/).
-%       Dependents (called by)  separationBeforeRuptureGate (private helper).
-%       Tests                   tests/tSystemAllowable.m —
-%                               dabjSystemIsBoltGoverned / dabjAnswerKeyUnchanged
-%                               (DABJ §9, bolt governs, COMPLETE),
-%                               nutAreaGovernsSystem, nutRatingCapsSystem,
-%                               insertGovernsSystem, tappedParentGovernsSystem
-%                               (each member mode governing in turn),
-%                               incompleteAssessmentFlagged (unassessable mode
-%                               -> Complete=false, optimistic minimum reported),
-%                               areaWithoutFsuIsNotSilentlyRated,
-%                               noBoltRatingFallsBackToDerivedAllowable,
-%                               noAllowableAtAllStaysNotEvaluated.
-%
-%   Validation status/coverage: see VALIDATION.md (Margin checks, rows 1, 1r, 12
-%   consume this as an input; no dedicated row of its own).
 
 arguments
     joint (1,1) model.Joint

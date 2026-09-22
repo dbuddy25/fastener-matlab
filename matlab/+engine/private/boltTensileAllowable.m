@@ -62,26 +62,6 @@ function a = boltTensileAllowable(joint)
 %             Reason    string: why not assessed ("" when Assessed)
 %     Yld   struct — the bolt yield tensile allowable, same shape:
 %             Value, Basis, Assessed, Note, Reason
-%
-%   Call graph:
-%       Precedents (calls)      (leaf — model.Joint fields only, no
-%                               engine.* / private-helper dependencies).
-%       Dependents (called by)  engine.marginTensionYield, engine.marginInteraction,
-%                               engine.preloadWatchdog, engine.systemTensileAllowable.
-%       Tests                   tests/tBoltAllowable.m —
-%                               ratedOnlyUsesSpecRatingEverywhere (rated basis,
-%                               both Ult/Yld); derivedOnlyUsesAtFtuAndEq18
-%                               (At*Ftu + Eq. 18 fallback); mixedBasisYieldUsesRatedUltimateNotAtFty
-%                               (rated ultimate + derived yield — Eq. 18 must
-%                               use the RATED ultimate, not At*Fty);
-%                               unavailableAtNaNIsNotEvaluatedNotThrown,
-%                               unavailableFtuNaNIsNotEvaluatedNotThrown,
-%                               unavailableFtyNaNLeavesYieldNotEvaluatedButUltimateFine
-%                               (missing-input NotEvaluated paths, no throw).
-%
-%   Validation status/coverage: no dedicated VALIDATION.md row — exercised as
-%   an input to Margin-checks rows 1/1r/2/7/8/9/12 (each row's Ptu_allow/
-%   Pty_allow figure is this function's output on that fixture).
 
 arguments
     joint (1,1) model.Joint

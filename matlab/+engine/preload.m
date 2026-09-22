@@ -31,9 +31,7 @@ function p = preload(joint)
 %   separation-critical the two are identical, so the pair only diverges
 %   where §4.3.1 says it should. Returning both, rather than switching on
 %   a caller-supplied flag, keeps each margin's choice visible at the
-%   point of use. Before 2026-08-13 slip received PpMin, which fed it the
-%   Eq. 4 value on separation-critical joints — conservative (~14%% low on
-%   slip capacity at Γ = 0.25, nf = 4) but not what §4.3.1 assigns.
+%   point of use.
 %
 %   The √nf is statistical, and Appendix A.2's rationale is why the split
 %   is by analysis: slip resists on the SUMMED friction of all nf
@@ -55,15 +53,10 @@ function p = preload(joint)
 %     DirectPreload — nominal preload specified directly:
 %         PpiMax = (1 + Γ)·Pnom,   PpiMin = (1 - Γ)·Pnom
 %
-%   WASHERS ARE IN THE THERMAL SUM (corrected 2026-08-13). They are rigid
-%   in the FRUSTUM — kc legitimately spans the flange stack alone — but they
-%   are not thermally absent: they sit in the clamped stack, carry the clamp
-%   load, and expand with their own CTE. Dropping them while kb spanned them
-%   was arithmetically identical to assuming every washer shares the BOLT's
-%   CTE, so the error is exactly (α_washer − α_bolt)·t_washer and VANISHES
-%   when they match. On a steel washer (1.17e-5) under an A-286 bolt
-%   (1.69e-5) the old form ran ~17% HIGH on the Ex 8-b geometry —
-%   conservative there, but unconservative whenever α_washer > α_bolt.
+%   WASHERS ARE IN THE THERMAL SUM. They are rigid in the FRUSTUM — kc
+%   legitimately spans the flange stack alone — but they are not thermally
+%   absent: they sit in the clamped stack, carry the clamp load, and expand
+%   with their own CTE.
 %
 %   Thermal: preload change from CTE mismatch per NASA TM-106943 (Chambers)
 %   Eq. 10 — P_th = (Kb·Kc)/(Kb+Kc)·L·ΔT·(αj − αb) — with the stiffnesses
@@ -87,25 +80,6 @@ function p = preload(joint)
 %   configuration, missing frustum geometry) propagate: supply the
 %   geometry (or, for a code-built validation fixture only, a ThermalRate
 %   override).
-%
-%   Call graph:
-%       Precedents (calls)      engine.stiffness — thermal path only, when
-%                               PreloadSpec.ThermalRate is unset/zero AND a
-%                               temperature excursion exists (Max or Min
-%                               differs from Reference); NOT wrapped in a
-%                               try/catch here (contrast engine.boltDesignLoad,
-%                               engine.marginTensionUlt, and
-%                               engine.marginBearingUnderHead, which all
-%                               catch engine.stiffness's errors and report
-%                               NotEvaluated instead of propagating them).
-%       Dependents (called by)  engine.analyze, engine.summary.
-%       Tests                   tests/tDabjCase.m — preloadMatchesDABJ,
-%                               torqueBandDerivedFromNominal;
-%                               tests/tStiffness.m — thermalFromStiffness
-%                               (stiffness-path thermal term),
-%                               tensionRuptureBranch (rupture-branch fixture).
-%
-%   Validation status/coverage: see VALIDATION.md (Preload, rows 1-4).
 
 arguments
     joint (1,1) model.Joint
@@ -151,8 +125,7 @@ switch ps.Method
         % — the variation of the joint's AVERAGE preload falls as the
         % fastener count rises — and that argument is about preload
         % variation, not about torque. Γ means the same thing on this
-        % branch, so the same averaging applies. Conservative to omit,
-        % which is what the tool did before 2026-08-13.
+        % branch, so the same averaging applies. Conservative to omit.
         PpiMinSlip = (1 - G/sqrt(joint.BoltCount)) * ps.NominalPreload;
     otherwise
         error("engine:preload:unknownMethod", ...
@@ -193,9 +166,7 @@ else
         %     delta_j = -Pth/Kj + alpha_j·L·dT
         % equated to give Eq. 10. So L must be the span the bolt actually
         % stretches over, which is the WASHER-INCLUSIVE clamped length kb
-        % was built over. This used to read joint.GripLength (the flange
-        % stack ALONE) while kb spanned grip + washers — see the header's
-        % washer note for what that cost.
+        % was built over — see the header's washer note.
         L = s.Lbolt;                             % washer-inclusive clamped length, in
 
         % Thickness-weighted member CTE over that SAME span: flange layers
@@ -222,17 +193,12 @@ else
         end
         alphaB = joint.BoltMaterial.CTE;         % bolt CTE, 1/°C
 
-        % NO CONFIDENT NUMBER FROM AN INPUT NOBODY SUPPLIED. Two failure
-        % routes, both now closed. Until 2026-08-13 model.Material.CTE
-        % DEFAULTED TO ZERO, so an unspecified material was read as "does
-        % not expand" — a physical claim, not an absence — and this term
-        % produced a confident number from data that was never given.
-        % (library.json's Rigid entry even documented a guard against
-        % that, which did not exist.) CTE now defaults to NaN so the
-        % absence is detectable; without the check below that NaN would
-        % reach Pth and then vanish anyway, because max([NaN NaN 0]) is 0
-        % in MATLAB — the same silent failure by a quieter route. Refuse
-        % instead, naming what to fix.
+        % An absent coefficient read as zero is a physical claim, not an
+        % absence, so CTE defaults to NaN to make the absence detectable;
+        % without the check below that NaN would reach Pth and vanish
+        % anyway, because max([NaN NaN 0]) is 0 in MATLAB — the same
+        % silent failure by a quieter route. Refuse instead, naming what
+        % to fix.
         requireCTE(joint, partMem, cteMem, alphaB);
 
         alphaJ = sum(tMem .* cteMem) / sum(tMem);

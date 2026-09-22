@@ -36,15 +36,14 @@ function r = marginInsert(joint, loadCase, factors, preload)
 %       with Fsu/Fsy of joint.ThreadedMember.Material (the PARENT material
 %       the insert is installed in).
 %
-%       THE YIELD CRITERION IS CORROBORATED BY PRACTICE, even though it
-%       carries no equation number. Reviewed with Dan 2026-08-14: his
-%       spreadsheet computes the insert's yield tensile strength as
-%       (ultimate tensile strength x parent Fsy) / parent Fsu. Ours is
-%       As*Fsy, and since the ultimate is As*Fsu that is the same thing —
-%       both scale the ultimate allowable by the parent's shear
-%       yield/ultimate ratio. So this is the standard construction rather
-%       than something invented here; §4.4.2 simply prints no pull-out
-%       equation to number it with.
+%       This yield criterion, though it carries no equation number, matches
+%       an independent construction: scaling the ultimate allowable
+%       (As*Fsu) by the parent's shear yield/ultimate ratio gives
+%       As*Fsu*(Fsy/Fsu) = As*Fsy — the same result as computing the
+%       insert's yield tensile strength as (ultimate tensile strength x
+%       parent Fsy) / parent Fsu. So this is the standard construction
+%       rather than something invented here; §4.4.2 simply prints no
+%       pull-out equation to number it with.
 %
 %       A NaN Fsy is estimated as Fty/sqrt(3)
 %       (NASA-STD-5020B Eq. 63, von Mises) via engine.shearYieldStrength —
@@ -71,8 +70,8 @@ function r = marginInsert(joint, loadCase, factors, preload)
 %             substitution is this tool's own convention, already used by
 %             marginNutStrength / marginTappedParentThread — same
 %             citation those two carry). p = 1/Bolt.ThreadsPerInch, the
-%             thread pitch. The "− 1.125·p" TERM IS A DERIVED
-%             CONVENTION — no published equation, no equation number
+%             thread pitch. The "− 1.125·p" term is a derived
+%             convention — no published equation, no equation number
 %             attached (DEVELOPMENT_PLAN.md §2.3): NASM33537 §11.1
 %             installs the insert's top edge 0.75p to 1.5p below the
 %             tapped-hole surface (midpoint 1.125p), so that much of the
@@ -84,7 +83,7 @@ function r = marginInsert(joint, loadCase, factors, preload)
 %             Le − 1.125·p <= 0 refuses rather than emit a negative or
 %             zero area (reason stated, never a crash).
 %         (c) else the flat MANUFACTURER RATED basis, (2) below.
-%         (d) else NotEvaluated — and the reason DISTINGUISHES "no insert
+%         (d) else NotEvaluated — and the reason distinguishes "no insert
 %             is catalogued for this thread size" (StiPitchDiameter NaN —
 %             e.g. #0-80, #5-44, for which no helical insert exists in
 %             either NASM33537 or the Stanley catalogue) from an
@@ -106,24 +105,16 @@ function r = marginInsert(joint, loadCase, factors, preload)
 %       n·phi (NASA-STD-5020B Eq. 6 principle). Detail names which branch
 %       produced the numbers actually used.
 %
-%       RATING AS A CEILING: when RatedUltimateLoad is ALSO set, it does
-%       not compete with the area form — it CAPS it:
-%           ultimate allowable = min(A_shear·Fsu, RatedUltimateLoad)
-%       with the governing source named in Detail. NASA-STD-5020B directs
-%       that a procured item's strength be based on the strength specified
-%       for that item (such items can expand under load, reducing the
-%       thread engagement areas — a computed area is optimistic) and that
-%       where two values exist "the lower value should be used for
-%       strength analysis". Lower-of satisfies both: a stale or
-%       parent-mismatched rating can only cost margin, never grant it,
-%       whereas superseding silently discards a number the user
-%       deliberately entered. The ceiling applies to the ULTIMATE
-%       criterion only — the rating is an ultimate allowable; the yield
-%       criterion is a different limit state (onset of permanent
-%       deformation) the ultimate rating says nothing about, and with any
-%       factor set where FFY·FSY <= FFU·FSU a rating-capped yield
-%       criterion could never govern below the rating-capped ultimate
-%       anyway (R/PbYield − 1 >= R/Pb − 1). Deliberate, not incidental.
+%       RATING DOES NOT CAP THIS ROW. RatedUltimateLoad is a separate
+%       §4.4.1 allowable — the insert's internal-thread capability
+%       (engine.marginInsertInternal) — not a ceiling on the parent
+%       pull-out computed here; capping here would hide which mode
+%       governs. NASA-STD-5020B's "the lower value should be used for
+%       strength analysis" is instead satisfied ACROSS the two rows by
+%       analyze()'s worst-margin pick. (The rating DOES cap the SYSTEM
+%       tension allowable computed in memberTensileUltAllowable / ua.EffUlt
+%       — a different, system-level minimum from this per-mode row; see
+%       the comment by allowUlt below.)
 %
 %       DESIGN-LOAD NOTE: this check uses the SAME thread-family
 %       convention as its siblings (marginBoltThreadShear,
@@ -194,55 +185,19 @@ function r = marginInsert(joint, loadCase, factors, preload)
 %       AllowYld  yield pull-out allowable A_shear·Fsy, lbf (NaN unless the
 %                 area form ran)
 %
-%   Call graph:
-%       Precedents (calls)      engine.boltDesignLoad, engine.shearYieldStrength,
-%                               memberTensileUltAllowable (private).
-%       Dependents (called by)  engine.analyze.
-%       Tests                   tests/tThreadShear.m —
-%                               insertUsesHelicoilRating,
-%                               insertFlatRatingFallbackRegression (rated
-%                               path, bit-identical regression guard);
-%                               insertAreaYieldGovernsSuppliedFsy,
-%                               insertAreaDerivedFsyFlagged,
-%                               insertAreaUltimateGoverns (area-form
-%                               ultimate/yield worst-of-two + derived-Fsy
-%                               flag); insertRatingNotLimiting,
-%                               insertRatingCeilingGoverns (rating
-%                               ceiling, both sides);
-%                               insertAreaNaNParentNotEvaluated;
-%                               insertComputedAreaGovernsWhenUnspecified,
-%                               insertSuppliedAreaWinsOverCatalogueGeometry,
-%                               insertComputedAreaRatingStillCaps,
-%                               insertUncataloguedSizeVsIncompleteConfigRefusal,
-%                               insertComputedAreaGuardRefusesNonPositiveArea
-%                               (AREA SOURCE PRECEDENCE: computed form,
-%                               supplied-still-wins, rating ceiling on the
-%                               computed area, the two distinguished
-%                               refusal reasons, and the Le-1.125p guard);
-%                               dabjSection9RegressionUnchanged (§9 answer
-%                               key unchanged, both insert rows
-%                               NotEvaluated, via engine.analyze).
+%   YIELD CRITERION SCOPE. TM-106943 Eq. 80 (p24) scopes its own
+%   thread-shear modes to "the margin of safety ... for ultimate strength
+%   only, to determine the limiting mode of failure" — no yield margin is
+%   asked for. NASA-STD-5020B §4.4.2 (p29) separately requires the yield
+%   assessment to "address all elements of the threaded fastening system,"
+%   but that is discharged by engine.systemTensileYieldAllowable, which
+%   folds this member's As·Fsy into the Tension-Yield row's Pty_allow.
 %
-%   Validation status/coverage: see VALIDATION.md (Margin checks, row 9).
-
-%
-%   ⚠️ THE YIELD CRITERION IS SUPPLEMENTAL TO BOTH DOCUMENTS, and the
-%   margin review (2026-08-14) established that it should say so. TM-106943
-%   Eq. 80, p24, scopes its own thread-shear modes explicitly: "The margin
-%   of safety should be calculated for all three modes of failure, FOR
-%   ULTIMATE STRENGTH ONLY, to determine the limiting mode of failure." So
-%   TM does not ask for a yield margin on this row. NASA-STD-5020B §4.4.2
-%   p29 separately requires the yield assessment to "address all elements
-%   of the threaded fastening system" — but that obligation is discharged
-%   by engine.systemTensileYieldAllowable, which folds this member's
-%   As·Fsy into the Tension-Yield row's Pty_allow.
-%
-%   This row's yield criterion is therefore EXTRA: neither TM's method nor
-%   5020B's requirement, but per-mode visibility that both allow and
-%   neither asks for. It is kept because a governing yield mode is worth
-%   naming rather than leaving buried inside a system minimum — and it is
-%   labelled here so nobody mistakes it for TM's. engine.marginTappedParentThread
-%   is the consistent one: ultimate only, exactly as Eq. 80 says.
+%   This row's yield criterion is therefore supplemental to both documents
+%   — neither TM's method nor 5020B's requirement — kept because a
+%   governing yield mode is worth naming rather than left buried inside a
+%   system minimum. engine.marginTappedParentThread is the consistent one:
+%   ultimate only, exactly as Eq. 80 says.
 arguments
     joint    (1,1) model.Joint
     loadCase (1,1) model.LoadCase
@@ -277,12 +232,12 @@ areaSrc = ua.AreaSrc;    % "specified ..." or "computed (DERIVED) ..." — see D
 % in tests/tThreadShear.m).
 % =========================================================================
 if isnan(As)
-    % NO PULL-OUT AREA, SO NO PULL-OUT ANSWER. This used to fall back to
-    % ThreadedMember.RatedUltimateLoad and report it as "rated pull-out",
-    % which conflated the two allowables NASA-STD-5020B §4.4.1 names: that
-    % value is the INSERT'S INTERNAL-THREAD allowable and now has its own
-    % row (engine.marginInsertInternal). Reporting it here would have put
-    % an internal-thread capability under a pull-out heading.
+    % No pull-out area, so no pull-out answer. There is no flat-rating
+    % fallback: ThreadedMember.RatedUltimateLoad is the insert's
+    % internal-thread allowable, checked on its own row
+    % (engine.marginInsertInternal) — reporting it here would conflate the
+    % two allowables NASA-STD-5020B §4.4.1 names, putting an
+    % internal-thread capability under a pull-out heading.
     % ua.Reason is EMPTY when a rating let the shared helper assess the
     % mode for the system minimum; the area refusal still has to be
     % reported here, because this row is the OTHER allowable.
@@ -334,24 +289,20 @@ if isnan(d.Pb)
 end
 
 % NASA-STD-5020B §4.4.1 — allowable pull-out = (minimum shear engagement
-% area) x (allowable shear stress of the parent material), both criteria,
-% each vs the design bolt load built with its own factor pair (thread-family
+% area) x (allowable shear stress of the parent material), each criterion
+% vs the design bolt load built with its own factor pair (thread-family
 % convention: MS = allowable/Pb − 1, factors inside Pb on the external term).
-% The ultimate side (A_shear·Fsu) and the NASA-STD-5020B lower-of ceiling —
-% a procured item's strength is limited to its specification rating (items
-% can expand under load, reducing engagement areas; "the lower value should
-% be used for strength analysis"):
-%     ultimate allowable = min(A_shear·Fsu, RatedUltimateLoad)
-% — are computed in memberTensileUltAllowable (shared with the system
-% allowable; disposition in ua.RatNote), off THIS As regardless of whether
-% it was specified or computed. The yield criterion is NOT capped: the
-% rating is an ultimate quantity (see header).
-% UNCAPPED. ua.EffUlt applies min(As*Fsu, RatedUltimateLoad), which is
-% right for the SYSTEM allowable (5020B §4.4.1: "the lower value should be
-% used for strength analysis") and wrong for this row: the rating is the
-% OTHER allowable, and capping pull-out with it hides which mode governs.
-% engine.analyze now carries both modes as rows and WorstMargin takes the
-% lower — the same answer, with the reason visible.
+% memberTensileUltAllowable also computes a lower-of ceiling,
+% min(A_shear·Fsu, RatedUltimateLoad) (ua.EffUlt) — a procured item's
+% strength is limited to its specification rating (items can expand under
+% load, reducing engagement areas; "the lower value should be used for
+% strength analysis") — but that ceiling belongs to the SYSTEM allowable,
+% not this row: the rating is the OTHER §4.4.1 allowable (the insert's
+% internal-thread capability, on its own row), so capping pull-out with it
+% here would hide which mode governs. engine.analyze carries both modes as
+% rows and WorstMargin takes the lower — the same answer, with the reason
+% visible. The yield criterion is never capped: the rating is an ultimate
+% quantity.
 allowUlt = As * Fsu;     % ultimate pull-out allowable, lbf
 % Yield through memberTensileYldAllowable, SHARED with
 % engine.systemTensileYieldAllowable so this row and the system yield
@@ -377,13 +328,9 @@ else
     crit = "yield";
 end
 
-% NUMBERS LIVE IN Inputs NOW, NOT HERE. Detail used to dump the parent
-% Fsu, both allowables and both design loads inline, which put six figures
-% into a sentence that also had to carry the area source, the Fsy basis and
-% the design-load branch — unreadable, and duplicated the moment those same
-% six became Inputs terms. Detail keeps what is qualitative (which criterion
-% governed, where the area came from, how Fsy was obtained, which Pb branch
-% ran); the arithmetic is read off the Inputs list.
+% Detail stays qualitative — which criterion governed, where the area came
+% from, how Fsy was obtained, which Pb branch ran; the arithmetic is read
+% off the Inputs list.
 detail = "Governing: " + crit + " — parent " + parent.Name + ", " + ...
     areaSrc + "; " + sy.Basis;
 if strlength(d.Note) > 0

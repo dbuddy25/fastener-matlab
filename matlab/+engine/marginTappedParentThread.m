@@ -42,40 +42,26 @@ function r = marginTappedParentThread(joint, loadCase, factors, preload)
 %                                               principle, no preload/n·phi)
 %   Detail names which branch produced Pb (via engine.boltDesignLoad's Note).
 %
-%   Validated against DABJ Example 6-a (#10-32 A-286 in 0.250-in
-%   6061-T651); see VALIDATION.md (Margin checks, row 14) for the
-%   area/allowable agreement and the un-knocked-vs-DABJ's-knockdown note.
-%
-%   THIS ROW IS ULTIMATE-ONLY, and that is now a scoped choice rather than
-%   a deferred question. It used to read: "whether a yield criterion
-%   belongs on tapped parent threads at all is an open decision that has
-%   been deliberately deferred." NASA-STD-5020B §4.4.2 settled it, both
-%   ways at once:
+%   THIS ROW IS ULTIMATE-ONLY, a scoped choice rather than a deferred
+%   question. NASA-STD-5020B §4.4.2 settles it, both ways at once:
 %     - p29 requires the yield assessment to "address all elements of the
 %       threaded fastening system, including the fastener, the internally
-%       threaded part such as a nut or an insert, and the clamped parts".
+%       threaded part such as a nut or an insert, and the clamped parts."
 %       "Such as" is illustrative, and in a tapped configuration the parent
 %       IS the internally threaded part — so a yield criterion DOES belong.
-%     - p31 removes the obstacle that caused the deferral in the first
-%       place: "Because shear yield strength is not a standard material
-%       property, when evaluating the margin of safety under yield design
-%       loads and performing combined loads analysis, the normal and shear
-%       components of stress should be transformed into principal
-%       stresses; and a failure theory (e.g., von Mises or Tresca) should
-%       be used that is compatible with the concept of tensile yield
-%       strength." And the standard does not stop at sanctioning it —
-%       NASA-STD-5020B Eq. 63 (p66, Appendix A.8) PRINTS the result,
-%       Fsy = Fty/sqrt(3), which is exactly engine.shearYieldStrength's
-%       estimate. (This header cited "p30" until the 2026-08-13 equation
-%       audit; the passage is on p31.)
-%   So the tapped-hole yield mode IS assessed, as As*Fsy_parent, but in
+%     - p31 supplies what a yield criterion needs: because shear yield
+%       strength is not a standard material property, it directs
+%       transforming stresses to principal stresses and applying a failure
+%       theory compatible with tensile yield strength — and NASA-STD-5020B
+%       Eq. 63 (p66, Appendix A.8) prints that result, Fsy = Fty/sqrt(3),
+%       exactly engine.shearYieldStrength's estimate.
+%   The tapped-hole yield mode IS assessed, as As*Fsy_parent, but inside
 %   engine.systemTensileYieldAllowable's minimum (via
 %   memberTensileYldAllowable) — which is where §4.4.2's Pty_allow is
-%   consumed — and NOT as a second margin on THIS row. Keeping the row
-%   ultimate-only leaves DABJ Example 6-a's pin exactly where the answer
-%   key put it, and avoids inventing a Pb-based yield criterion the
-%   standard never asks for. If you want a yield MS printed here, that is a
-%   new decision; the allowable already exists, so only the row is missing.
+%   consumed — and NOT as a second margin on THIS row, avoiding a
+%   Pb-based yield criterion the standard never asks for. If you want a
+%   yield MS printed here, that is a new decision; the allowable already
+%   exists, so only the row is missing.
 %
 %   NotEvaluated (MS = NaN) when the configuration is not a tapped hole,
 %   when PitchDiameter / the resolved Le (EngagementLength or
@@ -89,29 +75,11 @@ function r = marginTappedParentThread(joint, loadCase, factors, preload)
 %       As      thread-shear area 0.75·pi·E·Le, in^2 (NaN if not evaluated)
 %       Pult    parent thread-shear allowable Fsu·As, lbf (NaN if not evaluated)
 %       Pb      design bolt load, lbf (NaN if not computable)
-%
-%   Call graph:
-%       Precedents (calls)      engine.boltDesignLoad,
-%                               memberTensileUltAllowable (private),
-%                               resolveEngagementLength (private).
-%       Dependents (called by)  engine.analyze.
-%       Tests                   tests/tThreadShear.m —
-%                               tappedParentMatchesDABJ6a (DABJ Ex 6-a
-%                               area/allowable cross-check + hand-derived
-%                               MS); tappedParentGateAssuredSeparatedLoad,
-%                               tappedParentGateNotAssuredClampedLoad (Fig.
-%                               8 gate SEPARATED/CLAMPED branch pins);
-%                               dabjSection9RegressionUnchanged (§9 answer
-%                               key unchanged, row NotEvaluated, via
-%                               engine.analyze).
-%
-%   Validation status/coverage: see VALIDATION.md (Margin checks, row 14).
 
-%   WHY Eq. 76 AND NOT Eq. 79 — corrected 2026-08-14 by the margin review.
-%   This row cited Eq. 79, which is TM-106943's INSERT PARENT MATERIAL
-%   THREAD FAILURE mode. Read at the source (TM p23), Eq. 79 presumes an
-%   insert is present: its area is "assumed to be the same as the insert's
-%   reduced external thread shear area used for equation (78)". A tapped
+%   WHY Eq. 76 AND NOT Eq. 79. Eq. 79 is TM-106943's INSERT PARENT MATERIAL
+%   THREAD FAILURE mode; read at the source (TM p23), it presumes an insert
+%   is present — its area is "assumed to be the same as the insert's
+%   reduced external thread shear area used for equation (78)." A tapped
 %   hole has no insert, so there is no such area to borrow.
 %
 %   The failing surface here is the PARENT'S OWN INTERNAL THREADS, which is

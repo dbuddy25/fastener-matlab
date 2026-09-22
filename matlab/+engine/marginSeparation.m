@@ -13,8 +13,7 @@ function r = marginSeparation(preload, designLoads)
 %   (FSSep * FFSep * PtL).
 %
 %   TWO SCOPE LIMITS §4.4.3 PUTS ON Eq. 19, neither of which the tool can
-%   detect for you. They were recorded in COMPLIANCE.md but not at the
-%   code site until the 2026-08-13 audit:
+%   detect for you (see COMPLIANCE.md):
 %
 %     AXIAL ONLY. "The equation is applicable to systems under axial
 %     loading only. Other equations or methods may be used to evaluate the
@@ -36,9 +35,6 @@ function r = marginSeparation(preload, designLoads)
 %               hand — or diffed against another tool — without re-reading
 %               the preload and design-load panels. Symbols match the Method
 %               equation exactly.
-%
-%   Validated against the DABJ Section 9 class problem (Solutions-17, via
-%   validation.dabjSection9): MS = 6,469.75/5,590 - 1 = +0.16.
 
 arguments
     preload     (1,1) struct

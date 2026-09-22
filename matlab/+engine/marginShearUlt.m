@@ -25,22 +25,20 @@ function r = marginShearUlt(joint, designLoads)
 %   assumed to be half the value given in the fastener specification for
 %   double-shear joints, when applicable, OR is calculated by [Eq. 12]" --
 %   so computing is one of the two forms the standard names, not a
-%   fallback. Note this is a genuine "or", unlike the NUT case at §4.4.1
-%   p26, where the assessment of a procured item "should be based on the
-%   strength specified for that item RATHER THAN on thread-stripping
+%   fallback. This is a genuine "or", unlike the nut case at §4.4.1 p26,
+%   where the assessment of a procured item "should be based on the
+%   strength specified for that item rather than on thread-stripping
 %   analysis" (see engine.marginNutStrength). The library's boltSpecs carry
-%   ratedUltimateLoad/ratedYieldLoad, both TENSILE; no shear rating exists
-%   in the spec data, so there is nothing to prefer. Confirmed 2026-08-17.
+%   ratedUltimateLoad/ratedYieldLoad, both tensile; no shear rating exists
+%   in the spec data, so there is nothing to prefer.
 %
-%   NaN GUARD: Fsu (joint.BoltMaterial.Fsu), the shear-plane area
+%   NaN GUARD. Fsu (joint.BoltMaterial.Fsu), the shear-plane area
 %   (BodyArea/MinorArea per joint.ShearPlane), and designLoads.Psu must
 %   all be set; if any is NaN the check reports MS = NaN (NotEvaluated)
 %   with the specific missing input named in Detail, rather than letting
-%   an unset input propagate to a silent NaN with no explanation (Detail
-%   used to be hardcoded "" here -- the only one of the fifteen checks
-%   with no Detail at all; engine.marginInteraction reuses this
-%   function's ShearAllowable, so a silent NaN here would silently
-%   propagate there too).
+%   an unset input propagate to a silent NaN with no explanation --
+%   engine.marginInteraction reuses this function's ShearAllowable, so a
+%   silent NaN here would silently propagate there too.
 %
 %   Returned struct fields:
 %       MS              margin of safety (double; NaN = not evaluated)
@@ -50,27 +48,7 @@ function r = marginShearUlt(joint, designLoads)
 %       Detail          string: governing arithmetic (Fsu, area, Psu_allow,
 %                       Psu) on a normal evaluation, or the named missing
 %                       input when not evaluated
-%
-%   Call graph:
-%       Precedents (calls)      (leaf — joint/model getters and the
-%                               designLoads struct only; no engine.*
-%                               dependencies).
-%       Dependents (called by)  engine.analyze, engine.marginInteraction
-%                               (reuses ShearAllowable so both checks share
-%                               one shear allowable).
-%       Tests                   tests/tDabjCase.m —
-%                               shearUltMarginMatchesDABJ (DABJ §9
-%                               body-in-shear MS pin),
-%                               threadsInShearUsesMinorAreaForShearAllowable
-%                               (direct call; pins the MinorArea-based
-%                               ShearAllowable/MS on the threads-in-shear
-%                               branch), shearUltNaNGuardNamesMissingInput
-%                               (Fsu / area / Psu each NaN in turn ->
-%                               NotEvaluated with the specific input named,
-%                               no crash; confirms the guard never fires on
-%                               the two pins above).
-%
-%   Validation status/coverage: see VALIDATION.md (Margin checks, row 3).
+%       Inputs          engine.eqInput array: every term, with its source
 
 arguments
     joint       (1,1) model.Joint
@@ -82,17 +60,16 @@ method = "NASA-STD-5020B Eq. 12/13 allowable + Eq. 14 (ultimate shear, area by s
 switch joint.ShearPlane
     case model.ShearPlaneCondition.BodyInShear
         % NASA-STD-5020B Eq. 12 (body in shear) — Psu_allow = Fsu · A_body
-        % AREA NOTE (D, comment-only -- behavior unchanged): the area used
-        % here is joint.Bolt.BodyArea, whose getter falls back to
-        % BodyDiameter when set (see model.Bolt), while Eq. 12 itself
-        % prints D as the NOMINAL fastener diameter. For an undercut or
-        % necked-down shank the body (reduced) diameter is SMALLER than
-        % the nominal major diameter, so BodyArea < the Eq. 12 nominal
-        % area. Using BodyArea is the physically correct choice for a
-        % necked shank -- it is the actual material the shear plane cuts
-        % through, not the nominal thread-major diameter the fastener
-        % happens to be specified by -- and it is CONSERVATIVE whenever
-        % the two differ (a smaller area gives a smaller, more
+        % AREA NOTE: the area used here is joint.Bolt.BodyArea, whose
+        % getter falls back to BodyDiameter when set (see model.Bolt),
+        % while Eq. 12 itself prints D as the nominal fastener diameter.
+        % For an undercut or necked-down shank the body (reduced) diameter
+        % is smaller than the nominal major diameter, so BodyArea < the
+        % Eq. 12 nominal area. Using BodyArea is the physically correct
+        % choice for a necked shank -- it is the actual material the shear
+        % plane cuts through, not the nominal thread-major diameter the
+        % fastener happens to be specified by -- and it is conservative
+        % whenever the two differ (a smaller area gives a smaller, more
         % conservative Psu_allow). This is a silent substitution under a
         % citation that prints "Eq. 12" with D as nominal diameter; stated
         % here so it is not silent to a reader.
@@ -110,10 +87,10 @@ end
 Fsu = joint.BoltMaterial.Fsu;
 Psu = designLoads.Psu;
 
-% NaN GUARD (B/C): Fsu, the shear-plane area, and the design shear load
-% must all be set, or Psu_allow/MS silently comes out NaN with no
-% explanation -- and engine.marginInteraction, which reuses ShearAllowable
-% below, would inherit that silence too. Name exactly what is missing.
+% NaN GUARD: Fsu, the shear-plane area, and the design shear load must all
+% be set, or Psu_allow/MS silently comes out NaN with no explanation --
+% and engine.marginInteraction, which reuses ShearAllowable below, would
+% inherit that silence too. Name exactly what is missing.
 if isnan(Fsu) || isnan(area) || isnan(Psu)
     missing = strings(1, 0);
     if isnan(Fsu),  missing(end+1) = "BoltMaterial.Fsu"; end             %#ok<AGROW>

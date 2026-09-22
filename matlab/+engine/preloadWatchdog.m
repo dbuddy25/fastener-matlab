@@ -30,7 +30,7 @@ function r = preloadWatchdog(joint, preload)
 %   engine.preload/engine.stiffness's own error paths for threaded-in or
 %   missing-frustum-geometry configs.
 %
-%   BANDS (worst wins; AT MOST ONE warning emitted):
+%   BANDS (worst wins; at most one warning emitted):
 %       PpMax > ultimate allowable       -> "PreloadExceedsUltimate", Critical
 %       else PpMax > yield allowable     -> "PreloadExceedsYield",    Critical
 %       else PpMax > 0.85 * yield allow. -> "PreloadNearYield",       Warning
@@ -40,13 +40,13 @@ function r = preloadWatchdog(joint, preload)
 %   is NaN — same "not proven inadequate" philosophy as boltLengthCheck.
 %
 %   PROVENANCE — read this before citing anything from this function:
-%   PpMax ITSELF is NASA-STD-5020B Eq. 1 and IS properly citable (see
-%   above). THE 85%/100% UTILIZATION BANDS HAVE NO 5020B BASIS.
-%   NASA-STD-5020B §4.4.5 / TFSR 12 govern INCLUDING preload in the total
+%   PpMax itself is NASA-STD-5020B Eq. 1 and is properly citable (see
+%   above), but the 85%/100% utilization bands have no 5020B basis.
+%   NASA-STD-5020B §4.4.5 / TFSR 12 govern including preload in the total
 %   tensile load carried into the tension checks (i.e. that PpMax must be
-%   added there) — NOT a standalone preload-utilization percentage; 5020B
+%   added there) — not a standalone preload-utilization percentage; 5020B
 %   prints no such threshold. The 85% (Warning) and 100% (Critical) bands
-%   here are therefore a DERIVED CONVENTION, in the same voice as
+%   here are a DERIVED CONVENTION, in the same voice as
 %   engine.boltLengthCheck's Le = 1.5·D default — no equation number is
 %   cited for them, by design, because none exists to cite.
 %
@@ -71,28 +71,6 @@ function r = preloadWatchdog(joint, preload)
 %                         are a derived convention with no equation number
 %       Detail            human-readable explanation with the arithmetic
 %                         (or the not-evaluated reason)
-%
-%   Pinned in tests/tPreloadWatchdog.m: clean / near-yield / exceeds-yield
-%   / exceeds-ultimate (worst-wins ordering) on a synthetic rated-load
-%   fixture, not-evaluated on a bare joint (no rating, no At/Ftu, and on a
-%   NaN PpMax), and the DABJ Section 9 fixture — PpMax ~11,069 lbf vs its
-%   rated yield 11,400 lbf is 97% of yield, ABOVE the 85% band, so §9 is
-%   EXPECTED to report one PreloadNearYield warning (not a clean joint).
-%
-%   Call graph:
-%       Precedents (calls)      boltTensileAllowable (private helper,
-%                               +engine/private/boltTensileAllowable.m).
-%       Dependents (called by)  engine.analyze.
-%       Tests                   tests/tPreloadWatchdog.m — nearYieldWarning,
-%                               exceedsYieldCritical,
-%                               exceedsUltimateWinsOverYield (worst-wins),
-%                               notEvaluatedOnBareJoint,
-%                               dabjSection9TripsNearYieldByDesign.
-%
-%   Validation status/coverage: no VALIDATION.md row — this is a QUERY/
-%   warning, not one of its Margin-checks/Preload/Stiffness rows; the
-%   fixture coverage is the pinned-tests paragraph above, kept in full
-%   rather than pointed at a row that doesn't exist.
 
 arguments
     joint   (1,1) model.Joint

@@ -18,9 +18,7 @@ function a = memberTensileYldAllowable(joint)
 %   which area source governed — the same extraction, for the same reason, as
 %   engine.applyTemperatures and engine.jointPatternTotals.
 %
-%   WHICH HALF HAS AN EQUATION NUMBER, AND WHICH DOES NOT. This header used
-%   to say flatly "NO EQUATION NUMBER IS CLAIMED", which was half wrong and
-%   was corrected by the 2026-08-13 equation audit:
+%   WHICH HALF HAS AN EQUATION NUMBER, AND WHICH DOES NOT:
 %
 %     - The AREA form genuinely has none. NASA-STD-5020B §4.4.2 requires
 %       yield design loads but prints no thread-shear yield equation, and
@@ -36,8 +34,8 @@ function a = memberTensileYldAllowable(joint)
 %       engine.shearYieldStrength cites it; do not restate it as
 %       unnumbered.
 %
-%   The authority to derive Fsy at all is §4.4.2, p31 (NOT p30 — the page
-%   this header used to give): "Because shear yield strength is not a
+%   The authority to derive Fsy at all is §4.4.2, p31: "Because shear yield
+%   strength is not a
 %   standard material property, when evaluating the margin of safety under
 %   yield design loads and performing combined loads analysis, the normal
 %   and shear components of stress should be transformed into principal
@@ -58,13 +56,11 @@ function a = memberTensileYldAllowable(joint)
 %       with the reason "a rating carries no yield information". This is not a
 %       gap being tolerated: it is the established doctrine
 %       (marginNutStrength's flat-rating basis is ULTIMATE-ONLY for exactly
-%       this reason), and it is what keeps the DABJ §9 answer key intact — that
-%       fixture's nut is rated with no engagement length, so its yield mode is
-%       unassessable and a system yield minimum degenerates to the bolt's.
+%       this reason).
 %
 %   (3) A TAPPED HOLE DOES GET A YIELD MODE HERE. marginTappedParentThread's
-%       row stays ultimate-only — that deferral is about the ROW and DABJ Ex
-%       6-a's pin — but §4.4.2 p29 is explicit that the yield assessment
+%       row itself stays ultimate-only — but §4.4.2 p29 is explicit that the
+%       yield assessment
 %       "will address all elements of the threaded fastening system, including
 %       the fastener, the internally threaded part such as a nut or an insert,
 %       and the clamped parts". "Such as" is illustrative; in a tapped
@@ -84,19 +80,6 @@ function a = memberTensileYldAllowable(joint)
 %       FsyBasis  engine.shearYieldStrength's Basis string — ALWAYS surfaced
 %                 by the caller, so a derived Fsy never passes as test data
 %       Reason    why it could not be assessed ("" when Assessed)
-%
-%   Call graph:
-%       Precedents (calls)      memberTensileUltAllowable (area/mode/source),
-%                               engine.shearYieldStrength (Fsy + Basis).
-%       Dependents (called by)  engine.marginInsert, engine.marginNutStrength
-%                               (their own yield criteria), and
-%                               engine.systemTensileYieldAllowable.
-%       Tests                   tests/tThreadShear.m (the existing yield pins
-%                               prove this extraction bit-identical),
-%                               tests/tSystemAllowable.m.
-%
-%   Validation status/coverage: no new VALIDATION.md row — this moves an
-%   existing computation, it does not introduce one.
 
 arguments
     joint (1,1) model.Joint

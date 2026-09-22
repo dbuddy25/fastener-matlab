@@ -1,5 +1,5 @@
 function T = runWorkbook(workbookFile, outFile)
-%RUNWORKBOOK  One-call bulk run from a SINGLE multi-sheet workbook (Step 2c).
+%RUNWORKBOOK  One-call bulk run from a SINGLE multi-sheet workbook.
 %   T = engine.runWorkbook(workbookFile) runs the whole bulk pipeline on
 %   ONE .xlsx — the data.makeTemplate fill-in workbook (or any workbook
 %   with the same three input sheets):
@@ -33,26 +33,6 @@ function T = runWorkbook(workbookFile, outFile)
 %   Orchestration only — every number comes from the already-validated
 %   pieces (data.loadJointLibrary / data.loadElements / data.loadSettings
 %   / engine.analyzeBulk / report.exportResults).
-%
-%   Call graph:
-%       Precedents (calls)      data.Library.load, data.loadJointLibrary,
-%                               data.loadElements, data.loadSettings,
-%                               engine.private.applyGlobalSettings (shared
-%                               with engine.runBulk), engine.analyzeBulk,
-%                               report.exportResults, engine.private.samePath
-%                               (shared with engine.runBulk's own outFile
-%                               guard).
-%       Dependents (called by)  (entry point) — no other engine/gui
-%                               function calls it; exercised directly by
-%                               tests/tWorkbook.m.
-%       Tests                   tests/tWorkbook.m
-%                               workbookRunsFreshTemplateWithoutCrashing,
-%                               workbookWritesResults,
-%                               workbookRefusesInPlaceOutput (the
-%                               outFile == workbookFile guard).
-%
-%   Validation status/coverage: VALIDATION.md's Structural/non-numeric
-%   table, row "Single-workbook end-to-end".
 
 arguments
     workbookFile (1,1) string

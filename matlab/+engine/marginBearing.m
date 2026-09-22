@@ -10,8 +10,6 @@ function r = marginBearing(joint, loadCase, factors)
 %   equations are NASA TM-106943 (Chambers) Eq. 72-74:
 %       Pbr = Fbr * Abr             (bearing allowable, Eq. 72)
 %       Abr = D * t                 (projected bearing area, Eq. 73)
-%   (Listed the other way round, with the numbers swapped, until the
-%   2026-08-13 audit read TM-106943 p20.)
 %       MS  = Pbr / (FF*FS*V) - 1   (Eq. 74)
 %   evaluated per flange layer for BOTH criteria: ultimate (Fbru with
 %   FFU*FSU) and yield (Fbry with FFY*FSY). The reported margin is the
@@ -20,14 +18,13 @@ function r = marginBearing(joint, loadCase, factors)
 %   V = loadCase.BoltShearLimitLoad (most-loaded bolt) and
 %   D = joint.Bolt.NominalDiameter. A layer whose material carries no
 %   bearing allowable for a criterion (Fbru/Fbry NaN or 0 — the Material
-%   default 0 means "not set") is skipped for that criterion, AND THE ROW
-%   SAYS SO: Detail names every layer/criterion that could not be formed,
+%   default 0 means "not set") is skipped for that criterion, and the row
+%   says so: Detail names every layer/criterion that could not be formed,
 %   and for a missing Fbry states the threshold below which the absent
 %   yield criterion would have governed (Fbry/Fbru < FFY*FSY/(FFU*FSU)).
 %   Without that, an ultimate-only answer is indistinguishable from a
-%   genuine both-criteria minimum -- and since NO material in the shipped
-%   library carries Fbry, that was every bearing row this tool has ever
-%   produced. Guards:
+%   genuine both-criteria minimum — and no material in the shipped
+%   library carries Fbry, so this applies to every bearing row. Guards:
 %   V = NaN -> MS = NaN (NotEvaluated: no shear load defined); V = 0 ->
 %   MS = Inf (no applied shear means infinite bearing margin — falls out
 %   of the arithmetic); no checkable layer at all -> MS = NaN.
@@ -39,18 +36,6 @@ function r = marginBearing(joint, loadCase, factors)
 %                         not-evaluated reason)
 %       BearingAllowable  Pbr of the governing layer/criterion, lbf (NaN if
 %                         not evaluated)
-%
-%   Call graph:
-%       Precedents (calls)      model.Joint, model.LoadCase, model.Factors —
-%                               a leaf; no engine.* dependencies.
-%       Dependents (called by)  engine.analyze.
-%       Tests                   tests/tBearing.m —
-%                               bearingAllowableMatchesDABJ5b (DABJ Ex 5-b
-%                               allowable + hand-derived MS);
-%                               dabjSection9RegressionUnchanged (guards the
-%                               DABJ §9 answer key against this check).
-%
-%   Validation status/coverage: see VALIDATION.md (Margin checks, row 5).
 
 arguments
     joint    (1,1) model.Joint
@@ -80,16 +65,14 @@ detailList = strings(1, 0);
 % material data happened to support, and a reader cannot tell an
 % ultimate-only answer from a genuine both-criteria minimum. As of the
 % library shipped with this tool NO material carries Fbry at all, so the
-% yield branch below never runs — which makes the silence total rather than
-% occasional, and is exactly why it went unnoticed.
+% yield branch below never runs.
 noYield = strings(1, 0);
 noUlt   = strings(1, 0);
 for k = 1:numel(joint.FlangeStack)
     fl = joint.FlangeStack(k);
     t  = fl.Thickness;                    % layer thickness, in
     % NASA TM-106943 Eq. 73 — Abr = D·t (projected bearing area)
-    %   (Eq. 72 is Pbr = Fbr·Abr, applied below; this comment said 72 until
-    %   the 2026-08-13 audit checked the printed page.)
+    % (Eq. 72 is Pbr = Fbr·Abr, applied below.)
     Abr = D * t;                          % in^2
     layerName = sprintf("layer %d (%s)", k, fl.Material.Name);
 

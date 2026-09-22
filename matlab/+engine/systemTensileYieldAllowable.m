@@ -70,23 +70,6 @@ function s = systemTensileYieldAllowable(joint)
 %     Complete      logical: true only if EVERY applicable mode was assessed
 %     Note          one-line trace for Detail strings — names the governing
 %                   mode and flags an incomplete assessment
-%
-%   Call graph:
-%       Precedents (calls)      boltTensileAllowable, memberTensileYldAllowable
-%                               (both private helpers, +engine/private/).
-%       Dependents (called by)  engine.marginTensionYield.
-%       Tests                   tests/tSystemAllowable.m —
-%                               dabjYieldSystemBoltGovernedButIncomplete
-%                               (DABJ §9: rated nut has no yield mode, so
-%                               the minimum is bolt-only AND flagged),
-%                               nutYieldGovernsSystem, insertYieldGovernsSystem,
-%                               tappedHoleYieldModeAssessed,
-%                               ratedOnlyMemberYieldUnassessedFlagged,
-%                               noYieldModeAtAllNotEvaluated,
-%                               derivedFsyFlagSurvivesIntoSystemNote.
-%
-%   Validation status/coverage: see VALIDATION.md (Margin checks, rows 2, 2r
-%   consume this as an input, plus the hand-derived member-governed row).
 
 arguments
     joint (1,1) model.Joint

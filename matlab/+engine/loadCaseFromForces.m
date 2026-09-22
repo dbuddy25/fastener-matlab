@@ -24,17 +24,6 @@ function lc = loadCaseFromForces(F, axis, opts)
 %       Reversible = true  → PtL = abs(Axial). The load may reverse, so a
 %                    compressive case must also be carried as tension.
 %   Shear (an RSS, direction-free) passes through as PsL either way.
-%
-%   Call graph:
-%       Precedents (calls)      engine.resolveForces.
-%       Dependents (called by)  engine.analyzeBulk, gui pages
-%                               (Element Mapping / bulk resolution path).
-%       Tests                   tests/tForces.m loadCaseTensionOnly (the
-%                               Reversible / ScaleFactor / non-reversible
-%                               PtL=max(Axial,0) sign-convention cases).
-%
-%   Validation status/coverage: VALIDATION.md's Structural/non-numeric
-%   table, row "Bulk / force resolution" (shared with engine.resolveForces).
 
 arguments
     F                (1,1) struct
@@ -60,10 +49,8 @@ else
     PtL = max(r.Axial, 0);
 end
 
-% r.Bending is CARRIED now, not dropped. resolveForces has always derived
-% it from the transverse FE moments; until bending existed downstream this
-% line built a LoadCase without it and the value died here, one step after
-% being computed.
+% r.Bending (from the transverse FE moments) is carried onto the LoadCase
+% too, not dropped.
 lc = model.LoadCase(Name = opts.Name, ...
     BoltTensileLimitLoad   = PtL, ...
     BoltShearLimitLoad     = r.Shear, ...

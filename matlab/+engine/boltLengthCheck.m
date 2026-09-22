@@ -93,34 +93,11 @@ function r = boltLengthCheck(joint)
 %       Method          citation string for the RequiredLength relation
 %       Detail          human-readable explanation
 %
-%   Call graph:
-%       Precedents (calls)      resolveEngagementLength (private) — the ONLY
-%                               engine dependency; otherwise a leaf, reading
-%                               model.Joint / model.Bolt / model.ThreadedMember
-%                               getters directly. Never calls, and is never
-%                               called by, engine.stiffness — that function
-%                               independently estimates a bolt length
-%                               internally (same §4.7.4 relation, Nut config
-%                               only) when one is not supplied; the two
-%                               never call each other, so a bug in either
-%                               function's OWN Lmin arithmetic would not
-%                               surface in the other — they now share only
-%                               the Le RESOLUTION step (resolveEngagementLength),
-%                               not the surrounding formula.
-%       Dependents (called by)  engine.analyze (every run — a Shortfall > 0
-%                               result becomes Result.Warnings'
-%                               "BoltLengthShort" row, see that function's
-%                               WARNINGS note); the GUI, directly, on every
-%                               relevant edit.
-%       Tests                   tests/tBoltLength.m nutConfigAdequateAndShort,
-%                               threadedInConfig (Insert 2·pitch + TappedHole
-%                               no-allowance), nanInputsNeverThrow.
-%
-%   Validation status/coverage: no dedicated VALIDATION.md row — hand-
-%   derived pins on the DABJ Example 8-b geometry (tests/tBoltLength.m).
-%   The L1 bolt-length ESTIMATE this function's Nut-config formula shares
-%   with engine.stiffness's own internal fallback is pinned separately, in
-%   VALIDATION.md's "L1 fallback" row.
+%   engine.stiffness independently estimates a bolt length internally
+%   (same §4.7.4 relation, Nut config only) when one is not supplied; the
+%   two never call each other, so a bug in either function's own Lmin
+%   arithmetic would not surface in the other — they share only the Le
+%   resolution step (resolveEngagementLength), not the surrounding formula.
 
 arguments
     joint (1,1) model.Joint
@@ -130,14 +107,10 @@ end
 % A NUT WASHER ONLY EXISTS ON A THROUGH-BOLTED (Nut) JOINT. On Insert and
 % TappedHole the bolt threads into the parent, so there is no nut for a
 % washer to sit under and a NutWasher left set on the form is not part of
-% the clamped stack. engine.stiffness has always taken exactly this
-% position -- "a threaded-in joint has no nut washer", reading only
-% HeadWasher on that branch -- while this function counted it for every
-% configuration. The two therefore described different joints: the same
-% insert joint got a stiffness computed without the washer and a required
-% bolt length inflated by it, and nothing in the GUI prevents the
-% combination (the nut-washer fields gate on their own Present checkbox,
-% not on the member type).
+% the clamped stack. engine.stiffness takes the same position -- "a
+% threaded-in joint has no nut washer" -- reading only HeadWasher on that
+% branch; nothing in the GUI prevents a NutWasher being set on such a
+% joint (the field gates on its own Present checkbox, not on member type).
 isNutConfig = joint.ThreadedMember.Type == model.ThreadedMemberType.Nut;
 if isNutConfig
     tNutWasher = joint.NutWasher.Thickness;   % in

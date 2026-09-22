@@ -38,25 +38,18 @@ function r = marginBoltThreadShear(joint, loadCase, factors, preload)
 %   — Detail says which), else the unchanged joint.ThreadedMember.
 %   EngagementLength.
 %
-%   ⚠️ THIS ROW USED TO BE ~29% UNCONSERVATIVE, and the reason is worth
-%   keeping. It computed As = 0.75·pi·E·Le on the PITCH diameter — TM
-%   Eq. 76's INTERNAL-thread coefficient and a larger diameter — and
-%   justified it as applying "the SAME form to BOTH sides of the
-%   engagement, so the bolt-external and internal-thread rows are compared
-%   on one consistent area basis."
-%
-%   That rationale does not survive: the substitution runs in OPPOSITE
-%   directions on the two sides. On the internal side, Eq. 76 wants 3/4 on
-%   the MAJOR diameter of the mating external thread, so using the pitch
-%   diameter is CONSERVATIVE. On this, the external side, Eq. 63 wants 5/8
-%   on the MINOR diameter of the mating internal thread, so 3/4 on the
-%   pitch diameter was UNCONSERVATIVE — by ×(0.75/0.625)·(E/D_minor,int)
-%   = ×1.27 on a 3/8-24 (and still ~18% high against the exact
-%   FED-STD-H28 external-thread form). The "consistency" was cosmetic
-%   while the bias was real, and it made analyze()'s worst-margin pick
-%   systematically under-report bolt thread shear as the governing mode.
-%   Found by the 2026-08-13 equation audit; corrected here to the printed
-%   equation. The internal side is unchanged and stays on Eq. 76 — see
+%   THIS ROW USES THE MINOR-DIAMETER FORM DELIBERATELY, not the
+%   0.75·pi·E·Le pitch-diameter form used on the internal-thread side
+%   (marginNutStrength, marginTappedParentThread, marginInsert). The two
+%   substitutions run in OPPOSITE directions: on the internal side, Eq. 76
+%   wants 3/4 on the MAJOR diameter of the mating external thread, so using
+%   the pitch diameter there is CONSERVATIVE; here, Eq. 63 wants 5/8 on the
+%   MINOR diameter of the mating internal thread, so 3/4 on the pitch
+%   diameter would be UNCONSERVATIVE — by ×(0.75/0.625)·(E/D_minor,int) =
+%   ×1.27 on a 3/8-24 (and still ~18% high against the exact FED-STD-H28
+%   external-thread form). Making the two sides "consistent" would make
+%   analyze()'s worst-margin pick systematically under-report bolt thread
+%   shear as the governing mode. The internal side stays on Eq. 76 — see
 %   memberTensileUltAllowable.
 %
 %   NASA-STD-5020B prints no thread-shear-area equation of its own (full
@@ -91,22 +84,6 @@ function r = marginBoltThreadShear(joint, loadCase, factors, preload)
 %       As      thread-shear area 5·pi·Le·D_minor,int/8, in^2 (NaN if missing)
 %       Pult    thread-shear allowable Fsu·As, lbf (NaN if inputs missing)
 %       Pb      design bolt load, lbf (NaN if not computable)
-%
-%   Call graph:
-%       Precedents (calls)      engine.boltDesignLoad,
-%                               resolveEngagementLength (private).
-%       Dependents (called by)  engine.analyze.
-%       Tests                   tests/tThreadShear.m —
-%                               boltThreadShearHandDerived (hand-derived MS
-%                               pin, Ex 8-b Nut fixture; the Fig. 8 gate is
-%                               ASSURED on this fixture, so Pb takes the
-%                               SEPARATED branch);
-%                               dabjSection9RegressionUnchanged (guards the
-%                               DABJ §9 answer key — this row stays
-%                               NotEvaluated on that fixture, no
-%                               EngagementLength).
-%
-%   Validation status/coverage: see VALIDATION.md (Margin checks, row 7).
 
 arguments
     joint    (1,1) model.Joint

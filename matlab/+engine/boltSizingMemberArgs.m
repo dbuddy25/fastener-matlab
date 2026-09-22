@@ -18,16 +18,11 @@ function nvArgs = boltSizingMemberArgs(memberType, library, nutSpec, member)
 %   with member.Type FORCED to memberType in the latter two, so the Type is
 %   decided in exactly one place.
 %
-%   THIS IS THE CODE THAT KEEPS A NUT OFF THE TEMPLATE BRANCH.
-%   engine.boltSizingSweep REJECTS a ThreadedMember template whose Type is
-%   Nut -- a nut varies by thread size, so it must come through
-%   Library + NutSpec instead. The switch below routes Nut one way and
-%   everything else the other, so the two paths can never cross.
-%
-%   Call graph:
-%       Precedents (calls)      none (pure).
-%       Dependents (called by)  none today (gui.BoltSizingPage is bolt-only).
-%       Tests                   tests/tBoltSizingMemberArgs.m.
+%   This is what keeps a nut off the template branch: engine.boltSizingSweep
+%   rejects a ThreadedMember template whose Type is Nut, since a nut varies
+%   by thread size and must come through Library + NutSpec instead. The
+%   switch below routes Nut one way and everything else the other, so the
+%   two paths can never cross.
 
 arguments
     memberType (1,:) model.ThreadedMemberType

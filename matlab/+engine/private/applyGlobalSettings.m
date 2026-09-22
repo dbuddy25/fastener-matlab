@@ -24,25 +24,6 @@ function [jl, factors] = applyGlobalSettings(jl, s)
 %   model.Joint.checkTemperatureOrder — not a second, hand-written
 %   comparison that could drift from the constructor's — before stamping
 %   the temperatures onto any joint.
-%
-%   Call graph:
-%       Precedents (calls)      model.Joint.checkTemperatureOrder (the
-%                               temperature-order invariant, shared with
-%                               model.Joint's own constructor); otherwise a
-%                               leaf — no other engine.* dependencies.
-%       Dependents (called by)  engine.runBulk, engine.runWorkbook (both
-%                               via the private/ path, private to +engine).
-%       Tests                   tests/tApplyGlobalSettings.m
-%                               outOfOrderSettingsTemperaturesRejected;
-%                               also exercised via tests/tExport.m
-%                               runBulkEndToEnd and tests/tWorkbook.m
-%                               workbookRunsFreshTemplateWithoutCrashing,
-%                               both of which depend on the stamped
-%                               temperatures reaching engine.preload.
-%
-%   Validation status/coverage: no dedicated VALIDATION.md row — this
-%   function is exercised as a shared input to the Structural/non-numeric
-%   rows "Bulk runner + XLSX export" and "Single-workbook end-to-end".
 factors = s.Factors;
 
 % Re-asserted HERE TOO, not only inside engine.applyTemperatures: an
@@ -54,8 +35,7 @@ model.Joint.checkTemperatureOrder(s.ColdTempC, s.NominalTempC, s.HotTempC);
 % Delegated per joint. The settings -> joint MAPPING lives in exactly one
 % place (engine.applyTemperatures), because the gui single-joint Analyze
 % path needs the same mapping and this function is private to +engine —
-% unreachable from the GUI, which is how single-joint runs ended up
-% silently using model.Joint's 20/20/20 degC defaults.
+% unreachable from the GUI.
 for i = 1:numel(jl)
     jl(i).Joint = engine.applyTemperatures(jl(i).Joint, s);
 end

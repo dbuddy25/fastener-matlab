@@ -13,18 +13,13 @@ function [ok, reason] = boltSizingMemberSelectionReady(memberType, nutSpec, memb
 %   screen is a supported result, not an incomplete one.
 %
 %   Nut is ready only once a real family is chosen. Otherwise the caller
-%   would have to either fall back to bolt-only WITHOUT SAYING SO -- which
-%   engine.boltSizingSweep's TensionUltBasis honesty requirement forbids --
+%   would have to either fall back to bolt-only without saying so, which
+%   engine.boltSizingSweep's TensionUltBasis honesty requirement forbids,
 %   or hand the engine a blank NutSpec, which it refuses outright
 %   (engine:boltSizingSweep:missingNutSpec).
 %
 %   Insert and TappedHole are ready only once a member material is chosen,
 %   mirroring Joint Config's own required-field rule for the same dropdown.
-%
-%   Call graph:
-%       Precedents (calls)      none (pure).
-%       Dependents (called by)  a Bolt Sizing UI, when one exists.
-%       Tests                   tests/tBoltSizingMemberArgs.m.
 
 arguments
     memberType           (1,:) model.ThreadedMemberType

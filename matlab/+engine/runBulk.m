@@ -1,5 +1,5 @@
 function T = runBulk(jointFile, elementsFile, settingsFile, outFile)
-%RUNBULK  One-call headless bulk workflow: files in -> margins out (Phase 3.6).
+%RUNBULK  One-call headless bulk workflow: files in -> margins out.
 %   T = engine.runBulk(jointFile, elementsFile, settingsFile, outFile) runs
 %   the whole headless pipeline in one call:
 %
@@ -53,28 +53,6 @@ function T = runBulk(jointFile, elementsFile, settingsFile, outFile)
 %   Orchestration only — every number comes from the already-validated
 %   pieces (data.loadJointLibrary / data.loadSettings / data.loadElements
 %   / engine.analyzeBulk / report.exportResults).
-%
-%   Call graph:
-%       Precedents (calls)      engine.private.samePath (the outFile-vs-
-%                               input guard, shared with engine.runWorkbook),
-%                               data.Library.load, data.loadJointLibrary,
-%                               data.loadElements, data.loadSettings,
-%                               engine.private.applyGlobalSettings (shared
-%                               with engine.runWorkbook), engine.analyzeBulk,
-%                               report.exportResults.
-%       Dependents (called by)  (entry point) — examples/run_bulk_example.m;
-%                               no other engine/gui function calls it.
-%       Tests                   tests/tExport.m runBulkEndToEnd,
-%                               exportWritesFile, runBulkDefaultFactors
-%                               (the three settings-slot forms: file,
-%                               empty/omitted, legacy model.Factors),
-%                               runBulkRefusesJointFileAsOutput,
-%                               runBulkRefusesElementsFileAsOutput,
-%                               runBulkRefusesSettingsFileAsOutput,
-%                               runBulkDistinctOutFileStillWorks.
-%
-%   Validation status/coverage: VALIDATION.md's Structural/non-numeric
-%   table, row "Bulk runner + XLSX export".
 
 arguments
     jointFile    (1,1) string

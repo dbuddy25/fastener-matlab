@@ -93,41 +93,6 @@ function r = analyze(joint, loadCase, factors)
 %   without ever reading it out of MS (which stays NaN for this row by
 %   design, per the note above) or risking a caller applying the MS >= 0
 %   sign test to a value that passes at R <= 1 instead.
-%
-%   Call graph:
-%       Precedents (calls)      18 engine functions: engine.preload,
-%                               engine.designLoads; the six margin checks
-%                               marginTensionUlt, marginTensionYield,
-%                               marginShearUlt, marginInteraction,
-%                               marginSeparation, marginSlip; the three
-%                               member checks marginBearing,
-%                               marginShearTearout, marginBearingUnderHead;
-%                               the four thread checks
-%                               marginBoltThreadShear, marginNutStrength,
-%                               marginInsert, marginTappedParentThread;
-%                               boltLengthCheck, preloadWatchdog; and the
-%                               engine.Result constructor.
-%       Dependents (called by)  engine.analyzeBulk, gui pages
-%                               (single-joint Results tab and the per-row
-%                               bulk path), report.singleJointReport.
-%       Tests                   tests/tDabjCase.m
-%                               analyzeReproducesAllDABJMargins (the DABJ
-%                               §9 regression); tests/tSystemAllowable.m
-%                               dabjAnswerKeyUnchanged; tests/tBearing.m
-%                               dabjSection9RegressionUnchanged;
-%                               tests/tCaseIO.m caseRoundTripsLossless;
-%                               tests/tBulk.m
-%                               bulkFailingInteractionVisibleButNeverGoverns;
-%                               tests/tThreadShear.m
-%                               dabjNutRatingFallbackStaysNotEvaluated /
-%                               dabjSection9RegressionUnchanged.
-%
-%   Validation status/coverage: VALIDATION.md's Structural/non-numeric
-%   table, row "Solver `analyze()` + `Result` (15-row)", pins the DABJ §9
-%   answer key; Margin-checks rows 1-3 and 10-13 cover the individual
-%   checks this fixture reproduces. The same fixture also regression-guards
-%   row 5 (Bearing, tests/tBearing.m dabjSection9RegressionUnchanged) — a
-%   later check must never disturb an earlier fixture's answer key.
 
 arguments
     joint    (1,1) model.Joint
@@ -139,7 +104,7 @@ end
 p = engine.preload(joint);                  % NASA-STD-5020B Eq. 3/4/5 + Eq. 24 + Eq. 1/2
 d = engine.designLoads(loadCase, factors);  % NASA-STD-5020B design load = FS x FF x limit
 
-% ---- The six built margin checks (Phases 2.5-2.8) ------------------------
+% ---- The six built margin checks -----------------------------------------
 tu = engine.marginTensionUlt(joint, p, d);           % NASA-STD-5020B Eq. 6 / Eq. 10 + Fig. 8 gate
 ty = engine.marginTensionYield(joint, p, d);         % NASA-STD-5020B Eq. 15 / Eq. 16-17 + Fig. 8 gate
 su = engine.marginShearUlt(joint, d);                % NASA-STD-5020B Eq. 12/13 + Eq. 14
@@ -147,12 +112,12 @@ ia = engine.marginInteraction(joint, d);             % NASA-STD-5020B Eq. 20-23 
 sp = engine.marginSeparation(p, d);                  % NASA-STD-5020B Eq. 19
 sl = engine.marginSlip(joint, loadCase, p, factors); % NASA-STD-5020B Eq. 84 (Joint) / Eq. 86 (SingleFastener) per joint.SlipMode; Ignored -> MS NaN -> NotEvaluated
 
-% ---- The three member checks (Phase 3.2) ---------------------------------
+% ---- The three member checks ----------------------------------------------
 br = engine.marginBearing(joint, loadCase, factors);            % NASA TM-106943 Eq. 72-74 (bolt bearing; required by 5020B §4.4.2)
 to = engine.marginShearTearout(joint, loadCase, factors);       % NASA TM-106943 Eq. 69-71 (shear tear-out; required by 5020B §4.4.2)
 bh = engine.marginBearingUnderHead(joint, loadCase, factors, p); % NASA TM-106943 Eq. 74/75 + 5020B Eq. 8 Pb = PpMax + n·phi·PtL
 
-% ---- The four thread-strength checks (Phase 3.3) -------------------------
+% ---- The four thread-strength checks --------------------------------------
 % Thread-stripping is checked on BOTH sides of the engagement: the
 % bolt-external threads (bolt Fsu) and the internal side (nut, insert or
 % tapped parent, per configuration) — the weaker side governs via the
@@ -241,36 +206,19 @@ end
 sbr = entry("Separation-before-rupture", NaN, ...
     "NASA-STD-5020B Fig. 8 (DABJ Fig. 9-9) decision tree", tu.Decision);
 % THREE OUTCOMES, THREE STATUSES. entry() has already set NotEvaluated
-% (this row carries no MS), so the Pass/Fail override runs ONLY when the
-% gate actually reached a determination.
-%
-% Until 2026-08-14 an UNASSESSABLE gate printed "Fail":
-% marginTensionUlt sets SeparationBeforeRupture = false when it cannot
-% assess, and this branch read false as "determined to fail". So "we could
-% not tell" was reported as "rupture may occur before separation" — a
-% determination nobody made, on the one row in the tool that did not
-% distinguish the two. NASA-STD-5020B A.5: whether separation occurs
+% (this row carries no MS); the Pass/Fail override runs only when the gate
+% reached a determination. NASA-STD-5020B A.5: whether separation occurs
 % before rupture "can be determined based on test, analysis, or the logic
 % flow in Figure 8" — with none of the three available there is no
-% determination to report.
+% determination to report, so an unassessed gate stays NotEvaluated.
 %
-% The ANALYSIS is unaffected and stays conservative: engine.boltDesignLoad
-% takes the clamped Pb (preload included) whenever the gate is not
-% ASSURED, and an unassessed gate is not assured. Only the label changes.
-% NOT "Pass"/"Fail" — THE GATE IS A BRANCH SELECTION, NOT A CRITERION.
-% Nothing is being assessed against an allowable here. A gate that is not
-% assured does not mean the hardware failed; it means rupture before
-% separation is conservatively assumed, so engine.boltDesignLoad keeps the
-% clamped Pb (preload included) and the Eq. 10 branch prices that into
-% Tension-Ultimate. Reporting that determination as "Fail" states a verdict
-% nobody reached — the same error the unassessable case made until it was
-% changed to NotEvaluated, one branch over.
-%
-% "Assured" / "NotAssured" is not new vocabulary: gui.ResultsPage's
-% decision panel has always stated this branch as ASSURED / NOT ASSURED
-% (see tGuiResults' theGateStatesItsBranchRatherThanAPassOrFail), and the
-% gate struct itself carries Gate.Assured. The engine's Status string was
-% the last place still calling it a pass or a failure.
+% The gate is a BRANCH SELECTION, not a pass/fail criterion — nothing is
+% assessed against an allowable here. A gate that is not assured does not
+% mean the hardware failed; it means rupture before separation is
+% conservatively assumed, so engine.boltDesignLoad keeps the clamped Pb
+% (preload included) and the Eq. 10 branch prices that into
+% Tension-Ultimate. The analysis is identical either way; only the label
+% (Assured / NotAssured) differs.
 if tu.Gate.Assessed
     if tu.SeparationBeforeRupture
         sbr.Status = "Assured";
@@ -415,8 +363,7 @@ function names = entrySupplemental()
 %   definition and a reader can find every use of it. Every other row gets
 %   Required = true.
 %
-%   Not the same question as "which document supplies the equation", and the
-%   margin review (2026-08-14) found the two had been conflated. Bearing,
+%   Not the same question as "which document supplies the equation". Bearing,
 %   tear-out and bearing-under-head take their formulas from TM-106943, but
 %   5020B REQUIRES them: §4.4.1 p26 scopes the ultimate assessment to "all
 %   elements of the threaded fastening system, including the fastener, the
@@ -431,14 +378,12 @@ function names = entrySupplemental()
 %     by a computed margin: "thread engagement in an internally threaded part
 %     other than a nut, nut plate, or insert SHOULD be selected to ensure ...
 %     that the fastener would fail in tension before threads would strip."
-%     That is a "should" with no TFSR number (24 and 25 nearby cover grip
-%     runout and blind holes), and 5020B prints no thread-shear-area equation
-%     anywhere. The row is kept — a computed stripping margin can only be
-%     more conservative than the design rule — but it is marked, because it
-%     became materially more likely to GOVERN when its area was corrected to
-%     TM Eq. 63 as printed (6e3e370, ~21% less allowable). A reader should
-%     not redesign a joint to satisfy a requirement the standard does not
-%     levy, and a compliance statement should not rest on one.
+%     That is a "should" with no TFSR number, and 5020B prints no
+%     thread-shear-area equation anywhere. The row is kept — a computed
+%     stripping margin can only be more conservative than the design rule —
+%     but it is marked, because it can GOVERN. A reader should not redesign
+%     a joint to satisfy a requirement the standard does not levy, and a
+%     compliance statement should not rest on one.
 names = "Bolt-thread shear";
 end
 
