@@ -434,7 +434,7 @@ still carried as its own reported row (`marginBoltThreadShear`), governing
 via `analyze()`'s worst-margin pick like the other three supplemental rows,
 on the same added-conservatism rationale.
 
-Nothing else is outstanding under this entry. (§7.3 below is a distinct,
+Nothing else is outstanding under this entry. (§7.7 below is a distinct,
 still-open item.)
 
 ### 7.3 Tapped-hole yield
@@ -793,7 +793,7 @@ computed area `As`, which are independent quantities.
 The tool also has nowhere to PUT a manufacturer's rated pull-out load —
 `ShearEngagementArea` takes an area, and `RatedUltimateLoad` on an insert is the
 internal-thread allowable. Back-solving an area from a load launders a rating as
-geometry; do not. That gap is §7.8.
+geometry; do not. That gap is §7.7.
 
 **Next action — one number:** the spreadsheet's parent `Fsu` for Al 6061-T6
 (tool: 27,000 psi). If it differs, part of the 4.1% is materials data. If it
