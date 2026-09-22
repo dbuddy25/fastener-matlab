@@ -1,6 +1,6 @@
 # PRD — In-App User Guide
 
-Status: **draft, awaiting Dan's sign-off.** Delete this file once phase (d) ships;
+Status: **approved 2026-09-22; phase (a) next.** Delete this file once phase (d) ships;
 live rules move into `GUI_SPEC.md` and `CONVENTIONS.md`.
 
 ## 1. Problem
@@ -102,6 +102,28 @@ risk in §8 and keeps each page short.
 
 Hard limits: **no paragraph over 3 sentences**; anything tabular goes in a table.
 
+### Voice
+
+| Where | Voice | Example |
+|---|---|---|
+| Prose (Purpose, What you'll see, Next) | **Imperative**, no "you" | "Pick the nut spec. Material, rated load and engagement fill in and lock. For your own values, set the spec to `Custom`." |
+| Field tables (generated from tooltips) | **Reference**: field name, then what it sets | "**Nut spec**: sets material, rated load and engagement from the library (locked). `Custom` unlocks them." |
+
+The tooltip review in phase (b) brings every tooltip into the reference voice.
+
+### Import file formats (hand-written, on the importing page)
+
+Tooltips cannot describe a file, so each import gets a hand-written table: the
+file type, the sheet/column layout, units, and what the reader skips.
+
+| Page | File | Layout |
+|---|---|---|
+| Element Forces | `.xlsx` | One sheet per load case (the sheet name is the load case name); columns `element_id, FX, FY, FZ, MX, MY, MZ`; rows with a blank `element_id` are skipped. **Export Template...** writes this shape |
+| Element Mapping | `.csv` / `.txt` | Mapping columns, as the reader expects them (confirm in phase (b)) |
+
+A test pins each documented column list to the reader's, so a changed reader
+fails `runTests` until the guide follows.
+
 ## 5. Results section (the one page with extra content)
 
 Beyond the template, `Results.html` carries:
@@ -144,7 +166,7 @@ each release (it cannot run on the Mac side).
 | Step | Output |
 |---|---|
 | Build `fastenerTool` headless, then drive it into scripted states, reusing the `tGui*` fixture setup | — |
-| Load the DABJ §9 case, so Joint Config and Results show a real, published answer-key joint | — |
+| Load a neutral sample joint (a plain two-plate joint with a nut; no course-book case), so Joint Config and Results show real numbers | — |
 | `exportapp` each rail page | `docs/userguide/img/<pageId>.png` |
 | Walk each page's component tree; every control with a non-empty `Tooltip` becomes a row. Pair it with its label (the `uilabel` in the same grid row, the column to the left, the `addLabelledText` pattern in `JointConfigPage.m`). Group by the page's collapsible group title | `docs/userguide/fragments/<pageId>-fields.html` |
 | Splice each fragment into its `pages/<pageId>.html` between marker comments | updated page HTML |
@@ -219,10 +241,10 @@ One push per phase, and a green `runTests` before the next one.
 | **(c) "?" links + drift test** | `gui.Page` helper, per-page test, drift test | `runTests` green; every "?" opens its page |
 | **(d) Prose pass** | "Purpose" and "What you'll see" for each page, written with Dan one page at a time | Dan signs off each page |
 
-## 12. Open questions
+## 12. Resolved decisions (2026-09-22)
 
-| # | Question | Needed by |
-|---|---|---|
-| 1 | Voice: second person ("Pick the bolt material") or imperative-only? | Phase (a) |
-| 2 | Is a DABJ §9 walkthrough appendix (build the published joint, read back the six margins) wanted later? It would double as the `PRECOMPILE_CHECKLIST` Section B script | After (d) |
-| 3 | Should Bulk import file formats (CSV/NASTRAN columns) be documented in the guide, or linked out to `USER_GUIDE.md`? | Phase (b) |
+| Question | Decision |
+|---|---|
+| Voice | Imperative prose, reference-style field tables (§4) |
+| Course-book (DABJ) walkthrough | **No.** It is not a spec or standard; screenshots use a neutral sample joint (§7) |
+| Import file formats | Documented in the guide, on the importing page (§4) |
