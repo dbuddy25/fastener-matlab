@@ -313,7 +313,7 @@ classdef tGuiJointSection < matlab.uitest.TestCase
         end
 
         function aLoadingPlaneBeyondTheGripIsFlagged(testCase)
-            % One of the four things Section 13 says this view is for. The
+            % One of the four things GUI_SPEC.md Section 16 says this view is for. The
             % caller paints a flagged plane red.
             j = tGuiJointSection.fullJoint();
             j.LoadingPlaneFactor = 1.5;

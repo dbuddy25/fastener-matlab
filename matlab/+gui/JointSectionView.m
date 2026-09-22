@@ -7,17 +7,16 @@ classdef JointSectionView < handle
     %   nobody thinks to go looking for, so a picture you have to remember
     %   to open is a picture that never gets opened.
     %
-    %   WHY A WINDOW AND NOT THE RIGHT-HAND COLUMN. Section 13 says to host
-    %   this in a column of Joint Config "rather than a separate window".
-    %   Two things make that the wrong call here: that column already ends
+    %   WHY A WINDOW AND NOT THE RIGHT-HAND COLUMN OF JOINT CONFIG (GUI_SPEC.md
+    %   Section 16). That column already ends
     %   in the Analyze button on a scrollable page, so a fifth group renders
     %   below the fold exactly when it is wanted; and it is the 1x of a 2x/1x
     %   split, which cannot show a to-scale section with per-flange labels.
     %   DataAspectRatio forbids cheating the width. Repainting on
     %   JointChanged recovers what inline hosting was for.
     %
-    %   IT DRAWS IN DATA COORDINATES, never pixels. Section 13 is explicit
-    %   that this is the point - a pixel-scaling layer would be ~170 lines.
+    %   IT DRAWS IN DATA COORDINATES, never pixels; a pixel-scaling layer
+    %   would be ~170 lines.
     %   x is RADIAL (0 on the centerline,
     %   symmetric), y is AXIAL in inches measured DOWN from the under-head
     %   bearing plane, with the axis YDir reversed so the head sits at the
@@ -71,7 +70,7 @@ classdef JointSectionView < handle
         MaxThreadTeeth = 120
 
         % Fill colours. Deliberately muted and few: this is a diagram, not
-        % a rendering, and Section 13 says skip the gradients.
+        % a rendering, and GUI_SPEC.md Section 16 says skip the gradients.
         BoltFill   = [0.62 0.66 0.72]
         WasherFill = [0.78 0.80 0.84]
         FlangeFill = [0.86 0.88 0.91]
@@ -653,7 +652,7 @@ classdef JointSectionView < handle
             %   true axial position, so a 28-TPI thread draws 28 teeth to
             %   the inch and the picture stays to scale.
             %
-            %   Section 13 says to skip coil hatching, and this is not that:
+            %   GUI_SPEC.md Section 16 says to skip coil hatching, and this is not that:
             %   hatching is decoration, whereas a visible pitch is how you
             %   see at a glance that a thread runs where you meant it to.
             %

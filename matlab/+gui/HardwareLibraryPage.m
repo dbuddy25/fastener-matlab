@@ -30,7 +30,7 @@ classdef HardwareLibraryPage < gui.Page
     %   effect of navigation.
     %
     %   ORIGIN RENDERS AS ASCII, not as the lock/pencil glyphs GUI_SPEC.md
-    %   §16 sketches. Deliberate:
+    %   §15 sketches. Deliberate:
     %   the glyphs are non-ASCII (the lock is outside the Basic Multilingual
     %   Plane), this code is written on a machine that never runs it, and a
     %   font-fallback or file-encoding problem on the Windows target would

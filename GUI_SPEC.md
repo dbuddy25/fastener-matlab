@@ -35,18 +35,14 @@ The engine computes all 15 checks, and the GUI now shows all 15: **14 margin
 rows plus the Fig. 8 gate**, which leads Analysis decisions because it selects a
 branch rather than carrying a margin.
 
-It did not always. The first build displayed 9 and named the other 6 as
-"computed and not displayed", and that whitelist was wrong in two separate ways,
-both found in use:
+Two rows are easy to argue away, and must not be:
 
-- **`Bearing-under-head` was REQUIRED and invisible.** §4.4.2 calls for margins
+- **`Bearing-under-head` and `Bolt-thread shear`.** §4.4.2 calls for margins
   on the joint members and prints no member-strength equations, so TM-106943
-  Eq. 74/75 supply them — the check ran on every analysis and appeared nowhere.
-  `Bolt-thread shear` joined it as a row at the same time.
-- **The four §4.4.1 threaded-member modes were hidden on a false premise** — that
-  a row for them would report one fact twice, since whichever applies sets
-  `Ptu_allow` and governs Tension-Ultimate. They are not one fact. Those modes
-  carry their own margins against a **different** design load
+  Eq. 74/75 (and Eq. 63) supply them. They are required checks.
+- **The four §4.4.1 threaded-member modes** look like one fact reported twice,
+  since whichever applies sets `Ptu_allow` and governs Tension-Ultimate. They
+  are not one fact. Those modes carry their own margins against a **different** design load
   (`engine.boltDesignLoad`'s preload-included Eq. 8 form,
   `Pb = PpMax + FFU·FSU·n·φ·PtL`) while Tension-Ultimate divides by
   `Ptu = FSU·FFU·PtL`. A nut-strength MS is not recoverable from the
@@ -125,7 +121,7 @@ Three consequences:
 
 ---
 
-## 3. Information architecture — left rail, 10 pages
+## 3. Information architecture — left rail, 11 pages
 
 Top tabs waste vertical space, which is the scarce dimension on 16:9. A rail
 costs ~160 px horizontally, where there is surplus, and gives the tall Joint
@@ -137,6 +133,7 @@ SETUP              REFERENCE
   Factors
   Temp Loads       (Help -> menu bar, not a page)
 SINGLE JOINT
+  Bolt Sizing
   Joint Config
   Single Joint Results
 BULK
@@ -151,7 +148,7 @@ order → reference. The bulk steps are numbered **in the rail itself**, which i
 the one place the 1–4 scheme lives; no other page or status hint may restate it
 with different numbers.
 
-**Bolt Sizing (added 2026-09-21):** first page under SINGLE JOINT. Deliberately
+**Bolt Sizing** is the first page under SINGLE JOINT. Deliberately
 simple — bolt material, one limit-load pair, shear plane — a gut check on BOLT
 capability only over `engine.boltSizingSweep`. Inputs are page-local scratch, not
 saved in the case; "Use this size" hands the bolt and loads to Joint Config.
@@ -230,17 +227,13 @@ the file path when a case is open, prefixed `* ` when dirty. One
 
 ```
 File   New | Open... | Open Recent > | Save | Save As...
-       Import Joints from File...          (step 5 — needs Defined Joints)
-Help   About                               (built)
-       User Guide | References...          (built)
+       Import Joints from File...
+Help   About                               
+       User Guide | References...          
 ```
 
-> **No keyboard shortcut for Analyze.** `GUI_PORT_SPEC.md` §11 claimed the
-> first build ran Analyze on `F5`; it never did — there is no `KeyPressFcn`
-> anywhere in `+gui`. An earlier draft of this section specified one anyway,
-> on the strength of that claim. It was built, it required a figure-level
-> handler that made a page reach outside itself, and it shipped broken.
-> Removed: the button is the whole interface, and this is an MVP.
+> **No keyboard shortcut for Analyze.** A figure-level key handler makes a
+> page reach outside itself; the button is the whole interface.
 
 ---
 
@@ -275,10 +268,6 @@ Four notes, all settled during the step-1 build:
 
 Pages never talk to each other. All cross-page effect goes through AppState.
 
-> This reverses `GUI_PORT_SPEC.md` §2, which said to skip `events`/`notify` and
-> hand-wire `notifyXChanged()` calls. The 11,945-line single class that advice
-> produced is the evidence it does not scale past a few pages.
-
 **Deviation from the MathWorks MVC reference, deliberately:** views are plain
 `classdef < handle` page classes, not `matlab.ui.componentcontainer.
 ComponentContainer`. ComponentContainer exists to make *reusable* components
@@ -310,7 +299,7 @@ S  = engine.summary(joint, loadCase, factors)      % -> display table
 chk = engine.boltLengthCheck(...)                  % live length adequacy
 c  = data.loadCase(file)  /  data.saveCase(caseStruct, file)
 lib = data.Library.load(path)   and its accessors
-[el, info] = data.loadElementWorkbook(file)   % force import (step 7)
+[el, info] = data.loadElementWorkbook(file)   % force import
 r  = engine.applyTemperatures(joint, settings) % global temps onto one joint
 ```
 
@@ -374,12 +363,8 @@ Label it for the role: `Nut` → *Nut material*; `Helical Insert` and
 
 > **There is no `None`.** `model.ThreadedMemberType` has exactly three
 > members — a joint always threads into something, so "no threaded member" is
-> not a state Joint Config can be in. An earlier draft of this section listed a
-> fourth `None → hidden` row; it was wrong, and it was implemented faithfully
-> as `case model.ThreadedMemberType.None`, which threw on every switch to
-> Insert or Tapped Hole. The old build's *Bolt Sizing* tab did offer
-> "None (bolt-only)", but that was a standalone sizing context rather than a
-> joint — do not carry it back here.
+> not a state Joint Config can be in. Bolt Sizing's "bolt only" is a sizing
+> context, not a joint — do not carry it here.
 
 **b. Threaded-member rated load — field removed.** For a nut it already comes
 from the library (the Nut spec picker resolves `data.Library.nutFor` and
@@ -421,10 +406,8 @@ material change. A pairing with **no** `boltSpec` entry **blanks** them rather
 than carrying the previous pairing's numbers over — analysing a new bolt with
 the old bolt's ratings is the failure that matters here.
 
-> An earlier draft called for "locked display with an explicit override",
-> mirroring the nut-spec picker. Dropped once built: these fields live in a
-> group titled **Advanced / overrides**, so leaving them editable *is* the
-> override path. Locking them would need a second unlock control to say what
+> These fields are not locked: they live in a group titled **Advanced /
+> overrides**, so leaving them editable *is* the override path. Locking them would need a second unlock control to say what
 > the group's title already says. The override still matters — a pairing with
 > no spec entry falls back to `At · Ftu`, a derived convention rather than a
 > 5020B equation, and an analyst with a real spec value needs somewhere to put
@@ -472,21 +455,18 @@ The same note appears under the Interaction row on Single Joint Results.
 > **and** the interaction exponents (Eq. 20/21 body 2.5/1.5; Eq. 22/23 threads
 > 1.2/2.0). **Threads** is the conservative choice.
 
-### 7.4a Shear-transfer condition (§4.4.4) — now a real control
+### 7.4a Shear-transfer condition (§4.4.4)
 
-The first build deliberately omitted this dropdown and left
-`Joint.ShearTransferCondition` at `NotDeclared`, reasoning that a selectable
-"verified" member would have joints claiming a verification nobody performed.
-The static note that stood in its place was wired to nothing, and the omission
-had a worse consequence than the one it avoided: `NotDeclared` was the only
-value gui could produce, so `ClearanceOrGapped` — the case the enum exists to
-expose — was **unreachable from this GUI**.
+Omitting this control would leave `Joint.ShearTransferCondition` at
+`NotDeclared` and make `ClearanceOrGapped` — the case the enum exists to
+expose — unreachable from the GUI. A selectable "verified" value risks joints
+claiming a verification nobody performed, which the wording below addresses.
 
 The dropdown reads **Bolt bending (4.4.4)** — *Not determined* (default) /
 *Exempt — close or interference fit* / *Required — clearance or gap*, using
 §4.4.4's own framing rather than naming the shear-transfer mechanism. The
-default is still `NotDeclared`, so nothing claims a verification by accident; picking a value is a positive act by the
-analyst, which is what the original objection actually wanted. Applied loads
+default is `NotDeclared`, so nothing claims a verification by accident; picking
+a value is a positive act by the analyst. Applied loads
 gained a **Bolt bending limit MbL** field (in-lbf) alongside it — declaring
 `ClearanceOrGapped` without one leaves the interaction check NotEvaluated, and
 the Results bending line says so.
@@ -521,8 +501,7 @@ commit, or the summary and the form disagree.
 All fifteen displayed checks minus `Separation-before-rupture`, which is not a
 margin (§8.2). Solver order, no sorting, **`Interaction` last**.
 
-`Bearing-under-head` and `Bolt-thread shear` were hidden in the first build and
-are rows now. NASA-STD-5020B §4.4.2 REQUIRES margins on the joint members and
+`Bearing-under-head` and `Bolt-thread shear` are rows. NASA-STD-5020B §4.4.2 REQUIRES margins on the joint members and
 prints no member-strength equations (TM-106943 Eq. 74/75 supply them), so
 bearing-under-head was a required check computed on every run and displayed
 nowhere. `Bolt-thread shear` is a real mode 5020B defers on (TM-106943 Eq. 63)
@@ -689,56 +668,25 @@ becomes theme-aware and remains the single file that changes.
 
 ---
 
-## 14. Build order
+## 14. Open items
 
-Each step lands complete — spec section, class, test, run — before the next.
-
-| Step | Deliverable |
-|---|---|
-| 0 | **Behavior harvest.** Read each current tab and write its earned edge cases into a checklist. The 11,945-line class is ~20% layout and ~80% behavior; the layout is cheap to rebuild and the behavior is expensive to rediscover. Do this before deleting anything. |
-| 1 | Shell — `AppState`, `Page` base, rail, card area, navigation, status bar, menu bar, title/dirty. One placeholder page. |
-| 2 | Project · Factors · Temp Loads |
-| 3 | Joint Config — the big one |
-| 4 | Single Joint Results |
-| 5 | Defined Joints |
-| 6 | Element Mapping |
-| 7 | Element Forces |
-| 8 | Bulk Analysis |
-| 9 | Materials & Hardware — **DONE** (see §16) |
-| 10 | Help menu + References window; delete `+gui` — **DONE**. Phase 4 complete. |
-
----
-
-## 15. Open items
-
-- ~~Two pages named "Library".~~ **Resolved** — the rail labels are now
-  *Defined Joints* and *Materials & Hardware*, which drops the collision
-  `GUI_PORT_SPEC.md` §1 warned about and fixes the rail fit at the same time.
-  The scope difference still gets stated in-page on each: **Defined Joints is
-  case-scoped** (saved in the case file, travels with the analysis);
-  **Materials & Hardware is app-scoped** (baseline plus custom, persisted to
-  `library.json`, shared across every case).
+- **Two libraries, stated in-page on each.** **Defined Joints is case-scoped**
+  (saved in the case file, travels with the analysis); **Materials & Hardware is
+  app-scoped** (the shipped `+data/library/` folder, user drop-in files and the
+  saved custom entries, shared across every case).
 - **Three thin setup pages.** Project is ~4 fields and Temp Loads ~3. Defensible
   — they are easier to build and review separately, which is the point of this
   pass. If they feel sparse once built, merge into one *Project Setup* page with
   a nested `uitabgroup`. Temp Loads needs an *applies to every joint* banner
   regardless, since it is global and sits among per-joint-looking pages.
-- **Automatic L1 needs a library change.** Closed for this pass (§7.2(d)): no
-  seeded bolt carries `threadLength`, so L1 can only be entered. Deriving it
-  would mean per-part-number bolt entries (thread length is length-dependent,
-  not a property of the thread size), which is a `+data` change and a separate
-  decision — it would multiply the 25 catalogue entries by every ordered length.
 - **Dark mode** — near-free in R2026a, but below performance in priority.
   Deferred, not ruled out.
 
 ---
 
-## 16. Materials & Hardware — BUILT (step 9, 2026-08-17)
+## 15. Materials & Hardware
 
-`gui.HardwareLibraryPage`. The design below was rescued from
-`GUI_PORT_SPEC.md` §6 when that file was deleted; three parts of it were
-**changed on the way in**, and those changes are marked. Everything unmarked
-was built as written.
+`gui.HardwareLibraryPage`.
 
 **Two different things share the word "library" — keep them straight.**
 *Materials & Hardware* is app-scoped (baseline + custom, persisted to
@@ -775,7 +723,7 @@ to a document that does not contain them.
 carries an `origin` field (`"baseline"` | `"custom"`, absent = baseline),
 `save()` writes only custom entries and `load()` re-merges the shipped baseline,
 and `duplicateAsCustom(key)` exists for every managed section. The three reasons
-it was built first still explain the constraints the page must respect:
+for the split are the constraints the page must respect:
 
 - **Upgrade safety.** Without the split, `save()` would write the whole merged
   table to the user's file, and a corrected baseline value would never reach
@@ -805,7 +753,7 @@ admin tier, checksums and the packaging-path split are still only designed, in
 
 **Any library change must refresh dependent dropdowns**, or a newly added
 material is invisible until restart. Built: `JointConfigPage` subscribes to
-`LibraryChanged` — nothing in `+gui` did before step 9 — and every picker
+`LibraryChanged`, and every picker
 saves and restores its selection across the repopulation, because setting
 `Items` can drop `Value` and MATLAB fires no callback when it does. The nut and
 washer family pickers restore a **token** rather than a label, since their
@@ -825,23 +773,24 @@ and preserved across a round trip but nothing writes them — signing an
 allowable off as reviewed is a separate act the tool does not perform. See
 `COMPLIANCE.md` and `data.Library`'s header.
 
-## 17. Joint cross-section preview — deferred, geometry only
+## 16. Joint cross-section preview
 
-Also rescued from `GUI_PORT_SPEC.md` (§13). Still deferred, still the lowest
-value-per-hour item on the list, but it is a real design and nothing else
-records it.
+`gui.JointSectionView`: a non-modal window opened from Joint Config, kept
+alive beside the app, repainting on `JointChanged` as the form is edited.
 
 Draws a to-scale axial cross-section: head → washer → flanges (split left/right
 with the true clearance gap) → nut/insert/tapped host → shank at true length,
-plus centreline, dashed frustum lines at the joint's frustum angle, per-flange
-labels, and — after analysis — the loading-plane line.
+plus centreline, per-flange labels and the loading-plane line.
 
-**Genuinely useful, not decorative.** It catches exactly what the Joint Config
-form is prone to: a bolt too short for the stack, a washer wider than the
-flange, an implausible engagement, a loading plane outside the grip.
+**Useful, not decorative.** It catches exactly what the Joint Config form is
+prone to: a bolt too short for the stack, a washer wider than the flange, an
+implausible engagement, a loading plane outside the grip.
 
-**Geometry only.** On a `uiaxes` with `DataAspectRatio = [1 1 1]` and limits
-taken from real dimensions, ~15 `rectangle`/`patch`/`line`/`text` calls do it —
-and **drawing in MATLAB data coordinates removes the manual pixel-scaling layer
-entirely**. Skip gradients, hex chamfers and coil hatching. Host it in a
-right-hand column of Joint Config rather than a separate window.
+**Geometry only, in data coordinates.** A `uiaxes` with
+`DataAspectRatio = [1 1 1]` and limits taken from real dimensions; no
+pixel-scaling layer. No gradients, hex chamfers or coil hatching.
+
+**A window, not a Joint Config column.** That column ends in the Analyze
+button on a scrollable page, so a section there would sit below the fold
+exactly when it is wanted, and its width cannot show a to-scale section with
+labels. Repainting on `JointChanged` gives back what inline hosting was for.
