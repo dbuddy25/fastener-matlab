@@ -17,21 +17,19 @@ This is a **living document** — every new check adds a row.
   *untapped:* Ex 5-a, Ex 9-a (tension/sep-before-rupture).
 - **Hand-calc**: for paths no book covers (rupture branch, thermal-from-stiffness,
   single-fastener slip, tear-out & under-head margins, thread-shear margins).
-- **Second-wave acceptance cases (Phase 3.4)** — ⚠️ **the planned Phase 3.4
-  acceptance batch will NOT land in this repo.** Its input data cannot be
-  published, so those cases are verified **locally** and only the *outcome* is
-  recorded here, in the form: *"verified locally, <date>, agreement within X%,
-  inputs not in repo."* The cost is explicit and worth stating: a future
-  maintainer can see **that** a check passed, not **re-run** it. The ✍️ rows
-  below are the ones this affects.
-- **Thread-shear method note (Phase 3.3):** the thread checks use the
+- **External cross-check** — the tool has been reconciled row by row against an
+  independently maintained spreadsheet on real joints (`TOOL_DIFFERENCES.md`
+  §8). Those inputs are not public and are not in this repo, so a ✍️ row that
+  agrees with the spreadsheet is still ✍️: a maintainer can see **that** it
+  agreed, not re-run it.
+- **Thread-shear method note:** the thread checks use the
   PITCH-DIAMETER form — `As = 0.75·π·E·Le` (E = pitch diameter, Le = engagement) on BOTH the
   bolt-external and internal (nut/parent) sides — NOT TM-106943's printed 5/8·π
   external form (Eq. 63) and NOT DABJ §6's H28 tolerance-extreme form with the
   0.70 judgment knockdown. The DABJ Ex 6-a cross-check is therefore against the
   book's UN-KNOCKED area/allowable (0.0986 in² / 2,660 lb; the pitch-diameter form gives
   0.0999 in² / 2,698 lb, within 1.5%) — DABJ's knocked-down 1,860 lb is
-  deliberately not reproduced. **Inserts (updated today) now use TWO bases**,
+  deliberately not reproduced. **Inserts use TWO bases**,
   area-source precedence stated in Detail (`engine.marginInsert`): (a) a shear
   engagement area, COMPUTED from NASM33537 catalogue geometry
   (`As = 0.75·pi·D2·(Le−1.125·p)`, D2 = the STI tapped-hole pitch diameter) —
@@ -40,13 +38,10 @@ This is a **living document** — every new check adds a row.
   MANUFACTURER rated pull-out load (single spec value, row 9), which also caps
   (a)'s ultimate side when set (lower-of). The `insertUsesHelicoilRating`
   fixture's 12,949 lbf rating is an ILLUSTRATIVE input, not a Heli-Coil-anchored
-  one — an earlier version of that fixture's comment derived it from the
-  insert WIRE's strength (Nitronic 60, Ftu = 200 ksi) times a parent-side area,
-  which contradicts 5020B §4.4.1 (pull-out capacity is a property of the PARENT
-  material, not the wire); that derivation was unsound and was removed (commit
-  `0998736`) — the number is now stated as arbitrary to the rating/Pb
-  arithmetic it pins, not anchored to any Heli-Coil source.
-- **Insert computed-area external validation (today).** The shear-engagement-
+  one — pull-out capacity is a property of the PARENT material (5020B §4.4.1),
+  so no wire strength enters it; the number is arbitrary to the rating/Pb
+  arithmetic it pins.
+- **Insert computed-area external validation.** The shear-engagement-
   area form's `0.75` coefficient was checked against manufacturer pull-out data
   covering 27 thread sizes x 5 length classes (1D/1.5D/2D/2.5D/3D) = 135
   points, digitized from the charts in Heli-Coil Technical Bulletin 68-2 rev 4.
@@ -56,17 +51,9 @@ This is a **living document** — every new check adds a row.
   of ~0.79 against the STI pitch diameter; the shipped 0.75 is chosen to be a
   lower bound, not a best fit. No individual slope or per-size value from that
   data is reproduced here. **This evidence is held OUTSIDE this repository** —
-  68-2 is a Stanley vendor document kept out per the reference-standards rule —
-  and unlike the Phase 3.4 acceptance batch above, it is not a future
-  acceptance batch waiting to land in-repo: it is external and non-reproducible
-  from this repo alone BY DESIGN, permanently. Row 9a below is marked ✍️,
-  following the same convention the Phase 3.4 bullet above already
-  establishes: the glyph does not by itself distinguish reproducible hand-calc
-  arithmetic from a bound checked against external data the repo cannot
-  re-run — that distinction lives in this note and the row's Source column, not
-  the glyph. A reader must not mistake ✍️ here for a DABJ-pinned hand-calc (row
-  9's rated-fallback path stays that), nor for ✅ (no published worked example
-  was reproduced).
+  68-2 is a vendor document kept out per the reference-standards rule — so
+  row 9a is ✍️: a bound checked against data the repo cannot re-run, which is
+  what the Source column says.
 
 ---
 
@@ -134,10 +121,10 @@ This is a **living document** — every new check adds a row.
 | Solver `analyze()` + `Result` (15-row) | ✅ | tDabjCase |
 | Entry-point stub | ✅ | tFastenerToolSmoke |
 | Bulk / force resolution (`resolveForces` + `loadCaseFromForces` — bolt-axis projection, hand-derived 3-4-5) | ✍️ (Phase 3.5a) | tForces |
-| Bulk / joint-library parser (`data.loadJointLibrary` — joint-table → `model.Joint`, Step 2a schema: header-row auto-detect, AxialX/Y/Z bolt-direction marks, boltSpec auto-lookup + explicit `BoltSpec` override, On-gated washers, Nut*/Helicoil* member columns, HelicoilLengthRatio → ThreadedMember.EngagementRatio (stored as the ratio itself, since today — NOT pre-multiplied into an inch EngagementLength at parse time; engine.resolveEngagementLength resolves Le = EngagementRatio × Bolt.NominalDiameter per row at analysis time, keeping the analyst's stated intent and matching Joint Config's own ratio/length control); no temperature columns — temps are global settings; the template's first row is the DABJ §9 joint, cross-checked against the `dabjSection9` in-code build) | ✅ | tBulkParsers |
+| Bulk / joint-library parser (`data.loadJointLibrary` — joint-table → `model.Joint`: header-row auto-detect, AxialX/Y/Z bolt-direction marks, boltSpec auto-lookup + explicit `BoltSpec` override, On-gated washers, Nut*/Helicoil* member columns, HelicoilLengthRatio → ThreadedMember.EngagementRatio (stored as the ratio itself, since today — NOT pre-multiplied into an inch EngagementLength at parse time; engine.resolveEngagementLength resolves Le = EngagementRatio × Bolt.NominalDiameter per row at analysis time, keeping the analyst's stated intent and matching Joint Config's own ratio/length control); no temperature columns — temps are global settings; the template's first row is the DABJ §9 joint, cross-checked against the `dabjSection9` in-code build) | ✅ | tBulkParsers |
 | Bulk / elements parser (`data.loadElements` — element_id/joint_name/FX..MZ → forces struct; blank optionals → defaults; header-row auto-detect like the joint reader — a friendly banner row above the MATLAB names parses clean) | ✅ (Step 2c header tolerance) | tBulkParsers |
 | Bulk / settings parser (`data.loadSettings` — key/value table → NominalTempC/HotTempC/ColdTempC + the eight factor keys → `model.Factors`; template carries the §9 temperatures + DABJ factors, matched against the `dabjSection9` in-code Factors) | ✅ (Step 2a) | tBulkParsers |
-| Bulk end-to-end (parse→apply settings temps→resolve→analyze: `loadJointLibrary` template (Step 2a schema) + `loadSettings` temps/factors + in-code element → `engine.analyzeBulk` on the shipped demo joint — NAS1351 3/8-24 + A286 catalog hardware in a DABJ-§9-like configuration (torque/factors/bolt count) but NOT the book's own rated allowables, so these are hand-derived, not the §9 answer key: TensionUlt +0.718 (Eq. 10, rupture branch — Fig. 8 gate NOT assured, PpMax 11,006.78 > 0.75·Ptu_allow 10,539.6), TensionYield −1.3394 (Eq. 16/17, same not-assured gate — the derived yield allowable is itself below PpMax, a genuinely over-torqued joint per `engine.preloadWatchdog`'s own Critical warning on this row), InteractionR 0.541772 (R <= 1 Pass, NOT a margin) — in a results-table row; missing-joint rows error-marked, not thrown. The published DABJ §9 answer key (WorstMargin −0.65, GoverningCheck "Slip") is pinned separately, in-code, via `bulkJointSlipFromPatternAggregation`/`tDabjCase`) | ✅ (Phase 3.5c) | tBulk |
+| Bulk end-to-end (parse→apply settings temps→resolve→analyze: `loadJointLibrary` template + `loadSettings` temps/factors + in-code element → `engine.analyzeBulk` on the shipped demo joint — NAS1351 3/8-24 + A286 catalog hardware in a DABJ-§9-like configuration (torque/factors/bolt count) but NOT the book's own rated allowables, so these are hand-derived, not the §9 answer key: TensionUlt +0.718 (Eq. 10, rupture branch — Fig. 8 gate NOT assured, PpMax 11,006.78 > 0.75·Ptu_allow 10,539.6), TensionYield −1.3394 (Eq. 16/17, same not-assured gate — the derived yield allowable is itself below PpMax, a genuinely over-torqued joint per `engine.preloadWatchdog`'s own Critical warning on this row), InteractionR 0.541772 (R <= 1 Pass, NOT a margin) — in a results-table row; missing-joint rows error-marked, not thrown. The published DABJ §9 answer key (WorstMargin −0.65, GoverningCheck "Slip") is pinned separately, in-code, via `bulkJointSlipFromPatternAggregation`/`tDabjCase`) | ✅ (Phase 3.5c) | tBulk |
 | Bulk joint-slip pattern aggregation (four-element §9 pattern → vector-summed joint totals 16,090 / 5,690 lb → Eq. 84 reproduces the book's joint-slip −0.65 on every pattern row, governing; nf check: element count ≠ `Joint.BoltCount` → Slip NaN + Note, pinned via `pattern_id` split) | ✅ (Phase 3.5d) | tBulk |
 | Bulk runner + XLSX export (`engine.runBulk(jointFile, elementsFile, settingsFile, outFile)` — one-call files-in → margins-out pipeline over the templates, settings supplying global temps + factors; empty/omitted settings → `model.Factors()` defaults, legacy `model.Factors` object in the slot accepted; `report.exportResults` — .xlsx Results + Summary sheets / .csv by extension, write → `readtable` read-back row count verified) | ✅ (Phase 3.6, Step 2a signature) | tExport |
 | Workbook template generator (`data.makeTemplate` — five-sheet .xlsx: Joints/Elements two-row headers (friendly + MATLAB names) with the shipped example rows, Settings Setting|Value|Description, Lists dropdown sources from `data.Library`, Fields data dictionary; generated Joints sheet parse-back through `data.loadJointLibrary` reproduces the DABJ §9 row — BoltCount 4, SlipMode Joint, torque 470 — and the insert row) | ✅ (Step 2b) | tMakeTemplate |
@@ -148,334 +135,66 @@ This is a **living document** — every new check adds a row.
 
 ---
 
+
 ## Coverage gaps (watch list)
 
-- **Tapped-hole gap CLOSED (Phase 3.3)** — the parent-thread-shear check now
-  exists (`engine.marginTappedParentThread`), cross-checked vs DABJ Ex 6-a
-  (area/allowable) with a hand-derived MS. The threaded-in STIFFNESS frustum
-  now COMPUTES (validated vs DABJ Table 8-3), so a fully-defined insert/tapped
-  joint gets a real φ; the assumed φ = 1 survives only as a conservative bound
-  when the frustum geometry is incomplete — which is the case for the minimal
-  `tThreadShear` fixtures, so their hand-derived MS values are unchanged. A
-  second-wave case (Phase 3.4) should still cross-check a real
-  threaded-in φ end-to-end.
+What has no published answer key, or no fixture at all. Each margin's
+reasoning and the tests that pin it are in the engine function's header.
+
 - **Thread-shear MS values are hand-derived only** — no public worked example
-  works a thread-shear MARGIN with the 0.75·π·E·Le pitch-diameter area (DABJ Ex 6-a
-  compares allowables and then knocks down); second-wave cases (Phase 3.4)
-  should upgrade rows 7/8/9 to ✅. Row 9a (computed insert area) is a different
-  case: it already has independent evidence — the external manufacturer
-  pull-out bound described above — but that evidence is permanently held
-  outside this repo, so a Phase 3.4 acceptance case would ADD a
-  second, in-repo-outcome-only data point rather than change row 9a's ✍️
-  status; only a reproducible worked example could do that, and none is
-  known to exist for insert pull-out.
-- **Threads-in-shear interaction (Eq. 22/23) — CLOSED.** `engine.marginInteraction`
-  now computes this branch (exp 2.0/1.2, swapped from body-in-shear's 1.5/2.5 per
-  5020B's own peak-stress-location explanation), hand-derived pins in
-  `tests/tDabjCase.m` (no DABJ example covers threads-in-shear).
-  `engine.boltSizingSweep`'s preliminary sizing screen now ALSO evaluates this
-  branch, but ONLY as a pass/fail gate folded into `Status` — it reports no
-  interaction number at all (no `R`, no margin, not the file's former
-  solve-for-a `MS_Interaction` convention). Hand-derived pins in
-  `tests/tBoltSizing.m`, including a case where the interaction gate alone
-  flips an otherwise-all-passing bolt size to Fail, with the reason surfaced
-  in that row's `Notes` column so the rejection is never unexplained.
-- **Tension-yield system allowable: bolt-only defect CLOSED.**
-  `engine.marginTensionYield` used the BOLT's yield allowable in both Eq. 15
-  and Eq. 17. NASA-STD-5020B p30 defines Eq. 17's term as "the fastening
-  **system's** allowable yield tensile load", and §4.4.2 p29 scopes the
-  yield assessment to "all elements of the threaded fastening system,
-  including the fastener, the internally threaded part such as a nut or an
-  insert, and the clamped parts". The ultimate side had this right since
-  `engine.systemTensileAllowable`; there was simply no yield counterpart.
-  New `engine.systemTensileYieldAllowable` takes the minimum over bolt
-  yield and the member's `As·Fsy` (`memberTensileYldAllowable`, extracted
-  first as a behaviour-preserving step), and `marginTensionYield` consumes
-  it in both equations.
-
-  **Severity: wrong magnitudes and wrong attribution, never a wrong
-  verdict.** With member allowable `A`, `P = PpMax`, `x = n·φ·FFY·FSY·PtL`,
-  the per-mode member row gives `A/(P+x) − 1` and Eq. 17 gives
-  `(A−P)/x − 1`. Eq. 17 exceeds the row exactly when `A ≥ P + x` — i.e.
-  exactly when the row already passes — so below zero the ordering reverses
-  and above zero it does not; the SIGN never differs. No margin ever
-  reported Pass where the standard says Fail. That is also why `min()` over
-  the per-mode rows could never have substituted for this: the two forms are
-  different functions of the same allowable, not the same function of
-  different ones.
-
-  **Two rules fell out of it, both from §4.4.2 rather than inference.**
-  (a) A spec-RATED nut or insert has NO yield mode — a rating is an ultimate
-  quantity and carries no yield information — so the minimum degenerates to
-  the bolt's and is flagged INCOMPLETE / OPTIMISTIC rather than implying the
-  member was checked. This is what keeps DABJ §9's +0.63 exactly where the
-  answer key put it (`tSystemAllowable/dabjYieldSystemBoltGovernedButIncomplete`
-  pins the number AND the flag). (b) A TAPPED HOLE does get a yield mode
-  here: p29's "all elements" governs and p30's sanction of a failure theory
-  ("because shear yield strength is not a standard material property…")
-  removes the obstacle that had `engine.marginTappedParentThread` deferring
-  the question. The Pb-based tapped-hole ROW stays ultimate-only, so DABJ
-  Example 6-a's pin is untouched.
-
-  **Accepted divergence:** `engine.boltSizingSweep`'s `MS_TensionYield`
-  stays bolt-only, so that screen can Pass a size on yield that a full
-  `analyze()` then fails on a member-governed `Pty_allow` — the same trap
-  the tension-ULTIMATE rework above closed. Left open deliberately (the
-  screen is not exposed in gui, so it gates nothing today); recorded in
-  that function's header and in `TOOL_DIFFERENCES.md`. Hand-derived pin:
-  VALIDATION row 2s, `tSystemAllowable/memberGovernedYieldRuptureBranchHandDerived`.
-
-- **Joint slip took the wrong minimum preload on separation-critical joints: CORRECTED.**
-  NASA-STD-5020B §4.3.1 assigns the two minimum-initial-preload forms **by
-  analysis, not by joint**, and says so twice — p22 gives Eq. 4 (`1−Γ`) to
-  *"separation analysis of separation-critical joints and… fatigue analysis"*,
-  p23 gives Eq. 5 (`1−Γ/√n_f`) to *"**joint-slip analysis** and separation
-  analysis of joints that are not separation-critical"*, and p47 repeats the
-  split for the thermal-adjusted forms. `engine.preload` computed one `PpMin`
-  from `PreloadSpec.SeparationCritical` and both `marginSeparation` and
-  `marginSlip` consumed it, so slip on a separation-critical joint ran on the
-  Eq. 4 value.
-
-  Direction was **conservative** — Eq. 4 is the lower preload, so slip capacity
-  was understated (~14% at `Γ = 0.25, n_f = 4`) — but it is not what §4.3.1
-  assigns. `engine.preload` now returns `PpMinSlip` alongside `PpMin`;
-  `marginSlip` takes the former, `marginSeparation` the latter. On a joint that
-  is not separation-critical the two are identical, so the pair diverges only
-  where the standard says it should.
-
-  **DABJ §9 is `SeparationCritical = false`** (p. 9-11), so `PpMinSlip == PpMin`
-  there and the published **−0.65** slip margin does not move — pinned by
-  `tDabjCase/theDabjSlipAnswerKeyIsOnTheEq5Path`. The behaviour that does change
-  is pinned as an invariant rather than a number
-  (`slipIgnoresTheSeparationCriticalFlag`): flipping the flag must move the
-  separation margin and leave the slip margin exactly where it was.
-
-  **Scope: Eq. 84 only.** `PpMinSlip` feeds the joint-slip equation, not the
-  single-fastener Eq. 86. A.2.1 (p50) ties the `√n_f` to the joint TOTAL — *"the
-  concern… is not the variation in preload for a single fastener, it is the
-  variation in total preload for the joint"* — which is Eq. 84's `n_f·μ·PpMin`
-  and not Eq. 86's `μ·PpMin`. Crediting the averaging to the single-fastener
-  check would be non-conservative. See COMPLIANCE.md for the text-vs-rationale
-  conflict this leaves open.
-
-  **One judgment call, flagged not buried:** Eq. 5 is printed for the
-  torque-controlled form, and 5020B says nothing about direct preload. The
-  `√n_f` is applied on that branch too, on A.2.1's reasoning — the statistic is
-  about preload variation across `n_f` fasteners, not about torque.
-
-- **Thermal preload ignored washers while the bolt stiffness spanned them: CORRECTED.**
-  TM-106943 Eq. 10 carries ONE `L`, shared between its Eq. 6 bolt term
-  (`δ_b = P_th/K_b + α_b·L·ΔT`) and its Eq. 7 joint term — verified against the
-  printed derivation on p5. `engine.preload` used `Joint.GripLength` (the flange
-  stack alone) while `kb` was built over grip + washers, and the member CTE
-  average excluded washer materials entirely.
-
-  **The error is exactly `(α_washer − α_bolt)·t_washer`** — not a flat
-  span-ratio, and it **vanishes when washers share the bolt's material**.
-  Dropping them was arithmetically identical to assuming every washer has the
-  bolt's CTE. On the Ex 8-b geometry with steel washers (1.17e-5) under an A-286
-  bolt (1.69e-5) the old form ran **17% high** — conservative in that direction,
-  but unconservative whenever `α_washer > α_bolt`. `L` now comes from
-  `engine.stiffness`'s new `Lbolt` return, so the two can never disagree about
-  the span, and washers join the thickness-weighted CTE sum with their own
-  material.
-
-  **A missing CTE now refuses instead of being read as zero.**
-  `model.Material.CTE` defaulted to **0**, so a material with no coefficient was
-  read as "does not expand" — a physical claim, not an absence — and the thermal
-  term produced a confident number from data nobody had supplied. `library.json`'s
-  own `Rigid` entry documented a guard against exactly this ("cte is unset, so the
-  thermal-preload path (TFSR 5) cannot run for this entry") that did not exist.
-  The default is now `NaN`, matching every other optional number in `+model`, so
-  the absence is detectable; without the new check that NaN would reach `P_th` and
-  vanish anyway, since `max([NaN NaN 0])` is `0` in MATLAB. `engine.preload` now errors
-  (`engine:preload:missingCTE`) naming what to fix; `engine.analyzeBulk` catches
-  per row, so one under-specified joint cannot take down a bulk run. The guard
-  sits BEHIND the excursion check, so a joint with no temperature range still
-  runs without needing coefficients at all.
-
-- **Bolt thread-shear area was ~29% unconservative: CORRECTED.**
-  `engine.marginBoltThreadShear` computed `As = 0.75·π·E·Le` — TM-106943
-  **Eq. 76's INTERNAL-thread** coefficient applied to the **pitch** diameter —
-  while citing Eq. 63, which prints `As = 5·π·Le·D_minor,int/8` on the **minor
-  diameter of the mating internal thread** (TM-106943 p18, verified against the
-  page). Coefficient ×1.200 and diameter ×1.073 compound to **×1.27 on a
-  3/8-24**, and the area was still ~18% high against the exact FED-STD-H28
-  external-thread form.
-
-  **The deviation was declared but its rationale did not hold.** The header
-  justified it as applying "the SAME form to BOTH sides of the engagement… one
-  consistent area basis." But the substitution runs in **opposite directions**:
-  on the internal side Eq. 76 wants 3/4 on the *major* diameter, so pitch
-  diameter is conservative; on the external side Eq. 63 wants 5/8 on the *minor*
-  diameter, so 3/4 on pitch was unconservative. The consistency was cosmetic
-  while the bias was real — and it made `analyze()`'s worst-margin pick
-  systematically under-report bolt thread shear as the governing mode. Nothing
-  in the header stated the direction.
-
-  Now Eq. 63 as printed, with `D_minor,int` computed per ASME B1.1
-  (`D − 1.08253·p`; basic is also the minimum for an internal thread, so it is
-  the conservative end of the tolerance band). **The internal side is
-  untouched** and stays on Eq. 76. Row 7's pin moved +5.046 → **+3.778** — a
-  deliberate rebaseline of a hand-calc pin, not an answer key; DABJ §9 is
-  unaffected (its Nut fixture has no `EngagementLength`, so every thread row is
-  NotEvaluated there). Found by the 2026-08-13 equation audit.
-
-- **Bolt Sizing tension-ultimate: bolt-only defect CLOSED.** `engine.boltSizingSweep`
-  used to compute `MS_TensionUlt` from the bolt-only `Ptu_allow = At*Ftu`
-  unconditionally, so a bolt size could Pass this screen and then FAIL
-  Tension-Ultimate in a full `engine.analyze()` run once a weaker nut or
-  insert was chosen — the screen was blind to the governing failure mode.
-  The function now accepts optional threaded-member context
-  (`Library`+`NutSpec` for per-size nut resolution, or a fixed
-  `ThreadedMember` template for Insert/TappedHole) and, when supplied,
-  resolves EACH candidate bolt size's OWN matching nut/insert and computes
-  `Ptu_allow` via the shared `engine.systemTensileAllowable` — the SAME
-  function `engine.marginTensionUlt` calls, so the two can never disagree.
-  A new `TensionUltBasis` column states, per row, which allowable governed
-  (`"Bolt-only (...)"` or `"System (<mode> governs)"`) — the table itself
-  now says so, not just this function's header. Shear and the Eq. 20-23
-  interaction gate are UNCHANGED (always bolt-only), mirroring
-  `engine.marginInteraction`'s own deliberate bolt-only rule.
-  **Tension-yield in this screen is now a KNOWN DIVERGENCE, not a mirror** —
-  see the §4.4.2 entry below; the screen stays bolt-only while
-  `engine.marginTensionYield` moved to the system minimum. Hand-derived pins in `tests/tBoltSizing.m`:
-  `nutGovernsBelowBoltFlipsPassToFail` (NAS1351 1/4-28 + the shipped
-  NAS1291C4M nut — bolt-only would show `MS_TensionUlt = +0.204803`, the
-  nut's 4,580 lbf rating actually governs and the system value is
-  `-0.051760`, flipping Pass to Fail), `noMatchingNutFallsBackToBoltOnlyHonestly`
-  and `unassessedThreadedMemberRefusedNotGuessed` (honest fallback, never a
-  fabricated system number, when a size's nut can't be resolved or a
-  supplied member can't be assessed), and `noContextStaysBoltOnlyWithBasisStated`
-  (today's call shape is unchanged, now stated explicitly in the output).
-  **Coverage gap CLOSED (today).** The library's `inserts` section is now a
-  MANAGED section, seeded with 30 NASM33537 tapped-hole-geometry entries
-  (`data.Library.insert`/`insertFor`/`insertKeys`/`addInsert`, mirroring
-  nuts/washers — `tests/tLibrary.m`); the Insert branch of the bolt-sizing
-  context is now exercised against REAL catalog data by
-  `insertStiPitchDiameterResolvesPerRow` (`tests/tBoltSizing.m`), which
-  supplies a `Library` alongside a fixed Insert template and confirms
-  `StiPitchDiameter` resolves PER CANDIDATE ROW from `insertFor` — the same
-  "one template, many per-row numbers" pattern already proven for
-  `EngagementRatio`/Le (`engagementRatioResolvesPerRowNominalDiameter`).
-  **Remaining gap:** two sizes have no helical insert manufactured at all —
-  #0-80 and #5-44 — for which `StiPitchDiameter` resolves NaN and
-  `engine.marginInsert` refuses with a reason ("no insert is catalogued for
-  this thread size") kept explicitly distinct from an otherwise-catalogued
-  insert's incomplete configuration
-  (`insertUncataloguedSizeVsIncompleteConfigRefusal`, `tests/tThreadShear.m`),
-  so an analyst is never left guessing which case applies. The catalogue
-  carries geometry only — no insert strength data is seeded, since none is
-  published (the catalogue defers to Technical Bulletin 68-2, 68-2 is charts
-  only, and NASM33537 gives no strengths).
-  The GUI's Bolt Sizing page (`gui.BoltSizingPage`) is bolt-only by design and
-  passes no threaded-member context; the two pure helpers
-  (`engine.boltSizingMemberArgs` / `engine.boltSizingMemberSelectionReady`,
-  pinned in `tests/tBoltSizingMemberArgs.m`) remain for a caller that does.
-- **Interaction is now a CRITERION (R <= 1), not a margin — and R is fully
-  carried through to every surface.** NASA-STD-5020B states Eq. 20-23 as
-  pass/fail, never as a margin equation, so `engine.marginInteraction` returns a
-  ratio `R` and `Pass`, not `MS` — a `Pass`/`Fail` on a fundamentally different
-  scale than the other 14 margins (R = 0.86 is a comfortable pass; MS = 0.86
-  would be a large one). `engine.analyze` reports Interaction as its own Margins
-  row with `MS = NaN` (excluding it from the `WorstMargin`/`GoverningCheck` min,
-  the same way the boolean Separation-before-rupture gate row already does),
-  its own dedicated `R` field (NaN on every other row), and a `Status` set
-  directly from `R <= 1` — never silently hidden as "NotEvaluated". DABJ §9's
-  answer key (`WorstMargin` −0.65, `GoverningCheck` "Slip") is unaffected:
-  Interaction was never the governing check there (R = 0.483642, Pass) — and a
-  NEW fixture (`tBulk.bulkFailingInteractionVisibleButNeverGoverns`) pins the
-  opposite case, R = 2.518259 (Fail), confirming a failing interaction is
-  visible on its own Status at every surface while still never governing.
-  **CLOSED — carried to every surface:** `engine.analyzeBulk`'s bulk table
-  column is renamed `InteractionR` and sourced directly from
-  `Result.Margins("Interaction").R` (never `.MS`); the GUI Results row, Bulk
-  grid (Tiers 1-3, on screen AND in the XLSX export), and the PDF
-  (`report.singleJointReport`) all render `R = <value> (<=1)` on this row
-  instead of the ordinary signed-MS text, and key pass/fail/envelope
-  aggregation off `R <= 1` (`gui.MarginView.isRatio`/`envelope`/`passFail`), never the `MS >= 0` sign test.
-  `tests/tBulk.m`/`tests/tWorkbook.m`/`tests/tExport.m` assert the bulk table's
-  `InteractionR` column carries the real ratio, cross-checked against
-  `engine.marginInteraction` directly.
-- **Interaction §4.4.4 bolt-bending exemption — now an explicit, recorded
-  determination, not a silent global assumption.** NASA-STD-5020B §4.4.4 makes
-  the `fbu = 0` omission CONDITIONAL: exempt for close-tolerance/interference
-  fits, but bending "should be considered" when shear is transferred across a
-  gap/non-load-carrying spacer or there is clearance between bolt and joint.
-  `model.Joint` gained `ShearTransferCondition` (`model.ShearTransferCondition`:
-  `NotDeclared` default / `CloseToleranceOrInterference` / `ClearanceOrGapped`),
-  and `engine.marginInteraction` branches on it, mirroring the Fig. 8 `e/D`
-  ASSUMED/VERIFIED distinction directly above: `NotDeclared` computes the
-  fbu=0 form exactly as before (byte-identical R/Pass/a on every existing
-  fixture — pure regression) with the exemption reported ASSUMED, not
-  verified; `CloseToleranceOrInterference` computes the identical numeric
-  result with the exemption reported VERIFIED; `ClearanceOrGapped` reports
-  NotEvaluated (`R = NaN`, `Pass = false`, no throw) since bending physics is
-  still not implemented and the criterion cannot be evaluated conservatively
-  for that configuration. `engine.analyze` completes without error on a
-  `ClearanceOrGapped` joint — the NaN R already flows through the existing
-  `isnan(R) -> NotEvaluated` / `MS = NaN` machinery Interaction has always
-  used, so it was never picked as the governing worst margin even before this
-  change (`entry()`'s `iaRow.MS` is NaN by design regardless of `R`). See
-  row 13g and `TOOL_DIFFERENCES.md` §7.4 / `COMPLIANCE.md` TFSR 11.
-- **Yield rupture branch (Eq. 16/17) — ✅ RESOLVED**, implemented in
-  `marginTensionYield` sharing the Fig. 8 gate with `marginTensionUlt` (row 2r).
-  The stale TODO/VALIDATION.md citation of "Eq. 11" (the ultimate-side P'sep
-  formula, unrelated to yield) is corrected to Eq. 16/17.
-- **Fig. 8 e/D condition — ✅ RESOLVED**, previously hardcoded `true` in
-  `separationBeforeRuptureGate`; now computed from the minimum
-  `FlangeLayer.EdgeDistance` over the stack, over the bolt diameter, with the
-  Trace distinguishing a VERIFIED result (every layer's EdgeDistance set) from
-  an ASSUMED one (no layer set — the §9/Ex 8-b fixtures' unmodified case,
-  unaffected) or a partially-assumed one (some layers set, condition passes on
-  the known minimum but an unrecorded layer could still be tighter). A known
-  e/D < 1.5 fails the condition outright (rows 12a/12b/12c).
-- **Direct-preload & separation-critical preload** — direct-preload is now
+  works a thread-shear MARGIN with the `0.75·π·E·Le` pitch-diameter area (DABJ
+  Ex 6-a compares allowables and then knocks down). Row 9a (computed insert
+  area) has the external 68-2 bound described above; no reproducible worked
+  example is known to exist for insert pull-out.
+- **No real insert or tapped joint has been cross-checked with the full
+  frustum.** The threaded-in stiffness frustum is validated against DABJ
+  Table 8-3, but the minimal `tThreadShear` fixtures carry no frustum geometry,
+  so their thread margins run on the conservative `φ = 1` bound.
+- **Two thread sizes have no helical insert manufactured at all** (#0-80,
+  #5-44): `Library.insertFor` returns empty and the insert rows read
+  NotEvaluated with that reason. Not a gap in the tool; recorded so it is not
+  mistaken for one.
+- **A spec-RATED nut or insert has NO yield mode** (a rating carries no yield
+  information), so the system yield minimum degenerates to the bolt's and is
+  flagged INCOMPLETE / OPTIMISTIC. That is what keeps DABJ §9's +0.63 where the
+  answer key put it — `tSystemAllowable/dabjYieldSystemBoltGovernedButIncomplete`
+  pins the number AND the flag. A member-governed yield is pinned hand-derived,
+  row 2s.
+- **Direct-preload & separation-critical preload** — direct-preload is
   exercised indirectly by the tThreadShear fixtures (PpMax pinned); no dedicated
-  fixture, and separation-critical still has none.
-- **Mixed-modulus frustum** — implemented via the thickness-weighted harmonic-mean `Ebar` (NASA TM-106943 Eq. 34), not per-layer slicing; covered by self-checks (reduction, split invariance, bounding, monotonicity) rather than an external answer key — see the Stiffness table row above and `STIFFNESS_PLAN.md` §3.
-- **Joint-mode slip in bulk: CLOSED for force resultants (Phase 3.5d)** —
-  `analyzeBulk` aggregates the bolt pattern (`pattern_id`, or joint name when
-  blank) into the Eq. 84 joint totals and reproduces the §9 joint-slip −0.65
-  end-to-end (tBulk); the nf check (pattern element count must equal
-  `Joint.BoltCount`) refuses to evaluate mismatched patterns (Slip NaN + Note).
-  Remaining caveats: pattern TORSION (moment about the bolt axis at the pattern
-  centroid) is not modeled — same scope as Eq. 84 (resultant force only) — and
-  one `JointName` reused for several physical joints needs `pattern_id` set, or
-  the nf check will (correctly) refuse to aggregate.
+  fixture, and separation-critical has none. Joint slip takes Eq. 5 on every
+  joint (`tDabjCase` pins the Eq. 4/5 split); DABJ §9 is not separation-critical,
+  so its −0.65 is unaffected.
+- **Thermal preload has no external answer key.** TM-106943 Eq. 10 with the
+  washers in the CTE sum is pinned hand-derived (`tStiffness`), and a missing
+  CTE refuses rather than reading as zero. No joint with a real ΔT has been
+  compared against anything.
+- **Mixed-modulus frustum** — the thickness-weighted harmonic-mean `Ebar`
+  (NASA TM-106943 Eq. 34) is covered by self-checks only (reduction, split
+  invariance, bounding, monotonicity — `tStiffness`); no external answer key
+  exists for a mixed stack.
 - **The NUT side of bearing-under-head is exercised by no fixture.** The head
   side has two hand-derived pins; the `ThreadedMember.BearingDiameter` /
   `NutWasher.OuterDiameter` branch has none.
 - **Tear-out & under-head margins are hand-derived only** — no public worked
-  example works these margins (DABJ Ex 5-b compares bearing allowables only);
-  second-wave cases (Phase 3.4) should upgrade rows 4/6 to ✅.
+  example works these margins (DABJ Ex 5-b compares bearing allowables only).
 - **Tear-out below e/D = 1.5** — computed with a CAUTION flag (outside Eq. 69–71
   validity; Bruhn-type analysis needed); no numeric validation there.
-- **UN vs UNJ thread form — ✅ RESOLVED 2026-07-29, the seeded areas are right.**
-  **NAS1351/NAS1352 specify UNRF/UNF** (procurement drawings call UNRF-3A), **not
-  UNJ**. UNR mandates a rounded external-thread root but keeps UN basic
-  major/pitch/minor diameters, so the ASME B1.1 UN stress area applies and the
-  seeded `At` values are correct. UNJ (MIL-S-8879) is the form with an enlarged
-  *controlled* root radius that raises the minor diameter and gives the ~8%
-  larger area — a different specification.
-  > ⚠️ **The trap this leaves.** The 8.2% gap was never the hardware: **DABJ
-  > Appendix B assumes UNJF**, listing At = 0.0951 for 3/8, which is why its
-  > rated loads imply that area (15,200/160,000 = 0.095, and identically
-  > 11,400/120,000 — an area difference, not a strength one) against the UN
-  > value of 0.0878. So **do not pair DABJ's rated loads with a UNRF NAS entry**:
-  > the book's allowables are for a larger thread area than the part has. The
-  > `3/8 A-286 160ksi` boltSpec is fixture data for exactly this reason and is
-  > labelled as such; a real NAS1351 joint needs allowables for its own thread
-  > form, either spec-rated or derived from the UN `At` the library carries.
-- **DABJ §9 + Phase 3.2 interplay** — §9's library flange (Al 7075-T7351) carries
-  handbook-fill Fbru/Fbry, so the Bearing row now EVALUATES on §9 (+5.775, Pass,
-  hand-derived); tear-out/under-head stay NotEvaluated. WorstMargin/GoverningCheck
-  (Slip −0.65) unchanged — pinned by tBearing (dabjSection9RegressionUnchanged).
-- **DABJ §9 + Phase 3.3 interplay** — §9 is a Nut joint with no EngagementLength
-  (and no frustum geometry), so all five thread rows resolve NotEvaluated and the
-  answer key is untouched — pinned by tThreadShear (dabjSection9RegressionUnchanged).
-
-## How this drives the plan
-- **Phase 3.2 / 3.3:** each new check adds a row + a fixture (DABJ Ex 5-a/5-b/6-a where available, else hand-calc). ✅ done through 3.3 — all 15 checks implemented.
-- **Phase 3.4 (second wave):** pull additional acceptance cases specifically to fill ⏳/✍️ rows — especially a mixed-modulus external answer key (none exists yet; the Stiffness row is self-checks only).
-- **Phase 5.3 (final validation):** re-run this entire matrix against the packaged `.exe`.
+- **Fig. 8 e/D condition** — computed from the minimum `FlangeLayer.EdgeDistance`
+  over the stack; VERIFIED when every layer carries one, ASSUMED when none does
+  (the §9 / Ex 8-b fixtures), partially assumed in between. A known e/D < 1.5
+  fails the condition outright (rows 12a/12b/12c). The GUI requires an edge
+  distance for exactly this reason; the engine cannot, without breaking the
+  published answer key.
+- **UN vs UNJ thread form — decided, the seeded areas are right.**
+  NAS1351/NAS1352 specify UNRF/UNF, not UNJ, so the ASME B1.1 UN stress area
+  applies. **DABJ Appendix B assumes UNJF** (At = 0.0951 for 3/8 against the UN
+  0.0878), which is why its rated loads imply the larger area: **do not pair
+  DABJ's rated loads with a UNRF NAS entry.** The `3/8 A-286 160ksi` boltSpec
+  is fixture data for exactly this reason and is labelled as such.
+- **DABJ §9 regression pins.** §9's flange (Al 7075-T7351) carries handbook
+  Fbru/Fbry, so the Bearing row evaluates (+5.775, hand-derived) while
+  tear-out/under-head stay NotEvaluated; §9 is a Nut joint with no
+  EngagementLength, so all five thread rows resolve NotEvaluated. WorstMargin /
+  GoverningCheck (Slip −0.65) is pinned unchanged by `tBearing` and
+  `tThreadShear` (`dabjSection9RegressionUnchanged`).
