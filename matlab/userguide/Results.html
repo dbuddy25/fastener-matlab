@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Single Joint Results — Fastener Tool User Guide</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<nav aria-label="Guide">
+<a class="home" href="index.html">Fastener Tool — User Guide</a>
+<h2>SETUP</h2><ul>
+<li><span class="unwritten" title="Not written yet">Project</span></li>
+<li><span class="unwritten" title="Not written yet">Factors</span></li>
+<li><span class="unwritten" title="Not written yet">Temp Loads</span></li>
+</ul>
+<h2>SINGLE JOINT</h2><ul>
+<li><span class="unwritten" title="Not written yet">Bolt Sizing</span></li>
+<li><span class="unwritten" title="Not written yet">Joint Config</span></li>
+<li><a href="Results.html" aria-current="page">Single Joint Results</a></li>
+</ul>
+<h2>BULK</h2><ul>
+<li><span class="unwritten" title="Not written yet">1 · Defined Joints</span></li>
+<li><span class="unwritten" title="Not written yet">2 · Element Mapping</span></li>
+<li><span class="unwritten" title="Not written yet">3 · Element Forces</span></li>
+<li><span class="unwritten" title="Not written yet">4 · Bulk Analysis</span></li>
+</ul>
+<h2>REFERENCE</h2><ul>
+<li><span class="unwritten" title="Not written yet">Materials &amp; Hardware</span></li>
+</ul>
+<h2>ABOUT THE TOOL</h2><ul>
+<li><a href="limits.html">What the tool does not do</a></li>
+<li><a href="sources.html">Where the numbers come from</a></li>
+</ul>
+</nav>
+<main>
+<p class="crumb">SINGLE JOINT</p>
+<h1>Single Joint Results</h1>
+<p>Every check the engine computes, one row each: the margin, its status, and the equation that produced it. Select a row to see the inputs behind it.</p>
+
+<h2>Reading a row</h2>
+<table>
+<tr><th>Status</th><th>Means</th></tr>
+<tr><td><span class="pass">Pass</span></td><td>MS ≥ 0 (or R ≤ 1 for Interaction).</td></tr>
+<tr><td><span class="fail">FAIL</span></td><td>MS &lt; 0 (or R &gt; 1). The whole row is painted.</td></tr>
+<tr><td><span class="noteval">Not evaluated</span></td><td>A required input is missing, so the value shows <span class="noteval">—</span>. <strong>Not a pass.</strong> The row's Method names what is missing.</td></tr>
+<tr><td>Assured / Not assured</td><td>Separation-before-rupture only. A branch choice, not a verdict.</td></tr>
+</table>
+<ul>
+<li>The verdict line never reads "All … pass" while any row is Not evaluated. It reads "<em>N</em> displayed checks pass, <em>M</em> NOT EVALUATED".</li>
+<li>Only one threaded-member type applies to a joint. The rows for the other types read Not evaluated; that is expected.</li>
+<li><strong>Cap MS &gt; 5</strong> shows large margins as <code>&gt;+5</code>. Untick it to see the number.</li>
+<li><strong>Method</strong> names the equation that ran and the basis of the allowable (rated, computed, or derived).</li>
+</ul>
+
+<h2>The 15 checks</h2>
+<table>
+<tr><th>#</th><th>Check</th><th>Governing equation</th><th>Not evaluated when</th></tr>
+<tr data-check="Tension-Ultimate"><td>1</td><td>Tension-Ultimate</td><td>5020B Eq. 6 (separation first) or Eq. 7/10 (rupture first)</td><td>No tensile load; or rupture branch needed and stiffness unavailable</td></tr>
+<tr data-check="Tension-Yield"><td>2</td><td>Tension-Yield</td><td>5020B Eq. 15 or Eq. 16/17; Eq. 18 for an unrated bolt's allowable</td><td>No yield mode of the fastening system can be assessed</td></tr>
+<tr data-check="Shear-Ultimate"><td>3</td><td>Shear-Ultimate</td><td>5020B Eq. 12 (body) / Eq. 13 (threads), MS by Eq. 14</td><td>No shear load or no <code>Fsu</code></td></tr>
+<tr data-check="Interaction"><td>4</td><td>Interaction</td><td>5020B Eq. 20 (body) / Eq. 22 (threads)</td><td>No bolt ultimate allowable; or a clearance/gapped joint with no bending moment supplied</td></tr>
+<tr data-check="Separation"><td>5</td><td>Separation</td><td>5020B Eq. 19</td><td>No preload or no tensile load</td></tr>
+<tr data-check="Slip"><td>6</td><td>Slip</td><td>5020B Eq. 84/86</td><td>Slip ignored, or joint-level loads missing in Joint mode</td></tr>
+<tr data-check="Bearing"><td>7</td><td>Bearing</td><td>TM-106943 Eq. 72–74, required by 5020B §4.4.2</td><td>No shear load, no hole diameter, or no layer carries an allowable</td></tr>
+<tr data-check="Bearing-under-head"><td>8</td><td>Bearing-under-head</td><td>TM-106943 Eq. 75 area, Eq. 74 MS</td><td>No bearing face OD, or stiffness unavailable</td></tr>
+<tr data-check="Shear-tearout"><td>9</td><td>Shear-tearout</td><td>TM-106943 Eq. 69–71, required by 5020B §4.4.2</td><td>Edge distance unset, or the layer opted out</td></tr>
+<tr data-check="Bolt-thread shear"><td>10</td><td>Bolt-thread shear</td><td>TM-106943 Eq. 63 area, Eq. 64/65 MS</td><td>No engagement, no bolt <code>Fsu</code>, or no threads per inch</td></tr>
+<tr data-check="Nut strength"><td>11</td><td>Nut strength</td><td>Rated load (5020B §4.4.1); otherwise TM-106943 Eq. 76/77</td><td>Not a nut; or no rating and no area</td></tr>
+<tr data-check="Insert internal-thread"><td>12</td><td>Insert internal-thread</td><td>5020B §4.4.1 — the allowable specified for the insert</td><td>Not an insert, or no allowable specified</td></tr>
+<tr data-check="Insert external-thread"><td>13</td><td>Insert external-thread</td><td>5020B §4.4.1 — pull-out from the parent material</td><td>Not an insert; no catalogue geometry and no specified area</td></tr>
+<tr data-check="Tapped-hole parent-thread"><td>14</td><td>Tapped-hole parent-thread</td><td>TM-106943 Eq. 76/77 area and allowable, Eq. 65 MS</td><td>Not a tapped hole, or no parent <code>Fsu</code></td></tr>
+<tr data-check="Separation-before-rupture"><td>15</td><td>Separation-before-rupture</td><td>5020B Fig. 8 decision tree</td><td>Flange stack empty, or no system allowable</td></tr>
+</table>
+
+<h2>Two rows that are not margins</h2>
+<div class="callout"><strong>Interaction reports a ratio R, and passes when R ≤ 1</strong>, the opposite direction from MS ≥ 0. It never sets the worst margin, but a failing R still fails the verdict. It reads <code>R = 0.83 (&lt;= 1)</code>.</div>
+<p><strong>Separation-before-rupture</strong> decides which tension equation runs. <em>Not assured</em> is the conservative branch, not a failure. It leads the Analysis decisions panel below the table.</p>
+
+<h2>Below the table</h2>
+<ul>
+<li><strong>Analysis decisions</strong>: which Fig. 8 branch ran and which allowable governed.</li>
+<li><strong>Warnings</strong>: never margins. For example, preload close to yield, or friction above the 5020B cap without test substantiation.</li>
+<li><strong>Scope note</strong>: the table is not a complete 5020B assessment. Yield and separation under combined loading are not implemented. See <a href="limits.html">What the tool does not do</a>.</li>
+</ul>
+
+<h2>Saving the result</h2>
+<ul>
+<li><strong>Export Table...</strong> writes the rows to a workbook.</li>
+<li><strong>Save PDF Report...</strong> writes a calc report stamped with the version and run time.</li>
+</ul>
+<p>Both are enabled only while the result is fresh. After any edit, re-run first.</p>
+<p class="next">Next: <a href="limits.html">What the tool does not do</a></p>
+</main>
+</body>
+</html>

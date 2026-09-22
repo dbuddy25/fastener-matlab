@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fastener Analysis Tool — Fastener Tool User Guide</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<nav aria-label="Guide">
+<a class="home" href="index.html" aria-current="page">Fastener Tool — User Guide</a>
+<h2>SETUP</h2><ul>
+<li><span class="unwritten" title="Not written yet">Project</span></li>
+<li><span class="unwritten" title="Not written yet">Factors</span></li>
+<li><span class="unwritten" title="Not written yet">Temp Loads</span></li>
+</ul>
+<h2>SINGLE JOINT</h2><ul>
+<li><span class="unwritten" title="Not written yet">Bolt Sizing</span></li>
+<li><span class="unwritten" title="Not written yet">Joint Config</span></li>
+<li><a href="Results.html">Single Joint Results</a></li>
+</ul>
+<h2>BULK</h2><ul>
+<li><span class="unwritten" title="Not written yet">1 · Defined Joints</span></li>
+<li><span class="unwritten" title="Not written yet">2 · Element Mapping</span></li>
+<li><span class="unwritten" title="Not written yet">3 · Element Forces</span></li>
+<li><span class="unwritten" title="Not written yet">4 · Bulk Analysis</span></li>
+</ul>
+<h2>REFERENCE</h2><ul>
+<li><span class="unwritten" title="Not written yet">Materials &amp; Hardware</span></li>
+</ul>
+<h2>ABOUT THE TOOL</h2><ul>
+<li><a href="limits.html">What the tool does not do</a></li>
+<li><a href="sources.html">Where the numbers come from</a></li>
+</ul>
+</nav>
+<main>
+<p class="crumb">User Guide</p>
+<h1>Fastener Analysis Tool</h1>
+<p>Margins of safety for preloaded bolted joints to <strong>NASA-STD-5020B</strong>. Run one joint on the Single Joint pages, or many at once from FE element forces on the Bulk pages.</p>
+<p>Every result names the equation behind it. A check missing an input reports <span class="noteval">—</span> Not evaluated, never a guessed number.</p>
+
+<h2>The rail</h2>
+<table>
+<tr><th>Section</th><th>Page</th><th>Use it to</th></tr>
+<tr><td rowspan="3">SETUP</td><td>Project</td><td>Record who ran the analysis and what it is for. Never analysed; travels with the case.</td></tr>
+<tr><td>Factors</td><td>Set the factors of safety and fitting factors. Start from the 5020B preset.</td></tr>
+<tr><td>Temp Loads</td><td>Set assembly, hot and cold temperatures. Global: they apply to every joint in the case.</td></tr>
+<tr><td rowspan="3">SINGLE JOINT</td><td>Bolt Sizing</td><td>Gut-check bolt capability across sizes before defining the joint.</td></tr>
+<tr><td>Joint Config</td><td>Define the bolt, flange stack, threaded member and loads, then analyze.</td></tr>
+<tr><td><a href="Results.html">Single Joint Results</a></td><td>Read every check, its margin and the equation that produced it.</td></tr>
+<tr><td rowspan="4">BULK</td><td>1 · Defined Joints</td><td>Review the joints saved in this case.</td></tr>
+<tr><td>2 · Element Mapping</td><td>Tie FE element IDs to those joints.</td></tr>
+<tr><td>3 · Element Forces</td><td>Import element forces, one load case per sheet.</td></tr>
+<tr><td>4 · Bulk Analysis</td><td>Run every mapped element: one row each, with its worst margin and the check that governed it.</td></tr>
+<tr><td>REFERENCE</td><td>Materials &amp; Hardware</td><td>Browse the library and the source behind every allowable. Add custom entries.</td></tr>
+</table>
+
+<h2>Where to start</h2>
+<ol>
+<li><strong>Project</strong>: fill in the project details.</li>
+<li><strong>Factors</strong>: check the factors your program levies.</li>
+<li><strong>Temp Loads</strong>: set the three temperatures.</li>
+<li><strong>Joint Config</strong>: define the joint, then press <strong>Analyze Single Joint</strong>.</li>
+<li><a href="Results.html"><strong>Single Joint Results</strong></a>: read the margins.</li>
+</ol>
+
+<h2>Things that hold on every page</h2>
+<table>
+<tr><th>You see</th><th>It means</th></tr>
+<tr><td><span class="noteval">—</span> in amber</td><td>Not evaluated: an input the check needs is missing. <strong>Not a pass.</strong></td></tr>
+<tr><td>Amber banner over a result</td><td>Stale: an input changed after the run. Re-run before trusting it.</td></tr>
+<tr><td>Greyed-out field</td><td>Filled from the library and locked. Pick <code>Custom</code> to enter your own values.</td></tr>
+<tr><td>Blank required dropdown</td><td>Deliberate. A material is never defaulted for you.</td></tr>
+<tr><td><code>*</code> in the title bar</td><td>Unsaved changes to the case. File &gt; Save writes the case; the hardware library saves separately.</td></tr>
+</table>
+<p>Help &gt; About states the version. Quote it when reporting anything; every report and export carries it too.</p>
+<p class="next">Next: <a href="Results.html">Single Joint Results</a></p>
+</main>
+</body>
+</html>

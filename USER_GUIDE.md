@@ -1,7 +1,8 @@
 # User Guide — MATLAB Fastener Analysis Tool
 
-A from-scratch guide to running NASA-STD-5020B bolted-joint margin analyses. No prior
-knowledge of the codebase needed.
+A from-scratch guide to running NASA-STD-5020B bolted-joint margin analyses from the
+Command Window. No prior knowledge of the codebase needed. For the GUI, use
+**Help → User Guide** in the app (`matlab/userguide/`).
 
 ---
 

@@ -1,20 +1,12 @@
 classdef tUserGuide < matlab.unittest.TestCase
-    %TUSERGUIDE  The generated GUI user guide (report.userGuide).
+    %TUSERGUIDE  The bundled HTML user guide (matlab/userguide).
     %
     %   Run from the matlab/ folder with:
     %       runTests("UserGuide")
     %
-    %   WHAT IS WORTH ASSERTING. The guide is prose, and a test cannot say
-    %   whether prose is any good. What it can say is that the document
-    %   builds, that it is cached the way Help depends on, and that its
-    %   chapter set still covers the things a user has to be told -- the
-    %   check scope, how Not-evaluated differs from a pass, and where the
-    %   numbers come from. Those are claims about the tool, not about
-    %   writing, and each is the kind that rots silently.
-    %
-    %   PDF generation is slow and needs a toolbox, so the build itself is
-    %   exercised once and skipped where Report Generator is absent. The
-    %   content checks read the chapter data directly and cost nothing.
+    %   Nothing here opens a browser. The guide is static files, so what can
+    %   rot is a broken link, a network dependency on an offline machine, or
+    %   a check the engine gained that the Results page never documented.
 
     methods (TestClassSetup)
         function addSourceToPath(testCase)
@@ -26,76 +18,66 @@ classdef tUserGuide < matlab.unittest.TestCase
     end
 
     methods (Test)
-        function itBuildsAPdf(testCase)
-            testCase.assumeTrue( ...
-                exist("mlreportgen.report.Report", "class") == 8, ...
-                'MATLAB Report Generator is not available on this machine.');
-
-            fx = testCase.applyFixture( ...
-                matlab.unittest.fixtures.TemporaryFolderFixture);
-            out = string(fullfile(fx.Folder, "guide.pdf"));
-
-            f = report.userGuide(out);
-
-            testCase.verifyTrue(isfile(f), 'The guide did not reach disk.');
-            d = dir(f);
-            testCase.verifyGreaterThan(d.bytes, 1000, ...
-                'A PDF that small is an empty document, not a guide.');
+        function theIndexIsWhereHelpLooks(testCase)
+            testCase.verifyTrue(isfile(gui.userGuidePath()), ...
+                "Help > User Guide opens a file that is not there.");
         end
 
-        function everyChapterHasATitleAndBody(testCase)
-            chapters = report.userGuideChapters();
-            testCase.assertGreaterThan(numel(chapters), 0);
-            for c = chapters
-                testCase.verifyGreaterThan(strlength(c.Title), 0);
-                testCase.verifyGreaterThan(numel(c.Body), 0, ...
-                    sprintf('Chapter "%s" has no text.', c.Title));
-                testCase.verifyTrue(all(strlength(c.Body) > 0), ...
-                    sprintf('Chapter "%s" has an empty paragraph.', c.Title));
+        function everyLocalLinkAndImageResolves(testCase)
+            [files, folder] = tUserGuide.guideFiles("*.html");
+            targets = strings(0, 1);
+            for f = files
+                txt  = fileread(fullfile(folder, f));
+                refs = regexp(txt, '(?:href|src)="([^"]*)"', 'tokens');
+                refs = string(cellfun(@(c) c{1}, refs, 'UniformOutput', false));
+                refs = refs(~startsWith(refs, ["#", "mailto:"]) & refs ~= "");
+                refs = extractBefore(refs + "#", "#");
+                for r = refs(:)'
+                    targets(end + 1, 1) = r; %#ok<AGROW>
+                    testCase.verifyTrue(isfile(fullfile(folder, r)), ...
+                        sprintf('%s links to "%s", which does not exist.', f, r));
+                end
+            end
+            % Companion: an empty harvest would pass the loop above vacuously.
+            testCase.verifyTrue(any(targets == "guide.css"), ...
+                "No page linked the stylesheet; the link harvest found nothing.");
+            testCase.verifyTrue(any(targets == "Results.html"));
+        end
+
+        function nothingLoadsFromTheNetwork(testCase)
+            % Work machines are often offline; the guide must still render.
+            [files, folder] = tUserGuide.guideFiles(["*.html", "*.css"]);
+            testCase.assertNotEmpty(files);
+            for f = files
+                txt = fileread(fullfile(folder, f));
+                testCase.verifyEmpty(regexp(txt, 'https?://', 'once'), ...
+                    sprintf('%s reaches the network.', f));
             end
         end
 
-        function theGuideCoversWhatAUserHasToBeTold(testCase)
-            % Chapter titles are a contract with the reader, and each of
-            % these answers a question the tool cannot answer for them.
-            titles = lower(strjoin([report.userGuideChapters().Title], " | "));
+        function resultsDocumentsEveryCheckTheEngineReports(testCase)
+            txt = fileread(gui.userGuidePath("Results.html"));
+            documented = regexp(txt, 'data-check="([^"]+)"', 'tokens');
+            documented = string(cellfun(@(c) c{1}, documented, 'UniformOutput', false));
 
-            for want = ["what this tool does", "results", "library", ...
-                        "does not do", "numbers come from"]
-                testCase.verifySubstring(char(titles), char(want), ...
-                    sprintf('No chapter covers "%s".', want));
-            end
-        end
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+            reported = [r.Margins.Name];
 
-        function itStatesTheCheckScopeCorrectly(testCase)
-            % A wrong scope claim ("displays 9 of the 15") must not appear
-            % here -- the guide is the other place that states scope.
-            body = lower(tUserGuide.allText());
-            testCase.verifySubstring(char(body), 'fifteen');
-            testCase.verifyFalse(contains(body, 'nine of'), ...
-                'The guide must not restate the retired 9-of-15 scope.');
-        end
-
-        function itExplainsThatNotEvaluatedIsNotAPass(testCase)
-            % The single most consequential thing a reader can get wrong:
-            % a joint with half its checks unevaluated is not a clean
-            % joint, and every other safeguard in the tool assumes the
-            % analyst knows that.
-            body = lower(tUserGuide.allText());
-            testCase.verifySubstring(char(body), 'not evaluated');
-            testCase.verifySubstring(char(body), 'not a pass');
+            testCase.verifyNumElements(reported, 15);
+            testCase.verifyEqual(sort(documented), sort(reported), ...
+                "The Results page's check table and the engine's rows differ.");
         end
     end
 
     methods (Static, Access = private)
-        function s = allText()
-            %ALLTEXT  Every paragraph of the guide, joined.
-            chapters = report.userGuideChapters();
-            parts = strings(1, 0);
-            for c = chapters
-                parts = [parts, c.Title, reshape(c.Body, 1, [])]; %#ok<AGROW>
+        function [names, folder] = guideFiles(patterns)
+            folder = fileparts(gui.userGuidePath());
+            names = strings(1, 0);
+            for p = patterns
+                d = dir(fullfile(folder, p));
+                names = [names, string({d.name})]; %#ok<AGROW>
             end
-            s = strjoin(parts, " ");
         end
     end
 end

@@ -1,6 +1,6 @@
 # PRD — In-App User Guide
 
-Status: **approved 2026-09-22; phase (a) next.** Delete this file once phase (d) ships;
+Status: **approved 2026-09-22; phase (a) built, phase (b) next.** Delete this file once phase (d) ships;
 live rules move into `GUI_SPEC.md` and `CONVENTIONS.md`.
 
 ## 1. Problem
@@ -55,15 +55,19 @@ the guide to answer one of these questions:
 system browser.**
 
 ```
-docs/userguide/
-  index.html            landing: what the tool does, the rail, where to start
+matlab/userguide/                 flat, so every relative link is one level
+  index.html                      landing: what the tool does, the rail, where to start
   guide.css
-  pages/<pageId>.html   one per rail page (template + generated fragments)
-  fragments/<pageId>-fields.html   GENERATED — never hand-edited
-  img/<pageId>*.png     GENERATED — never hand-edited
-  limits.html           what the tool does not do
-  sources.html          where the numbers come from (hierarchy, citations)
+  <pageId>.html                   one per rail page (template + generated fragments)
+  fragments/<pageId>-fields.html  GENERATED — never hand-edited
+  img/<pageId>*.png               GENERATED — never hand-edited
+  limits.html                     what the tool does not do
+  sources.html                    where the numbers come from (hierarchy, citations)
 ```
+
+Under `matlab/`, not a repo-root `docs/`, so `gui.userGuidePath` resolves it
+from its own file the way `data.Library` finds `+data/library`, and `mcc -a
+userguide` keeps the same relative position.
 
 `pageId` is the stable rail id (the contract in `FastenerApp.pageSpecs`), so file
 names and "?" links key off something that already must not change:
@@ -167,9 +171,9 @@ each release (it cannot run on the Mac side).
 |---|---|
 | Build `fastenerTool` headless, then drive it into scripted states, reusing the `tGui*` fixture setup | — |
 | Load a neutral sample joint (a plain two-plate joint with a nut; no course-book case), so Joint Config and Results show real numbers | — |
-| `exportapp` each rail page | `docs/userguide/img/<pageId>.png` |
-| Walk each page's component tree; every control with a non-empty `Tooltip` becomes a row. Pair it with its label (the `uilabel` in the same grid row, the column to the left, the `addLabelledText` pattern in `JointConfigPage.m`). Group by the page's collapsible group title | `docs/userguide/fragments/<pageId>-fields.html` |
-| Splice each fragment into its `pages/<pageId>.html` between marker comments | updated page HTML |
+| `exportapp` each rail page | `matlab/userguide/img/<pageId>.png` |
+| Walk each page's component tree; every control with a non-empty `Tooltip` becomes a row. Pair it with its label (the `uilabel` in the same grid row, the column to the left, the `addLabelledText` pattern in `JointConfigPage.m`). Group by the page's collapsible group title | `matlab/userguide/fragments/<pageId>-fields.html` |
+| Splice each fragment into its `<pageId>.html` between marker comments | updated page HTML |
 
 The output is **committed**, so every guide change shows up as a reviewable diff.
 
@@ -184,17 +188,17 @@ fail. The drift test (§9) decides what is allowed.
 | Item | Spec |
 |---|---|
 | Help > User Guide | Opens `index.html` |
-| "?" on every page | One helper on `gui.Page` puts a "?" button in the page header, opening `pages/<pageId>.html`. Pages get it by inheritance, not per-page code |
-| Opening | `web(url, "-browser")` with a `file:` URL, which replaces the `winopen` path in `gui.openExternal` for the guide. Must be verified in MATLAB and in the packaged `.exe` on Dan's machine (see risks) |
-| Locating files | A single `gui.userGuidePath(pageId)` resolves relative to the app root, with a `ctfroot` branch when `isdeployed`. `data.Library.defaultPath` has the same unfixed gap; fix both the same way |
-| Packaging | `mcc ... -a ../docs/userguide`, next to the existing `-a +data/library` (`PRECOMPILE_CHECKLIST.md`) |
+| "?" on every page | One helper on `gui.Page` puts a "?" button in the page header, opening `<pageId>.html`. Pages get it by inheritance, not per-page code |
+| Opening | `gui.openExternal(gui.userGuidePath(...))`, the same path Help > References uses. One file per page means no `#fragment` has to survive the hand-off to the OS |
+| Locating files | `gui.userGuidePath(name)` resolves from its own file, like `data.Library.defaultPath`. If the packaged app can't find it, both need a `ctfroot` branch; fix them together |
+| Packaging | `mcc ... -a userguide`, next to the existing `-a +data/library` (`PRECOMPILE_CHECKLIST.md`) |
 | Missing guide | If the file isn't found, show an alert naming the path. Never fail silently |
 
 **Risks**
 
 | Risk | Mitigation |
 |---|---|
-| `web -browser` behaves differently in a compiled app | Verify in the `.exe` in phase (a). The fallback is `winopen` on the file, which works because §4 uses one file per page and needs no `#anchors` |
+| Path resolution differs in the compiled app | Help > User Guide in the first test `.exe`; the alert names the path it looked for |
 | Work-machine browser blocks `file:` URLs | Also caught in phase (a). The fallback is `uihtml` in a figure window |
 | `exportapp` on hidden or collapsed groups | The script expands every group before capture |
 
@@ -202,9 +206,9 @@ fail. The drift test (§9) decides what is allowed.
 
 | Criterion | Enforced by |
 |---|---|
-| Every rail page has `pages/<pageId>.html` and a fields fragment | Test: iterate `FastenerApp.pageSpecs` |
+| Every rail page has `<pageId>.html` and a fields fragment | Test: iterate `FastenerApp.pageSpecs` |
 | Every tooltip-bearing control appears in its page's committed fragment (**drift test**) | Test: harvest live, compare with the committed fragment. A tooltip added or changed without re-running the build fails `runTests` |
-| Every `<img>` and link inside `docs/userguide` resolves | Test: parse the HTML, `isfile` each target |
+| Every `<img>` and link inside `matlab/userguide` resolves | Test: parse the HTML, `isfile` each target |
 | The 15-check table matches the engine's row names | Test |
 | "?" exists on every page and targets that page's file | Test on the `gui.Page` helper (asserts the URL, doesn't open a browser) |
 | No external URLs in the guide (offline) | Test: no `http` in `src`/`href` except citation links in `sources.html` |
@@ -218,12 +222,12 @@ what a field is.
 
 | Remove | Replace with |
 |---|---|
-| `+report/userGuide.m`, `+report/userGuideChapters.m` | `docs/userguide/` |
-| `tests/tUserGuide.m` | The tests in §9 (new `tUserGuideHtml.m`) |
+| `+report/userGuide.m`, `+report/userGuideChapters.m` | `matlab/userguide/` |
+| `tests/tUserGuide.m` | The tests in §9 (`tUserGuide.m`, rewritten) |
 | `FastenerApp.onHelpUserGuide` PDF build, progress dialog, `prefdir` cache | Open `index.html` |
 | `GUI_SPEC.md` line on Help opening `USER_GUIDE.md` (stale) | The §8 behavior |
 | `PRECOMPILE_CHECKLIST.md` user-guide PDF steps | The §9 checklist line |
-| `ARCHITECTURE.md` / `README.md` mentions of the PDF guide | Pointer to `docs/userguide/` |
+| `ARCHITECTURE.md` / `README.md` mentions of the PDF guide | Pointer to `matlab/userguide/` |
 
 `USER_GUIDE.md` **stays**, as the headless / Command Window doc. Its intro
 points to the in-app guide for GUI use.
@@ -236,7 +240,7 @@ One push per phase, and a green `runTests` before the next one.
 
 | Phase | Ships | Done when |
 |---|---|---|
-| **(a) Skeleton** | `docs/userguide/` with CSS, `index.html`, `limits.html`, `sources.html`, `Results.html` (hand-written, including the 15-check table); `gui.userGuidePath`; Help menu rewired; old PDF code and `tUserGuide` deleted; link/image/offline/15-row tests | Dan opens it from Help in MATLAB **and** in a test `.exe` |
+| **(a) Skeleton** | `matlab/userguide/` with CSS, `index.html`, `limits.html`, `sources.html`, `Results.html` (hand-written, including the 15-check table); `gui.userGuidePath`; Help menu rewired; old PDF code deleted, `tUserGuide` rewritten; link/image/offline/15-row tests | Dan opens it from Help in MATLAB **and** in a test `.exe` |
 | **(b) Build script** | `tools/buildUserGuide.m`, `gui.harvestFields`, screenshots + field fragments for all 11 pages, remaining page templates with Purpose/Next stubs; tooltip review | Dan runs the script; fragments and images committed |
 | **(c) "?" links + drift test** | `gui.Page` helper, per-page test, drift test | `runTests` green; every "?" opens its page |
 | **(d) Prose pass** | "Purpose" and "What you'll see" for each page, written with Dan one page at a time | Dan signs off each page |

@@ -34,6 +34,7 @@ matlab/
 ├── +gui/             THE GUI (`gui.launch`, GUI_SPEC.md) — what `fastenerTool`
 │                      opens. Programmatic uifigure, rail + card over AppState,
 │                      eleven pages.
+├── userguide/         the in-app user guide (Help → User Guide): static HTML, opened in the browser
 ├── examples/          runnable reference scripts (`run_bulk_example.m`)
 └── tests/             validation + smoke tests (checked vs the worked example)
 ```

@@ -692,34 +692,8 @@ classdef FastenerApp < handle
         end
 
         function onHelpUserGuide(app)
-            %ONHELPUSERGUIDE  Build the guide PDF if needed, then open it.
-            %   A PDF, not a .md file: on Windows a .md opens in Notepad or
-            %   in nothing, and reads as source rather than as a document.
-            %   report.userGuide writes a PDF about the application instead.
-            %
-            %   GENERATED, NOT SHIPPED. Report Generator is already a
-            %   dependency, so this costs the build nothing, removes a
-            %   file from the mcc line, and cannot go stale: the guide is
-            %   produced by the version that is running.
-            %
-            %   Cached per version, so only the first open waits.
-            f = report.userGuide();
-            if ~isfile(f)
-                d = uiprogressdlg(app.Fig, 'Indeterminate', 'on', ...
-                    'Title', 'User guide', ...
-                    'Message', 'Building the guide (first open only)...');
-                closer = onCleanup(@() delete(d)); %#ok<NASGU>
-                try
-                    f = report.userGuide(f);
-                catch err
-                    clear closer
-                    uialert(app.Fig, sprintf([ ...
-                        'Could not build the user guide.\n\n%s'], ...
-                        err.message), 'User guide', 'Icon', 'warning');
-                    return
-                end
-            end
-            gui.openExternal(f, app.Fig);
+            %ONHELPUSERGUIDE  Open the bundled HTML guide in the browser.
+            gui.openExternal(gui.userGuidePath(), app.Fig);
         end
 
         function onHelpReferences(app)

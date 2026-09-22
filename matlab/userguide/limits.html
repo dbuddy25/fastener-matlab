@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What the tool does not do — Fastener Tool User Guide</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<nav aria-label="Guide">
+<a class="home" href="index.html">Fastener Tool — User Guide</a>
+<h2>SETUP</h2><ul>
+<li><span class="unwritten" title="Not written yet">Project</span></li>
+<li><span class="unwritten" title="Not written yet">Factors</span></li>
+<li><span class="unwritten" title="Not written yet">Temp Loads</span></li>
+</ul>
+<h2>SINGLE JOINT</h2><ul>
+<li><span class="unwritten" title="Not written yet">Bolt Sizing</span></li>
+<li><span class="unwritten" title="Not written yet">Joint Config</span></li>
+<li><a href="Results.html">Single Joint Results</a></li>
+</ul>
+<h2>BULK</h2><ul>
+<li><span class="unwritten" title="Not written yet">1 · Defined Joints</span></li>
+<li><span class="unwritten" title="Not written yet">2 · Element Mapping</span></li>
+<li><span class="unwritten" title="Not written yet">3 · Element Forces</span></li>
+<li><span class="unwritten" title="Not written yet">4 · Bulk Analysis</span></li>
+</ul>
+<h2>REFERENCE</h2><ul>
+<li><span class="unwritten" title="Not written yet">Materials &amp; Hardware</span></li>
+</ul>
+<h2>ABOUT THE TOOL</h2><ul>
+<li><a href="limits.html" aria-current="page">What the tool does not do</a></li>
+<li><a href="sources.html">Where the numbers come from</a></li>
+</ul>
+</nav>
+<main>
+<p class="crumb">ABOUT THE TOOL</p>
+<h1>What the tool does not do</h1>
+<p>Know these before relying on a clean table.</p>
+
+<h2>Gaps in the 5020B assessment</h2>
+<table>
+<tr><th>Not covered</th><th>What to do instead</th></tr>
+<tr><td>Yield and separation under <strong>combined</strong> loading (5020B §4.4.4, TFSR 11)</td><td>Assess separately. Only ultimate interaction is implemented.</td></tr>
+<tr><td>Deriving bolt bending from shear</td><td>Supply the limit moment on Joint Config. With a clearance or gapped joint and no moment, Interaction reads Not evaluated.</td></tr>
+<tr><td>Plastic bending (5020B Eq. 21/23)</td><td>Not implemented.</td></tr>
+<tr><td>Fatigue (5020B §4.5)</td><td>Out of scope.</td></tr>
+<tr><td>Thread-form compatibility, fillet clearance, locking-feature engagement, runout, blind-hole bottoming (5020B §4.7)</td><td>Check by hand against the drawing.</td></tr>
+</table>
+
+<h2>Modelling limits</h2>
+<table>
+<tr><th>Limit</th><th>Effect</th></tr>
+<tr><td>One bolt, the most loaded, not a pattern</td><td>Enter that bolt's loads. Joint-level slip takes the joint totals you supply.</td></tr>
+<tr><td>Mixed-modulus flange stacks use an averaged member modulus</td><td>Exact for an ordinary two-plate joint. With soft layers at both bearing faces, joint stiffness can read high and φ low, which is unconservative for bolt tension.</td></tr>
+<tr><td>A threaded-in joint missing frustum geometry</td><td>Falls back to φ = 1 (conservative).</td></tr>
+</table>
+
+<h2>Decisions that stay yours</h2>
+<ul>
+<li>Whether friction may be relied on.</li>
+<li>Whether the joint is separation-critical.</li>
+<li>The factors your program levies.</li>
+</ul>
+<p>The tool warns where an entry sits outside what 5020B permits without test substantiation.</p>
+
+<h2>Units</h2>
+<p>US customary (in, lbf, psi). Temperatures are in °C.</p>
+<p class="next">Next: <a href="sources.html">Where the numbers come from</a></p>
+</main>
+</body>
+</html>

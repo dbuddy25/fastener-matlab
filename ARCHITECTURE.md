@@ -149,6 +149,7 @@ matlab/
 ├── +report/         XLSX export (`exportResults`); single-joint PDF report (`singleJointReport`, via MATLAB Report Generator)
 ├── +gui/           THE GUI — programmatic uifigure app, `classdef < handle` on
 │                    `uigridlayout`; rail + card shell over `AppState`; eleven pages
+├── userguide/       Help → User Guide: static HTML + CSS, one file per rail page (USER_GUIDE_PRD.md)
 ├── examples/        runnable headless reference (`run_bulk_example.m`)
 └── tests/           smoke + model tests; validation
 ```
@@ -159,7 +160,7 @@ Package classes reference each other with the `model.` / `engine.` prefix.
 
 Generated from source (comments stripped, so documentation mentions do not count
 as calls). File counts: `+model` 16 · `+engine` 39 · `+engine/private` 8 ·
-`+data` 16 · `+report` 5 · `+gui` 23 · `+validation` 2.
+`+data` 16 · `+report` 5 · `+gui` 24 · `+validation` 2.
 
 **The single-joint chain.** `analyze` is the only orchestrator — it calls 18
 things and nothing calls back into it:

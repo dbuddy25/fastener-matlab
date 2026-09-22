@@ -176,8 +176,9 @@ where this machine keeps its copies. A row with no local file says *"not on
 this machine"* rather than going blank — "you do not have this" and "the tool
 does not cite one" are different facts.
 
-`Help → User Guide` opens `USER_GUIDE.md` externally: one source of truth, and
-MATLAB has no markdown renderer, so an in-app window would show raw markup.
+`Help → User Guide` opens `matlab/userguide/index.html` in the system browser
+(`gui.userGuidePath` + `gui.openExternal`): static HTML bundled with the app,
+one file per rail page, keyed by `pageId`. `USER_GUIDE_PRD.md` is the spec.
 
 ### The rail is a button rail, not a `uitabgroup`
 
