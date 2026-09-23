@@ -65,7 +65,7 @@
 <tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="Material"><td>Material</td><td>Layer material. Fsu drives tear-out; Fbru / Fbry drive bearing.</td></tr>
 <tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="t (in)"><td>t (in)</td><td>Layer thickness.</td></tr>
 <tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="Hole (in)"><td>Hole (in)</td><td>Clearance hole diameter. Blank = bearing not evaluated.</td></tr>
-<tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="Edge (in)"><td>Edge (in)</td><td>Hole centre to free edge. Blank = tear-out not evaluated.</td></tr>
+<tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="Edge (in)"><td>Edge (in)</td><td>Hole centre to free edge. Required for every layer with a thickness. To skip tear-out on a layer, untick Tear-out.</td></tr>
 <tr data-group="Flange stack (clamped layers only - not the threaded member)" data-field="Tear-out"><td>Tear-out</td><td>Run the shear tear-out check on this layer.</td></tr>
 </table>
 <h3>Washer under nut</h3>
@@ -138,13 +138,24 @@
 <li>Required dropdowns start <strong>blank</strong>. A material is never picked for you.</li>
 <li>Picking a nut or washer spec fills and <strong>locks</strong> the dependent fields. <code>Custom</code> unlocks them. If the spec has no match at this bolt size it reverts to Custom and the status bar says why.</li>
 <li>Changing the bolt re-resolves the nut and both washer specs.</li>
-<li>Changing the threaded-member type clears the engagement field that no longer applies. A ratio is never read as inches.</li>
+<li>Engagement is two fields: a ratio for an insert, a length for a nut or tapped hole. Changing the type greys out the one that no longer applies; it keeps its value but is not used. A ratio is never read as inches.</li>
 <li>The Bolt length readout itemises grip, minimum length and which L1 is in force, and updates as you edit.</li>
-<li><strong>Analyze Single Joint</strong> lists what is still missing rather than refusing silently.</li>
+<li><strong>Analyze Single Joint</strong> lists what is still missing rather than refusing silently. See <em>Required before Analyze</em> below.</li>
 <li><strong>View Cross-Section</strong> works on a half-built joint and redraws as you edit.</li>
 <li><strong>Save to Defined Joints</strong> adds the joint to this case for bulk runs. Names collide ignoring case: <code>JT-A</code> overwrites <code>jt-a</code> after a confirm.</li>
 <li>Advanced / overrides starts collapsed.</li>
 </ul>
+<h2>Required before Analyze</h2>
+<table>
+<tr><th>Group</th><th>Required</th></tr>
+<tr><td>Bolt</td><td>Bolt, Bolt material</td></tr>
+<tr><td>Threaded member</td><td>Nut material (Parent material for an insert or tapped hole)</td></tr>
+<tr><td>Flange stack</td><td>At least one layer thickness; for every layer with a thickness, its Material and Edge</td></tr>
+<tr><td>Washers</td><td>Washer material, when the washer is present</td></tr>
+<tr><td>Preload</td><td>Nominal torque</td></tr>
+<tr><td>Applied loads</td><td>At least one limit load (a bending moment alone counts)</td></tr>
+</table>
+<p>Everything else is optional: a blank input leaves only the checks that need it not evaluated.</p>
 <p class="next">Next: <a href="Results.html">Single Joint Results</a></p>
 </main>
 </body>
