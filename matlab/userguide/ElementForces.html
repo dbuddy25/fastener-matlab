@@ -43,11 +43,26 @@
 <h2>What you'll see</h2>
 <ul>
 <li>Units are fixed: forces in lbf, moments in in-lbf. There is no unit switch.</li>
-<li>Scale and Reversible are set here, per load case. They are never read from the file, and Merge keeps them.</li>
+<li>Scale and Reversible are set here, per load case (see below). They are never read from the file, and Merge keeps them.</li>
 <li>A load case with 0 elements shows amber.</li>
 <li>The cross-check panel compares the mapping with the imported forces. A file that covers <strong>none</strong> of the mapped elements shows red.</li>
 <li>Re-importing asks: <strong>Merge</strong> (update matching element and load case) or <strong>Replace</strong>.</li>
 </ul>
+<h2>How forces become bolt loads</h2>
+<p>Each element is treated as <strong>one bolt</strong>: its forces are projected onto the joint's <strong>Bolt axis</strong> (Joint Config → Analysis assumptions). There is no load distribution across a bolt pattern.</p>
+<table>
+<tr><th>Bolt load</th><th>From the element (bolt axis Z shown)</th></tr>
+<tr><td>Tension PtL</td><td>The force along the bolt axis, FZ. Positive is tension.</td></tr>
+<tr><td>Shear PsL</td><td>√(FX² + FY²), the two forces across the bolt</td></tr>
+<tr><td>Bending MbL</td><td>√(MX² + MY²), the two moments across the bolt. Feeds the interaction check (5020B Eq. 20/22).</td></tr>
+<tr><td>—</td><td>MZ, the moment about the bolt axis (torsion), is ignored.</td></tr>
+</table>
+<table>
+<tr><th>Load case setting</th><th>Effect</th></tr>
+<tr><td><strong>Scale</strong></td><td>Multiplies all six components before they are resolved. Default 1.</td></tr>
+<tr><td><strong>Reversible</strong> off</td><td>Compression is ignored: PtL = max(axial, 0).</td></tr>
+<tr><td><strong>Reversible</strong> on</td><td>The load can reverse, so compression counts as tension: PtL = |axial|.</td></tr>
+</table>
 <h2>Import Workbook… file format</h2>
 <p>An <code>.xlsx</code> workbook, one sheet per load case. The sheet name is the load case name.</p>
 <table>
