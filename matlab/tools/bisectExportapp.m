@@ -1,113 +1,97 @@
 function bisectExportapp()
-%BISECTEXPORTAPP  Find what on the Hardware Library page breaks exportapp.
+%BISECTEXPORTAPP  Find what makes exportapp fail on the last page captured.
 %   Temporary diagnostic. Run once and paste the output:
 %       bisectExportapp
-%   Prints OK or FAIL for each step. Nothing is saved except scratch PNGs
-%   in a temp folder.
+%   Round 1 showed the Hardware Library page captures fine on its own, so
+%   this tests the two things that differ in captureUserGuideScreens:
+%   every other page already built, and the sample data loaded.
 
 here = fileparts(mfilename("fullpath"));
-addpath(fileparts(here));
+src = fileparts(here);
+addpath(src);
 out = tempname;
 mkdir(out);
 
+section("A. No data; every page built first");
 app = gui.FastenerApp();
-closer = onCleanup(@() delete(app));
-scr = get(groot, "ScreenSize");
-app.Fig.Position = [20 50 min(1250, scr(3) - 40) min(820, scr(4) - 110)];
-figure(app.Fig);
-
-fprintf("MATLAB %s, screen %dx%d, window %dx%d\n", version, scr(3), scr(4), ...
-    app.Fig.Position(3), app.Fig.Position(4));
-
-section("1. Baseline");
-app.navigateTo("Project");
-attempt(app.Fig, "Project page");
+for id = app.pageIds()
+    app.navigateTo(id);
+end
 app.navigateTo("HardwareLibrary");
-attempt(app.Fig, "Hardware Library, as built");
+attempt(app.Fig, "Hardware Library, built last");
+app.navigateTo("Project");
+attempt(app.Fig, "Project, after all pages built");
+delete(app);
 
-page = app.page("HardwareLibrary");
-grid = page.rootContainer().Children(1);
-parts = flip(grid.Children)';
+section("B. Sample data loaded; Hardware Library before the other pages");
+app = gui.FastenerApp();
+loadSample(app, src);
+app.navigateTo("HardwareLibrary");
+attempt(app.Fig, "Hardware Library, data loaded, few pages built");
 
-section("2. Hide one part of the page at a time");
-for c = parts
-    was = c.Visible;
-    c.Visible = "off";
-    attempt(app.Fig, "without " + describe(c));
-    c.Visible = was;
-end
-section("   Hide everything except one part");
-for c = parts
-    others = parts(parts ~= c);
-    was = arrayfun(@(o) o.Visible, others, "UniformOutput", false);
-    set(others, "Visible", "off");
-    attempt(app.Fig, "only " + describe(c));
-    for k = 1:numel(others)
-        others(k).Visible = was{k};
+section("C. As the capture script: data, bulk run, every page built and expanded");
+app.navigateTo("BulkAnalysis");
+bulk = app.page("BulkAnalysis");
+b = bulk.runButton();
+b.ButtonPushedFcn(b, []);
+for id = app.pageIds()
+    app.navigateTo(id);
+    p = app.page(id);
+    for t = p.collapsedGroups()
+        p.expandGroup(t);
     end
 end
+attempt(app.Fig, "Hardware Library, everything done");
+app.navigateTo("Project");
+attempt(app.Fig, "Project, everything done");
+app.navigateTo("BulkAnalysis");
+attempt(app.Fig, "Bulk Analysis, everything done");
+fprintf("  open figures: %d\n", numel(findall(groot, "Type", "figure")));
+delete(app);
 
-tg = findall(grid, "Type", "uitabgroup");
-tables = findall(grid, "Type", "uitable");
-if ~isempty(tg)
-    section("3. Each tab selected");
-    for t = flip(tg.Children)'
-        tg.SelectedTab = t;
-        attempt(app.Fig, "tab " + t.Title);
-    end
-    tg.SelectedTab = tg.Children(end);
-
-    section("   Each table emptied (all others kept)");
-    for t = tables'
-        d = t.Data;
-        t.Data = {};
-        attempt(app.Fig, "empty table in tab " + t.Parent.Parent.Title);
-        t.Data = d;
-    end
-    section("   All tables emptied");
-    saved = arrayfun(@(t) t.Data, tables, "UniformOutput", false);
-    set(tables, "Data", {});
-    attempt(app.Fig, "all six tables empty");
-    for k = 1:numel(tables)
-        tables(k).Data = saved{k};
-    end
-end
-
-section("4. Each table alone in a fresh window");
-for t = tables'
-    f = uifigure("Position", [60 60 900 500]);
-    g = uigridlayout(f, [1 1]);
-    u = uitable(g, "Data", t.Data, "ColumnName", t.ColumnName, ...
-        "RowName", {}, "ColumnSortable", t.ColumnSortable);
-    u.ColumnWidth = t.ColumnWidth;
-    attempt(f, sprintf("%s alone (%dx%d, class %s)", t.Parent.Parent.Title, ...
-        size(t.Data, 1), size(t.Data, 2), class(t.Data)));
-    delete(f);
-end
-
-fprintf("\nDone. Scratch files in %s\n", out);
+fprintf("\nDone.\n");
 
     function attempt(fig, label)
         drawnow
         pause(0.5)
+        t = tic;
         try
             exportapp(fig, char(fullfile(out, "x.png")));
-            fprintf("  OK    %s\n", label);
+            fprintf("  OK    %-48s %5.1f s\n", label, toc(t));
         catch err
-            fprintf("  FAIL  %s  (%s)\n", label, err.message);
+            fprintf("  FAIL  %-48s %5.1f s  (%s)\n", label, toc(t), err.message);
         end
     end
 end
 
-function section(t)
-fprintf("\n%s\n", t);
+function loadSample(app, src)
+s = app.State;
+jl = data.loadJointLibrary( ...
+    fullfile(src, "templates", "joint_library_template.csv"), s.Library);
+s.Joint    = jl(1).Joint;
+s.LoadCase = model.LoadCase(Name = "Quasistatic", ...
+    BoltTensileLimitLoad = 5590 / 4, BoltShearLimitLoad = 1560 / 4, ...
+    JointTensileLimitLoad = 5590, JointShearLimitLoad = 1560);
+s.setResult(engine.analyze(s.Joint, s.LoadCase, s.Factors));
+s.JointLibrary = struct('Name', {jl.Name}, 'Joint', {jl.Joint});
+m = gui.AppState.emptyMapping();
+m(1) = gui.AppState.mappingRow("1001", jl(1).Name, "PLATE-1");
+m(2) = gui.AppState.mappingRow("1002", jl(1).Name, "PLATE-1");
+m(3) = gui.AppState.mappingRow("1003", jl(2).Name);
+s.Mapping = m;
+el = gui.AppState.emptyElements();
+el.Cases(1) = gui.AppState.elementCase("Quasistatic");
+el.Cases(2) = gui.AppState.elementCase("Random Vibration", 1.5);
+F = gui.AppState.zeroForces();
+F1 = F; F1.FX = 1560; F1.FZ = 5590;
+F2 = F; F2.FX = -150; F2.FY = 200; F2.FZ = -800; F2.MX = 10; F2.MY = 5;
+F3 = F; F3.FX = 50; F3.FY = 120; F3.FZ = 400;
+el.Rows(end + 1) = gui.AppState.elementRow("1001", "Quasistatic", F1);
+el.Rows(end + 1) = gui.AppState.elementRow("1002", "Quasistatic", F2);
+el.Rows(end + 1) = gui.AppState.elementRow("1003", "Random Vibration", F3);
+s.Elements = el;
 end
 
-function s = describe(c)
-s = string(class(c));
-s = extractAfter(s, find(char(s) == '.', 1, 'last'));
-if isprop(c, "Text") && strlength(string(c.Text)) > 0
-    s = s + " """ + extractBefore(string(c.Text) + "                              ", 30) + """";
-end
-s = s + " (row " + c.Layout.Row(1) + ")";
+function section(t)
+fprintf("\n%s\n", t);
 end
