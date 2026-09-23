@@ -93,6 +93,18 @@ for id = app.pageIds()
             pause(1.5)
         end
     end
+    if msg ~= ""
+        % exportapp has failed on the six-table Hardware Library page;
+        % a screen grab of the window is the fallback.
+        try
+            frame = getframe(app.Fig);
+            imwrite(frame.cdata, f);
+            fprintf("saved   %s  (screen grab: exportapp said %s)\n", f, msg);
+            continue
+        catch err
+            msg = msg + "; getframe fallback: " + err.message;
+        end
+    end
     if msg == ""
         fprintf("saved   %s\n", f);
     else
