@@ -111,10 +111,15 @@ th { background: var(--nav-bg); }
 
 h3 { margin: 1.4rem 0 0.2rem; font-size: 1rem; }
 
-img.shot {
-  max-width: 100%;
+p.shot {
+  max-width: none;
+  width: calc(100vw - 15rem - 6rem);
+}
+p.shot img {
+  width: 100%;
   border: 1px solid var(--rule);
   border-radius: 4px;
+  cursor: zoom-in;
 }
 
 table.fields td:first-child { width: 14rem; font-weight: 500; }
@@ -125,10 +130,12 @@ table.fields td:first-child { width: 14rem; font-weight: 500; }
   body { display: block; }
   nav { border-right: 0; border-bottom: 1px solid var(--rule); }
   main { padding: 1rem; }
+  p.shot { width: 100%; }
 }
 
 @media print {
   body { display: block; }
   nav, .next { display: none; }
+  p.shot { width: 100%; }
   main { max-width: none; padding: 0; }
 }
