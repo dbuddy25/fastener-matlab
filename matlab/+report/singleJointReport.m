@@ -1,4 +1,4 @@
-function file = singleJointReport(joint, loadCase, factors, file)
+function file = singleJointReport(joint, loadCase, factors, file, opts)
 %SINGLEJOINTREPORT  Single-joint PDF report via MATLAB Report Generator.
 %   file = report.singleJointReport(joint, loadCase, factors, file) runs
 %   engine.analyze(joint, loadCase, factors) and builds ONE PDF report
