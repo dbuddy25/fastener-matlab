@@ -115,7 +115,8 @@ p.shot {
   max-width: calc(100vw - 15rem - 6rem);
 }
 p.shot img {
-  max-width: 100%;
+  /* exportapp saves above screen resolution; show at the app window's size */
+  max-width: min(100%, 1250px);
   height: auto;
   border: 1px solid var(--rule);
   border-radius: 4px;
