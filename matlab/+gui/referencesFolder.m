@@ -8,7 +8,7 @@ function p = referencesFolder(newPath, store)
 %   preference, the same reason data.saveFactorPreset takes a file
 %   argument. Nothing in the app passes it.
 %
-%   THE TOOL SHIPS NO STANDARDS. Nine of the fifteen documents it cites
+%   THE TOOL SHIPS NO STANDARDS. Most of the documents it cites
 %   are copyrighted and cannot be redistributed (see
 %   data.referenceDocuments), so the References window shows citations for
 %   everything and opens a file only where the analyst already has one.

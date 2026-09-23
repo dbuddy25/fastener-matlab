@@ -12,8 +12,8 @@ classdef tGuiHelp < matlab.uitest.TestCase
     %     1. THE WINDOW IS CREATE-OR-FOCUS. Its uifigure cannot be a child
     %        of the app window, so a second one would be a second window
     %        nothing owns -- and it would outlive the app that opened it.
-    %     2. A MISSING DOCUMENT IS REPORTED, NOT ERRORED. Nine of the
-    %        fifteen documents are copyrighted and never ship; on most
+    %     2. A MISSING DOCUMENT IS REPORTED, NOT ERRORED. Most of the
+    %        documents are copyrighted and never ship; on most
     %        machines most rows have no local file, and that is the normal
     %        case rather than a fault.
     %

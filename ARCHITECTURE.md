@@ -149,7 +149,7 @@ matlab/
 ├── +report/         XLSX export (`exportResults`); single-joint PDF report (`singleJointReport`, via MATLAB Report Generator)
 ├── +gui/           THE GUI — programmatic uifigure app, `classdef < handle` on
 │                    `uigridlayout`; rail + card shell over `AppState`; eleven pages
-├── userguide/       Help → User Guide: static HTML + CSS, one file per rail page (USER_GUIDE_PRD.md)
+├── userguide/       Help → User Guide: static HTML + CSS, one file per rail page (GUI_SPEC.md)
 ├── examples/        runnable headless reference (`run_bulk_example.m`)
 └── tests/           smoke + model tests; validation
 ```

@@ -159,7 +159,7 @@ resolution is `fileparts(mfilename('fullpath'))`, or `ctfroot` when
 `gui.docPath`, the first deployment-aware resolver in the codebase.
 
 **CHANGED — nothing is bundled, because nothing can be.** This section said
-Help opens *"the bundled PDFs"*. Nine of the fifteen documents the tool cites
+Help opens *"the bundled PDFs"*. Most of the documents the tool cites
 are not ours to redistribute: every NAS/NASM sheet carries *"COPYRIGHT …
 Aerospace Industries Association … ALL RIGHTS RESERVED"*, the DABJ course book
 carries a copyright notice and restrictions, and the Heli-Coil bulletin is
@@ -177,8 +177,21 @@ this machine"* rather than going blank — "you do not have this" and "the tool
 does not cite one" are different facts.
 
 `Help → User Guide` opens `matlab/userguide/index.html` in the system browser
-(`gui.userGuidePath` + `gui.openExternal`): static HTML bundled with the app,
-one file per rail page, keyed by `pageId`. **? Help for this page**, at the right of the status bar, opens the active page's file. `USER_GUIDE_PRD.md` is the spec.
+(`gui.userGuidePath` + `gui.openExternal`). **? Help for this page**, at the
+right of the status bar, opens the active page's file.
+
+**The user guide's rules** (`matlab/userguide/`, edited by hand):
+
+| Rule | Why / enforced by |
+|---|---|
+| One `<pageId>.html` per rail page, flat folder, one `guide.css` | The "?" button and `tGuiUserGuide` find pages by `pageId` |
+| Each page: purpose → screenshot → Fields → What you'll see → Next | Same shape everywhere |
+| Field rows are `<tr data-group="…" data-field="…">`, keyed by the name `gui.harvestFields` finds; the visible cell may read better | `tGuiUserGuide` compares them with the live pages both ways |
+| Prose is imperative; field tables are reference style; no paragraph over 3 sentences | Reader is an analyst new to the tool |
+| No network: no CDN, fonts or scripts from outside the folder | Work machines are offline; `tUserGuide` |
+| Import formats are documented on the importing page | Element Forces' required columns are pinned by `tUserGuide` |
+| Screenshots are build output: `tools/captureUserGuideScreens` writes gitignored `img/`, one fresh app per page; a missing image hides itself | Nothing generated on Windows comes back to the repo |
+| Sample data is the template joint with Quasistatic / Random Vibration load cases; no course-book (DABJ) content | The guide is not a validation document |
 
 ### The rail is a button rail, not a `uitabgroup`
 

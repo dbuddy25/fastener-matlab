@@ -47,9 +47,11 @@ packaged as a standalone Windows `.exe`.
   3. **The DABJ course book is VALIDATION ONLY** — the worked-example "answer
      key." Never cite DABJ as a governing equation; use it only in
      "Validated against DABJ §N (Solutions-NN)" provenance notes.
-  4. **Open:** `engine.stiffness` cites Shigley (frustum) and
-     `tools/kc_exact_crosscheck.py` leans on SAND2008-0371; neither is in this
-     hierarchy yet. Decide whether to admit them.
+  4. **Background** (admitted 2026-09-23): where 5020B takes a quantity as a
+     given input and prints no method for it, the method's source is cited as
+     Background. Shigley (Shigley & Mischke) for the conical-frustum stiffness
+     in `engine.stiffness`; SAND2008-0371 and NASA TM-108377 as corroborating
+     treatment. All are listed in `data.referenceDocuments`.
 
 ## Engineering ground rules (must be exactly right)
 

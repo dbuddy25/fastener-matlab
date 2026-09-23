@@ -6,7 +6,7 @@ classdef ReferencesView < handle
     %   Open button opens it in the system viewer.
     %
     %   WHY NOTHING IS BUNDLED. GUI_SPEC.md Sec. 3 specified this as "Help
-    %   opens the bundled PDFs". It cannot be: nine of the fifteen
+    %   opens the bundled PDFs". It cannot be: most of the
     %   documents are copyrighted and not ours to redistribute -- every
     %   NAS/NASM sheet says so on its face -- and they are exactly the ones
     %   the hardware catalogue is transcribed from. The citations are facts
