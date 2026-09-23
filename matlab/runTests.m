@@ -94,7 +94,7 @@ elapsed = toc(t0);
 
 fprintf("\n%s: %d passed, %d failed, %d incomplete  (%.0f s)\n", ...
     scope, nnz([results.Passed]), nnz([results.Failed]), ...
-    nnz([results.Incomplete]), elapsed);
+    nnz([results.Incomplete] & ~[results.Failed]), elapsed);
 
 % A subset that passes has proven only what it ran, and the whole point of
 % the message is to stop a green short run reading as permission to push.
@@ -169,7 +169,7 @@ try
     end
     bar = repmat('=', 1, 76);
     fprintf('\n%s\nNOT PASSED: %d failed, %d incomplete (skipped)\n%s\n', ...
-        bar, nnz([bad.Failed]), nnz([bad.Incomplete]), bar);
+        bar, nnz([bad.Failed]), nnz([bad.Incomplete] & ~[bad.Failed]), bar);
 
     for i = 1:numel(bad)
         kind = 'FAILED';
