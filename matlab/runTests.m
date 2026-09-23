@@ -168,10 +168,15 @@ try
         return
     end
     bar = repmat('=', 1, 76);
-    fprintf('\n%s\nFAILURE DETAIL (%d)\n%s\n', bar, numel(bad), bar);
+    fprintf('\n%s\nNOT PASSED: %d failed, %d incomplete (skipped)\n%s\n', ...
+        bar, nnz([bad.Failed]), nnz([bad.Incomplete]), bar);
 
     for i = 1:numel(bad)
-        fprintf('\n%d) %s\n', i, bad(i).Name);
+        kind = 'FAILED';
+        if bad(i).Incomplete && ~bad(i).Failed
+            kind = 'INCOMPLETE';
+        end
+        fprintf('\n%d) %s  [%s]\n', i, bad(i).Name, kind);
         lines = diagnosticLines(bad(i));
         if isempty(lines)
             fprintf('   (no diagnostic recorded)\n');
