@@ -953,7 +953,7 @@ classdef BulkAnalysisPage < gui.Page
                 % display cap are screen concessions; the workbook is the
                 % record.
                 written = report.exportResults(T, string(fullfile(p, f)), ...
-                    Notes = obj.runNotes());
+                    Notes = obj.runNotes(), Project = obj.State.Project);
             catch err
                 uialert(obj.figureHandle(), err.message, 'Export failed');
                 return

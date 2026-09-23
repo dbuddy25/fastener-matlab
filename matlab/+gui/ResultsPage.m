@@ -356,7 +356,7 @@ classdef ResultsPage < gui.Page
             obj.setStatus('Writing the PDF report...');
             try
                 written = report.singleJointReport(in.Joint, in.LoadCase, ...
-                    in.Factors, file);
+                    in.Factors, file, Project = obj.State.Project);
             catch err
                 uialert(ancestor(obj.Root, 'figure'), err.message, ...
                     'Report failed');
@@ -385,7 +385,8 @@ classdef ResultsPage < gui.Page
 
             try
                 written = report.exportResults(obj.displayedTable(), ...
-                    string(fullfile(p, f)), Notes = obj.scopeFooterText());
+                    string(fullfile(p, f)), Notes = obj.scopeFooterText(), ...
+                    Project = obj.State.Project);
             catch err
                 uialert(ancestor(obj.Root, 'figure'), err.message, ...
                     'Export failed');

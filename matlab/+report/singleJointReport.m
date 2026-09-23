@@ -62,6 +62,7 @@ arguments
     loadCase (1,1) model.LoadCase
     factors
     file     (1,1) string
+    opts.Project struct = struct()
 end
 
 if isempty(factors)
@@ -108,8 +109,17 @@ tp.Title     = "Bolted Joint Analysis";
 tp.Subtitle  = joint.Name + " -- per NASA-STD-5020B";
 tp.PubDate   = generated;
 tp.Publisher = stamp;
+[pItem, pValue] = report.projectRows(opts.Project);
+if pValue(1) ~= "—"
+    tp.Author = pValue(1);
+end
 add(rpt, tp);
 add(rpt, TableOfContents());
+
+ch = Chapter("Project");
+add(ch, tableFromMATLAB(table(pItem, pValue, ...
+    'VariableNames', {'Item', 'Value'})));
+add(rpt, ch);
 
 % ---- 2. Inputs --------------------------------------------------------------
 ch = Chapter("Inputs");

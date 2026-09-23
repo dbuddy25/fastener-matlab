@@ -372,6 +372,36 @@ classdef tExport < matlab.unittest.TestCase
                 'And must not have displaced the version stamp.');
         end
 
+        function projectDetailsAreWrittenToTheAboutSheet(testCase)
+            T = table("a", 1, 'VariableNames', {'Check', 'MS'});
+            f = string(tempname) + ".xlsx";
+            testCase.addTeardown(@() delete(f));
+            p = gui.AppState.defaultProject();
+            p.analyst = "A. Analyst";
+            p.partNumber = "PN-123";
+
+            report.exportResults(T, f, Project = p);
+
+            A = readtable(f, "Sheet", "About", "TextType", "string");
+            testCase.verifyEqual(A.Value(A.Item == "Analyst"), "A. Analyst");
+            testCase.verifyEqual(A.Value(A.Item == "Part number"), "PN-123");
+            testCase.verifyEqual(A.Value(A.Item == "Program"), "—", ...
+                'A blank field must read as unfilled, not vanish.');
+            testCase.verifyTrue(any(A.Value == toolVersion()));
+        end
+
+        function projectRowsShowNotesOnlyWhenPresent(testCase)
+            p = gui.AppState.defaultProject();
+            [item, ~] = report.projectRows(p);
+            testCase.verifyEqual(item, ["Analyst"; "Program"; "Assembly"; ...
+                "Part number"; "Environment"]);
+
+            p.notes = {'line one'; 'line two'};
+            [item, value] = report.projectRows(p);
+            testCase.verifyEqual(item(end), "Notes");
+            testCase.verifyEqual(value(end), "line one line two");
+        end
+
         function summaryCountsAnInteractionFailureAsFailed(testCase)
             % NASA-STD-5020B Eq. 20-23 is a pass/fail CRITERION, not a
             % margin, so engine.analyze gives the Interaction row MS = NaN

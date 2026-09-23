@@ -39,6 +39,7 @@ arguments
     T    table
     file (1,1) string
     opts.Notes (1,:) string = string.empty(1, 0)
+    opts.Project struct = struct()
 end
 
 [~, ~, ext] = fileparts(file);
@@ -112,6 +113,9 @@ if isXlsx
     Value = ["Fastener Analysis Tool"; toolVersion(); ...
              string(datetime("now", "Format", "yyyy-MM-dd HH:mm")); ...
              "NASA-STD-5020B"];
+    [pItem, pValue] = report.projectRows(opts.Project);
+    Item  = [Item; pItem];
+    Value = [Value; pValue];
     % Caller notes ride on the SAME sheet as the version stamp, because they
     % are the same kind of claim: a scope statement naming checks that are
     % computed and not exported has to travel with the file, or the
