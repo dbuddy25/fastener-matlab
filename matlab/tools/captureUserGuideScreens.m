@@ -64,6 +64,14 @@ if fo.Value
     fo.ValueChangedFcn(fo, []);
 end
 
+% exportapp fails on a window that extends past the screen, which the
+% default 1250x820 does on a scaled laptop display.
+scr = get(groot, "ScreenSize");
+app.Fig.Position = [20 50 min(1250, scr(3) - 40) min(820, scr(4) - 110)];
+figure(app.Fig);
+drawnow
+
+failed = strings(0, 1);
 for id = app.pageIds()
     app.navigateTo(id);
     p = app.page(id);
@@ -72,9 +80,30 @@ for id = app.pageIds()
     end
     drawnow
     pause(0.5)
-    f = fullfile(out, id + ".png");
-    exportapp(app.Fig, f);
-    fprintf("%s\n", f);
+    f = char(fullfile(out, id + ".png"));
+    msg = "";
+    for attempt = 1:2
+        try
+            exportapp(app.Fig, f);
+            msg = "";
+            break
+        catch err
+            msg = string(err.message);
+            figure(app.Fig);
+            pause(1.5)
+        end
+    end
+    if msg == ""
+        fprintf("saved   %s\n", f);
+    else
+        failed(end + 1) = id + ": " + msg; %#ok<AGROW>
+        fprintf("FAILED  %s  (%s)\n", id, msg);
+    end
+end
+if isempty(failed)
+    fprintf("All %d pages captured.\n", numel(app.pageIds()));
+else
+    fprintf("%d page(s) not captured:\n  %s\n", numel(failed), strjoin(failed.', newline + "  "));
 end
 end
 
