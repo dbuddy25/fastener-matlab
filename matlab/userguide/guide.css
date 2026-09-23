@@ -113,7 +113,7 @@ h3 { margin: 1.4rem 0 0.2rem; font-size: 1rem; }
 
 p.shot {
   max-width: none;
-  width: calc(100vw - 15rem - 6rem);
+  width: min(calc(100vw - 15rem - 6rem), 72rem);
 }
 p.shot img {
   width: 100%;
