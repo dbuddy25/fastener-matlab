@@ -42,13 +42,14 @@
 <table class="fields">
 <tr><th>Field</th><th>What it sets</th></tr>
 <tr data-group="" data-field="Assign to selected rows"><td>Assign to selected rows</td><td>The joint <strong>Assign</strong> writes into every selected row.</td></tr>
-<tr data-group="" data-field="Pattern ID"><td>Pattern ID</td><td>Optional. Written to the selected rows only when not blank. Splits one joint definition across several physical patterns.</td></tr>
+<tr data-group="" data-field="Pattern ID"><td>Pattern ID</td><td>Used only for <strong>joint-mode slip</strong> (5020B Eq. 84): elements sharing a pattern ID, joint and load case are summed into the joint totals. Blank = the joint name is the pattern. Needed only when one joint definition covers several physical patterns. Written to the selected rows only when not blank.</td></tr>
 </table>
 <h2>What you'll see</h2>
 <ul>
 <li>Joint names match ignoring case. An unknown name asks whether to create the joint, skip the row or cancel.</li>
 <li><strong>Create Missing Joints</strong> adds name-only placeholders. Fill them in on Joint Config before running.</li>
 <li>A duplicate element ID is flagged amber, not blocked.</li>
+<li>For joint-mode slip, a pattern whose element count differs from the joint's bolt count is not evaluated, and the result says why.</li>
 <li>Importing over an existing mapping asks: <strong>Merge</strong> (update by element ID) or <strong>Replace</strong>.</li>
 <li><strong>Import IDs from Forces</strong> pulls the element IDs from the Element Forces page.</li>
 </ul>
