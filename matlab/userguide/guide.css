@@ -66,7 +66,7 @@ nav [aria-current="page"] { font-weight: 600; }
 
 main {
   padding: 1.5rem 2.5rem 4rem;
-  max-width: 60rem;
+  max-width: calc(1250px + 5rem);   /* content = the screenshots' 1250 px */
 }
 
 a { color: var(--link); }
@@ -111,12 +111,9 @@ th { background: var(--nav-bg); }
 
 h3 { margin: 1.4rem 0 0.2rem; font-size: 1rem; }
 
-p.shot {
-  max-width: calc(100vw - 15rem - 6rem);
-}
+p.shot { max-width: none; }
 p.shot img {
-  /* exportapp saves above screen resolution; show at the app window's size */
-  max-width: min(100%, 1250px);
+  max-width: 100%;
   height: auto;
   border: 1px solid var(--rule);
   border-radius: 4px;
@@ -131,12 +128,10 @@ table.fields td:first-child { width: 14rem; font-weight: 500; }
   body { display: block; }
   nav { border-right: 0; border-bottom: 1px solid var(--rule); }
   main { padding: 1rem; }
-  p.shot { max-width: 100%; }
 }
 
 @media print {
   body { display: block; }
   nav, .next { display: none; }
-  p.shot { width: 100%; }
   main { max-width: none; padding: 0; }
 }
