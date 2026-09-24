@@ -620,8 +620,10 @@ classdef AppState < handle
                 'Mapping',      gui.AppState.emptyMapping(), ...
                 'Elements',     gui.AppState.emptyElements());
 
-            % GUI default: all four fitting factors at the FFU default.
-            % model.Factors() itself keeps the DABJ ultimate-only set.
+            % GUI default: one fitting factor — the four engine FF slots
+            % uniform at the FFU default. model.Factors() itself keeps the
+            % DABJ mixed set; seeding that would open a blank case already
+            % in the mixed-FF warning state.
             st.Factors.FFY    = st.Factors.FFU;
             st.Factors.FFSep  = st.Factors.FFU;
             st.Factors.FFSlip = st.Factors.FFU;

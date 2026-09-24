@@ -55,15 +55,11 @@ Leave Spec and Type blank.
 
 ## 2. Factors
 
-| Fitting Factors | | Factors of Safety | |
-|---|---|---|---|
-| FFy | **1.0** | FSy | 1.25 |
-| FFu | 1.15 | FSu | 1.4 |
-| FFsep | **1.0** | FSsep | 1.0 |
-| FFslip | **1.0** | FSslip | 1.0 |
-
-The book levies the fitting factor on ultimate only. The three **1.0**s differ
-from a new case's defaults.
+The book levies the fitting factor on **ultimate only** (FFu 1.15; FFy, FFsep and
+FFslip 1.0). The Factors page has one FF field, which can't express that, so this
+check needs the **quick route**: the loaded case keeps the book's four values and
+the page shows them in an amber banner. **Don't edit FF**, or all four become one
+value. The factors of safety are FSu 1.4, FSy 1.25, FSsep 1.0 and FSslip 1.0.
 
 ## 3. Temp Loads
 

@@ -1,15 +1,25 @@
 classdef FactorsPage < gui.Page
-    %FACTORSPAGE  The four fitting factors and the four factors of safety
+    %FACTORSPAGE  The fitting factor and the four factors of safety
     %   (GUI_SPEC.md Section 3, "Factors").
     %
-    %   Fitting Factors first, then Factors of Safety: each FF multiplies
-    %   the FS of the same check, so reading order matches the arithmetic.
-    %   Each row is name | symbol | value, and all eight fields map 1:1
-    %   onto model.Factors.
+    %   Fitting factor first, then Factors of Safety: one FF multiplies
+    %   every FS below it, so reading order matches the arithmetic. Each
+    %   row is name | symbol | value.
     %
-    %   PER-CHECK FITTING FACTORS. A program may levy the fitting factor on
-    %   some checks only — the DABJ answer key applies 1.15 to ultimate and
-    %   1.0 elsewhere — so one FF field could not express a real case.
+    %   Four factor-of-safety fields map 1:1 onto model.Factors (FSU / FSY /
+    %   FSSep / FSSlip). NASA-STD-5020B 4.2.2 [TFSR 3] defines ONE fitting
+    %   factor that multiplies every factor of safety, so the GUI exposes a
+    %   single FF field while model.Factors keeps its four FF slots
+    %   (FFU/FFY/FFSep/FFSlip) as the engine mechanism — single-FF mode
+    %   writes that one field into all four on commit.
+    %
+    %   MIXED-FF PRESERVATION. A loaded case can carry UNEQUAL per-check fitting factors — the DABJ fixture is FFU=1.15,
+    %   the rest 1.0. Collapsing that onto one field and writing it back
+    %   would silently change the loaded margins. So an unequal set is kept
+    %   verbatim in LoadedFittingFactors (page-local, not case state — it is
+    %   a view of what AppState.Factors already holds) until the analyst
+    %   edits the FF field, at which point that one value governs all four
+    %   and the mixed set is dropped.
     %
     %   NO PRESET UI YET. data.factorPreset / factorPresets /
     %   factorPresetNames / saveFactorPreset are all in place and tested
@@ -21,7 +31,9 @@ classdef FactorsPage < gui.Page
 
     properties (Access = private)
         SafetyFields   % struct: FSU/FSY/FSSep/FSSlip -> numeric edit field
-        FittingFields  % struct: FFU/FFY/FFSep/FFSlip -> numeric edit field
+        FFField
+        MixedLabel
+        LoadedFittingFactors = double.empty(1, 0)
     end
 
     properties (Constant, Access = private)
@@ -49,8 +61,8 @@ classdef FactorsPage < gui.Page
             % Column 2 is a flexible gutter that absorbs the window width,
             % so the panels in column 1 size to their content instead of
             % stretching across the page around three narrow fields.
-            g = uigridlayout(parent, [4 2]);
-            g.RowHeight   = {'fit', 'fit', 'fit', '1x'};
+            g = uigridlayout(parent, [5 2]);
+            g.RowHeight   = {'fit', 'fit', 'fit', 'fit', '1x'};
             g.ColumnWidth = {'fit', '1x'};
             g.Padding     = [8 8 8 8];
             g.RowSpacing  = 8;
@@ -61,7 +73,8 @@ classdef FactorsPage < gui.Page
                  'every joint in a bulk run use this one set of factors. ' ...
                  'They are case state, saved and loaded with the case file.']);
             obj.buildFittingGroup(g, 2);
-            obj.buildSafetyGroup(g, 3);
+            obj.buildMixedBanner(g, 3);
+            obj.buildSafetyGroup(g, 4);
 
             obj.listenTo('FactorsChanged', @() obj.refresh());
         end
@@ -78,35 +91,46 @@ classdef FactorsPage < gui.Page
     % ---- Layout -------------------------------------------------------
     methods (Access = private)
         function buildFittingGroup(obj, parent, row)
-            %BUILDFITTINGGROUP  The four fitting factors, first on the page.
-            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Fitting Factors');
+            %BUILDFITTINGGROUP  The fitting factor, first on the page.
+            %   First because one FF multiplies every factor of safety
+            %   below it — reading order matches the arithmetic.
+            panel = uipanel(parent, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Fitting Factor');
             panel.Layout.Row    = row;
             panel.Layout.Column = 1;
-            g = uigridlayout(panel, [4 3]);
+            g = uigridlayout(panel, [1 3]);
             g.ColumnWidth = gui.FactorsPage.RowColumns;
-            g.RowHeight   = repmat({'fit'}, 1, 4);
+            g.RowHeight   = {'fit'};
             g.RowSpacing  = 4;
             g.Padding     = [6 6 6 6];
 
-            % NASA-STD-5020B 4.2.2 [TFSR 3] — FF multiplies the factor of
-            % safety (a program-level policy value, not an equation).
-            spec = { ...
-                "FFY",    'Yield',      'FFy'; ...
-                "FFU",    'Ultimate',   'FFu'; ...
-                "FFSep",  'Separation', 'FFsep'; ...
-                "FFSlip", 'Slip',       'FFslip'};
-            tips = [ ...
-                "Yield fitting factor, multiplies FSy (NASA-STD-5020B 4.2.2).", ...
-                "Ultimate fitting factor, multiplies FSu. A minimum of 1.15 is recommended (NASA-STD-5020B 4.2.2).", ...
-                "Separation fitting factor, multiplies FSsep. At least 1.15 on a separation-critical joint (NASA-STD-5020B 4.2.2).", ...
-                "Slip fitting factor, multiplies FSslip (NASA-STD-5020B 4.2.2)."];
+            % NASA-STD-5020B 4.2.2 [TFSR 3] — one fitting factor multiplies
+            % every factor of safety (FF is a program-level policy knob, not
+            % an equation with a number to evaluate; the citation still
+            % names the governing section per CONVENTIONS.md's traceability rule).
+            ffTip = ['Fitting factor (FF), NASA-STD-5020B 4.2.2 [TFSR 3]: ' ...
+                'one factor multiplies every factor of safety — ultimate, ' ...
+                'yield, separation, slip. A minimum of 1.15 is recommended ' ...
+                'for ultimate. Commits into all four model.Factors FF slots ' ...
+                'unless a loaded case carried unequal values — see the ' ...
+                'banner below.'];
+            obj.FFField = obj.addFactorRow(g, 1, 'Fitting Factor', 'FF', ffTip);
+            obj.bindEdit(obj.FFField, @(~, ~) obj.onFittingFactorEdited());
+        end
 
-            obj.FittingFields = struct();
-            for i = 1:size(spec, 1)
-                f = obj.addFactorRow(g, i, spec{i, 2}, spec{i, 3}, tips(i));
-                obj.FittingFields.(spec{i, 1}) = f;
-                obj.bindEdit(f, @(~, ~) obj.commitFromControls());
-            end
+        function buildMixedBanner(obj, parent, row)
+            %BUILDMIXEDBANNER  The unequal-fitting-factor warning.
+            %   Lives on the PAGE grid, not inside the Fitting Factor panel:
+            %   the panel is only as wide as three narrow columns, and a
+            %   wrapping sentence in that width becomes a tall thin column
+            %   of words. Full page width, hidden until it has something to
+            %   say.
+            obj.MixedLabel = uilabel(parent, 'Text', '', 'WordWrap', 'on');
+            obj.MixedLabel.Layout.Row    = row;
+            obj.MixedLabel.Layout.Column = [1 2];
+            obj.MixedLabel.VerticalAlignment = 'top';
+            obj.MixedLabel.BackgroundColor   = gui.palette('bannerWarnBg');
+            obj.MixedLabel.FontColor         = gui.palette('bannerWarnFg');
+            obj.MixedLabel.Visible           = 'off';
         end
 
         function buildSafetyGroup(obj, parent, row)
@@ -174,24 +198,43 @@ classdef FactorsPage < gui.Page
     methods (Access = private)
         function setFactorControls(obj, fac)
             %SETFACTORCONTROLS  model.Factors -> controls (no dirty).
-            for n = ["FSU", "FSY", "FSSep", "FSSlip"]
-                obj.SafetyFields.(n).Value = fac.(n);
+            fsNames = ["FSU", "FSY", "FSSep", "FSSlip"];
+            for i = 1:numel(fsNames)
+                obj.SafetyFields.(fsNames(i)).Value = fac.(fsNames(i));
             end
-            for n = ["FFU", "FFY", "FFSep", "FFSlip"]
-                obj.FittingFields.(n).Value = fac.(n);
+            ff = [fac.FFU, fac.FFY, fac.FFSep, fac.FFSlip];
+            if all(ff == ff(1))
+                obj.FFField.Value = ff(1);
+                obj.clearMixedFitting();
+            else
+                obj.FFField.Value = fac.FFU;
+                obj.LoadedFittingFactors = ff;
+                obj.MixedLabel.Text = sprintf( ...
+                    ['Unequal per-check fitting factors: FFU=%g, FFY=%g, ' ...
+                     'FFSep=%g, FFSlip=%g. These stay in effect until the ' ...
+                     'FF field above is edited.'], ff(1), ff(2), ff(3), ff(4));
+                obj.MixedLabel.Visible = 'on';
             end
         end
 
+        function clearMixedFitting(obj)
+            obj.LoadedFittingFactors = double.empty(1, 0);
+            obj.MixedLabel.Text    = '';
+            obj.MixedLabel.Visible = 'off';
+        end
+
         function fac = factorsFromControls(obj)
+            if isempty(obj.LoadedFittingFactors)
+                ff = repmat(obj.FFField.Value, 1, 4);
+            else
+                ff = obj.LoadedFittingFactors;
+            end
             fac = model.Factors( ...
                 FSU    = obj.SafetyFields.FSU.Value, ...
                 FSY    = obj.SafetyFields.FSY.Value, ...
                 FSSep  = obj.SafetyFields.FSSep.Value, ...
                 FSSlip = obj.SafetyFields.FSSlip.Value, ...
-                FFU    = obj.FittingFields.FFU.Value, ...
-                FFY    = obj.FittingFields.FFY.Value, ...
-                FFSep  = obj.FittingFields.FFSep.Value, ...
-                FFSlip = obj.FittingFields.FFSlip.Value);
+                FFU    = ff(1), FFY = ff(2), FFSep = ff(3), FFSlip = ff(4));
         end
 
         function commitFromControls(obj)
@@ -199,6 +242,13 @@ classdef FactorsPage < gui.Page
             %   AppState.Factors. Fires FactorsChanged, which calls
             %   refresh() — harmless (see ProjectPage.commit for why).
             obj.State.Factors = obj.factorsFromControls();
+        end
+
+        function onFittingFactorEdited(obj)
+            %ONFITTINGFACTOREDITED  Editing FF exits mixed-FF mode: from
+            %   here on this one value governs all four engine slots.
+            obj.clearMixedFitting();
+            obj.commitFromControls();
         end
 
     end
@@ -213,14 +263,16 @@ classdef FactorsPage < gui.Page
             f = obj.SafetyFields.FSU;
         end
 
-        function f = ffField(obj, name)
-            %FFFIELD  One fitting-factor field: "FFU" (default), "FFY",
-            %   "FFSep" or "FFSlip".
-            arguments
-                obj
-                name (1,1) string = "FFU"
-            end
-            f = obj.FittingFields.(name);
+        function f = ffField(obj)
+            f = obj.FFField;
         end
+
+        function lbl = mixedLabel(obj)
+            lbl = obj.MixedLabel;
+        end
+
+
+
+
     end
 end

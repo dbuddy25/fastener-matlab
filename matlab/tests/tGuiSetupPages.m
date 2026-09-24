@@ -113,34 +113,31 @@ classdef tGuiSetupPages < matlab.uitest.TestCase
             end
         end
 
-        function unequalFittingFactorsLoadIntoTheirOwnFields(testCase)
-            % The DABJ answer key levies FF on ultimate only; a loaded case
-            % like that must show, and keep, all four values.
+        function mixedFittingFactorsShowTheBannerAndCollapseOnEdit(testCase)
             testCase.App.navigateTo("Factors");
             page = testCase.App.page("Factors");
+
+            % A loaded case can carry unequal per-check FFs —
+            % assign one directly, as File > Open would.
             testCase.App.State.Factors = model.Factors( ...
                 FSU=1.4, FSY=1.25, FSSep=1.0, FSSlip=1.0, ...
                 FFU=1.15, FFY=1.0, FFSep=1.0, FFSlip=1.0);
 
-            testCase.verifyEqual(page.ffField("FFU").Value, 1.15);
-            testCase.verifyEqual(page.ffField("FFY").Value, 1.0);
-            testCase.verifyEqual(page.ffField("FFSep").Value, 1.0);
-            testCase.verifyEqual(page.ffField("FFSlip").Value, 1.0);
-        end
+            testCase.verifyTrue(logical(page.mixedLabel().Visible), ...
+                'Unequal fitting factors did not raise the mixed-FF banner.');
+            testCase.verifyEqual(page.ffField().Value, 1.15, ...
+                'The FF field should surface FFU while the mixed set is preserved.');
 
-        function editingOneFittingFactorChangesOnlyItsCheck(testCase)
-            testCase.App.navigateTo("Factors");
-            page = testCase.App.page("Factors");
-            testCase.App.State.Factors = model.Factors( ...
-                FFU=1.15, FFY=1.15, FFSep=1.15, FFSlip=1.15);
+            % Editing FF exits mixed mode: this one value now governs all
+            % four engine slots.
+            testCase.type(page.ffField(), 1.30);
 
-            testCase.type(page.ffField("FFY"), 1.0);
-
+            testCase.verifyFalse(logical(page.mixedLabel().Visible), ...
+                'Editing FF did not retire the mixed-FF banner.');
             fac = testCase.App.State.Factors;
             testCase.verifyEqual([fac.FFU, fac.FFY, fac.FFSep, fac.FFSlip], ...
-                [1.15 1.0 1.15 1.15], ...
-                'Editing FFy must leave the other three fitting factors alone.');
-            testCase.verifyTrue(testCase.App.State.IsDirty);
+                [1.30 1.30 1.30 1.30], ...
+                'Editing FF should write the single value into all four engine slots.');
         end
 
         function factorsRefreshFromDirectStateEditNeverMarksDirty(testCase)
