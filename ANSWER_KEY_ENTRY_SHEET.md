@@ -5,7 +5,15 @@
 against. Here you prove the **screens** do: what you type lands where the engine
 reads it, and what Results shows is what the engine returned.
 
-Start with **File → New**. About 20 minutes.
+**Quick route (recommended):** run `makeAnswerKeyCase` from `matlab/tools/`. It writes
+`dabj9_answer_key.json` plus the book's two materials and bolt as drop-in library
+files. Restart the app, **File → Open** that file, press **Analyze Single Joint**, and
+go straight to section 5. Pressing Analyze rebuilds the joint from the on-screen
+controls, so every field is still exercised, just not typed.
+
+**By hand:** start with **File → New**. About 20 minutes. Known gap: a material
+added with **Add…** gets no "bolt" role, so it never appears in the Bolt material
+dropdown. Use the quick route until that's fixed.
 
 ## 1. Materials & Hardware — three custom entries
 
