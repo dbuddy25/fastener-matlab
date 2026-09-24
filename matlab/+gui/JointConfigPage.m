@@ -67,6 +67,7 @@ classdef JointConfigPage < gui.Page
         BodyLengthField
         RatedUltField
         RatedYieldField
+        ThermalRateField
         FrustumAngleField
 
         % Right column
@@ -256,6 +257,11 @@ classdef JointConfigPage < gui.Page
             obj.UncertaintyField.Value        = ps.Uncertainty;
             obj.RelaxationField.Value         = ps.RelaxationFraction;
             obj.SeparationCriticalCheck.Value = ps.SeparationCritical;
+            if ps.ThermalRate == 0
+                obj.ThermalRateField.Value = '';
+            else
+                obj.ThermalRateField.Value = obj.fmtOptional(ps.ThermalRate);
+            end
 
             lc = obj.State.LoadCase;
             obj.CaseNameField.Value     = char(lc.Name);
@@ -697,10 +703,10 @@ classdef JointConfigPage < gui.Page
             %   inputs reads as one.
             panel = obj.collapsibleGroup(parent, row, "Advanced / overrides", true);
 
-            b = uigridlayout(panel, [4 3]);
+            b = uigridlayout(panel, [5 3]);
             b.ColumnWidth = {gui.JointConfigPage.LabelW, ...
                              gui.JointConfigPage.ValueW, '1x'};
-            b.RowHeight   = repmat({'fit'}, 1, 4);
+            b.RowHeight   = repmat({'fit'}, 1, 5);
             b.RowSpacing  = 4;
             b.Padding     = [6 6 6 6];
 
@@ -759,6 +765,15 @@ classdef JointConfigPage < gui.Page
                 'model default is 30.'];
             lb.Tooltip = obj.FrustumAngleField.Tooltip;
             obj.bindEdit(obj.FrustumAngleField, @(~, ~) obj.commitJoint());
+
+            obj.ThermalRateField = obj.addLabelledText(b, 5, ...
+                'Thermal preload rate (lbf/degC)', ...
+                ['Preload change per degC away from the assembly ' ...
+                 'temperature, applied + on the maximum and - on the ' ...
+                 'minimum preload. Blank = the engine derives the change ' ...
+                 'from the bolt and clamped-stack CTEs (TM-106943 Eq. 10). ' ...
+                 'A rate in lbf/degF times 1.8 is lbf/degC.']);
+            obj.bindEdit(obj.ThermalRateField, @(~, ~) obj.commitJoint());
         end
 
         function buildPreloadGroup(obj, parent, row)
@@ -1213,6 +1228,12 @@ classdef JointConfigPage < gui.Page
             ps.Uncertainty        = obj.UncertaintyField.Value;
             ps.RelaxationFraction = obj.RelaxationField.Value;
             ps.SeparationCritical = logical(obj.SeparationCriticalCheck.Value);
+            % model.PreloadSpec's "not supplied" is 0, not NaN.
+            rate = obj.parseOptional(obj.ThermalRateField);
+            if isnan(rate)
+                rate = 0;
+            end
+            ps.ThermalRate = rate;
         end
 
         function commitLoadCase(obj)
@@ -2859,6 +2880,10 @@ classdef JointConfigPage < gui.Page
 
         function f = frustumAngleField(obj)
             f = obj.FrustumAngleField;
+        end
+
+        function f = thermalRateField(obj)
+            f = obj.ThermalRateField;
         end
 
         function f = nominalTorqueField(obj)

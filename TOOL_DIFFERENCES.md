@@ -80,14 +80,10 @@ paired with `FSU/FSY/FSSep/FSSlip`.
 Why: the DABJ worked example applies FF to **ultimate only** — `Pty = 1.25 × PtL`
 with no 1.15 in it — so a single FF could not reproduce the answer key.
 
-**Resolved in the GUI:** the form shows **one** `FF` field, fanned out to all
-four on Analyze. The engine keeps its four slots as the mechanism.
-
-> One hazard handled there: a case carrying four *unequal* fitting factors — as
-> the DABJ fixture does — has them **preserved verbatim** until the user edits
-> the field, with an amber label listing what is actually in use. Showing one
-> number and writing it to all four would have silently changed that case's yield
-> margin the first time anyone pressed Analyze without touching anything.
+**Resolved in the GUI:** the Factors page shows all four fitting factors,
+one per check, beside the four factors of safety. A program that levies FF on
+ultimate only (as DABJ does) enters it that way; a new case starts with all
+four at 1.15.
 
 ### 1.4 Bearing yield may not evaluate
 Bearing runs as an ultimate/yield pair (`Fbru` with `FFU·FSU`, `Fbry` with

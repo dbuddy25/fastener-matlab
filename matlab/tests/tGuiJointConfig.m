@@ -799,6 +799,30 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             testCase.verifyEqual(j.BoltRatedUltimateLoad, 4210);
         end
 
+        function aThermalRateOverridesTheCteDerivation(testCase)
+            p = testCase.Page;
+            p.expandGroup("Advanced");
+            testCase.verifyEqual(string(p.thermalRateField().Value), "", ...
+                'A new joint must start with no thermal-rate override.');
+
+            testCase.type(p.thermalRateField(), '12.978');
+            testCase.verifyEqual( ...
+                testCase.App.State.Joint.PreloadSpec.ThermalRate, 12.978);
+
+            testCase.type(p.thermalRateField(), ' ');
+            testCase.verifyEqual( ...
+                testCase.App.State.Joint.PreloadSpec.ThermalRate, 0, ...
+                'Blank must restore the CTE derivation (ThermalRate = 0).');
+        end
+
+        function aLoadedThermalRateIsShown(testCase)
+            j = testCase.App.State.Joint;
+            j.PreloadSpec.ThermalRate = 7.21 * 1.8;
+            testCase.App.State.Joint = j;
+            testCase.verifyEqual(str2double(testCase.Page.thermalRateField().Value), ...
+                7.21 * 1.8, 'AbsTol', 1e-3);
+        end
+
         function aRatedLoadOfZeroIsKeptNotDiscarded(testCase)
             % BoltRatedUltimateLoad is mustBeNonnegativeOrNaN, unlike the
             % geometry fields: zero is a legitimate rating, so it must not

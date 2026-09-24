@@ -36,13 +36,16 @@
 <main>
 <p class="crumb">SETUP</p>
 <h1>Factors</h1>
-<p>Set the fitting factor and the four factors of safety your program levies. They apply to every analysis in the case.</p>
+<p>Set the fitting factors and factors of safety your program levies, one pair per check. They apply to every analysis in the case.</p>
 <p class="shot"><a href="img/Factors.png" target="_blank" title="Open full size"><img src="img/Factors.png" alt="The Factors page" onerror="this.closest('p').remove()"></a></p>
 <h2>Fields</h2>
-<h3>Fitting Factor</h3>
+<h3>Fitting Factors</h3>
 <table class="fields">
 <tr><th>Field</th><th>What it sets</th></tr>
-<tr data-group="Fitting Factor" data-field="FF"><td>Fitting factor (FF)</td><td>One factor multiplying every factor of safety: ultimate, yield, separation and slip (5020B §4.2.2). A minimum of 1.15 is recommended for ultimate.</td></tr>
+<tr data-group="Fitting Factors" data-field="FFy"><td>Yield (FFy)</td><td>Multiplies FSy (5020B §4.2.2).</td></tr>
+<tr data-group="Fitting Factors" data-field="FFu"><td>Ultimate (FFu)</td><td>Multiplies FSu. A minimum of 1.15 is recommended.</td></tr>
+<tr data-group="Fitting Factors" data-field="FFsep"><td>Separation (FFsep)</td><td>Multiplies FSsep. At least 1.15 on a separation-critical joint.</td></tr>
+<tr data-group="Fitting Factors" data-field="FFslip"><td>Slip (FFslip)</td><td>Multiplies FSslip.</td></tr>
 </table>
 <h3>Factors of Safety</h3>
 <table class="fields">
@@ -54,10 +57,10 @@
 </table>
 <h2>What you'll see</h2>
 <ul>
-<li>The engine keeps four fitting factors (ultimate, yield, separation, slip); this page shows one.</li>
-<li>A loaded case with <strong>unequal</strong> fitting factors keeps them, and a banner says so. Editing FF replaces all four with the one value.</li>
-<li>The tool warns when FF is below 1.15 on a separation-critical joint.</li>
-<li>A new case starts at FF 1.15, FSu 1.4, FSy 1.25, FSsep 1.0, FSslip 1.0. Check them against your program's factors.</li>
+<li>Each check's design load uses its own pair: e.g. yield is FFy × FSy × PtL. A program that levies the fitting factor on ultimate only sets FFu 1.15 and the rest 1.0.</li>
+<li>The tool warns when FFsep is below 1.15 on a separation-critical joint.</li>
+<li>A new case starts with all four fitting factors at 1.15, and FSu 1.4, FSy 1.25, FSsep 1.0, FSslip 1.0. Check them against your program's factors.</li>
+<li>The summary bar at the bottom shows unequal fitting factors as <em>FF mixed</em>, with all four values.</li>
 </ul>
 <p class="next">Next: <a href="TempLoads.html">Temp Loads</a></p>
 </main>

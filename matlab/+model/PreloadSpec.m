@@ -29,7 +29,7 @@ classdef PreloadSpec
         RelaxationFraction (1,1) double {mustBeNonnegative} = 0.05
         CreepLoss          (1,1) double {mustBeNonnegative} = 0          % lbf
         SeparationCritical (1,1) logical = false                         % selects min-preload eqn (NASA-STD-5020B Eq. 4 vs Eq. 5)
-        ThermalRate        (1,1) double = 0                              % lbf/°C; 0 (default) = compute from CTE/stiffness later. Not an analyst input — no GUI control and no bulk-template column. Set programmatically only, by validation fixtures that need to reproduce a book answer key without full frustum geometry (e.g. validation.dabjSection9, 7.21 lbf/degF x 1.8 from DABJ Table 8-4).
+        ThermalRate        (1,1) double = 0                              % lbf/°C; 0 (default) = compute from CTE/stiffness. Optional override: Joint Config > Advanced / overrides; no bulk-template column.
         NominalPreload     (1,1) double {mustBePositiveOrNaN} = NaN      % lbf, used when Method = DirectPreload
     end
 
