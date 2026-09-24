@@ -44,13 +44,9 @@ in the fields the engine reads, and that the margins shown are the margins
 returned. That path only runs when a human runs it, and it is the only test in
 the project with published numbers behind it, so a mismatch is unambiguous.
 
-Build the DABJ Section 9 joint through the UI. `+validation/dabjSection9.m` has
-every input and flags its two assumptions.
-
-Key inputs: 4 bolts, 3/8-24, body in shear, μ = 0.1, loading-plane factor 0.5,
-rated ultimate 15,200 / yield 11,400 lbf, torque control 470 in-lbf ±20, nut
-factor 0.15, uncertainty 0.25. Limit loads: bolt tensile 5,590, bolt shear
-1,560, joint tensile total 16,090.
+Build the DABJ Section 9 joint through the UI, field by field, from
+**`ANSWER_KEY_ENTRY_SHEET.md`**. It takes every value from
+`+validation/dabjSection9.m` and states the assumptions the book leaves open.
 
 Watch the **"Required before Analyze: …"** label empty out as you go — that
 gating is the page's own, and it is the only thing that enables the button.
@@ -63,7 +59,7 @@ Press **Analyze Single Joint**. It should auto-navigate to Results.
 | Separation | **+0.16** | ±0.01 |
 | Bolt Yield | **+0.63** | ±0.01 |
 | Shear-Ultimate | **+3.18** | ±0.01 |
-| Interaction | **+0.59** (a = 1.59) | ±0.01 |
+| Interaction | **R = 0.48** (book: a = 1.59, MS +0.59; see the sheet) | ±0.01 |
 | Joint Slip | **−0.65** | ±0.01 |
 
 - [ ] All six match.
