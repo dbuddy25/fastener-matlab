@@ -23,13 +23,14 @@ easy to understand at a glance. The current exports are calc-document dumps:
 | What a single-joint slide shows | **Verdict headline, margin summary table, key inputs, joint cross-section** |
 | Detailed calc PDF for the checker | **Keep it, but fix it** |
 | How the Excel is styled | A **styled template** `.xlsx` shipped with the tool; MATLAB fills in values only. It works in the `.exe` with no Excel installed. |
-| Bulk | The **full results sheet** stays, now formatted. See open question 1 for the summary sheet. |
+| Bulk | A **Joint Summary** sheet (one row per joint, every reported margin) plus the full results sheet, both formatted |
+| Slide sheet layout | **Wide**: the margin table beside the key inputs |
 
 ## 3. Single-joint Excel (Results → Export Table…)
 
 | Sheet | Contents |
 |---|---|
-| **Slide** | Laid out to be copied as one block onto a 16:9 slide (fixed range, fixed column widths, no gridlines). Top to bottom: **verdict headline** (worst margin and governing check, or "N not evaluated", coloured like the Results verdict), **key inputs** (bolt, bolt material, stack, threaded member, torque and K, PtL / PsL, factors, temperatures), **margin table** (Check · MS or R · Status · Equation), with pass / fail / not-evaluated colours from the template's conditional formatting on the Status column |
+| **Slide** | Laid out to be copied as one block onto a 16:9 slide (fixed range, fixed column widths, no gridlines). **Verdict headline** across the top (worst margin and governing check, or "N not evaluated", coloured like the Results verdict); below it, **wide**: **key inputs** on the left (bolt, bolt material, stack, threaded member, torque and K, PtL / PsL, factors, temperatures), the **margin table** on the right (Check · MS or R · Status · Equation), with pass / fail / not-evaluated colours from the template's conditional formatting on the Status column |
 | **Detail** | Per check: the equation written out, the substituted inputs (the Results detail panel's content) and the Method string |
 | **About** | Tool, version, run time, Project rows, scope note (as now) |
 
@@ -47,7 +48,7 @@ Rules carried over:
 | Sheet | Contents |
 |---|---|
 | **Results** | Every element × load case, as now, but **formatted**: frozen header, filter, number formats, conditional pass / fail colour on every margin column, Interaction R ratio-aware |
-| Summary | See open question 1 |
+| **Joint Summary** | First sheet. **One row per joint**, with **every reported margin** as a column: the worst MS for that check across the joint's elements and load cases, Interaction as the worst (largest) R. Then the overall worst margin, its governing check, and the element and load case where it occurs, plus element and pass/fail counts. The same pass/fail/not-evaluated colours; a check that never ran for a joint is `—`. Mirrors the Bulk page's Joint Summary tab, so screen and file agree. |
 | **About** | As now |
 
 Always the complete result set, whatever the on-screen filters show (as now).
@@ -88,13 +89,13 @@ Visual quality is checked by Dan, in Excel and pasted into PowerPoint.
 | Phase | Ships |
 |---|---|
 | **(a)** | Single-joint template, the Slide / Detail / About sheets, the section PNG, and tests. Confirm `PreserveFormat` first. |
-| **(b)** | The bulk template with the formatted Results sheet (and a Summary sheet, if wanted) |
+| **(b)** | The bulk template: Joint Summary sheet plus formatted Results sheet |
 | **(c)** | The calc PDF reorder |
 | **(d)** | Dan pastes real results into a deck and we adjust |
 
-## 9. Open questions
+## 9. Resolved (2026-09-24)
 
-| # | Question |
+| Question | Decision |
 |---|---|
-| 1 | **Bulk summary sheet:** is the formatted full Results sheet enough, or do you also want a slide-sized summary: one row per joint (worst margin, governing check, where it occurs) plus pass / fail counts? |
-| 2 | Slide sheet orientation: the margin table beside the inputs (wide) or below them (tall)? |
+| Bulk summary | Joint Summary sheet: one row per joint, all reported margins |
+| Slide layout | Wide: margin table beside the key inputs |
