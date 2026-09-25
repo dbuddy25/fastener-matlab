@@ -384,9 +384,15 @@ classdef ResultsPage < gui.Page
             end
 
             try
-                written = report.exportResults(obj.displayedTable(), ...
-                    string(fullfile(p, f)), Notes = obj.scopeFooterText(), ...
-                    Project = obj.State.Project);
+                file = string(fullfile(p, f));
+                [~, ~, ext] = fileparts(file);
+                if lower(ext) == ".csv"
+                    written = report.exportResults(obj.displayedTable(), ...
+                        file, Notes = obj.scopeFooterText(), ...
+                        Project = obj.State.Project);
+                else
+                    written = obj.writeWorkbook(file);
+                end
             catch err
                 uialert(ancestor(obj.Root, 'figure'), err.message, ...
                     'Export failed');
@@ -698,25 +704,8 @@ classdef ResultsPage < gui.Page
                 obj.VerdictLabel.FontColor = gui.palette('statusWarn');
                 return
             end
-            status = string({shown.Status});
-            nFail  = sum(status == "Fail");
-            nEval  = sum(status == "NotEvaluated");
-            nTotal = numel(shown);
-
-            if nFail > 0
-                txt = sprintf('%d of %d displayed checks FAIL', nFail, nTotal);
-                col = gui.palette('statusFail');
-            elseif nEval > 0
-                % A1 forbids an unqualified pass while anything is
-                % unevaluated - it would overstate what the engine
-                % concluded.
-                txt = sprintf('%d displayed checks pass, %d NOT EVALUATED', ...
-                    nTotal - nEval, nEval);
-                col = gui.palette('statusWarn');
-            else
-                txt = sprintf('All %d displayed checks pass', nTotal);
-                col = gui.palette('statusPass');
-            end
+            [txt, cls] = gui.ResultsPage.verdictFor(string({shown.Status}));
+            col = gui.palette(gui.ResultsPage.verdictColour(cls));
 
             % NO "N more computed, not shown" TAIL: every check now carries
             % a row, so it would read "0 more computed, not shown" -- a
@@ -1047,6 +1036,72 @@ classdef ResultsPage < gui.Page
 
     % ---- Reading the Result -----------------------------------------------
     methods (Access = private)
+        function v = exportView(obj)
+            %EXPORTVIEW  What report.writeSingleJointWorkbook writes, built
+            %   from the same helpers that draw this page.
+            r  = obj.State.Result;
+            in = obj.State.ResultInputs;
+            if isempty(in)
+                in = struct('Joint', obj.State.Joint, ...
+                    'LoadCase', obj.State.LoadCase, 'Factors', obj.State.Factors);
+            end
+            j = in.Joint;  lc = in.LoadCase;  f = in.Factors;
+
+            shown = obj.tableMargins();
+            [verdict, cls] = gui.ResultsPage.verdictFor(string({shown.Status}));
+            name = j.Name;
+            if strlength(name) == 0
+                name = "Joint";
+            end
+            v.Title = char(name + ": " + verdict);
+            v.VerdictClass = char(cls);
+
+            parts = strings(1, 0);
+            if ~isnan(r.WorstMargin)
+                parts(end + 1) = sprintf("Worst margin %+.2f (%s)", ...
+                    r.WorstMargin, r.GoverningCheck);
+            end
+            p = obj.State.Project;
+            for fld = ["program", "partNumber"]
+                if isfield(p, fld) && strlength(strtrim(string(p.(fld)))) > 0
+                    parts(end + 1) = strtrim(string(p.(fld))); %#ok<AGROW>
+                end
+            end
+            parts(end + 1) = "Fastener Analysis Tool v" + toolVersion();
+            parts(end + 1) = string(datetime("now", "Format", "yyyy-MM-dd HH:mm"));
+            v.Subtitle = char(strjoin(parts, "  ·  "));
+
+            v.Inputs = gui.ResultsPage.keyInputs(j, lc, f, r);
+
+            rows = [shown, obj.marginsNamed(gui.ResultsPage.DecisionRow)];
+            v.Margins = cell(numel(rows), 4);
+            v.Details = cell(numel(rows), 6);
+            for i = 1:numel(rows)
+                m = rows(i);
+                if m.Name ~= "Interaction" && ~isnan(m.MS)
+                    val = m.MS;
+                else
+                    val = char(gui.ResultsPage.formatValue(m, false));
+                end
+                st = gui.ResultsPage.statusText(m.Status);
+                v.Margins(i, :) = {char(m.Name), val, st, ...
+                    char(gui.ResultsPage.shortMethod(m.Method))};
+                lines = string(obj.inputLines(m));
+                lines = strtrim(lines(startsWith(lines, "  ")));
+                inputs = strjoin(lines, newline);
+                v.Details(i, :) = {char(m.Name), st, val, char(m.Method), ...
+                    char(inputs), char(obj.rowDetail(m))};
+            end
+
+            [pItem, pValue] = report.projectRows(obj.State.Project);
+            item  = ["Tool"; "Version"; "Generated"; "Standard"; pItem; "Note"];
+            value = ["Fastener Analysis Tool"; toolVersion(); ...
+                     string(datetime("now", "Format", "yyyy-MM-dd HH:mm")); ...
+                     "NASA-STD-5020B"; pValue; string(obj.scopeFooterText())];
+            v.About = cellstr([item, value]);
+            v.Scope = char(obj.scopeFooterText());
+        end
+
         function m = marginNamed(obj, name)
             %MARGINNAMED  One Margins row by name, or empty if absent.
             m = [];
@@ -1106,6 +1161,79 @@ classdef ResultsPage < gui.Page
 
     % ---- Formatting -------------------------------------------------------
     methods (Static, Access = private)
+        function [txt, cls] = verdictFor(status)
+            %VERDICTFOR  The verdict line and its class ("fail" | "noteval"
+            %   | "pass") from the displayed rows' statuses. One place, so
+            %   the screen and the export cannot word it differently.
+            nFail  = sum(status == "Fail");
+            nEval  = sum(status == "NotEvaluated");
+            nTotal = numel(status);
+            if nFail > 0
+                txt = sprintf('%d of %d displayed checks FAIL', nFail, nTotal);
+                cls = "fail";
+            elseif nEval > 0
+                % A1 forbids an unqualified pass while anything is
+                % unevaluated - it would overstate what the engine
+                % concluded.
+                txt = sprintf('%d displayed checks pass, %d NOT EVALUATED', ...
+                    nTotal - nEval, nEval);
+                cls = "noteval";
+            else
+                txt = sprintf('All %d displayed checks pass', nTotal);
+                cls = "pass";
+            end
+        end
+
+        function name = verdictColour(cls)
+            switch cls
+                case "fail",    name = 'statusFail';
+                case "noteval", name = 'statusWarn';
+                otherwise,      name = 'statusPass';
+            end
+        end
+
+        function c = keyInputs(j, lc, f, r)
+            %KEYINPUTS  The slide's left-hand block: label | value.
+            tm = j.ThreadedMember;
+            layers = strings(1, 0);
+            for k = 1:numel(j.FlangeStack)
+                L = j.FlangeStack(k);
+                layers(end + 1) = sprintf("%g in %s", L.Thickness, L.Material.Name); %#ok<AGROW>
+            end
+            ps = j.PreloadSpec;
+            loads = sprintf("PtL %s, PsL %s lbf", ...
+                gui.ResultsPage.withThousands(lc.BoltTensileLimitLoad), ...
+                gui.ResultsPage.withThousands(lc.BoltShearLimitLoad));
+            if ~isnan(lc.BoltBendingLimitMoment)
+                loads = loads + sprintf(", MbL %s in-lbf", ...
+                    gui.ResultsPage.withThousands(lc.BoltBendingLimitMoment));
+            end
+            ff = [f.FFU, f.FFY, f.FFSep, f.FFSlip];
+            if all(ff == ff(1))
+                ffTxt = sprintf("FF %g", ff(1));
+            else
+                ffTxt = sprintf("FFu/y/sep/slip %g/%g/%g/%g", ff);
+            end
+            rows = { ...
+                "Bolt",            sprintf("%s, %s, nf = %g", j.Bolt.Designation, j.BoltMaterial.Name, j.BoltCount); ...
+                "Threaded member", sprintf("%s, %s", string(tm.Type), tm.Material.Name); ...
+                "Clamped stack",   strjoin(layers, " + "); ...
+                "Preload",         sprintf("%s in-lbf, K %g", gui.ResultsPage.withThousands(ps.NominalTorque), ps.NutFactor); ...
+                "Preload band",    sprintf("PpMax %s, PpMin %s lbf", gui.ResultsPage.withThousands(r.Preload.PpMax), gui.ResultsPage.withThousands(r.Preload.PpMin)); ...
+                "Limit loads",     loads; ...
+                "Factors",         sprintf("%s; FSu %g, FSy %g, FSsep %g, FSslip %g", ffTxt, f.FSU, f.FSY, f.FSSep, f.FSSlip); ...
+                "Temperatures",    sprintf("%g / %g / %g degC (assembly / hot / cold)", j.ReferenceTemperature, j.MaxTemperature, j.MinTemperature); ...
+                "Shear plane",     char(string(j.ShearPlane)); ...
+                "Slip",            sprintf("%s, mu %g", string(j.SlipMode), j.FrictionCoefficient)};
+            c = cellfun(@char, rows, 'UniformOutput', false);
+        end
+
+        function s = shortMethod(method)
+            %SHORTMETHOD  The citation part of a Method string, for a slide:
+            %   everything before the written-out equation.
+            s = strtrim(regexprep(string(method), '\s+(-|—|–)\s+.*$', ''));
+        end
+
         function s = formatValue(m, capOn)
             %FORMATVALUE  The Value cell for one row.
             %   Interaction is the exception and stays one: it reports a
@@ -1250,6 +1378,25 @@ classdef ResultsPage < gui.Page
 
     % ---- Public surface ---------------------------------------------------
     methods
+        function written = writeWorkbook(obj, file)
+            %WRITEWORKBOOK  The styled .xlsx and its cross-section PNG.
+            %   The Export Table path without the file dialog. The PNG is
+            %   best-effort: the workbook is the record, so a drawing
+            %   failure is reported in the status bar, not thrown.
+            written = report.writeSingleJointWorkbook(file, obj.exportView());
+            in = obj.State.ResultInputs;
+            if isempty(in)
+                return
+            end
+            [d, n] = fileparts(written);
+            png = fullfile(d, n + "_section.png");
+            try
+                gui.JointSectionView.writeImage(in.Joint, png);
+            catch err
+                obj.setStatus(sprintf('Workbook written; the cross-section image was not (%s).', err.message));
+            end
+        end
+
         function selectRow(obj, k)
             %SELECTROW  Select a table row and repaint the detail panel.
             %   Public because assigning Selection programmatically does NOT

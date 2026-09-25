@@ -118,9 +118,14 @@ classdef JointSectionView < handle
 
     % ---- Window -----------------------------------------------------------
     methods (Access = private)
-        function build(obj)
+        function build(obj, visible)
+            arguments
+                obj
+                visible (1,1) logical = true
+            end
             obj.Fig = uifigure('Name', 'Joint Cross-Section', ...
-                'Position', [200 160 560 680]);
+                'Position', [200 160 560 680], ...
+                'Visible', matlab.lang.OnOffSwitchState(visible));
 
             g = uigridlayout(obj.Fig, [2 1]);
             g.RowHeight   = {'1x', 'fit'};
@@ -349,6 +354,23 @@ classdef JointSectionView < handle
 
     % ---- Geometry ---------------------------------------------------------
     methods (Static)
+        function writeImage(joint, file)
+            %WRITEIMAGE  Draw joint off-screen and save it as an image.
+            %   exportgraphics on the axes, not exportapp on the window:
+            %   exportapp has failed on busy app states.
+            arguments
+                joint (1,1) model.Joint
+                file  (1,1) string
+            end
+            s = gui.AppState();
+            s.Joint = joint;
+            v = gui.JointSectionView(s);
+            closer = onCleanup(@() delete(v));
+            v.build(false);
+            v.redraw();
+            exportgraphics(v.Ax, file, 'Resolution', 200);
+        end
+
         function g = layout(joint)
             %LAYOUT  A model.Joint -> every coordinate the drawing needs.
             %   PURE, and public, so the geometry can be tested without a

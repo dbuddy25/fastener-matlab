@@ -227,11 +227,11 @@ Error paths are read by an analyst on a deadline.
 MATLAB Compiler licensed:
 
 ```matlab
-mcc -m fastenerTool.m -a +data/library -a userguide -o FastenerTool -d ../build
+mcc -m fastenerTool.m -a +data/library -a userguide -a templates -o FastenerTool -d ../build
 ```
 
 or **APPS → Application Compiler** with `fastenerTool.m` as the main file and the
-`+data/library` and `userguide` folders added as files required for the app.
+`+data/library`, `userguide` and `templates` folders added as files required for the app.
 Done when the exe runs on a clean Windows box with only the MATLAB Runtime.
 
 ### Check first on the packaged app
