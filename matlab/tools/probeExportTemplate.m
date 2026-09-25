@@ -15,7 +15,7 @@ if isfile(out)
 end
 copyfile(tpl, out);
 
-opts = {'Sheet', 'Slide', 'UseExcel', false, 'PreserveFormat', true};
+opts = {'Sheet', 'Slide', 'UseExcel', false, 'PreserveFormat', true, 'AutoFitWidth', false};
 writecell({'DABJ 9 - worst margin -0.65 (Slip), 1 FAIL'}, out, 'Range', 'A1', opts{:});
 rows = { ...
     'Tension-Ultimate', 0.69,  'Pass',          'NASA-STD-5020B Eq. 6'; ...
@@ -35,9 +35,11 @@ workbook = string(fileread(fullfile(x, "xl", "workbook.xml")));
 
 check("pass/fail colour rules kept", contains(sheets, "<conditionalFormatting"));
 check("fail colour kept in styles", contains(styles, "FFC7C7"));
-check("gridlines still off", contains(sheets, 'showGridLines="0"'));
+check("gridlines still off", ~isempty(regexp(sheets, 'showGridLines="(0|false)"', 'once')));
 check("title merge kept", contains(sheets, 'A1:D1'));
-check("column widths kept", contains(sheets, 'width="26'));
+colC = regexp(sheets, '<col [^>]*min="3"[^>]*>', 'match', 'once');
+w = str2double(regexp(colC, 'width="([\d.]+)"', 'tokens', 'once'));
+check(sprintf("column C width kept (template 16, got %g)", w), abs(w - 16) < 1.5);
 check("named range kept", contains(workbook, "MarginTable"));
 b5 = regexp(sheets, '<c r="B5"[^>]*>', 'match', 'once');
 check("written cell B5 kept its style", contains(b5, ' s="') && ~contains(b5, ' s="0"'));
