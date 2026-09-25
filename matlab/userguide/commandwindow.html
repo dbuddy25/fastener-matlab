@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Command Window (MATLAB) — Fastener Tool User Guide</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<nav aria-label="Guide">
+<a class="home" href="index.html">Fastener Tool — User Guide</a>
+<h2>SETUP</h2><ul>
+<li><a href="Project.html">Project</a></li>
+<li><a href="Factors.html">Factors</a></li>
+<li><a href="TempLoads.html">Temp Loads</a></li>
+</ul>
+<h2>SINGLE JOINT</h2><ul>
+<li><a href="BoltSizing.html">Bolt Sizing</a></li>
+<li><a href="JointConfig.html">Joint Config</a></li>
+<li><a href="Results.html">Single Joint Results</a></li>
+</ul>
+<h2>BULK</h2><ul>
+<li><a href="DefinedJoints.html">1 · Defined Joints</a></li>
+<li><a href="ElementMapping.html">2 · Element Mapping</a></li>
+<li><a href="ElementForces.html">3 · Element Forces</a></li>
+<li><a href="BulkAnalysis.html">4 · Bulk Analysis</a></li>
+</ul>
+<h2>REFERENCE</h2><ul>
+<li><a href="HardwareLibrary.html">Materials &amp; Hardware</a></li>
+</ul>
+<h2>ABOUT THE TOOL</h2><ul>
+<li><a href="limits.html">What the tool does not do</a></li>
+<li><a href="sources.html">Where the numbers come from</a></li>
+<li><a href="commandwindow.html" aria-current="page">Command Window (MATLAB)</a></li>
+</ul>
+</nav>
+<main>
+<p class="crumb">ABOUT THE TOOL</p>
+<h1>Command Window (MATLAB)</h1>
+<p class="callout">This page requires MATLAB and the source install. It does not apply to the packaged <code>.exe</code>, which only runs the GUI.</p>
+
+<h2>Setup</h2>
+<p>Set the MATLAB Current Folder to the <code>matlab/</code> subfolder, then sanity-check the install:</p>
+<pre><code>cd matlab
+fastenerTool          % prints the version banner
+runTests               % should be all green</code></pre>
+
+<h2>Single joint</h2>
+<p>Build a joint from the built-in library, or load a saved case (see below). This example pulls a bolt and two materials, builds a two-layer flange stack, and analyzes it:</p>
+<pre><code>lib = data.Library.loadInstalled();
+b   = lib.bolt("NAS1351 3/8-24");
+bm  = lib.material("A286");
+fm  = lib.material("Al 7075-T7351");
+
+j = model.Joint(Name="Demo", Bolt=b, BoltMaterial=bm, ...
+      FlangeStack=[model.FlangeLayer(Material=fm, Thickness=0.375), ...
+                   model.FlangeLayer(Material=fm, Thickness=0.375)], ...
+      ThreadedMember=model.ThreadedMember(Type=model.ThreadedMemberType.Nut), ...
+      PreloadSpec=model.PreloadSpec(NominalTorque=470, TorqueTolerance=0.0426, ...
+                                     NutFactor=0.15, Uncertainty=0.25), ...
+      BoltCount=4, FrictionCoefficient=0.1, LoadingPlaneFactor=0.5, ...
+      MinTemperature=6.1, MaxTemperature=33.9);
+
+lc = model.LoadCase(Name="Quasistatic", BoltTensileLimitLoad=5590, BoltShearLimitLoad=1560);
+f  = data.factorPreset("NASA-STD-5020B");
+
+r = engine.analyze(j, lc, f);
+r.asTable
+r.WorstMargin
+r.GoverningCheck</code></pre>
+<p><code>engine.summary(j, lc, f)</code> prints every input, including the computed min/max preload, so you can double-check what went in before trusting the margins.</p>
+
+<h3>Reading the Result</h3>
+<table>
+<tr><th>Field</th><th>Meaning</th></tr>
+<tr><td><code>r.asTable()</code></td><td>One row per check: Name, MS, Status, Method (the equation citation)</td></tr>
+<tr><td>MS ≥ 0</td><td>Pass</td></tr>
+<tr><td>MS &lt; 0</td><td>Fail</td></tr>
+<tr><td>MS = <code>NaN</code></td><td>NotEvaluated — the check did not run (missing geometry, not applicable, or deferred). Not a pass, not a fail.</td></tr>
+<tr><td><code>r.WorstMargin</code> / <code>r.GoverningCheck</code></td><td>The smallest evaluated margin and which check produced it</td></tr>
+<tr><td>Interaction row</td><td>Reports a ratio <code>R</code>, not a margin, in <code>Margins(k).R</code> — <strong>passes at R ≤ 1</strong>, the opposite direction from every other row, and is excluded from <code>WorstMargin</code>/<code>GoverningCheck</code></td></tr>
+</table>
+
+<h3>PDF report</h3>
+<p>Requires the MATLAB Report Generator toolbox:</p>
+<pre><code>report.singleJointReport(j, lc, f, "report.pdf")</code></pre>
+<p>Builds a title page, an Inputs table, Preload and Design Loads tables, the full margins table (governing check bolded, Fail rows shaded), the separation-before-rupture narrative, and a Governing Equations table. Pass a <code>Project=</code> struct (fields <code>analyst</code>, <code>program</code>, <code>assembly</code>, <code>partNumber</code>, <code>environment</code>, <code>notes</code>) to stamp the report's Project section.</p>
+
+<h3>Export the margins table</h3>
+<p>Without a PDF, write just the margins table to Excel or CSV:</p>
+<pre><code>report.exportResults(r.asTable(), "margins.xlsx")</code></pre>
+
+<h2>Save / load a case</h2>
+<p>Save a Joint (and, usually, a LoadCase and Factors) to one JSON file so you can reopen it later without retyping anything:</p>
+<pre><code>data.saveCase(struct(Joint=j, LoadCase=lc, Factors=f, Name="Demo"), "demo_case.json");
+
+% ... later, in a new session ...
+c = data.loadCase("demo_case.json");
+r = engine.analyze(c.Joint, c.LoadCase, c.Factors);</code></pre>
+<p>The round trip is lossless — re-analyzing a loaded case reproduces the exact same margins as the original, including unconfigured (<code>NaN</code>) fields.</p>
+
+<h2>Factor presets</h2>
+<p>Pull a named safety/fitting-factor preset instead of typing <code>model.Factors(...)</code> every time:</p>
+<pre><code>f = data.factorPreset("NASA-STD-5020B");   % the built-in standard set
+data.factorPresetNames()                   % every preset name available, built-in + yours</code></pre>
+<p>Save your own program-specific set for reuse — built-in names are protected and cannot be overwritten:</p>
+<pre><code>data.saveFactorPreset("My Program Factors", model.Factors(FSU=1.5, FFU=1.2));
+f = data.factorPreset("My Program Factors");   % pulls it back, any session</code></pre>
+
+<h2>Bulk</h2>
+<p>Fill three plain CSVs (or one multi-sheet workbook) and get a margins table out with one call.</p>
+<table>
+<tr><th>Template</th><th>What it holds</th></tr>
+<tr><td><code>matlab/templates/joint_library_template.csv</code></td><td>One row per joint definition</td></tr>
+<tr><td><code>matlab/templates/elements_template.csv</code></td><td>One row per FEM element × load case</td></tr>
+<tr><td><code>matlab/templates/settings_template.csv</code></td><td>Global temperatures + the eight safety/fitting factors</td></tr>
+</table>
+<pre><code>T = engine.runBulk("joints.csv", "elements.csv", "settings.csv", "margins.xlsx");</code></pre>
+<p>Prefer one workbook? <code>data.makeTemplate("analysis_template.xlsx")</code> writes a five-sheet fill-in workbook (Joints/Elements/Settings plus Lists and Fields for Excel dropdowns and tooltips); fill it in, then run it in one call:</p>
+<pre><code>T = engine.runWorkbook("analysis_template.xlsx", "margins.xlsx");</code></pre>
+<p>Either call writes a <strong>Results</strong> sheet (one row per element, same MS/NaN/Interaction rules as above) and a <strong>Summary</strong> sheet with Pass/Fail/Error counts. See <code>matlab/examples/run_bulk_example.m</code> for a runnable end-to-end example that copies the bundled templates and writes <code>bulk_results.xlsx</code>.</p>
+
+</main>
+</body>
+</html>

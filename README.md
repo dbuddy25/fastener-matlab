@@ -5,8 +5,9 @@ analysis tool, deployable as a standalone Windows executable.
 
 ## Docs (read these first)
 
-- **`USER_GUIDE.md`** — ⭐ **start here to actually use the tool** — a from-scratch
-  walkthrough: setup, single-joint analysis, and the bulk workbook workflow.
+- **`matlab/userguide/`** — ⭐ **start here to actually use the tool** — the in-app
+  user guide (Help → User Guide), covering every GUI page plus Command Window
+  (headless) usage on `commandwindow.html`. `USER_GUIDE.md` is now a pointer to it.
 - **`CONVENTIONS.md`** — the rules the code follows: equation traceability, the
   document hierarchy, the engineering ground rules, the GUI invariants.
 - **`ARCHITECTURE.md`** — how the pieces fit together (layers, data flow, design
@@ -107,7 +108,7 @@ is fine.
   sheet with the dropdown sources (bolt/material keys pulled live from the
   library), and a `Fields` sheet: the full data dictionary (MATLAB name,
   friendly name, description, units, default per column — the Excel
-  Data-Validation tooltip text). See USER_GUIDE.md §4.
+  Data-Validation tooltip text). See `matlab/userguide/commandwindow.html`.
 - **Input templates** (exact column headers/keys, first joint row = the DABJ
   §9 worked example, settings = the §9 temperatures + factors):
   `matlab/templates/joint_library_template.csv`, `elements_template.csv`,
