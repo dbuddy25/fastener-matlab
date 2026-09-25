@@ -90,7 +90,7 @@ pre {
   padding: 0.7rem 0.9rem;
   margin: 0.75rem 0 1.25rem;
   overflow-x: auto;
-  max-width: 75ch;
+  max-width: 100%;
 }
 pre code {
   background: none;
