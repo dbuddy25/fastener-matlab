@@ -15,9 +15,7 @@
   #msg { margin-left: 12px; color: #666666; }
   #graph { flex: 1; padding: 8px 14px 24px; overflow: auto; }
   #graph svg { max-width: none !important; }
-  #graph .eq { text-align: left; padding: 4px 6px; margin-top: 4px;
-               border-top: 1px solid #d8d8dc; cursor: pointer; }
-  #graph .eq:hover { background: #e0ecf9; }
+  .eq:hover { background: #e0ecf9; }
   #graph .node.clickable, #graph .node[onclick] { cursor: pointer; }
 </style>
 <!-- Mermaid 11.17.2 (MIT, see MERMAID_LICENSE.txt), bundled so the map works offline. -->
@@ -74,6 +72,7 @@
     mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "neutral",
                          themeVariables: { fontSize: "12px" },
                          flowchart: { htmlLabels: true, useMaxWidth: false, curve: "basis",
+                                      wrappingWidth: 700,
                                       nodeSpacing: 30, rankSpacing: 45 } });
     htmlComponent.addEventListener("DataChanged", draw);
     draw();

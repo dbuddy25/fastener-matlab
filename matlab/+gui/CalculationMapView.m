@@ -164,9 +164,18 @@ classdef CalculationMapView < handle
                 for j = 1:numel(nd.Equations)
                     e = nd.Equations(j);
                     id = sid + "E" + j;
-                    label = label + "<div class='eq eq-" + id + "'><b>" + ...
-                        gui.CalculationMapView.esc(gui.CalculationMapView.shortRef(e.Reference)) + ...
-                        "</b><br/>" + gui.CalculationMapView.wrap(gui.CalculationMapView.esc(e.Formula)) + ...
+                    head = gui.CalculationMapView.esc(gui.CalculationMapView.shortRef(e.Reference));
+                    if strlength(e.Description) > 0
+                        head = "<b>" + gui.CalculationMapView.esc(e.Description) + "</b> · " + head;
+                    else
+                        head = "<b>" + head + "</b>";
+                    end
+                    % Styles inline, not in the page's CSS: Mermaid sizes the
+                    % box from them, so the content cannot overflow it.
+                    label = label + "<div class='eq eq-" + id + "' style='" + ...
+                        "text-align:left;padding:4px 6px;margin-top:4px;" + ...
+                        "border-top:1px solid #d8d8dc;cursor:pointer'>" + head + ...
+                        "<br/>" + gui.CalculationMapView.wrap(gui.CalculationMapView.esc(e.Formula)) + ...
                         "<br/><i>line " + e.Line + "</i></div>";
                     links(end + 1) = struct('Id', id, 'File', nd.File, 'Line', e.Line); %#ok<AGROW>
                 end
@@ -196,12 +205,12 @@ classdef CalculationMapView < handle
         end
 
         function s = wrap(s)
-            % Break long formulas at spaces, about 56 characters a line.
+            % Break long formulas at spaces, about 84 characters a line.
             words = split(string(s), " ")';
             s = "";
             n = 0;
             for w = words
-                if n > 0 && n + strlength(w) > 56
+                if n > 0 && n + strlength(w) > 84
                     s = s + "<br/>";
                     n = 0;
                 elseif n > 0

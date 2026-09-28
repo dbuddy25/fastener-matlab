@@ -3,7 +3,7 @@ function m = calculationMap(check)
 %   m = engine.calculationMap("Slip") returns a struct:
 %     Check   the check name
 %     Nodes   struct array: Name, File (full path), IsCheck, Equations
-%             (struct array: Line, Reference, Formula)
+%             (struct array: Line, Reference, Formula, Description)
 %     Edges   struct array: From, To (From feeds To)
 %   names = engine.calculationMap() returns the 15 check names.
 %
@@ -143,7 +143,7 @@ lines = src.text(char(n));
 % Non-capturing inner groups: MATLAB returns only the two outer tokens.
 refs = "(?:NASA-STD-5020B|NASA TM-106943|TM-106943|NASA RP-1228|RP-1228|Shigley|ASME B1\.1|NASM\d+)";
 pat = "^\s*%\s*(" + refs + "[^=]*?)\s+(?:—|–|-)\s+(.*=.*)$";
-eqs = struct('Line', {}, 'Reference', {}, 'Formula', {});
+eqs = struct('Line', {}, 'Reference', {}, 'Formula', {}, 'Description', {});
 k = headerEnd(lines);
 while k < numel(lines)
     k = k + 1;
@@ -164,7 +164,8 @@ while k < numel(lines)
         j = j + 1;
     end
     ref = strtrim(regexprep(tok(1), "\s*\(DABJ[^)]*\)", ""));
-    eqs(end + 1) = struct('Line', k, 'Reference', ref, 'Formula', formula); %#ok<AGROW>
+    eqs(end + 1) = struct('Line', k, 'Reference', ref, 'Formula', formula, ...
+        'Description', describe(formula)); %#ok<AGROW>
 end
 end
 
@@ -199,3 +200,41 @@ for t = regexp(code, '\w+\s*=\s*engine\.(\w+)\s*\(([^;]*)\)\s*;', 'tokens')
     feeds(char(fn)) = ups;
 end
 end
+
+function d = describe(formula)
+% A short name for what an equation computes, from its left-hand side. A
+% relation (<=, >=) is a gate condition rather than a quantity.
+tok = regexp(formula, "^\s*(.+?)\s*(<=|>=|=)", 'tokens', 'once');
+d = "";
+if isempty(tok)
+    return
+end
+lhs = strtrim(tok(1));
+if tok(2) ~= "="
+    gates = dictionary(["PpMax", "n", "e/D"], ...
+        ["Fig. 8 preload gate", "Fig. 8 loading-plane gate", "Edge-distance gate"]);
+    if isKey(gates, lhs)
+        d = gates(lhs);
+    end
+    return
+end
+names = dictionary( ...
+    ["MS", "Pb", "PbYield", "Lmin", "Pty_allow", "Ptu_allow", "Psu_allow", ...
+     "design load", "Abr", "D_minor,int", "As", "Pult", "allowable pull-out", ...
+     "Rt", "Rs", "Rb", "Capacity", "Demand", "P'tu", "P'ty", "Ppi_nom", ...
+     "c_max", "Ppi_max", "Ppi_min", "Pth", "PpMax", "PpMin", "fbu", "Fsy", "phi"], ...
+    ["Margin of safety", "Bolt design load", "Bolt design load (yield)", ...
+     "Minimum bolt length", "Tension yield allowable", "Tension ultimate allowable", ...
+     "Shear allowable", "Design loads", "Bearing area", ...
+     "Internal-thread minor diameter", "Shear area", "Ultimate allowable", ...
+     "Insert pull-out allowable", "Tension ratio", "Shear ratio", "Bending ratio", ...
+     "Friction capacity", "Slip demand", "Allowable applied tension (rupture)", ...
+     "Allowable applied tension (yield)", "Nominal initial preload", ...
+     "Torque-tolerance factors", "Max initial preload", "Min initial preload", ...
+     "Thermal preload change", "Max preload", "Min preload", "Bending stress", ...
+     "Shear yield strength", "Load factor"]);
+if isKey(names, lhs)
+    d = names(lhs);
+end
+end
+

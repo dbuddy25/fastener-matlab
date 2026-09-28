@@ -44,6 +44,24 @@ classdef tCalculationMap < matlab.unittest.TestCase
             testCase.verifyGreaterThan(n, 30, 'The equation scan found almost nothing.');
         end
 
+        function everyEquationHasAShortDescription(testCase)
+            % A new equation needs a name in calculationMap's describe()
+            % dictionary, or its box shows only a reference number.
+            missing = strings(0, 1);
+            for name = engine.calculationMap()
+                m = engine.calculationMap(name);
+                for node = m.Nodes
+                    for e = node.Equations
+                        if strlength(e.Description) == 0
+                            missing(end + 1) = sprintf("%s:%d  %s", node.File, e.Line, e.Formula); %#ok<AGROW>
+                        end
+                    end
+                end
+            end
+            testCase.verifyEmpty(unique(missing), sprintf( ...
+                "Equations with no description:\n%s", strjoin(unique(missing), newline)));
+        end
+
         function knownLinksAreFound(testCase)
             testCase.verifyTrue(tCalculationMap.has("Slip", "preload"));
             testCase.verifyTrue(tCalculationMap.has("Separation", "designLoads"));
