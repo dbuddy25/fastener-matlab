@@ -6,26 +6,72 @@
 <style>
   body { margin: 0; background: #ffffff; color: #1c1c1e;
          font: 13px "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; }
-  #msg { padding: 10px 14px; color: #666666; }
-  #graph { padding: 8px 14px 24px; overflow: auto; }
-  #graph svg { max-width: none !important; height: auto; }
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; }
+  #bar { display: flex; align-items: center; gap: 6px; padding: 6px 14px;
+         border-bottom: 1px solid #c7c7cc; background: #f4f4f6; }
+  #bar button { font: inherit; padding: 2px 10px; }
+  #zoom { min-width: 3.5em; text-align: center; color: #444; }
+  #msg { margin-left: 12px; color: #666666; }
+  #graph { flex: 1; padding: 8px 14px 24px; overflow: auto; }
+  #graph svg { max-width: none !important; }
   #graph .node.clickable, #graph .node[onclick] { cursor: pointer; }
 </style>
 <!-- Mermaid 11.17.2 (MIT, see MERMAID_LICENSE.txt), bundled so the map works offline. -->
 <script src="mermaid.min.js"></script>
 </head>
 <body>
-<div id="msg">Loading the calculation map…</div>
+<div id="bar">
+  <button id="out" title="Zoom out">−</button>
+  <span id="zoom">100%</span>
+  <button id="in" title="Zoom in">+</button>
+  <button id="fit" title="Fit the whole map in the window">Fit</button>
+  <button id="one" title="Actual size">100%</button>
+  <span id="msg">Loading the calculation map…</span>
+</div>
 <div id="graph"></div>
 <script>
   var H = null;
   var drawn = 0;
+  var scale = 1;
+
+  function svgBox() {
+    var svg = document.querySelector("#graph svg");
+    if (!svg || !svg.viewBox || !svg.viewBox.baseVal) { return null; }
+    return { svg: svg, w: svg.viewBox.baseVal.width, h: svg.viewBox.baseVal.height };
+  }
+  function setScale(s) {
+    var b = svgBox();
+    if (!b) { return; }
+    scale = Math.min(4, Math.max(0.1, s));
+    b.svg.setAttribute("width", b.w * scale);
+    b.svg.setAttribute("height", b.h * scale);
+    b.svg.style.width = (b.w * scale) + "px";
+    b.svg.style.height = (b.h * scale) + "px";
+    document.getElementById("zoom").textContent = Math.round(scale * 100) + "%";
+  }
+  function fit() {
+    var b = svgBox(), g = document.getElementById("graph");
+    if (!b) { return; }
+    setScale(Math.min((g.clientWidth - 30) / b.w, (g.clientHeight - 30) / b.h, 1.5));
+  }
+  document.getElementById("in").onclick  = function () { setScale(scale * 1.25); };
+  document.getElementById("out").onclick = function () { setScale(scale / 1.25); };
+  document.getElementById("fit").onclick = fit;
+  document.getElementById("one").onclick = function () { setScale(1); };
+  document.getElementById("graph").addEventListener("wheel", function (e) {
+    if (!e.ctrlKey) { return; }
+    e.preventDefault();
+    setScale(scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+  }, { passive: false });
 
   // uihtml calls setup() once the page is live.
   function setup(htmlComponent) {
     H = htmlComponent;
     mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "neutral",
-                         flowchart: { htmlLabels: true, useMaxWidth: false, curve: "basis" } });
+                         themeVariables: { fontSize: "12px" },
+                         flowchart: { htmlLabels: true, useMaxWidth: false, curve: "basis",
+                                      nodeSpacing: 30, rankSpacing: 45 } });
     htmlComponent.addEventListener("DataChanged", draw);
     draw();
   }
@@ -44,6 +90,7 @@
       var g = document.getElementById("graph");
       g.innerHTML = r.svg;
       if (r.bindFunctions) { r.bindFunctions(g); }
+      fit();
       msg.textContent = d.note || "";
       H.sendEventToMATLAB("rendered", String(drawn));
     } catch (e) {

@@ -12,6 +12,7 @@ classdef CalculationMapView < handle
     properties (Access = private)
         Fig
         CheckDropDown
+        LayoutDropDown
         Html
         Links = struct('Id', {}, 'File', {}, 'Line', {})
         Check (1,1) string = ""
@@ -51,6 +52,10 @@ classdef CalculationMapView < handle
             f = obj.Fig;
         end
 
+        function d = layoutDropDown(obj)
+            d = obj.LayoutDropDown;
+        end
+
         function e = lastEvent(obj)
             %LASTEVENT  "rendered <n>" or "renderError <message>" from the page.
             e = obj.LastEvent;
@@ -70,9 +75,9 @@ classdef CalculationMapView < handle
         function build(obj)
             obj.Fig = uifigure('Name', 'Calculation Map', ...
                 'Position', [160 90 1100 760]);
-            g = uigridlayout(obj.Fig, [2 3]);
+            g = uigridlayout(obj.Fig, [2 5]);
             g.RowHeight   = {26, '1x'};
-            g.ColumnWidth = {'fit', 220, '1x'};
+            g.ColumnWidth = {'fit', 220, 'fit', 130, '1x'};
             g.Padding     = [8 8 8 8];
 
             lb = uilabel(g, 'Text', 'Check');
@@ -81,21 +86,29 @@ classdef CalculationMapView < handle
             obj.CheckDropDown = uidropdown(g, 'Items', cellstr(names), ...
                 'ValueChangedFcn', @(src, ~) obj.setCheck(string(src.Value)));
             obj.CheckDropDown.Layout.Row = 1;  obj.CheckDropDown.Layout.Column = 2;
-            hint = uilabel(g, 'Text', ['Click an equation to open its file ' ...
-                'in the editor at that line. Arrows point from a step to the ' ...
-                'function that uses it.']);
-            hint.Layout.Row = 1;  hint.Layout.Column = 3;
+            lb = uilabel(g, 'Text', 'Layout');
+            lb.Layout.Row = 1;  lb.Layout.Column = 3;
+            obj.LayoutDropDown = uidropdown(g, ...
+                'Items', {'Left to right', 'Top to bottom'}, ...
+                'ItemsData', {'LR', 'TB'}, 'Value', 'LR', ...
+                'ValueChangedFcn', @(~, ~) obj.setCheck(obj.Check));
+            obj.LayoutDropDown.Layout.Row = 1;  obj.LayoutDropDown.Layout.Column = 4;
+            hint = uilabel(g, 'Text', ['Click an equation to open it in the ' ...
+                'editor. Arrows run from a step to the function that uses it. ' ...
+                'Ctrl + wheel zooms.']);
+            hint.Layout.Row = 1;  hint.Layout.Column = 5;
             hint.FontColor = gui.palette('mutedText');
 
             here = fileparts(fileparts(mfilename("fullpath")));
             obj.Html = uihtml(g, 'HTMLSource', fullfile(here, "calcmap", "index.html"), ...
                 'HTMLEventReceivedFcn', @(~, evt) obj.onHtmlEvent(evt));
-            obj.Html.Layout.Row = 2;  obj.Html.Layout.Column = [1 3];
+            obj.Html.Layout.Row = 2;  obj.Html.Layout.Column = [1 5];
         end
 
         function setCheck(obj, check)
             m = engine.calculationMap(check);
-            [txt, obj.Links] = gui.CalculationMapView.mermaidText(m);
+            [txt, obj.Links] = gui.CalculationMapView.mermaidText(m, ...
+                string(obj.LayoutDropDown.Value));
             obj.Check = check;
             obj.LastEvent = "";
             obj.Html.Data = struct('graph', char(txt), ...
@@ -117,10 +130,15 @@ classdef CalculationMapView < handle
     end
 
     methods (Static)
-        function [txt, links] = mermaidText(m)
+        function [txt, links] = mermaidText(m, direction)
             %MERMAIDTEXT  engine.calculationMap -> Mermaid flowchart text,
             %   plus the node id -> file:line table the clicks resolve.
-            L = "flowchart TB";
+            %   direction "LR" (default, suits a wide screen) or "TB".
+            arguments
+                m (1,1) struct
+                direction (1,1) string {mustBeMember(direction, ["LR", "TB"])} = "LR"
+            end
+            L = "flowchart " + direction;
             links = struct('Id', {}, 'File', {}, 'Line', {});
             box = containers.Map('KeyType', 'char', 'ValueType', 'any');
             for k = 1:numel(m.Nodes)

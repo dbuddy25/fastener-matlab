@@ -46,6 +46,14 @@ classdef tGuiCalculationMap < matlab.uitest.TestCase
             end
         end
 
+        function theTopToBottomLayoutDrawsToo(testCase)
+            v = testCase.App.showCalculationMap("Tension-Yield");
+            tGuiCalculationMap.waitForRender(v);
+            testCase.choose(v.layoutDropDown(), 'Top to bottom');
+            ev = tGuiCalculationMap.waitForRender(v);
+            testCase.verifyTrue(startsWith(ev, "rendered"), ev);
+        end
+
         function aSecondOpenReusesTheWindow(testCase)
             v1 = testCase.App.showCalculationMap("Slip");
             fig = v1.figureHandle();
@@ -85,7 +93,7 @@ classdef tGuiCalculationMap < matlab.uitest.TestCase
         function everyClickTargetIsARealLine(testCase)
             for name = engine.calculationMap()
                 [txt, links] = gui.CalculationMapView.mermaidText(engine.calculationMap(name));
-                testCase.verifySubstring(txt, "flowchart TB");
+                testCase.verifyTrue(startsWith(txt, "flowchart LR"));
                 for k = links
                     n = numel(splitlines(string(fileread(k.File))));
                     testCase.verifyLessThanOrEqual(k.Line, n, ...
