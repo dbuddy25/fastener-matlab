@@ -180,6 +180,15 @@ does not cite one" are different facts.
 (`gui.userGuidePath` + `gui.openExternal`). **? Help for this page**, at the
 right of the status bar, opens the active page's file.
 
+**Help → Calculation Map** (`gui.CalculationMapView`): one Mermaid flowchart per
+check, built from the code when shown (`engine.calculationMap`: the traceability
+comments CONVENTIONS.md requires, plus call edges). One box per file, its
+equations stacked inside, each equation clickable (`opentoline`). Left-to-right
+by default, zoom/fit bar. Formulas and code locations only, no result values:
+those live on the Results detail panel. Mermaid 11 is bundled in
+`matlab/calcmap` (MIT) so it works offline. Results' **Show calculation** opens it
+at the selected check.
+
 **The user guide's rules** (`matlab/userguide/`, edited by hand):
 
 | Rule | Why / enforced by |
