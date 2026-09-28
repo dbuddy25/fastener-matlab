@@ -18,7 +18,7 @@ of 2026-09-28): `opentoline(file, line)` is MATLAB-only.
 | Question | Decision |
 |---|---|
 | Rendering | **Mermaid** in a `uihtml` panel. The library is bundled in the repo (MIT licence, about 3 MB), so it works offline. |
-| Values | **Yes, when a result exists**: each box shows its formula plus the substituted value from the last Analyze (e.g. `PpMin = 6,470 lbf`). Formulas only when there is no result. |
+| Values | **No** (dropped after trying it): the Results page already shows each check's substituted inputs. The map shows formulas and where they live. |
 | Opening it | **Help → Calculation Map**, and a **Show calculation** button on Results that opens the selected check's map |
 | Kept current | **Built from the code when opened.** Never a hand-drawn picture that can drift. |
 
@@ -76,7 +76,7 @@ comment, and a test can report them as a `CONVENTIONS.md` violation.
 |---|---|
 | **(a)** | `engine.calculationMap` plus tests. No UI. I also print the maps as text so you can sanity-check them. |
 | **(b)** | The window: Mermaid bundled, click → `opentoline`, Help menu item, and the Show calculation button on Results |
-| **(c)** | Values from the current result on each box |
+| ~~(c)~~ | **Dropped 2026-09-28.** Values on the map duplicated the Results detail panel (Dan: "too much"). The map stays a code navigator: formulas and file:line only. |
 | **(d)** | You and a colleague use it on a real review; we adjust |
 | **(e)** | **User guide:** a page on using the map, plus an **appendix** with all 15 flowcharts (formulas and `file:line` as text, no values, no click-through) generated from `engine.calculationMap` by a script. A test fails if the appendix is stale. The appendix pages use the bundled Mermaid, an accepted exception to the guide's no-JavaScript rule. |
 
