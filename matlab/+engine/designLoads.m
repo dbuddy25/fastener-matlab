@@ -24,7 +24,7 @@ arguments
     factors  (1,1) model.Factors
 end
 
-% NASA-STD-5020B design-factor application: design load = FS x FF x limit load
+% NASA-STD-5020B §4.2.1/§4.2.2 — design load = FS·FF·limit: Ptu = FSU·FFU·PtL, Pty = FSY·FFY·PtL, Psu = FSU·FFU·PsL, Psep = FSSep·FFSep·PtL
 d = struct( ...
     "Ptu",  factors.FSU   * factors.FFU   * loadCase.BoltTensileLimitLoad, ... % NASA-STD-5020B design ultimate tension (FSU*FFU*PtL)
     "Pty",  factors.FSY   * factors.FFY   * loadCase.BoltTensileLimitLoad, ... % NASA-STD-5020B design yield tension (FSY*FFY*PtL)
