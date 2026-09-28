@@ -123,6 +123,18 @@ classdef CalculationMapView < handle
         end
 
         function setCheck(obj, check)
+            try
+                obj.drawCheck(check);
+            catch err
+                % Never a silent map: the bar says what failed.
+                obj.Check = check;
+                obj.LastEvent = "buildError " + string(err.message);
+                obj.Html.Data = struct('graph', 'flowchart LR', 'check', char(check), ...
+                    'note', char("Could not build the map for " + check + ": " + err.message));
+            end
+        end
+
+        function drawCheck(obj, check)
             m = engine.calculationMap(check);
             r = [];
             note = "No result yet: formulas only. Run Analyze to see this joint's numbers.";
@@ -272,7 +284,7 @@ classdef CalculationMapView < handle
                 gui.CalculationMapView.esc(val + " · " + st) + "</div>";
             if isfield(mg, 'Inputs') && ~isempty(mg.Inputs)
                 parts = strings(1, 0);
-                for t = mg.Inputs
+                for t = reshape(mg.Inputs, 1, [])
                     u = "";
                     if strlength(t.Units) > 0
                         u = " " + t.Units;
