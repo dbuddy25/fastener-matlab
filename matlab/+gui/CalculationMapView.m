@@ -101,6 +101,7 @@ classdef CalculationMapView < handle
             names = sort(engine.calculationMap());
             obj.CheckDropDown = uidropdown(g, 'Items', cellstr(names), ...
                 'ValueChangedFcn', @(src, ~) obj.setCheck(string(src.Value)));
+            obj.CheckDropDown.Tooltip = 'Reads this check''s code and redraws; large checks take a second or two.';
             obj.CheckDropDown.Layout.Row = 1;  obj.CheckDropDown.Layout.Column = 2;
             lb = uilabel(g, 'Text', 'Layout');
             lb.Layout.Row = 1;  lb.Layout.Column = 3;
@@ -136,7 +137,7 @@ classdef CalculationMapView < handle
                 string(obj.LayoutDropDown.Value), r);
             obj.Check = check;
             obj.LastEvent = "";
-            obj.Html.Data = struct('graph', char(txt), 'note', char(note));
+            obj.Html.Data = struct('graph', char(txt), 'note', char(note), 'check', char(check));
         end
 
         function onResultChanged(obj)

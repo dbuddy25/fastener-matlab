@@ -87,6 +87,8 @@
     var d = H && H.Data;
     if (!d || !d.graph) { return; }
     var msg = document.getElementById("msg");
+    msg.textContent = "Drawing " + (d.check || "the map") + "…";
+    document.getElementById("graph").style.opacity = "0.35";
     try {
       var r = await mermaid.render("cm" + (drawn++), d.graph);
       var g = document.getElementById("graph");
@@ -102,6 +104,7 @@
         });
       });
       fit();
+      g.style.opacity = "1";
       msg.textContent = d.note || "";
       H.sendEventToMATLAB("rendered", "eqs=" + eqs.length);
     } catch (e) {
