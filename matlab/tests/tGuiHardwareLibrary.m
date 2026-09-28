@@ -122,6 +122,20 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
                 'Every shipped material carries a citation; none should read as unset.');
         end
 
+        function theRolesColumnShowsTheTaggedRolesOrAnEmDash(testCase)
+            % A286 ships with roles ["bolt", "washer"]; the table must show
+            % that, not an em dash pretending nothing is known.
+            data = testCase.Page.sectionTable("material").Data;
+            cols = string(testCase.Page.sectionTable("material").ColumnName);
+            k    = find(cols == "Roles", 1);
+            testCase.assertNotEmpty(k, 'Materials table has no Roles column.');
+
+            row = find(string(data(:, 2)) == "A286", 1);
+            testCase.assertNotEmpty(row, ...
+                'Fixture assumption: A286 ships in the material library.');
+            testCase.verifyEqual(string(data{row, k}), "bolt, washer");
+        end
+
         function selectingARowShowsItsFullCitation(testCase)
             % The Source column is truncated by its width and the useful
             % citations are whole paragraphs, so the detail area is where
@@ -458,6 +472,64 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
             testCase.verifyEqual(string(raw.materials(1).origin), "custom");
             testCase.verifyTrue(isfield(raw.materials(1), "modifiedBy"), ...
                 'The provenance stamp must reach the file.');
+        end
+
+        function tickingTheBoltRoleBoxMakesTheNewMaterialAppearInJointConfigsBoltList(testCase)
+            % The bug this feature fixes: a custom material had no way to
+            % set roles, so it never reached Joint Config's Bolt material
+            % picker no matter what an analyst typed into the form.
+            testCase.Page.openAddForm("material");
+            testCase.Page.setFormField("key",    'Site Bolt Alloy');
+            testCase.Page.setFormField("ftu",    180000);
+            testCase.Page.setFormField("fty",    150000);
+            testCase.Page.setFormField("fsu",    108000);
+            testCase.Page.setFormField("source", 'Site test report 2026-09');
+            testCase.Page.roleCheckBox("bolt").Value = true;
+            testCase.Page.commitForm();
+
+            testCase.verifyFalse(testCase.Page.formIsOpen());
+            testCase.verifyTrue(any(testCase.App.State.Library.materialKeys( ...
+                Role="bolt") == "Site Bolt Alloy"));
+
+            testCase.App.navigateTo("JointConfig");
+            jc = testCase.App.page("JointConfig");
+            testCase.verifyTrue( ...
+                any(strcmp(jc.boltMaterialDropDown().Items, 'Site Bolt Alloy')), ...
+                'The bolt box was ticked, so Joint Config must offer it as a bolt material.');
+        end
+
+        function withNeitherRoleBoxTickedTheNewMaterialStaysFlangeOnly(testCase)
+            testCase.Page.openAddForm("material");
+            testCase.Page.setFormField("key",    'Flange Only Alloy');
+            testCase.Page.setFormField("ftu",    90000);
+            testCase.Page.setFormField("fty",    70000);
+            testCase.Page.setFormField("fsu",    50000);
+            testCase.Page.setFormField("source", 'Site test report 2026-09');
+            testCase.Page.commitForm();
+
+            lib = testCase.App.State.Library;
+            testCase.verifyFalse(any(lib.materialKeys(Role="bolt")   == "Flange Only Alloy"));
+            testCase.verifyFalse(any(lib.materialKeys(Role="washer") == "Flange Only Alloy"));
+            testCase.verifyTrue(any(lib.materialKeys() == "Flange Only Alloy"));
+        end
+
+        function duplicatingABoltAndWasherMaterialPreTicksBothRoleBoxes(testCase)
+            % A286 ships with roles ["bolt", "washer"] -- Duplicate as
+            % Custom must carry that forward into the form, not silently
+            % revert to neither box ticked.
+            data = testCase.Page.sectionTable("material").Data;
+            row  = find(string(data(:, 2)) == "A286", 1);
+            testCase.assertNotEmpty(row, ...
+                'Fixture assumption: A286 ships in the material library.');
+
+            testCase.Page.openDuplicateForm("material", row);
+            testCase.addTeardown(@() testCase.Page.cancelForm());
+
+            testCase.assertTrue(testCase.Page.formIsOpen());
+            testCase.verifyTrue(testCase.Page.roleCheckBox("bolt").Value, ...
+                'A286 lists bolt among its roles.');
+            testCase.verifyTrue(testCase.Page.roleCheckBox("washer").Value, ...
+                'A286 lists washer among its roles.');
         end
     end
 
