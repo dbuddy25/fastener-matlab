@@ -13,17 +13,15 @@ classdef tGuiExport < matlab.uitest.TestCase
         File
     end
 
+    % Once per class: every test only reads the exported file, so one
+    % export serves them all.
     methods (TestClassSetup)
-        function addSourceToPath(testCase)
+        function exportTheAnswerKey(testCase)
             testDir = fileparts(mfilename("fullpath"));   % .../matlab/tests
             srcDir  = fileparts(testDir);                 % .../matlab
             testCase.applyFixture( ...
                 matlab.unittest.fixtures.PathFixture(srcDir));
-        end
-    end
 
-    methods (TestMethodSetup)
-        function exportTheAnswerKey(testCase)
             testCase.App = gui.FastenerApp();
             testCase.addTeardown(@() delete(testCase.App));
             c = validation.dabjSection9();

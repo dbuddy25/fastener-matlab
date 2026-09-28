@@ -193,30 +193,14 @@ classdef tElementWorkbook < matlab.unittest.TestCase
                 "data:loadElementWorkbook:noForceSheets");
         end
 
-        function loadElementsRegressionGuard(testCase)
-            % REGRESSION GUARD: the flat data.loadElements reader — the
-            % headless runBulk/runWorkbook interface — must be untouched
-            % by the workbook reader's addition. Expected values mirror
-            % tBulkParsers.loadsElements, sourced from
-            % templates/elements_template.csv (= the data.makeTemplate
-            % elementExampleRows: 1001 carries the demo per-bolt limit
-            % loads FX 1560 / FZ 5590, borrowed from DABJ Sec. 9).
+        function bothReadersReturnTheSameShape(testCase)
+            % Every downstream consumer of data.loadElements output works on
+            % workbook output. The template's values are pinned in
+            % tBulkParsers.loadsElements.
             el = data.loadElements( ...
                 tElementWorkbook.templatePath("elements_template.csv"));
-            testCase.assertEqual(numel(el), 3);
-            testCase.verifyEqual(el(1).ElementId, "1001");
-            testCase.verifyEqual(el(1).JointName, "Sample four-bolt SHCS/nut joint");
-            testCase.verifyEqual(el(1).LoadCaseName, "Quasistatic");
-            testCase.verifyEqual(el(1).PatternId, "PLATE-1");
-            testCase.verifyEqual(el(1).Forces.FX, 1560);
-            testCase.verifyEqual(el(1).Forces.FZ, 5590);
-            testCase.verifyEqual(el(1).ScaleFactor, 1);
-            testCase.verifyFalse(el(1).Reversible);
-            testCase.verifyTrue(el(2).Reversible);       % template row 1002
-            testCase.verifyEqual(el(3).ScaleFactor, 1.5, "AbsTol", 1e-12);
+            testCase.assertNotEmpty(el);
 
-            % Same struct shape from both readers — every downstream
-            % consumer of loadElements output works on workbook output.
             hdr = {'element_id', 'FX', 'FY', 'FZ', 'MX', 'MY', 'MZ'};
             f = tElementWorkbook.writeTempXlsx(testCase, { ...
                 {"Liftoff", [hdr; {1001, 1, 2, 3, 4, 5, 6}]}});

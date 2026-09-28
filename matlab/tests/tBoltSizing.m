@@ -773,10 +773,8 @@ classdef tBoltSizing < matlab.unittest.TestCase
             % doubling the insert pull-out allowable and able to show Pass
             % where the insert-governed margin actually fails.
             %
-            % The GUI never hit this -- collectBoltSizingMemberSelection
-            % builds a fresh template and tBoltSizingMemberArgs.m's
-            % insertTemplateNeverCarriesAStiPitchDiameter pins that -- but
-            % the headless/API path is a supported workflow (CONVENTIONS.md).
+            % Bolt Sizing's page passes no member, so only the headless/API
+            % path reaches this; it is a supported workflow.
             b   = [data.Library.load().bolt("NAS1351 #10-32"), ...
                    data.Library.load().bolt("NAS1351 3/8-24")];
             m   = data.Library.load().material("A286");

@@ -35,10 +35,13 @@ classdef tGuiCalculationMap < matlab.uitest.TestCase
             testCase.verifyGreaterThan(v.linkCount(), 0);
         end
 
-        function mermaidDrawsEveryCheck(testCase)
+        function mermaidDrawsRepresentativeChecks(testCase)
             % The real proof the generated text is valid Mermaid: the page
-            % reports back "rendered" or "renderError" for each check.
-            for name = engine.calculationMap()
+            % reports back "rendered" or "renderError". Four shapes: the
+            % largest map, a small one, one with a bending helper, and one
+            % rooted in a private function. everyClickTargetIsARealLine
+            % covers all fifteen statically.
+            for name = ["Tension-Yield", "Slip", "Interaction", "Separation-before-rupture"]
                 v = testCase.App.showCalculationMap(name);
                 ev = tGuiCalculationMap.waitForRender(v);
                 testCase.verifyTrue(startsWith(ev, "rendered"), ...

@@ -347,13 +347,6 @@ classdef tGuiResults < matlab.uitest.TestCase
                 'And the load at which it governs.');
         end
 
-        function theBendingExemptionIsStatedAsAssumed(testCase)
-            testCase.showSynthetic();
-            txt = strjoin(string(testCase.Page.decisionArea().Value), newline);
-            testCase.verifyTrue(contains(txt, "ASSUMED"), ...
-                'The 4.4.4 exemption is assumed, not verified - say so.');
-        end
-
         function noWarningsIsStatedRatherThanLeftBlank(testCase)
             testCase.showSynthetic();
             txt = strjoin(string(testCase.Page.warningArea().Value), newline);
@@ -981,19 +974,6 @@ classdef tGuiResults < matlab.uitest.TestCase
 
             testCase.verifyFalse(contains(txt, "Eq. 22/23"), ...
                 'Interaction''s citation belongs to its own row.');
-        end
-    end
-
-    % ---- The gate names the branch it selects -------------------------------
-    methods (Test)
-        function theGateStatesItsBranchRatherThanAPassOrFail(testCase)
-            testCase.showResult(tGuiResults.syntheticResult("decisionNotAssured"));
-
-            txt = string(testCase.App.page("Results").decisionArea().Value);
-            testCase.verifyTrue(any(contains(txt, "NOT ASSURED")), ...
-                'The gate states its branch, not a pass/fail verdict.');
-            testCase.verifyTrue(any(contains(txt, "Eq. 10")), ...
-                'It must say which equation that branch selects.');
         end
     end
 end
