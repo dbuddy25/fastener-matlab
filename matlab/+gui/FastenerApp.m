@@ -64,6 +64,9 @@ classdef FastenerApp < handle
         % the pages' dialogs use.
         ReferencesView
 
+        % The Calculation Map window (gui.CalculationMapView), same terms.
+        CalcMapView
+
         % Pages, in rail order. Struct array:
         %   Section  string — rail section header ("" continues the previous)
         %   Prefix   string — bulk step number shown before the label
@@ -157,6 +160,12 @@ classdef FastenerApp < handle
                 end
             catch
             end
+            try
+                if ~isempty(app.CalcMapView) && isvalid(app.CalcMapView)
+                    delete(app.CalcMapView);
+                end
+            catch
+            end
             % Pages can own windows of their own — Element Mapping's paste
             % dialog — and a page is a handle object, not a child of the
             % figure, so destroying the window does not destroy the page.
@@ -182,6 +191,19 @@ classdef FastenerApp < handle
             if ~isempty(app.Fig) && isvalid(app.Fig)
                 delete(app.Fig);
             end
+        end
+
+        function v = showCalculationMap(app, check)
+            %SHOWCALCULATIONMAP  Create-or-focus the map, at check.
+            arguments
+                app
+                check (1,1) string = "Tension-Ultimate"
+            end
+            if isempty(app.CalcMapView) || ~isvalid(app.CalcMapView)
+                app.CalcMapView = gui.CalculationMapView();
+            end
+            app.CalcMapView.show(check);
+            v = app.CalcMapView;
         end
 
         function showSection(app)
@@ -560,6 +582,7 @@ classdef FastenerApp < handle
                 pg.attachStatus(@(m) app.setStatus(m));
                 pg.attachNavigate(@(id) app.navigateTo(id));
                 pg.attachShowSection(@() app.showSection());
+                pg.attachShowCalculationMap(@(c) app.showCalculationMap(c));
 
                 app.Pages(end + 1) = struct( ...
                     'Section', section, 'Prefix', prefix, ...
@@ -656,6 +679,8 @@ classdef FastenerApp < handle
             mHelp = uimenu(app.Fig, 'Text', 'Help');
             uimenu(mHelp, 'Text', 'User Guide', ...
                 'MenuSelectedFcn', @(~, ~) app.onHelpUserGuide());
+            uimenu(mHelp, 'Text', 'Calculation Map...', ...
+                'MenuSelectedFcn', @(~, ~) app.showCalculationMap());
             uimenu(mHelp, 'Text', 'References...', ...
                 'MenuSelectedFcn', @(~, ~) app.onHelpReferences());
             uimenu(mHelp, 'Text', 'About', 'Separator', 'on', ...
@@ -959,6 +984,11 @@ classdef FastenerApp < handle
 
         function b = pageHelpButton(app)
             b = app.PageHelpButton;
+        end
+
+        function v = calculationMapView(app)
+            %CALCULATIONMAPVIEW  The map window, or empty if never opened.
+            v = app.CalcMapView;
         end
 
         function v = referencesView(app)

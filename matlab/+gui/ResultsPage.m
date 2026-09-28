@@ -133,6 +133,7 @@ classdef ResultsPage < gui.Page
         StaleBanner
         ReportButton
         ExportButton
+        CalcButton
         PreloadValues       % 1x5 gobjects, in PreloadRows order
         DesignLoadValues    % 1x4 gobjects, in DesignLoadRows order
         Table
@@ -280,10 +281,10 @@ classdef ResultsPage < gui.Page
     methods (Access = private)
         function buildHeaderRow(obj, g, row)
             %BUILDHEADERROW  The scope-qualified verdict, and the cap toggle.
-            h = uigridlayout(g, [1 4]);
+            h = uigridlayout(g, [1 5]);
             h.Layout.Row    = row;
             h.Layout.Column = [1 2];
-            h.ColumnWidth   = {'1x', 'fit', 'fit', 'fit'};
+            h.ColumnWidth   = {'1x', 'fit', 'fit', 'fit', 'fit'};
             h.RowHeight     = {'fit'};
             h.Padding       = [0 0 0 0];
 
@@ -326,6 +327,18 @@ classdef ResultsPage < gui.Page
             obj.ExportButton.Tooltip = ['Write the displayed checks to ' ...
                 '.xlsx or .csv. The scope statement travels with them, so ' ...
                 'the six computed-but-not-shown checks cannot be lost.'];
+
+            obj.CalcButton = uibutton(h, 'push', 'Text', 'Show calculation', ...
+                'ButtonPushedFcn', @(~, ~) obj.onShowCalculation());
+            obj.CalcButton.Layout.Row    = 1;
+            obj.CalcButton.Layout.Column = 5;
+            obj.CalcButton.Tooltip = ['Open the Calculation Map at the ' ...
+                'selected check: every function and equation behind it, ' ...
+                'each clickable to open the code at that line.'];
+        end
+
+        function onShowCalculation(obj)
+            obj.showCalculationMap(obj.selectedCheck());
         end
 
         function onSaveReport(obj)
@@ -1036,6 +1049,19 @@ classdef ResultsPage < gui.Page
 
     % ---- Reading the Result -----------------------------------------------
     methods (Access = private)
+        function name = selectedCheck(obj)
+            %SELECTEDCHECK  The selected table row's check, else the first.
+            name = gui.ResultsPage.TableRows(1);
+            if isempty(obj.State.Result)
+                return
+            end
+            rows = obj.tableMargins();
+            k = obj.Table.Selection;
+            if ~isempty(k) && k(1) >= 1 && k(1) <= numel(rows)
+                name = rows(k(1)).Name;
+            end
+        end
+
         function v = exportView(obj)
             %EXPORTVIEW  What report.writeSingleJointWorkbook writes, built
             %   from the same helpers that draw this page.
@@ -1454,6 +1480,10 @@ classdef ResultsPage < gui.Page
 
         function b = reportButton(obj)
             b = obj.ReportButton;
+        end
+
+        function b = calcButton(obj)
+            b = obj.CalcButton;
         end
 
         function b = exportButton(obj)

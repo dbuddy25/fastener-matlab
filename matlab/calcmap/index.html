@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calculation Map</title>
+<style>
+  body { margin: 0; background: #ffffff; color: #1c1c1e;
+         font: 13px "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; }
+  #msg { padding: 10px 14px; color: #666666; }
+  #graph { padding: 8px 14px 24px; overflow: auto; }
+  #graph svg { max-width: none !important; height: auto; }
+  #graph .node.clickable, #graph .node[onclick] { cursor: pointer; }
+</style>
+<!-- Mermaid 11.17.2 (MIT, see MERMAID_LICENSE.txt), bundled so the map works offline. -->
+<script src="mermaid.min.js"></script>
+</head>
+<body>
+<div id="msg">Loading the calculation map…</div>
+<div id="graph"></div>
+<script>
+  var H = null;
+  var drawn = 0;
+
+  // uihtml calls setup() once the page is live.
+  function setup(htmlComponent) {
+    H = htmlComponent;
+    mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "neutral",
+                         flowchart: { htmlLabels: true, useMaxWidth: false, curve: "basis" } });
+    htmlComponent.addEventListener("DataChanged", draw);
+    draw();
+  }
+
+  // Mermaid "click X call openNode(...)" handlers land here.
+  window.openNode = function (id) {
+    if (H) { H.sendEventToMATLAB("open", id); }
+  };
+
+  async function draw() {
+    var d = H && H.Data;
+    if (!d || !d.graph) { return; }
+    var msg = document.getElementById("msg");
+    try {
+      var r = await mermaid.render("cm" + (drawn++), d.graph);
+      var g = document.getElementById("graph");
+      g.innerHTML = r.svg;
+      if (r.bindFunctions) { r.bindFunctions(g); }
+      msg.textContent = d.note || "";
+      H.sendEventToMATLAB("rendered", String(drawn));
+    } catch (e) {
+      msg.textContent = "The map could not be drawn: " + e;
+      H.sendEventToMATLAB("renderError", String(e));
+    }
+  }
+</script>
+</body>
+</html>

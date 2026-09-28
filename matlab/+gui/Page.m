@@ -82,6 +82,9 @@ classdef (Abstract) Page < handle
         % page that opened it and must be a singleton, so the shell owns
         % it — a page that constructed its own would leak one per press.
         ShowSectionFcn = function_handle.empty
+
+        % Route to the shell's Calculation Map window, same reason.
+        ShowCalcMapFcn = function_handle.empty
     end
 
     properties (Access = protected)
@@ -265,6 +268,14 @@ classdef (Abstract) Page < handle
             end
             obj.ShowSectionFcn();
         end
+
+        function showCalculationMap(obj, check)
+            %SHOWCALCULATIONMAP  Ask the shell for the Calculation Map at check.
+            if isempty(obj.ShowCalcMapFcn)
+                return
+            end
+            obj.ShowCalcMapFcn(string(check));
+        end
     end
 
     % ---- Shell-facing plumbing. Called by gui.FastenerApp only. ---------
@@ -288,6 +299,14 @@ classdef (Abstract) Page < handle
                 fcn (1,1) function_handle
             end
             obj.StatusFcn = fcn;
+        end
+
+        function attachShowCalculationMap(obj, fcn)
+            arguments
+                obj (1,1) gui.Page
+                fcn (1,1) function_handle
+            end
+            obj.ShowCalcMapFcn = fcn;
         end
 
         function attachShowSection(obj, fcn)
