@@ -913,7 +913,7 @@ classdef HardwareLibraryPage < gui.Page
                 s = "—";
                 return
             end
-            r = string(e.roles);
+            r = reshape(string(e.roles), 1, []);
             r = r(strlength(r) > 0);
             if isempty(r)
                 s = "—";
