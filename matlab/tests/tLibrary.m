@@ -511,6 +511,66 @@ classdef tLibrary < matlab.unittest.TestCase
             testCase.verifyEmpty(raw.washers);
         end
 
+        % --- Material roles (bolt/washer pickers) ---
+
+        function customMaterialWithBoltRoleAppearsInBoltRoleKeys(testCase)
+            lib = data.Library.load();
+            e = testCase.sampleMaterial();
+            e.roles = {"bolt"};
+            lib = lib.addMaterial(e);
+            testCase.verifyTrue(any(lib.materialKeys(Role="bolt") == "Ti-6Al-4V"));
+            testCase.verifyFalse(any(lib.materialKeys(Role="washer") == "Ti-6Al-4V"));
+            % Untagged/flange is universal -- a role never narrows it out.
+            testCase.verifyTrue(any(lib.materialKeys() == "Ti-6Al-4V"));
+        end
+
+        function customMaterialWithoutRolesIsFlangeOnly(testCase)
+            % sampleMaterial() carries no roles field -- the "as today"
+            % default the bug report calls out: it must not silently show
+            % up in the fastener pickers.
+            lib = testCase.libWithSampleEntries();
+            testCase.verifyFalse(any(lib.materialKeys(Role="bolt") == "Ti-6Al-4V"));
+            testCase.verifyFalse(any(lib.materialKeys(Role="washer") == "Ti-6Al-4V"));
+            testCase.verifyTrue(any(lib.materialKeys() == "Ti-6Al-4V"));
+        end
+
+        function rolesSurviveSaveAndReloadWithTwoRoles(testCase)
+            fx = testCase.applyFixture( ...
+                matlab.unittest.fixtures.TemporaryFolderFixture);
+            lib = data.Library.load();
+            e = testCase.sampleMaterial();
+            e.roles = {"bolt", "washer"};
+            lib = lib.addMaterial(e);
+            path = string(fullfile(fx.Folder, "library.json"));
+            lib.save(path);
+            re = data.Library.load(path);
+            testCase.verifyTrue(any(re.materialKeys(Role="bolt") == "Ti-6Al-4V"));
+            testCase.verifyTrue(any(re.materialKeys(Role="washer") == "Ti-6Al-4V"));
+        end
+
+        function rolesSurviveSaveAndReloadWithOneRole(testCase)
+            % THE JSONDECODE EDGE CASE. jsondecode collapses a 1-element
+            % JSON array to a bare char/string rather than a cell -- so a
+            % material with exactly one role round-trips through a REAL
+            % file differently than one with two. materialKeys(Role=...)
+            % must handle both shapes.
+            fx = testCase.applyFixture( ...
+                matlab.unittest.fixtures.TemporaryFolderFixture);
+            lib = data.Library.load();
+            e = testCase.sampleMaterial();
+            e.roles = {"bolt"};
+            lib = lib.addMaterial(e);
+            path = string(fullfile(fx.Folder, "library.json"));
+            lib.save(path);
+            raw = jsondecode(fileread(path));
+            % Confirm the file actually round-tripped to the collapsed
+            % shape this test exists to guard against, not a cell.
+            testCase.verifyTrue(ischar(raw.materials.roles) || isstring(raw.materials.roles));
+            re = data.Library.load(path);
+            testCase.verifyTrue(any(re.materialKeys(Role="bolt") == "Ti-6Al-4V"));
+            testCase.verifyFalse(any(re.materialKeys(Role="washer") == "Ti-6Al-4V"));
+        end
+
         % --- Origin provenance: baseline vs custom ---
 
         function shippedLibraryIsAllBaseline(testCase)

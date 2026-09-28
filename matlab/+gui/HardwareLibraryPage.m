@@ -529,6 +529,19 @@ classdef HardwareLibraryPage < gui.Page
             obj.DialogFields = struct();
             for i = 1:numel(fields)
                 f = fields{i};
+                if strcmp(f, 'roles')
+                    % Not a text/numeric/dropdown field -- two checkboxes,
+                    % not the generic single control buildFieldControl
+                    % makes. readForm() knows to skip it in its generic
+                    % loop and assemble entry.roles from them separately.
+                    lb = uilabel(host, 'Text', 'Roles', 'Tooltip', ...
+                        ['Every material can already be used as a flange ' ...
+                         '/ clamped member -- tick a box only to ALSO ' ...
+                         'allow it as a bolt or washer material.']);
+                    lb.Layout.Row = i;  lb.Layout.Column = 1;
+                    obj.DialogFields.roles = obj.buildRolesControl(host, i, seed);
+                    continue
+                end
                 label = f;
                 if any(strcmp(spec.Required, f)) || strcmp(f, 'source')
                     label = [f ' *'];
@@ -539,6 +552,37 @@ classdef HardwareLibraryPage < gui.Page
                 c = obj.buildFieldControl(host, i, spec, f, seed);
                 obj.DialogFields.(f) = c;
             end
+        end
+
+        function ctrl = buildRolesControl(~, host, row, seed)
+            %BUILDROLESCONTROL  "Usable as bolt/washer material" checkboxes.
+            %   Pre-fills from seed.roles (Duplicate as Custom) -- string()
+            %   handles seed.roles as either a cell array or a bare
+            %   char/string, the same jsondecode-collapse shape rolesText()
+            %   guards against.
+            existing = strings(1, 0);
+            if isfield(seed, 'roles') && ~isempty(seed.roles)
+                existing = string(seed.roles);
+            end
+
+            g = uigridlayout(host, [1 2]);
+            g.Layout.Row = row;  g.Layout.Column = 2;
+            g.ColumnWidth   = {'1x', '1x'};
+            g.RowHeight     = {'1x'};
+            g.Padding       = [0 0 0 0];
+            g.ColumnSpacing = 8;
+
+            bolt = uicheckbox(g, 'Text', 'Bolt material', ...
+                'Tooltip', 'List this material in Joint Config''s Bolt material picker.', ...
+                'Value', any(existing == "bolt"));
+            bolt.Layout.Row = 1;  bolt.Layout.Column = 1;
+
+            washer = uicheckbox(g, 'Text', 'Washer material', ...
+                'Tooltip', 'List this material in Joint Config''s Washer material pickers.', ...
+                'Value', any(existing == "washer"));
+            washer.Layout.Row = 1;  washer.Layout.Column = 2;
+
+            ctrl = struct('bolt', bolt, 'washer', washer);
         end
 
         function c = buildFieldControl(obj, host, row, spec, f, seed)
@@ -608,6 +652,9 @@ classdef HardwareLibraryPage < gui.Page
             fields = fieldnames(obj.DialogFields);
             for i = 1:numel(fields)
                 f = fields{i};
+                if strcmp(f, 'roles')
+                    continue   % not a single-control field; read below
+                end
                 v = obj.DialogFields.(f).Value;
                 if ischar(v) || isstring(v)
                     if strlength(strtrim(string(v))) == 0
@@ -618,6 +665,24 @@ classdef HardwareLibraryPage < gui.Page
                     continue        % empty numeric: absent, not zero
                 else
                     entry.(f) = v;
+                end
+            end
+            if isfield(obj.DialogFields, 'roles')
+                % Neither box ticked leaves roles ABSENT, not an empty
+                % array — "no special role" today means no roles field at
+                % all (see data.Library.materialKeys), and this keeps that
+                % true for entries built through the form too. A cell
+                % array (never a plain string array) so jsonencode always
+                % writes a JSON array, even for exactly one role.
+                roles = {};
+                if obj.DialogFields.roles.bolt.Value
+                    roles{end+1} = 'bolt'; %#ok<AGROW>
+                end
+                if obj.DialogFields.roles.washer.Value
+                    roles{end+1} = 'washer'; %#ok<AGROW>
+                end
+                if ~isempty(roles)
+                    entry.roles = roles;
                 end
             end
             % Pre-check the required set so the analyst is told which field
@@ -691,12 +756,17 @@ classdef HardwareLibraryPage < gui.Page
             %           choices. Renders as a dropdown.
             specs = [ ...
                 struct('Id', 'material', 'Title', 'Materials', 'Noun', 'materials', ...
+                    ... % roles is not a plain scalar field like the rest --
+                    ... % it is listed here so it gets a table column, but
+                    ... % buildFormFields/entryRow special-case it (two role
+                    ... % checkboxes, not a text/numeric control) rather than
+                    ... % going through the generic per-field path below.
                     'Fields',  {{'origin', 'key', 'ftu', 'fty', 'fsu', ...
-                                 'fsy', 'fbru', 'fbry', 'e', 'cte', 'source'}}, ...
+                                 'fsy', 'fbru', 'fbry', 'e', 'cte', 'roles', 'source'}}, ...
                     'Columns', {{'Origin', 'Key', 'Ftu (psi)', 'Fty (psi)', ...
                                  'Fsu (psi)', 'Fsy (psi)', 'Fbru (psi)', ...
-                                 'Fbry (psi)', 'E (psi)', 'CTE (1/degC)', 'Source'}}, ...
-                    'Widths',  {{62, 120, 75, 75, 75, 75, 75, 75, 90, 90, 'auto'}}, ...
+                                 'Fbry (psi)', 'E (psi)', 'CTE (1/degC)', 'Roles', 'Source'}}, ...
+                    'Widths',  {{62, 120, 75, 75, 75, 75, 75, 75, 90, 90, 100, 'auto'}}, ...
                     'Required', {{'key', 'ftu', 'fty', 'fsu'}}, ...
                     'Text',     {{'key'}}, ...
                     'Refs',     {struct()}), ...
@@ -807,6 +877,13 @@ classdef HardwareLibraryPage < gui.Page
             row = cell(1, numel(fields));
             for i = 1:numel(fields)
                 f = fields{i};
+                if strcmp(f, 'roles')
+                    % Not a scalar field: char(string(cellArray)) would
+                    % stack into a multi-row char matrix instead of one
+                    % cell entry, so this goes through rolesText() instead.
+                    row{i} = char(gui.HardwareLibraryPage.rolesText(e));
+                    continue
+                end
                 if isfield(e, f) && ~isempty(e.(f))
                     v = e.(f);
                     if isnumeric(v) && isscalar(v)
@@ -821,6 +898,27 @@ classdef HardwareLibraryPage < gui.Page
                 else
                     row{i} = '—';
                 end
+            end
+        end
+
+        function s = rolesText(e)
+            %ROLESTEXT  "bolt, washer" / "—" for the Roles table column.
+            %   HANDLES BOTH SHAPES a roles field can take: a cell array of
+            %   char/string when it has more than one element, but a BARE
+            %   char/string when it has exactly one — jsondecode collapses
+            %   a single-element JSON array to a scalar rather than keeping
+            %   it a 1-element cell. string() coerces either shape to a
+            %   string array uniformly, so this never needs to branch on it.
+            if ~isfield(e, 'roles') || isempty(e.roles)
+                s = "—";
+                return
+            end
+            r = string(e.roles);
+            r = r(strlength(r) > 0);
+            if isempty(r)
+                s = "—";
+            else
+                s = strjoin(r, ', ');
             end
         end
     end
@@ -916,6 +1014,14 @@ classdef HardwareLibraryPage < gui.Page
 
         function setFormField(obj, name, value)
             obj.DialogFields.(char(name)).Value = value;
+        end
+
+        function c = roleCheckBox(obj, role)
+            %ROLECHECKBOX  The "Usable as <role> material" checkbox in the
+            %   open material form ("bolt" or "washer"). Not reachable
+            %   through formField(): roles is two checkboxes, not the one
+            %   control every other field name maps to.
+            c = obj.DialogFields.roles.(char(role));
         end
 
         function commitForm(obj)
