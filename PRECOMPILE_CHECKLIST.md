@@ -1,5 +1,7 @@
 # Pre-compile manual checklist
 
+> **The `.exe` is dropped for now (2026-09-28): the tool is shared as a MATLAB toolbox. See `PACKAGING.md`.** Sections B–C and F still apply as pre-release checks; the `mcc` build and packaged-app checks do not.
+
 **Run this in MATLAB, before `mcc`.** It is deliberately *not* a re-run of the
 automated suite. The automated suite already builds every page programmatically and
 makes hundreds of assertions about them; repeating that by hand proves nothing new.

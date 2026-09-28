@@ -36,3 +36,6 @@ Thumbs.db
 references/
 *.pdf
 matlab/userguide/img/
+
+# Packaged toolbox output (tools/packageToolbox)
+build/
