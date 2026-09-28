@@ -152,7 +152,7 @@ classdef CalculationMapView < handle
                 end
                 if isempty(nd.Equations)
                     L(end + 1) = sprintf('  %s["%s"]', sid, ...
-                        gui.CalculationMapView.esc(title) + "<br/><i>combines the steps above</i>"); %#ok<AGROW>
+                        gui.CalculationMapView.esc(title) + "<br/><i>combines the steps feeding it</i>"); %#ok<AGROW>
                     links(end + 1) = struct('Id', sid, 'File', nd.File, 'Line', 1); %#ok<AGROW>
                     L(end + 1) = sprintf('  click %s call openNode("%s")', sid, sid); %#ok<AGROW>
                 else
