@@ -200,7 +200,7 @@ classdef FastenerApp < handle
                 check (1,1) string = "Tension-Ultimate"
             end
             if isempty(app.CalcMapView) || ~isvalid(app.CalcMapView)
-                app.CalcMapView = gui.CalculationMapView();
+                app.CalcMapView = gui.CalculationMapView(app.State);
             end
             app.CalcMapView.show(check);
             v = app.CalcMapView;

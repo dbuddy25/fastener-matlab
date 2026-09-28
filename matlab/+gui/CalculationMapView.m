@@ -10,6 +10,8 @@ classdef CalculationMapView < handle
     %   inside a uihtml panel.
 
     properties (Access = private)
+        State
+        Listener
         Fig
         CheckDropDown
         LayoutDropDown
@@ -20,6 +22,19 @@ classdef CalculationMapView < handle
     end
 
     methods
+        function obj = CalculationMapView(state)
+            %CALCULATIONMAPVIEW  state (gui.AppState) supplies the values
+            %   from the last Analyze; without one the map is formulas only.
+            arguments
+                state = []
+            end
+            obj.State = state;
+            if ~isempty(state)
+                obj.Listener = event.listener(state, 'ResultChanged', ...
+                    @(~, ~) obj.onResultChanged());
+            end
+        end
+
         function show(obj, check)
             arguments
                 obj
@@ -35,6 +50,7 @@ classdef CalculationMapView < handle
         end
 
         function delete(obj)
+            delete(obj.Listener);
             if ~isempty(obj.Fig) && isvalid(obj.Fig)
                 delete(obj.Fig);
             end
@@ -107,13 +123,26 @@ classdef CalculationMapView < handle
 
         function setCheck(obj, check)
             m = engine.calculationMap(check);
+            r = [];
+            note = "No result yet: formulas only. Run Analyze to see this joint's numbers.";
+            if ~isempty(obj.State) && ~isempty(obj.State.Result)
+                r = obj.State.Result;
+                note = "Values from the last Analyze.";
+                if obj.State.ResultStale
+                    note = "Values from the last Analyze, which is STALE: inputs changed since.";
+                end
+            end
             [txt, obj.Links] = gui.CalculationMapView.mermaidText(m, ...
-                string(obj.LayoutDropDown.Value));
+                string(obj.LayoutDropDown.Value), r);
             obj.Check = check;
             obj.LastEvent = "";
-            obj.Html.Data = struct('graph', char(txt), ...
-                'note', sprintf('%s: %d functions, %d equations, read from the code just now.', ...
-                check, numel(m.Nodes), numel(obj.Links)));
+            obj.Html.Data = struct('graph', char(txt), 'note', char(note));
+        end
+
+        function onResultChanged(obj)
+            if obj.isOpen() && strlength(obj.Check) > 0
+                obj.setCheck(obj.Check);
+            end
         end
 
         function onHtmlEvent(obj, evt)
@@ -130,13 +159,24 @@ classdef CalculationMapView < handle
     end
 
     methods (Static)
-        function [txt, links] = mermaidText(m, direction)
+        function [txt, links] = mermaidText(m, direction, r)
             %MERMAIDTEXT  engine.calculationMap -> Mermaid flowchart text,
             %   plus the node id -> file:line table the clicks resolve.
             %   direction "LR" (default, suits a wide screen) or "TB".
+            %   r, an engine.Result, adds this joint's values and dims the
+            %   equations and links the run did not use.
             arguments
                 m (1,1) struct
                 direction (1,1) string {mustBeMember(direction, ["LR", "TB"])} = "LR"
+                r = []
+            end
+            mg = [];
+            root = m.Nodes([m.Nodes.IsCheck]).Name;
+            if ~isempty(r)
+                hit = r.Margins([r.Margins.Name] == m.Check);
+                if ~isempty(hit)
+                    mg = hit(1);
+                end
             end
             L = "flowchart " + direction;
             links = struct('Id', {}, 'File', {}, 'Line', {});
@@ -155,6 +195,12 @@ classdef CalculationMapView < handle
                 % eq-<id> class); a click elsewhere on the box opens the
                 % file at its first equation.
                 label = "<b>" + gui.CalculationMapView.esc(title) + "</b>";
+                if nd.IsCheck && ~isempty(mg)
+                    label = label + gui.CalculationMapView.resultBadge(mg);
+                end
+                if ~isempty(r)
+                    label = label + gui.CalculationMapView.nodeValues(nd.Name, r);
+                end
                 first = 1;
                 if isempty(nd.Equations)
                     label = label + "<br/><i>combines the steps feeding it</i>";
@@ -172,8 +218,14 @@ classdef CalculationMapView < handle
                     end
                     % Styles inline, not in the page's CSS: Mermaid sizes the
                     % box from them, so the content cannot overflow it.
+                    dim = "";
+                    ran = ~isempty(mg) && any(string(mg.Status) == ["Pass", "Fail"]);
+                    if nd.IsCheck && ran && ~gui.CalculationMapView.cited(e.Reference, mg.Method)
+                        dim = "opacity:0.4;";
+                        head = head + " <i>(not used for this joint)</i>";
+                    end
                     label = label + "<div class='eq eq-" + id + "' style='" + ...
-                        "text-align:left;padding:4px 6px;margin-top:4px;" + ...
+                        "text-align:left;padding:4px 6px;margin-top:4px;" + dim + ...
                         "border-top:1px solid #d8d8dc;cursor:pointer'>" + head + ...
                         "<br/>" + gui.CalculationMapView.wrap(gui.CalculationMapView.esc(e.Formula)) + ...
                         "<br/><i>line " + e.Line + "</i></div>";
@@ -186,14 +238,102 @@ classdef CalculationMapView < handle
                     L(end + 1) = sprintf('  style %s stroke:#1a3a6e,stroke-width:3px', sid); %#ok<AGROW>
                 end
             end
-            for e = m.Edges
+            for i = 1:numel(m.Edges)
+                e = m.Edges(i);
                 L(end + 1) = sprintf('  %s --> %s', box(char(e.From)), box(char(e.To))); %#ok<AGROW>
+                % phi reaches a tension margin only on the rupture-first
+                % branch; when the Fig. 8 gate is assured it did not.
+                if ~isempty(mg) && e.From == "stiffness" && e.To == root && ...
+                        ~contains(mg.Method, ["phi", "φ"])
+                    L(end + 1) = sprintf('  linkStyle %d stroke:#c7c7cc,stroke-dasharray:4 4', i - 1); %#ok<AGROW>
+                end
             end
             txt = strjoin(L, newline);
         end
     end
 
     methods (Static, Access = private)
+        function s = resultBadge(mg)
+            % The check's outcome in the app's pass / fail / not-evaluated colours.
+            switch string(mg.Status)
+                case "Fail",         bg = "#ffc7c7"; fg = "#cc0000"; st = "FAIL";
+                case "NotEvaluated", bg = "#fff3cd"; fg = "#856404"; st = "Not evaluated";
+                case "Pass",         bg = "#c7f0c7"; fg = "#006600"; st = "Pass";
+                otherwise,           bg = "#e0ecf9"; fg = "#1a3a6e"; st = string(mg.Status);
+            end
+            if mg.Name == "Interaction"
+                val = gui.MarginView.rText(mg.R);
+            else
+                val = "MS " + gui.MarginView.msText(mg.MS, false);
+            end
+            s = "<div style='margin-top:4px;padding:3px 6px;background:" + bg + ...
+                ";color:" + fg + ";font-weight:bold'>" + ...
+                gui.CalculationMapView.esc(val + " · " + st) + "</div>";
+            if isfield(mg, 'Inputs') && ~isempty(mg.Inputs)
+                parts = strings(1, 0);
+                for t = mg.Inputs
+                    u = "";
+                    if strlength(t.Units) > 0
+                        u = " " + t.Units;
+                    end
+                    parts(end + 1) = t.Symbol + " = " + gui.CalculationMapView.num(t.Value) + u; %#ok<AGROW>
+                end
+                s = s + "<div style='text-align:left;padding:3px 6px'><i>Inputs:</i> " + ...
+                    gui.CalculationMapView.wrap(gui.CalculationMapView.esc(strjoin(parts, " · "))) + "</div>";
+            end
+        end
+
+        function s = nodeValues(name, r)
+            % This joint's values for the shared steps.
+            parts = strings(1, 0);
+            n = @gui.CalculationMapView.num;
+            switch string(name)
+                case "preload"
+                    p = r.Preload;
+                    parts = ["PpiMax " + n(p.PpiMax), "PpiMin " + n(p.PpiMin), ...
+                             "thermal " + n(p.ThermalDelta), "PpMax " + n(p.PpMax), ...
+                             "PpMin " + n(p.PpMin) + " lbf"];
+                    if isfield(p, 'PpMinSlip') && p.PpMinSlip ~= p.PpMin
+                        parts(end + 1) = "PpMinSlip " + n(p.PpMinSlip) + " lbf";
+                    end
+                case "designLoads"
+                    d = r.DesignLoads;
+                    parts = ["Ptu " + n(d.Ptu), "Pty " + n(d.Pty), ...
+                             "Psu " + n(d.Psu), "Psep " + n(d.Psep) + " lbf"];
+                case "separationBeforeRuptureGate"
+                    g = r.Gate;
+                    if isfield(g, 'Assessed') && ~g.Assessed
+                        parts = "Not assessed";
+                    elseif isfield(g, 'Assured') && g.Assured
+                        parts = ["Assured: separation first", "Ptu_allow " + n(g.PtuAllow) + " lbf"];
+                    elseif isfield(g, 'Assured')
+                        parts = ["Not assured: rupture first", "Ptu_allow " + n(g.PtuAllow) + " lbf"];
+                    end
+            end
+            s = "";
+            if ~isempty(parts)
+                s = "<div style='text-align:left;padding:3px 6px;background:#f4f4f6'>" + ...
+                    gui.CalculationMapView.wrap(gui.CalculationMapView.esc(strjoin(parts, " · "))) + "</div>";
+            end
+        end
+
+        function tf = cited(reference, method)
+            % Does the margin's Method cite this equation's number? Section
+            % and figure references carry no Eq. number and always count.
+            tok = regexp(string(reference), "Eq\.\s*(\d+)", "tokens", "once");
+            tf = isempty(tok) || contains(string(method), "Eq. " + tok(1));
+        end
+
+        function s = num(v)
+            if isnan(v)
+                s = "—";
+            elseif abs(v) >= 1000
+                s = regexprep(sprintf("%.0f", v), "(\d)(?=(\d{3})+$)", "$1,");
+            else
+                s = string(sprintf("%.4g", v));
+            end
+        end
+
         function s = esc(s)
             % Mermaid entity codes, so formula text cannot break the syntax.
             s = replace(string(s), ["#", """", "<", ">"], ["#35;", "#quot;", "#lt;", "#gt;"]);

@@ -94,6 +94,38 @@ classdef tGuiCalculationMap < matlab.uitest.TestCase
             testCase.verifyEqual(v.currentCheck(), "Shear-Ultimate");
         end
 
+        function aResultPutsThisJointsNumbersOnTheMap(testCase)
+            r = tGuiCalculationMap.answerKeyResult();
+            txt = gui.CalculationMapView.mermaidText(engine.calculationMap("Slip"), "LR", r);
+            testCase.verifySubstring(txt, "FAIL", 'Slip fails on the answer key.');
+            testCase.verifySubstring(txt, "-0.65");
+            testCase.verifySubstring(txt, "PpMin");
+            testCase.verifySubstring(txt, "Inputs:");
+            testCase.verifySubstring(txt, "not used for this joint", ...
+                'Joint-mode slip must dim the single-fastener Eq. 86 rows.');
+
+            none = gui.CalculationMapView.mermaidText(engine.calculationMap("Slip"), "LR", []);
+            testCase.verifyFalse(contains(none, "Inputs:"), ...
+                'With no result the map must be formulas only.');
+        end
+
+        function anAssuredGateDimsTheStiffnessLink(testCase)
+            r = tGuiCalculationMap.answerKeyResult();
+            txt = gui.CalculationMapView.mermaidText( ...
+                engine.calculationMap("Tension-Ultimate"), "LR", r);
+            testCase.verifySubstring(txt, "Assured");
+            testCase.verifySubstring(txt, "linkStyle", ...
+                'phi did not reach the margin, so its link must be dimmed.');
+        end
+
+        function theMapRedrawsWhenAnalyzeRuns(testCase)
+            v = testCase.App.showCalculationMap("Slip");
+            tGuiCalculationMap.waitForRender(v);
+            testCase.App.State.setResult(tGuiCalculationMap.answerKeyResult());
+            ev = tGuiCalculationMap.waitForRender(v);
+            testCase.verifyTrue(startsWith(ev, "rendered"), ev);
+        end
+
         function everyClickTargetIsARealLine(testCase)
             for name = engine.calculationMap()
                 [txt, links] = gui.CalculationMapView.mermaidText(engine.calculationMap(name));
@@ -111,6 +143,11 @@ classdef tGuiCalculationMap < matlab.uitest.TestCase
     end
 
     methods (Static, Access = private)
+        function r = answerKeyResult()
+            c = validation.dabjSection9();
+            r = engine.analyze(c.Joint, c.LoadCase, c.Factors);
+        end
+
         function ev = waitForRender(v)
             t0 = tic;
             ev = "";
