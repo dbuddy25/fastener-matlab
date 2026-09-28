@@ -952,8 +952,15 @@ classdef BulkAnalysisPage < gui.Page
                 % T, not the filtered view. The on-screen filters and the
                 % display cap are screen concessions; the workbook is the
                 % record.
-                written = report.exportResults(T, string(fullfile(p, f)), ...
-                    Notes = obj.runNotes(), Project = obj.State.Project);
+                file = string(fullfile(p, f));
+                [~, ~, ext] = fileparts(file);
+                if lower(ext) == ".csv"
+                    written = report.exportResults(T, file, ...
+                        Notes = obj.runNotes(), Project = obj.State.Project);
+                else
+                    written = report.writeBulkWorkbook(file, T, ...
+                        Notes = obj.runNotes(), Project = obj.State.Project);
+                end
             catch err
                 uialert(obj.figureHandle(), err.message, 'Export failed');
                 return

@@ -65,6 +65,61 @@ classdef tExportTemplates < matlab.unittest.TestCase
         end
     end
 
+    methods (Test)
+        function theBulkTemplateNamesTheEnginesMarginColumns(testCase)
+            T = tExportTemplates.sampleBulk();
+            vars = string(T.Properties.VariableNames);
+            want = [vars(find(vars == "Shear") + 1:find(vars == "WorstMargin") - 1), "WorstMargin"];
+            got = string(readcell(tExportTemplates.bulkTemplate(), 'Sheet', 'Lists'))';
+            testCase.verifyEqual(got, want, ...
+                'The template colours margin columns by these names; they must match the engine''s.');
+        end
+
+        function theJointSummaryHasEachJointsWorst(testCase)
+            T = tExportTemplates.sampleBulk();
+            S = report.bulkJointSummary(T);
+            joints = unique(string(T.JointName), 'stable');
+            testCase.verifyEqual(S.Joint, joints);
+            for j = 1:numel(joints)
+                m = string(T.JointName) == joints(j);
+                testCase.verifyEqual(S.Analyses(j), nnz(m));
+                wm = T.WorstMargin(m);
+                if any(~isnan(wm))
+                    testCase.verifyEqual(S.WorstMargin(j), min(wm, [], 'omitnan'));
+                end
+                r = T.InteractionR(m);
+                if any(~isnan(r))
+                    testCase.verifyEqual(S.InteractionR(j), max(r, [], 'omitnan'), ...
+                        'Interaction must envelope to the LARGEST R, never the best.');
+                end
+            end
+        end
+
+        function theBulkWorkbookHoldsEveryRowWithNoBlankMargin(testCase)
+            T = tExportTemplates.sampleBulk();
+            f = testCase.tempXlsx();
+            report.writeBulkWorkbook(f, T, Notes = "run note");
+
+            R = readcell(f, 'Sheet', 'Results');
+            testCase.verifyEqual(size(R, 1) - 1, height(T), 'Every row must be exported.');
+            S = readcell(f, 'Sheet', 'Joint Summary');
+            head = string(S(1, :));
+            for c = find(ismember(head, ["TensionUlt", "Slip", "InteractionR", "WorstMargin"]))
+                for r = 2:size(S, 1)
+                    v = S{r, c};
+                    testCase.verifyTrue(isnumeric(v) || strcmp(v, char(8212)), ...
+                        sprintf('%s row %d is blank; not-evaluated must read as an em dash.', head(c), r));
+                end
+            end
+            a = readcell(f, 'Sheet', 'About');
+            testCase.verifyTrue(any(strcmp(a(:, 2), 'run note')));
+
+            x = tExportTemplates.unzipped(testCase, f);
+            testCase.verifyTrue(contains(tExportTemplates.allSheets(x), "<conditionalFormatting"), ...
+                'The pass/fail colour rules did not survive the write.');
+        end
+    end
+
     methods
         function f = tempXlsx(testCase)
             f = string(tempname) + ".xlsx";
@@ -73,6 +128,18 @@ classdef tExportTemplates < matlab.unittest.TestCase
     end
 
     methods (Static, Access = private)
+        function T = sampleBulk()
+            src = fileparts(fileparts(mfilename("fullpath")));
+            t = @(n) fullfile(src, "templates", n);
+            T = engine.runBulk(t("joint_library_template.csv"), ...
+                t("elements_template.csv"), t("settings_template.csv"));
+        end
+
+        function f = bulkTemplate()
+            f = fullfile(fileparts(fileparts(mfilename("fullpath"))), ...
+                "templates", "export_bulk.xlsx");
+        end
+
         function f = templateFile()
             f = fullfile(fileparts(fileparts(mfilename("fullpath"))), ...
                 "templates", "export_single.xlsx");

@@ -1119,12 +1119,7 @@ classdef ResultsPage < gui.Page
                     char(inputs), char(obj.rowDetail(m))};
             end
 
-            [pItem, pValue] = report.projectRows(obj.State.Project);
-            item  = ["Tool"; "Version"; "Generated"; "Standard"; pItem; "Note"];
-            value = ["Fastener Analysis Tool"; toolVersion(); ...
-                     string(datetime("now", "Format", "yyyy-MM-dd HH:mm")); ...
-                     "NASA-STD-5020B"; pValue; string(obj.scopeFooterText())];
-            v.About = cellstr([item, value]);
+            v.About = report.aboutRows(obj.State.Project, string(obj.scopeFooterText()));
             v.Scope = char(obj.scopeFooterText());
         end
 

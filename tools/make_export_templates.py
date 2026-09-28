@@ -141,6 +141,75 @@ def single():
     wb.save(OUT / "export_single.xlsx")
 
 
+# The engine's bulk margin columns (engine.analyzeBulk msColumns) plus the
+# worst margin. Colour rules key on these header names, so a column is
+# coloured wherever it lands. tExportTemplates checks this list.
+MARGIN_COLUMNS = ["TensionUlt", "TensionYield", "ShearUlt", "ShearTearout",
+                  "Bearing", "BearingUnderHead", "BoltThreadShear",
+                  "NutStrength", "InsertInternal", "InsertExternal",
+                  "Separation", "Slip", "SepBeforeRupture", "InteractionR",
+                  "TappedParent", "WorstMargin"]
+
+
+def margin_rules(ws, rng, first):
+    """Pass/fail/not-evaluated colour by header name; InteractionR reversed."""
+    col = first[0]
+    row = first[1:]
+    head = f"{col}$1"
+    cell = f"{col}{row}"
+    is_margin = f"ISNUMBER(MATCH({head},Margins,0))"
+    fail = f'AND(ISNUMBER({cell}),{is_margin},IF({head}="InteractionR",{cell}>1,{cell}<0))'
+    ok = f'AND(ISNUMBER({cell}),{is_margin},IF({head}="InteractionR",{cell}<=1,{cell}>=0))'
+    ne = f'AND({cell}="—",{is_margin})'
+    for formula, bg, fg in ((fail, FAIL_BG, FAIL_FG), (ne, NOTEVAL_BG, NOTEVAL_FG),
+                            (ok, PASS_BG, PASS_FG)):
+        ws.conditional_formatting.add(rng, FormulaRule(
+            formula=[formula], fill=fill(bg), font=Font(color=fg)))
+
+
+def data_sheet(ws, last_col="BZ", last_row=5000, first_col_width=22):
+    ws.freeze_panes = "B2"
+    for c in range(1, 79):
+        ws.cell(row=1, column=c).font = Font(bold=True)
+        ws.cell(row=1, column=c).fill = fill(HEADER_BG)
+        ws.cell(row=1, column=c).alignment = Alignment(wrap_text=True,
+                                                       vertical="center")
+    ws.row_dimensions[1].height = 30
+    ws.column_dimensions["A"].width = first_col_width
+    for col in ("B", "C", "D"):
+        ws.column_dimensions[col].width = 16
+    for c in range(5, 79):
+        from openpyxl.utils import get_column_letter
+        ws.column_dimensions[get_column_letter(c)].width = 13
+    margin_rules(ws, f"A2:{last_col}{last_row}", "A2")
+
+
+def bulk():
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Joint Summary"
+    data_sheet(ws, last_row=1000, first_col_width=28)
+    ws = wb.create_sheet("Results")
+    data_sheet(ws)
+    ws.auto_filter.ref = "A1:BZ5000"
+
+    ws = wb.create_sheet("About")
+    widths(ws, {"A": 22, "B": 100})
+    header(ws, [("A1", "Item"), ("B1", "Value")])
+    grid(ws, "AB", range(2, 26), wrap=True)
+    for r in range(2, 26):
+        ws[f"A{r}"].font = Font(bold=True)
+
+    ws = wb.create_sheet("Lists")
+    for i, col_name in enumerate(MARGIN_COLUMNS, start=1):
+        ws.cell(row=i, column=1).value = col_name
+    ws.sheet_state = "hidden"
+    name(wb, "Margins", f"Lists!$A$1:$A${len(MARGIN_COLUMNS)}")
+    name(wb, "BulkAboutRows", "About!$A$2:$B$25")
+    wb.save(OUT / "export_bulk.xlsx")
+
+
 if __name__ == "__main__":
     single()
-    print("wrote", OUT / "export_single.xlsx")
+    bulk()
+    print("wrote", OUT / "export_single.xlsx", "and", OUT / "export_bulk.xlsx")
