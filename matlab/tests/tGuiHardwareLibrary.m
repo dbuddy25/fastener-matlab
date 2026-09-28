@@ -172,6 +172,7 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
         end
 
         function theShippedLibraryIsEntirelyBaseline(testCase)
+            tGuiHardwareLibrary.assumeCleanInstall(testCase);
             for id = testCase.Page.sectionIds()
                 origins = string(testCase.Page.sectionTable(id).Data(:, 1));
                 testCase.verifyTrue(all(origins == "baseline"), ...
@@ -193,6 +194,7 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
         function theBaselineFilterKeepsEverythingOnACleanLibrary(testCase)
             % The other half: a filter that hid everything regardless would
             % pass the test above on its own.
+            tGuiHardwareLibrary.assumeCleanInstall(testCase);
             before = size(testCase.Page.sectionTable("material").Data, 1);
             testCase.assertGreaterThan(before, 0);
 
@@ -578,6 +580,19 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
 
             testCase.verifyEqual(p.refreshCount(), before + 1, ...
                 'Navigating to a built page did not refresh it from AppState.');
+        end
+    end
+
+    methods (Static, Access = private)
+        function assumeCleanInstall(testCase)
+            % These describe a library with nothing added on this machine;
+            % a user's drop-in or custom files make them unreachable here.
+            drop = data.Library.dropInPath();
+            testCase.assumeFalse(isfolder(drop) && ...
+                ~isempty(dir(fullfile(drop, "**", "*.json"))), ...
+                'This machine has drop-in library files; a clean-install check cannot run here.');
+            testCase.assumeFalse(isfile(data.Library.userPath()), ...
+                'This machine has a custom library file; a clean-install check cannot run here.');
         end
     end
 end
