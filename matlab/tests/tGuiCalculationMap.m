@@ -70,10 +70,16 @@ classdef tGuiCalculationMap < matlab.uitest.TestCase
             s.setResult(engine.analyze(c.Joint, c.LoadCase, c.Factors));
             testCase.App.navigateTo("Results");
             page = testCase.App.page("Results");
+            % Results pre-selects the first failing row: Slip, here.
             testCase.press(page.calcButton());
             v = testCase.App.calculationMapView();
             testCase.assertNotEmpty(v, 'Show calculation opened nothing.');
-            testCase.verifyEqual(v.currentCheck(), "Tension-Ultimate");
+            testCase.verifyEqual(v.currentCheck(), "Slip");
+
+            % Row 3 of the table is Shear-Ultimate.
+            page.selectRow(3);
+            testCase.press(page.calcButton());
+            testCase.verifyEqual(v.currentCheck(), "Shear-Ultimate");
         end
 
         function everyClickTargetIsARealLine(testCase)
