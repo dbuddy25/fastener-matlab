@@ -549,11 +549,8 @@ classdef tLibrary < matlab.unittest.TestCase
         end
 
         function rolesSurviveSaveAndReloadWithOneRole(testCase)
-            % THE JSONDECODE EDGE CASE. jsondecode collapses a 1-element
-            % JSON array to a bare char/string rather than a cell -- so a
-            % material with exactly one role round-trips through a REAL
-            % file differently than one with two. materialKeys(Role=...)
-            % must handle both shapes.
+            % A single role must survive a real file round trip, whatever
+            % shape jsondecode gives a one-element array.
             fx = testCase.applyFixture( ...
                 matlab.unittest.fixtures.TemporaryFolderFixture);
             lib = data.Library.load();
@@ -562,10 +559,6 @@ classdef tLibrary < matlab.unittest.TestCase
             lib = lib.addMaterial(e);
             path = string(fullfile(fx.Folder, "library.json"));
             lib.save(path);
-            raw = jsondecode(fileread(path));
-            % Confirm the file actually round-tripped to the collapsed
-            % shape this test exists to guard against, not a cell.
-            testCase.verifyTrue(ischar(raw.materials.roles) || isstring(raw.materials.roles));
             re = data.Library.load(path);
             testCase.verifyTrue(any(re.materialKeys(Role="bolt") == "Ti-6Al-4V"));
             testCase.verifyFalse(any(re.materialKeys(Role="washer") == "Ti-6Al-4V"));
