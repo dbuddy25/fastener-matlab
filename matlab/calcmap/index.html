@@ -15,6 +15,9 @@
   #msg { margin-left: 12px; color: #666666; }
   #graph { flex: 1; padding: 8px 14px 24px; overflow: auto; }
   #graph svg { max-width: none !important; }
+  #graph .eq { text-align: left; padding: 4px 6px; margin-top: 4px;
+               border-top: 1px solid #d8d8dc; cursor: pointer; }
+  #graph .eq:hover { background: #e0ecf9; }
   #graph .node.clickable, #graph .node[onclick] { cursor: pointer; }
 </style>
 <!-- Mermaid 11.17.2 (MIT, see MERMAID_LICENSE.txt), bundled so the map works offline. -->
@@ -90,9 +93,18 @@
       var g = document.getElementById("graph");
       g.innerHTML = r.svg;
       if (r.bindFunctions) { r.bindFunctions(g); }
+      var eqs = g.querySelectorAll(".eq");
+      eqs.forEach(function (el) {
+        var cls = Array.prototype.find.call(el.classList, function (c) { return c.indexOf("eq-") === 0; });
+        if (!cls) { return; }
+        el.addEventListener("click", function (e) {
+          e.stopPropagation();
+          window.openNode(cls.substring(3));
+        });
+      });
       fit();
       msg.textContent = d.note || "";
-      H.sendEventToMATLAB("rendered", String(drawn));
+      H.sendEventToMATLAB("rendered", "eqs=" + eqs.length);
     } catch (e) {
       msg.textContent = "The map could not be drawn: " + e;
       H.sendEventToMATLAB("renderError", String(e));

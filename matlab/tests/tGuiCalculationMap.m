@@ -43,6 +43,10 @@ classdef tGuiCalculationMap < matlab.uitest.TestCase
                 ev = tGuiCalculationMap.waitForRender(v);
                 testCase.verifyTrue(startsWith(ev, "rendered"), ...
                     sprintf('%s: %s', name, ev));
+                % Every equation must reach the page as its own click target;
+                % a sanitiser stripping the class would leave eqs=0.
+                testCase.verifyGreaterThan(str2double(extractAfter(ev, "eqs=")), 0, ...
+                    sprintf('%s: no clickable equations reached the page (%s).', name, ev));
             end
         end
 
@@ -98,7 +102,9 @@ classdef tGuiCalculationMap < matlab.uitest.TestCase
                     n = numel(splitlines(string(fileread(k.File))));
                     testCase.verifyLessThanOrEqual(k.Line, n, ...
                         sprintf('%s: %s points past the end of %s.', name, k.Id, k.File));
-                    testCase.verifySubstring(txt, "click " + k.Id + " call openNode");
+                    testCase.verifyTrue(contains(txt, "click " + k.Id + " call openNode") || ...
+                        contains(txt, "eq-" + k.Id + "'"), ...
+                        sprintf('%s: %s is not clickable in the text.', name, k.Id));
                 end
             end
         end

@@ -150,26 +150,29 @@ classdef CalculationMapView < handle
                 if nd.IsCheck
                     title = m.Check + ": " + title;
                 end
+                % One box per file, its equations stacked inside it. Each
+                % equation is its own click target (the page binds the
+                % eq-<id> class); a click elsewhere on the box opens the
+                % file at its first equation.
+                label = "<b>" + gui.CalculationMapView.esc(title) + "</b>";
+                first = 1;
                 if isempty(nd.Equations)
-                    L(end + 1) = sprintf('  %s["%s"]', sid, ...
-                        gui.CalculationMapView.esc(title) + "<br/><i>combines the steps feeding it</i>"); %#ok<AGROW>
-                    links(end + 1) = struct('Id', sid, 'File', nd.File, 'Line', 1); %#ok<AGROW>
-                    L(end + 1) = sprintf('  click %s call openNode("%s")', sid, sid); %#ok<AGROW>
+                    label = label + "<br/><i>combines the steps feeding it</i>";
                 else
-                    L(end + 1) = sprintf('  subgraph %s["%s"]', sid, gui.CalculationMapView.esc(title)); %#ok<AGROW>
-                    L(end + 1) = "    direction TB"; %#ok<AGROW>
-                    for j = 1:numel(nd.Equations)
-                        e = nd.Equations(j);
-                        id = sid + "E" + j;
-                        label = "<b>" + gui.CalculationMapView.esc(gui.CalculationMapView.shortRef(e.Reference)) + ...
-                            "</b><br/>" + gui.CalculationMapView.wrap(gui.CalculationMapView.esc(e.Formula)) + ...
-                            "<br/><i>line " + e.Line + "</i>";
-                        L(end + 1) = sprintf('    %s["%s"]', id, label); %#ok<AGROW>
-                        L(end + 1) = sprintf('    click %s call openNode("%s")', id, id); %#ok<AGROW>
-                        links(end + 1) = struct('Id', id, 'File', nd.File, 'Line', e.Line); %#ok<AGROW>
-                    end
-                    L(end + 1) = "  end"; %#ok<AGROW>
+                    first = nd.Equations(1).Line;
                 end
+                for j = 1:numel(nd.Equations)
+                    e = nd.Equations(j);
+                    id = sid + "E" + j;
+                    label = label + "<div class='eq eq-" + id + "'><b>" + ...
+                        gui.CalculationMapView.esc(gui.CalculationMapView.shortRef(e.Reference)) + ...
+                        "</b><br/>" + gui.CalculationMapView.wrap(gui.CalculationMapView.esc(e.Formula)) + ...
+                        "<br/><i>line " + e.Line + "</i></div>";
+                    links(end + 1) = struct('Id', id, 'File', nd.File, 'Line', e.Line); %#ok<AGROW>
+                end
+                L(end + 1) = sprintf('  %s["%s"]', sid, label); %#ok<AGROW>
+                L(end + 1) = sprintf('  click %s call openNode("%s")', sid, sid); %#ok<AGROW>
+                links(end + 1) = struct('Id', sid, 'File', nd.File, 'Line', first); %#ok<AGROW>
                 if nd.IsCheck
                     L(end + 1) = sprintf('  style %s stroke:#1a3a6e,stroke-width:3px', sid); %#ok<AGROW>
                 end
