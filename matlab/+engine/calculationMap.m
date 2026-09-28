@@ -26,6 +26,19 @@ if ~isKey(roots, char(check))
         'No check named "%s". Known: %s.', check, strjoin(string(keys(roots)), ", "));
 end
 
+% Cached per check until any +engine file changes, so switching checks is
+% instant while an edited file is still picked up on the next call.
+persistent cache stamp
+now = sourceStamp();
+if isempty(cache) || ~isequal(stamp, now)
+    cache = containers.Map('KeyType', 'char', 'ValueType', 'any');
+    stamp = now;
+end
+if isKey(cache, char(check))
+    m = cache(char(check));
+    return
+end
+
 src = sources();
 root = string(roots(char(check)));
 
@@ -63,6 +76,13 @@ for n = names
         'IsCheck', n == root, 'Equations', equationsOf(src, n)); %#ok<AGROW>
 end
 m = struct('Check', check, 'Nodes', nodes, 'Edges', edges);
+cache(char(check)) = m;
+end
+
+function s = sourceStamp()
+here = fileparts(mfilename("fullpath"));
+d = [dir(fullfile(here, "*.m")); dir(fullfile(here, "private", "*.m"))];
+s = [numel(d), max([d.datenum]), sum([d.bytes])];
 end
 
 function t = rootTable()
