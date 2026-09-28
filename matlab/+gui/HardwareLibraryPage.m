@@ -556,10 +556,8 @@ classdef HardwareLibraryPage < gui.Page
 
         function ctrl = buildRolesControl(~, host, row, seed)
             %BUILDROLESCONTROL  "Usable as bolt/washer material" checkboxes.
-            %   Pre-fills from seed.roles (Duplicate as Custom) -- string()
-            %   handles seed.roles as either a cell array or a bare
-            %   char/string, the same jsondecode-collapse shape rolesText()
-            %   guards against.
+            %   Pre-fills from seed.roles (Duplicate as Custom); string()
+            %   accepts it as a cell array or a char/string.
             existing = strings(1, 0);
             if isfield(seed, 'roles') && ~isempty(seed.roles)
                 existing = string(seed.roles);
@@ -903,12 +901,8 @@ classdef HardwareLibraryPage < gui.Page
 
         function s = rolesText(e)
             %ROLESTEXT  "bolt, washer" / "—" for the Roles table column.
-            %   HANDLES BOTH SHAPES a roles field can take: a cell array of
-            %   char/string when it has more than one element, but a BARE
-            %   char/string when it has exactly one — jsondecode collapses
-            %   a single-element JSON array to a scalar rather than keeping
-            %   it a 1-element cell. string() coerces either shape to a
-            %   string array uniformly, so this never needs to branch on it.
+            %   string() takes roles as a cell array or a char/string, so a
+            %   hand-written drop-in file in either form reads the same.
             if ~isfield(e, 'roles') || isempty(e.roles)
                 s = "—";
                 return
