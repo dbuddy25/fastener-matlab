@@ -37,13 +37,12 @@
 <main>
 <p class="crumb">ABOUT THE TOOL</p>
 <h1>Command Window (MATLAB)</h1>
-<p class="callout">This page requires MATLAB and the source install. It does not apply to the packaged <code>.exe</code>, which only runs the GUI.</p>
+<p class="callout">Everything here runs in the MATLAB Command Window, the same MATLAB that runs the app.</p>
 
 <h2>Setup</h2>
-<p>Set the MATLAB Current Folder to the <code>matlab/</code> subfolder, then sanity-check the install:</p>
-<pre><code>cd matlab
-fastenerTool          % prints the version banner
-runTests               % should be all green</code></pre>
+<p>Installed as a toolbox (<code>.mltbx</code>), the tool is already on the path: these commands work from any folder. From a copy of the repository, set the Current Folder to its <code>matlab/</code> subfolder first.</p>
+<pre><code>fastenerTool          % prints the version and opens the app
+runTests              % runs the test suite; should be all green</code></pre>
 
 <h2>Single joint</h2>
 <p>Build a joint from the built-in library, or load a saved case (see below). This example pulls a bolt and two materials, builds a two-layer flange stack, and analyzes it:</p>
