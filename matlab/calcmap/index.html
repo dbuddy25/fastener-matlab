@@ -108,6 +108,7 @@
       msg.textContent = d.note || "";
       H.sendEventToMATLAB("rendered", "eqs=" + eqs.length);
     } catch (e) {
+      document.getElementById("graph").style.opacity = "1";
       msg.textContent = "The map could not be drawn: " + e;
       H.sendEventToMATLAB("renderError", String(e));
     }
