@@ -76,7 +76,7 @@ classdef tUserGuide < matlab.unittest.TestCase
             % The guide's "Required: Yes" columns for Import Workbook... must
             % be enough for the reader, and each one must be necessary.
             txt = fileread(gui.userGuidePath("ElementForces.html"));
-            rows = regexp(txt, '<tr><td>(.*?)</td><td>Yes</td>', 'tokens');
+            rows = regexp(txt, '<tr><td>((?:(?!</td>).)*)</td><td>Yes</td>', 'tokens');
             cols = strings(1, 0);
             for i = 1:numel(rows)
                 c = regexp(rows{i}{1}, '<code>([^<]+)</code>', 'tokens');

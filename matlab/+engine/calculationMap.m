@@ -140,8 +140,9 @@ end
 
 function eqs = equationsOf(src, n)
 lines = src.text(char(n));
-refs = "(NASA-STD-5020B|NASA TM-106943|TM-106943|NASA RP-1228|RP-1228|Shigley|ASME B1\.1|NASM\d+)";
-pat = "^\s*%\s*(" + refs + "[^=]*?)\s+(—|–|-)\s+(.*=.*)$";
+% Non-capturing inner groups: MATLAB returns only the two outer tokens.
+refs = "(?:NASA-STD-5020B|NASA TM-106943|TM-106943|NASA RP-1228|RP-1228|Shigley|ASME B1\.1|NASM\d+)";
+pat = "^\s*%\s*(" + refs + "[^=]*?)\s+(?:—|–|-)\s+(.*=.*)$";
 eqs = struct('Line', {}, 'Reference', {}, 'Formula', {});
 k = headerEnd(lines);
 while k < numel(lines)
@@ -150,7 +151,7 @@ while k < numel(lines)
     if isempty(tok)
         continue
     end
-    formula = strtrim(tok(4));
+    formula = strtrim(tok(2));
     % A formula that wraps continues on the following comment lines.
     j = k;
     while j < numel(lines) && j < k + 3
