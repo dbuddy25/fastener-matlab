@@ -103,7 +103,7 @@ classdef (Abstract) Page < handle
         %          what actually collapses
         %   Header the uibutton that toggles it
         %   Body   the uipanel every caller fills
-        Groups = struct('Title', {}, 'Grid', {}, 'Header', {}, 'Body', {})
+        Groups = struct('Title', {}, 'Grid', {}, 'Header', {}, 'Body', {}, 'StartCollapsed', {})
     end
 
     methods (Abstract)
@@ -149,6 +149,14 @@ classdef (Abstract) Page < handle
             end
             g = obj.groupNamed(titleSubstring);
             gui.Page.setGroupCollapsed(g.Grid, g.Header, g.Body, g.Title, false);
+        end
+
+        function resetGroups(obj)
+            %RESETGROUPS  Fold every collapsible group back to how build()
+            %   left it. For tests that reuse one app across methods.
+            for g = obj.Groups
+                gui.Page.setGroupCollapsed(g.Grid, g.Header, g.Body, g.Title, g.StartCollapsed);
+            end
         end
 
         function h = groupHeader(obj, titleSubstring)
@@ -416,7 +424,7 @@ classdef (Abstract) Page < handle
             gui.Page.setGroupCollapsed(pg, hdr, host, titleText, startCollapsed);
 
             obj.Groups(end + 1) = struct('Title', titleText, 'Grid', pg, ...
-                'Header', hdr, 'Body', host);
+                'Header', hdr, 'Body', host, 'StartCollapsed', startCollapsed);
         end
 
         function bindEdit(obj, control, callback)

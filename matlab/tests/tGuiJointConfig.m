@@ -15,23 +15,44 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     properties
         App
         Page
+        BaseLibrary
     end
 
+    % ONE APP PER CLASS, RESET PER TEST. Building the app and this page is
+    % most of this file's runtime, so it is built once and each test starts
+    % from File > New's own reset (AppState.newCase), the shipped library,
+    % no open dialog, an empty status bar and the groups as build() left
+    % them. A test that needs a truly fresh app builds its own.
     methods (TestClassSetup)
-        function addSourceToPath(testCase)
+        function launchAppOnce(testCase)
             testDir = fileparts(mfilename("fullpath"));   % .../matlab/tests
             srcDir  = fileparts(testDir);                 % .../matlab
             testCase.applyFixture( ...
                 matlab.unittest.fixtures.PathFixture(srcDir));
+            testCase.App = gui.FastenerApp();
+            testCase.addTeardown(@() delete(testCase.App));
+            testCase.BaseLibrary = testCase.App.State.Library;
+            testCase.App.navigateTo("JointConfig");
+            testCase.Page = testCase.App.page("JointConfig");
         end
     end
 
     methods (TestMethodSetup)
-        function launchApp(testCase)
-            testCase.App = gui.FastenerApp();
-            testCase.addTeardown(@() delete(testCase.App));
+        function resetApp(testCase)
+            for kind = ["uiconfirm", "uialert"]
+                try
+                    testCase.dismissDialog(char(kind), testCase.App.Fig);
+                catch
+                end
+            end
+            s = testCase.App.State;
+            if ~isequal(s.Library, testCase.BaseLibrary)
+                s.Library = testCase.BaseLibrary;
+            end
+            s.newCase();
+            testCase.App.setStatus("");
             testCase.App.navigateTo("JointConfig");
-            testCase.Page = testCase.App.page("JointConfig");
+            testCase.Page.resetGroups();
         end
     end
 
