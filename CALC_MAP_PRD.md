@@ -78,6 +78,7 @@ comment, and a test can report them as a `CONVENTIONS.md` violation.
 | **(b)** | The window: Mermaid bundled, click → `opentoline`, Help menu item, and the Show calculation button on Results |
 | **(c)** | Values from the current result on each box |
 | **(d)** | You and a colleague use it on a real review; we adjust |
+| **(e)** | **User guide:** a page on using the map, plus an **appendix** with all 15 flowcharts (formulas and `file:line` as text, no values, no click-through) generated from `engine.calculationMap` by a script. A test fails if the appendix is stale. The appendix pages use the bundled Mermaid, an accepted exception to the guide's no-JavaScript rule. |
 
 ## 8. Risks
 
