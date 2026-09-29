@@ -68,6 +68,8 @@ Help → References lists them and can open the colleague's own copies.
       folder that is *not* the repo: `fastenerTool`, open the answer-key case,
       Analyze, Help → User Guide, Help → Calculation Map. (This proves the
       toolbox carries everything, not your repo on the path.)
+- [ ] `which runTests` finds nothing: tests and tools are developer-only and
+      stay out of the toolbox.
 - [ ] Uninstall it again (Manage Add-Ons) so it doesn't shadow your repo copy.
 
 If the installed copy and your repo are both on the path, MATLAB uses

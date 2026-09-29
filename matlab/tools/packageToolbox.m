@@ -11,8 +11,10 @@ function file = packageToolbox(args)
 %   older build: the images are gitignored, so nothing else keeps them in
 %   step with the pages.
 %
-%   The toolbox is the whole matlab/ folder: code, library, templates, the
-%   user guide and its screenshots, the Calculation Map, examples and tests. The
+%   The toolbox is what a user runs: code, library, templates, the user
+%   guide and its screenshots, the Calculation Map and the examples.
+%   Developer-only files stay out: tests/, tools/, +testing, +validation
+%   (the course-book answer-key cases) and runTests.m. The
 %   identifier stays fixed, so installing a newer version replaces the
 %   older one instead of sitting beside it.
 arguments
@@ -40,7 +42,19 @@ opts.Summary = "NASA-STD-5020B bolted-joint margins of safety, single joint and 
 opts.Description = "Run fastenerTool to open the app. Help > User Guide covers every page.";
 % uihtml's sendEventToMATLAB (Calculation Map, R2023a) is the newest API used.
 opts.MinimumMatlabRelease = "R2023a";
+opts.ToolboxFiles = shippedFiles(src);
 opts.OutputFile = file;
 matlab.addons.toolbox.packageToolbox(opts);
 fprintf("Built %s\n", file);
+end
+
+function f = shippedFiles(src)
+% Every file under src except the developer-only ones.
+d = dir(fullfile(src, "**", "*"));
+d = d(~[d.isdir]);
+f = string(fullfile({d.folder}, {d.name}))';
+rel = replace(extractAfter(f, strlength(string(src)) + 1), "\", "/");
+devOnly = startsWith(rel, ["tests/", "tools/", "+testing/", "+validation/"]) | ...
+    rel == "runTests.m" | startsWith(string({d.name})', ".") | endsWith(rel, ".asv");
+f = f(~devOnly);
 end
