@@ -54,9 +54,8 @@ Help → References lists them and can open the colleague's own copies.
 >    **Help → About**.
 >
 > Your custom library entries are saved in your MATLAB user folder as
-> `fastener_library.json` (type `userpath` to see where; usually
-> `Documents\MATLAB`, or `OneDrive\Documents\MATLAB` when Documents is on
-> OneDrive). Drop-in JSON files go in `fastener_library\<category>\` beside
+> `fastener_library.json` (usually `Documents\MATLAB`; type `userpath` to
+> check). Drop-in JSON files go in `fastener_library\<category>\` beside
 > it. Neither is inside the toolbox, so both survive updates. To update, install the newer `.mltbx`; it replaces this one.
 > To remove, **Home → Add-Ons → Manage Add-Ons**.
 
