@@ -2,9 +2,10 @@ function file = writeBulkWorkbook(file, T, opts)
 %WRITEBULKWORKBOOK  Fill the styled bulk template.
 %   file = report.writeBulkWorkbook(file, T) copies
 %   templates/export_bulk.xlsx and writes a Joint Summary sheet
-%   (report.bulkJointSummary) and every row of T to Results. The template
-%   colours margin columns by header name (its hidden Lists sheet names
-%   them), so no Excel is needed. A not-evaluated margin is written as an
+%   (report.bulkJointSummary) and every row of T to Results, under the
+%   readable headers of report.bulkHeaders. The template colours and
+%   formats margin columns by those headers (its hidden Lists sheet names
+%   them), so no Excel is needed and every value is written unrounded. A not-evaluated margin is written as an
 %   em dash, never a blank (CONVENTIONS.md A1).
 %   Name-value: Notes (string array), Project (struct) for the About sheet.
 arguments
@@ -29,11 +30,16 @@ vars = string(T.Properties.VariableNames);
 margins = [vars(find(vars == "Shear", 1) + 1:find(vars == "WorstMargin", 1) - 1), "WorstMargin"];
 
 w = {'UseExcel', false, 'PreserveFormat', true, 'AutoFitWidth', false};
-writetable(dashes(report.bulkJointSummary(T), margins), file, ...
-    'Sheet', 'Joint Summary', 'Range', 'A1', w{:});
-writetable(dashes(T, margins), file, 'Sheet', 'Results', 'Range', 'A1', w{:});
+writeSheet(file, 'Joint Summary', dashes(report.bulkJointSummary(T), margins), w);
+writeSheet(file, 'Results', dashes(T, margins), w);
 writecell(report.aboutRows(opts.Project, opts.Notes), file, 'Sheet', 'About', ...
     'Range', 'A2', w{:});
+end
+
+function writeSheet(file, sheet, T, w)
+head = cellstr(report.bulkHeaders(string(T.Properties.VariableNames)));
+writecell(head, file, 'Sheet', sheet, 'Range', 'A1', w{:});
+writetable(T, file, 'Sheet', sheet, 'Range', 'A2', 'WriteVariableNames', false, w{:});
 end
 
 function T = dashes(T, margins)

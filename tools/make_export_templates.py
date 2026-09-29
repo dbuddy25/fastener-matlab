@@ -14,7 +14,11 @@ from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.formatting.rule import CellIsRule, FormulaRule
+from openpyxl.formatting.rule import Rule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.styles.differential import DifferentialStyle
+from openpyxl.styles.numbers import NumberFormat
+from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
 
 OUT = Path(__file__).resolve().parents[1] / "matlab" / "templates"
@@ -141,46 +145,80 @@ def single():
     wb.save(OUT / "export_single.xlsx")
 
 
-# The engine's bulk margin columns (engine.analyzeBulk msColumns) plus the
-# worst margin. Colour rules key on these header names, so a column is
-# coloured wherever it lands. tExportTemplates checks this list.
-MARGIN_COLUMNS = ["TensionUlt", "TensionYield", "ShearUlt", "ShearTearout",
-                  "Bearing", "BearingUnderHead", "BoltThreadShear",
-                  "NutStrength", "InsertInternal", "InsertExternal",
-                  "Separation", "Slip", "SepBeforeRupture", "InteractionR",
-                  "TappedParent", "WorstMargin"]
+# The headers report.bulkHeaders gives the engine's bulk margin columns
+# (engine.analyzeBulk msColumns) plus the worst margin. Colour and number
+# rules key on these header names, so a column is formatted wherever it
+# lands. tExportTemplates checks this list.
+MARGIN_COLUMNS = ["Tension-Ultimate", "Tension-Yield", "Shear-Ultimate",
+                  "Shear-tearout", "Bearing", "Bearing-under-head",
+                  "Bolt-thread shear", "Nut strength", "Insert internal-thread",
+                  "Insert external-thread", "Separation", "Slip",
+                  "Separation-before-rupture", "Interaction R (≤ 1)",
+                  "Tapped-hole parent-thread", "Worst Margin"]
+LOAD_COLUMNS = ["Axial (lbf)", "Shear (lbf)"]
+RATIO_FMT = "0.00"
+LOAD_FMT = "#,##0.0"
+
+
+def fmt_rule(formula, code, num_id, bg=None, fg=None):
+    """A formula rule that sets the number format too: the value stays
+    unrounded, only its display is trimmed."""
+    dxf = DifferentialStyle(numFmt=NumberFormat(numFmtId=num_id, formatCode=code))
+    if bg:
+        dxf.fill = fill(bg)
+        dxf.font = Font(color=fg)
+    return Rule(type="expression", dxf=dxf, formula=[formula])
 
 
 def margin_rules(ws, rng, first):
-    """Pass/fail/not-evaluated colour by header name; InteractionR reversed."""
+    """Pass/fail/not-evaluated colour and two decimals by header name;
+    Interaction R reversed. Loads get one decimal and a thousands comma."""
     col = first[0]
     row = first[1:]
     head = f"{col}$1"
     cell = f"{col}{row}"
     is_margin = f"ISNUMBER(MATCH({head},Margins,0))"
-    fail = f'AND(ISNUMBER({cell}),{is_margin},IF({head}="InteractionR",{cell}>1,{cell}<0))'
-    ok = f'AND(ISNUMBER({cell}),{is_margin},IF({head}="InteractionR",{cell}<=1,{cell}>=0))'
+    is_ratio = f'LEFT({head},11)="Interaction"'
+    fail = f'AND(ISNUMBER({cell}),{is_margin},IF({is_ratio},{cell}>1,{cell}<0))'
+    ok = f'AND(ISNUMBER({cell}),{is_margin},IF({is_ratio},{cell}<=1,{cell}>=0))'
     ne = f'AND({cell}="—",{is_margin})'
-    for formula, bg, fg in ((fail, FAIL_BG, FAIL_FG), (ne, NOTEVAL_BG, NOTEVAL_FG),
-                            (ok, PASS_BG, PASS_FG)):
-        ws.conditional_formatting.add(rng, FormulaRule(
-            formula=[formula], fill=fill(bg), font=Font(color=fg)))
+    load = f"AND(ISNUMBER({cell}),ISNUMBER(MATCH({head},Loads,0)))"
+    # The ratio's format first: rules apply in order, and a ratio has no sign.
+    ratio_fmt = f"AND(ISNUMBER({cell}),{is_margin},{is_ratio})"
+    ws.conditional_formatting.add(rng, fmt_rule(ratio_fmt, RATIO_FMT, 201))
+    ws.conditional_formatting.add(rng, fmt_rule(fail, MARGIN_FMT, 200, FAIL_BG, FAIL_FG))
+    ws.conditional_formatting.add(rng, FormulaRule(
+        formula=[ne], fill=fill(NOTEVAL_BG), font=Font(color=NOTEVAL_FG)))
+    ws.conditional_formatting.add(rng, fmt_rule(ok, MARGIN_FMT, 200, PASS_BG, PASS_FG))
+    ws.conditional_formatting.add(rng, fmt_rule(load, LOAD_FMT, 202))
 
 
-def data_sheet(ws, last_col="BZ", last_row=5000, first_col_width=22):
+def data_sheet(ws, n_cols, left_cols=(), last_col="BZ", last_row=5000,
+               first_col_width=22):
+    """Header row plus centred data cells. The cells are pre-styled because
+    MATLAB's writer keeps a cell's existing format (PreserveFormat) but
+    ignores column-level styles; left_cols are free-text columns."""
     ws.freeze_panes = "B2"
     for c in range(1, 79):
-        ws.cell(row=1, column=c).font = Font(bold=True)
-        ws.cell(row=1, column=c).fill = fill(HEADER_BG)
-        ws.cell(row=1, column=c).alignment = Alignment(wrap_text=True,
-                                                       vertical="center")
-    ws.row_dimensions[1].height = 30
+        h = ws.cell(row=1, column=c)
+        h.font = Font(bold=True)
+        h.fill = fill(HEADER_BG)
+        h.alignment = Alignment(wrap_text=True, horizontal="center",
+                                vertical="center")
+    ws.row_dimensions[1].height = 45
     ws.column_dimensions["A"].width = first_col_width
     for col in ("B", "C", "D"):
         ws.column_dimensions[col].width = 16
     for c in range(5, 79):
-        from openpyxl.utils import get_column_letter
-        ws.column_dimensions[get_column_letter(c)].width = 13
+        ws.column_dimensions[get_column_letter(c)].width = 14
+    centre = Alignment(horizontal="center", vertical="center")
+    for c in range(2, n_cols + 1):
+        if get_column_letter(c) in left_cols:
+            continue
+        for r in range(2, last_row + 1):
+            ws.cell(row=r, column=c).alignment = centre
+    for col in left_cols:
+        ws.column_dimensions[col].width = 40
     margin_rules(ws, f"A2:{last_col}{last_row}", "A2")
 
 
@@ -188,9 +226,12 @@ def bulk():
     wb = Workbook()
     ws = wb.active
     ws.title = "Joint Summary"
-    data_sheet(ws, last_row=1000, first_col_width=28)
+    # Joint | 3 counts | worst margin, check, element, load case | 15 margins
+    data_sheet(ws, n_cols=23, last_row=1000, first_col_width=28)
     ws = wb.create_sheet("Results")
-    data_sheet(ws)
+    # Element, joint, load case | 2 loads | 15 margins | worst, governing |
+    # Error, Note, Warnings (free text, left)
+    data_sheet(ws, n_cols=25, left_cols=("W", "X", "Y"))
     ws.auto_filter.ref = "A1:BZ5000"
 
     ws = wb.create_sheet("About")
@@ -203,8 +244,11 @@ def bulk():
     ws = wb.create_sheet("Lists")
     for i, col_name in enumerate(MARGIN_COLUMNS, start=1):
         ws.cell(row=i, column=1).value = col_name
+    for i, col_name in enumerate(LOAD_COLUMNS, start=1):
+        ws.cell(row=i, column=2).value = col_name
     ws.sheet_state = "hidden"
     name(wb, "Margins", f"Lists!$A$1:$A${len(MARGIN_COLUMNS)}")
+    name(wb, "Loads", f"Lists!$B$1:$B${len(LOAD_COLUMNS)}")
     name(wb, "BulkAboutRows", "About!$A$2:$B$25")
     wb.save(OUT / "export_bulk.xlsx")
 

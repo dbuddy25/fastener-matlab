@@ -70,9 +70,11 @@ classdef tExportTemplates < matlab.unittest.TestCase
             T = tExportTemplates.sampleBulk();
             vars = string(T.Properties.VariableNames);
             want = [vars(find(vars == "Shear") + 1:find(vars == "WorstMargin") - 1), "WorstMargin"];
-            got = string(readcell(tExportTemplates.bulkTemplate(), 'Sheet', 'Lists'))';
-            testCase.verifyEqual(got, want, ...
-                'The template colours margin columns by these names; they must match the engine''s.');
+            L = readcell(tExportTemplates.bulkTemplate(), 'Sheet', 'Lists');
+            got = string(L(:, 1))';
+            got = got(~ismissing(got));
+            testCase.verifyEqual(got, report.bulkHeaders(want), ...
+                'The template colours margin columns by these headers; they must match the export''s.');
         end
 
         function theJointSummaryHasEachJointsWorst(testCase)
@@ -104,7 +106,10 @@ classdef tExportTemplates < matlab.unittest.TestCase
             testCase.verifyEqual(size(R, 1) - 1, height(T), 'Every row must be exported.');
             S = readcell(f, 'Sheet', 'Joint Summary');
             head = string(S(1, :));
-            for c = find(ismember(head, ["TensionUlt", "Slip", "InteractionR", "WorstMargin"]))
+            cols = report.bulkHeaders(["TensionUlt", "Slip", "InteractionR", "WorstMargin"]);
+            testCase.verifyTrue(all(ismember(cols, head)), ...
+                'The Joint Summary must show readable headers, not variable names.');
+            for c = find(ismember(head, cols))
                 for r = 2:size(S, 1)
                     v = S{r, c};
                     testCase.verifyTrue(isnumeric(v) || strcmp(v, char(8212)), ...
