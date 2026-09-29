@@ -846,12 +846,17 @@ classdef Library
             %   fields as a library.json materials entry. Required: key, ftu,
             %   fty, fsu. Optional: fsy, fbru, fbry, e, cte, source, origin
             %   (defaults to "custom"; "baseline" is the seeder/admin path).
+            %
+            %   The values are checked as well as the fields: a drop-in with
+            %   "ftu": -5 or a CTE in ppm would otherwise load and put a
+            %   wrong number under every margin that uses it.
             arguments
                 obj   (1,1) data.Library
                 entry (1,1) struct
             end
             data.Library.requireFields(entry, ["key" "ftu" "fty" "fsu"], ...
                 "material");
+            data.Library.checkMaterialValues(entry);
             entry = data.Library.stampNew(entry, "material");
             obj.checkNewKey(obj.Materials, entry.key, "material");
             obj.Materials{end+1} = entry;
@@ -1257,6 +1262,47 @@ classdef Library
             keys = strings(1, numel(list));
             for i = 1:numel(list)
                 keys(i) = string(list{i}.key);
+            end
+        end
+
+        function checkMaterialValues(entry)
+            %CHECKMATERIALVALUES  Error if a material's numbers cannot be right.
+            %   Strengths and modulus positive and finite (psi); yield no
+            %   higher than ultimate in tension, shear and bearing; CTE in
+            %   1/degC between 1e-7 and 1e-4, which catches ppm and percent.
+            %   A blank optional value ([] or NaN) counts as absent.
+            key = string(entry.key);
+            has = @(f) isfield(entry, f) && ~isempty(entry.(f)) && ...
+                ~(isnumeric(entry.(f)) && isscalar(entry.(f)) && isnan(entry.(f)));
+            for f = ["ftu" "fty" "fsu" "fsy" "fbru" "fbry" "e"]
+                if ~has(f)
+                    if any(f == ["ftu" "fty" "fsu"])
+                        error("data:Library:badValue", ...
+                            "Material ""%s"": %s is blank.", key, f);
+                    end
+                    continue
+                end
+                v = entry.(f);
+                if ~(isnumeric(v) && isscalar(v) && isfinite(v) && v > 0)
+                    error("data:Library:badValue", ...
+                        "Material ""%s"": %s must be a positive number in psi.", key, f);
+                end
+            end
+            pairs = ["fty" "ftu"; "fsy" "fsu"; "fbry" "fbru"];
+            for i = 1:size(pairs, 1)
+                y = pairs(i, 1);  u = pairs(i, 2);
+                if has(y) && has(u) && entry.(y) > entry.(u)
+                    error("data:Library:badValue", ...
+                        "Material ""%s"": %s (%g) is above %s (%g); yield cannot exceed ultimate.", ...
+                        key, y, entry.(y), u, entry.(u));
+                end
+            end
+            if has("cte")
+                c = entry.cte;
+                if ~(isnumeric(c) && isscalar(c) && isfinite(c) && c >= 1e-7 && c <= 1e-4)
+                    error("data:Library:badValue", ...
+                        "Material ""%s"": cte must be in 1/degC, between 1e-7 and 1e-4 (steel is about 1.2e-5).", key);
+                end
             end
         end
 

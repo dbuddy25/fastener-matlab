@@ -1512,6 +1512,52 @@ classdef tLibrary < matlab.unittest.TestCase
         end
     end
 
+
+    % ---- Material values are checked, not just present ----------------------
+    methods (Test)
+        function implausibleMaterialValuesAreRefused(testCase)
+            % A drop-in loads through addMaterial, so this is what stops a
+            % typo reaching every margin that uses the material.
+            lib = data.Library.load();
+            cases = {"ftu", -5; "fsu", "abc"; "fty", 200000; ...
+                     "cte", 12; "e", 0};
+            for i = 1:size(cases, 1)
+                e = testCase.sampleMaterial();
+                e.(cases{i, 1}) = cases{i, 2};
+                testCase.verifyError(@() lib.addMaterial(e), "data:Library:badValue", ...
+                    sprintf('%s = %s must be refused.', cases{i, 1}, string(cases{i, 2})));
+            end
+        end
+
+        function aBlankOptionalValueIsAbsentNotWrong(testCase)
+            lib = data.Library.load();
+            e = testCase.sampleMaterial();
+            e.fbru = NaN;
+            e.cte = [];
+            lib = lib.addMaterial(e);
+            testCase.verifyTrue(any(lib.materialKeys("custom") == e.key));
+        end
+
+        function aBadDropInIsSkippedWithTheReason(testCase)
+            fx = testCase.applyFixture( ...
+                matlab.unittest.fixtures.TemporaryFolderFixture);
+            d = fullfile(fx.Folder, "materials");
+            mkdir(d);
+            e = testCase.sampleMaterial();
+            e.key = "Typo alloy";
+            e.cte = 12;
+            fid = fopen(fullfile(d, "typo.json"), 'w');
+            fprintf(fid, '%s', jsonencode(e));
+            fclose(fid);
+
+            lib = data.Library.load(DropIn=string(fx.Folder));
+
+            testCase.verifyFalse(any(lib.materialKeys() == "Typo alloy"));
+            testCase.verifyTrue(any(contains(lib.LoadWarnings, "cte")), ...
+                'The skip must say why, or the analyst never learns the file was refused.');
+        end
+    end
+
     methods (Access = private)
         function d = dropInFolder(testCase)
             %A temp drop-in root with the six category folders in it.
