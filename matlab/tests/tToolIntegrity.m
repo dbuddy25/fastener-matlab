@@ -22,7 +22,8 @@ classdef tToolIntegrity < matlab.unittest.TestCase
             [st, changed, txt] = toolIntegrity(Root=r);
             testCase.verifyEqual(st, "source");
             testCase.verifyEmpty(changed);
-            testCase.verifySubstring(txt, "source");
+            testCase.verifyEqual(txt, "", ...
+                'A checkout has no release to compare with, so nothing is said.');
         end
 
         function anUntouchedReleaseMatches(testCase)
@@ -62,9 +63,10 @@ classdef tToolIntegrity < matlab.unittest.TestCase
             testCase.verifyEqual(changed, "+model/Thing.m");
         end
 
-        function theExportAboutSheetCarriesTheState(testCase)
+        function aCheckoutAddsNoCalculationCodeRow(testCase)
+            % The tests run from a checkout: no fingerprint, no row.
             c = report.aboutRows();
-            testCase.verifyTrue(any(strcmp(c(:, 1), 'Calculation code')));
+            testCase.verifyFalse(any(strcmp(c(:, 1), 'Calculation code')));
         end
     end
 

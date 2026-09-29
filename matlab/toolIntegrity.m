@@ -7,7 +7,8 @@ function [state, changed, text] = toolIntegrity(opts)
 %              "modified"  changed lists the files edited, added or removed
 %              "source"    no fingerprint: running from a checkout, where
 %                          editing the code is the point
-%     text     one line for Help > About and every export's About sheet
+%     text     one line for Help > About and every export's About sheet;
+%              "" when running from source, where there is nothing to say
 %   toolIntegrity(Write=true) records the fingerprint; packageToolbox is
 %   the only caller.
 %
@@ -42,7 +43,7 @@ end
 
 if ~isfile(mf)
     state = "source";
-    text = "Not checked (running from source)";
+    text = "";
     return
 end
 
@@ -61,7 +62,7 @@ if isempty(changed)
     text = "Matches release v" + string(m.version);
 else
     state = "modified";
-    text = sprintf("MODIFIED since release v%s: %s", string(m.version), strjoin(changed, ", "));
+    text = "MODIFIED FROM RELEASED VERSION";
 end
 end
 

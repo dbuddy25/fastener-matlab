@@ -6,10 +6,15 @@ arguments
 end
 [pItem, pValue] = report.projectRows(project);
 [~, ~, code] = toolIntegrity();
-item  = ["Tool"; "Version"; "Calculation code"; "Generated"; "Standard"; pItem];
-value = ["Fastener Analysis Tool"; toolVersion(); code; ...
+item  = ["Tool"; "Version"; "Generated"; "Standard"; pItem];
+value = ["Fastener Analysis Tool"; toolVersion(); ...
          string(datetime("now", "Format", "yyyy-MM-dd HH:mm")); ...
          "NASA-STD-5020B"; pValue];
+if strlength(code) > 0
+    % After Version: it qualifies the version. Absent from a checkout.
+    item  = [item(1:2); "Calculation code"; item(3:end)];
+    value = [value(1:2); code; value(3:end)];
+end
 for k = 1:numel(notes)
     item(end + 1)  = "Note"; %#ok<AGROW>
     value(end + 1) = notes(k); %#ok<AGROW>
