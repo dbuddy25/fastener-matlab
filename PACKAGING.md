@@ -57,7 +57,7 @@ Help → References lists them and can open the colleague's own copies.
 > `fastener_library.json` (usually `Documents\MATLAB`; type `userpath` to
 > check). Drop-in JSON files go in `fastener_library\<category>\` beside
 > it. Neither is inside the toolbox, so both survive updates. To keep one
-> library across machines, **Hardware Library → Library Folder…** moves it
+> library across machines, **Hardware Library → Choose Library Folder…** moves it
 > to a folder you choose (a synced OneDrive folder, say). To update, install the newer `.mltbx`; it replaces this one.
 > To remove, **Home → Add-Ons → Manage Add-Ons**.
 

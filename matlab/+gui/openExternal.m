@@ -27,7 +27,7 @@ arguments
 end
 
 ok = false;
-if ~isfile(file)
+if ~isfile(file) && ~isfolder(file)
     report(fig, sprintf( ...
         'That file is no longer where the tool expected it:\n%s', file));
     return

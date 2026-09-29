@@ -54,7 +54,8 @@ classdef HardwareLibraryPage < gui.Page
         AddButton
         DuplicateButton
         SaveButton
-        FolderButton                % Library Folder...: where user data lives
+        FolderButton                % Choose Library Folder...
+        OpenFolderButton            % Open Library Folder
         Unsaved      (1,1) logical = false   % added entries not yet saved
         Dialog                      % the add/duplicate form (its own uifigure)
         DialogFields = struct()     % field name -> control, while open
@@ -149,7 +150,7 @@ classdef HardwareLibraryPage < gui.Page
             bar.Layout.Row    = row;
             bar.Layout.Column = 1;
             bar.RowHeight     = {'1x'};
-            bar.ColumnWidth   = {50, 130, '1x', 'fit', 'fit', 'fit', 'fit'};
+            bar.ColumnWidth   = {50, 130, '1x', 'fit', 'fit', 'fit', 'fit', 'fit'};
             bar.Padding       = [0 0 0 0];
             bar.ColumnSpacing = 8;
 
@@ -192,9 +193,13 @@ classdef HardwareLibraryPage < gui.Page
                 'ButtonPushedFcn', @(~, ~) obj.onSave());
             obj.SaveButton.Layout.Row = 1;  obj.SaveButton.Layout.Column = 6;
 
-            obj.FolderButton = uibutton(bar, 'push', 'Text', 'Library Folder…', ...
+            obj.FolderButton = uibutton(bar, 'push', 'Text', 'Choose Library Folder…', ...
                 'ButtonPushedFcn', @(~, ~) obj.onChooseFolder());
             obj.FolderButton.Layout.Row = 1;  obj.FolderButton.Layout.Column = 7;
+
+            obj.OpenFolderButton = uibutton(bar, 'push', 'Text', 'Open Library Folder', ...
+                'ButtonPushedFcn', @(~, ~) obj.onOpenFolder());
+            obj.OpenFolderButton.Layout.Row = 1;  obj.OpenFolderButton.Layout.Column = 8;
         end
 
         function buildSection(obj, spec)
@@ -349,6 +354,11 @@ classdef HardwareLibraryPage < gui.Page
                 'library on several machines. Files are copied there only ' ...
                 'where none exists yet; nothing is overwritten or deleted.'], ...
                 data.userDataFolder());
+            obj.OpenFolderButton.Tooltip = sprintf(['Open %s in File ' ...
+                'Explorer. Drop-in JSON files go in its fastener_library ' ...
+                'subfolders (materials, bolts, ...), and load when the ' ...
+                'tool next starts. Edit your own files freely; never the ' ...
+                'shipped library inside the toolbox.'], data.userDataFolder());
         end
 
         function showLoadWarnings(obj)
@@ -517,6 +527,28 @@ classdef HardwareLibraryPage < gui.Page
                     numel(kept), strjoin(kept, ", "));
             end
             obj.setStatus(msg + sprintf('. %s is unchanged.', old));
+        end
+
+        function onOpenFolder(obj)
+            %ONOPENFOLDER  Show the library folder, drop-in subfolders ready.
+            %   The category folders are created if missing, so an analyst
+            %   adding a drop-in sees where each kind of file goes.
+            %   Creating an empty folder changes no entry.
+            f = data.userDataFolder();
+            try
+                for c = data.Library.dropInCategories()
+                    d = fullfile(f, "fastener_library", c);
+                    if ~isfolder(d)
+                        mkdir(d);
+                    end
+                end
+            catch err
+                uialert(obj.figureHandle(), sprintf( ...
+                    'Could not create the library folders in %s:\n%s', ...
+                    f, err.message), 'Library folder');
+                return
+            end
+            gui.openExternal(f, obj.figureHandle());
         end
     end
 
@@ -1033,6 +1065,10 @@ classdef HardwareLibraryPage < gui.Page
 
         function b = folderButton(obj)
             b = obj.FolderButton;
+        end
+
+        function b = openFolderButton(obj)
+            b = obj.OpenFolderButton;
         end
 
         function selectSection(obj, entityId)

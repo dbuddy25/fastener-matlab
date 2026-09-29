@@ -303,6 +303,18 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
 
     % ---- Adding and duplicating ------------------------------------------
     methods (Test)
+        function bothFolderButtonsNameTheFolderInUse(testCase)
+            % Choosing and opening are two actions; each says which folder
+            % it acts on. Neither is pressed: both would act on the real
+            % user's folder.
+            p = testCase.Page;
+            f = data.userDataFolder();
+            testCase.verifyEqual(string(p.folderButton().Text), "Choose Library Folder…");
+            testCase.verifyEqual(string(p.openFolderButton().Text), "Open Library Folder");
+            testCase.verifySubstring(string(p.folderButton().Tooltip), f);
+            testCase.verifySubstring(string(p.openFolderButton().Tooltip), f);
+        end
+
         function saveIsDisabledUntilThereIsSomethingOfYours(testCase)
             % A Save that writes a file containing nothing but the header
             % reads as "saved" and has saved nothing.

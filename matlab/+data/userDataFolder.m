@@ -11,7 +11,7 @@ function p = userDataFolder(newPath, store)
 %
 %   Default: userpath (usually Documents\MATLAB), or prefdir() when
 %   userpath is empty. An analyst may choose another folder, a synced
-%   OneDrive one for example, from Hardware Library > Library Folder.
+%   OneDrive one for example, from Hardware Library > Choose Library Folder.
 %   The choice is per machine, stored in prefdir() like gui.referencesFolder,
 %   because it is a property of the machine rather than of a case.
 %

@@ -185,6 +185,13 @@ classdef Library
             p = string(fullfile(fileparts(mfilename("fullpath")), "library"));
         end
 
+        function c = dropInCategories()
+            %DROPINCATEGORIES  The drop-in subfolders, in load order.
+            %   Materials and bolts first, so a dropped bolt spec or nut
+            %   can reference them.
+            c = ["materials" "bolts" "boltSpecs" "nuts" "washers" "inserts"];
+        end
+
         function p = dropInPath()
             %DROPINPATH  Where this installation's DROP-IN files live.
             %   A folder beside userPath()'s file, same userpath/prefdir
@@ -1110,7 +1117,7 @@ classdef Library
             %   skipped and the reason lands in LoadWarnings, which the
             %   Materials & Hardware page shows. Materials and bolts load
             %   first so a dropped bolt spec or nut can reference them.
-            cats = ["materials" "bolts" "boltSpecs" "nuts" "washers" "inserts"];
+            cats = data.Library.dropInCategories();
             for c = cats
                 files = dir(fullfile(folder, c, "*.json"));
                 [~, order] = sort(string({files.name}));

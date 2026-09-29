@@ -53,9 +53,10 @@
 <li>Every material can be used for a flange/clamped member. Tick <strong>Bolt material</strong> and/or <strong>Washer material</strong> on the Materials form to also offer it in those pickers on Joint Config.</li>
 <li>This library is shared by every case and is <strong>not</strong> saved in the case file. <strong>Save Library</strong> writes your custom entries, and is enabled once there are any.</li>
 <li>Custom entries are saved to <code>fastener_library.json</code> in your MATLAB user folder (usually <code>Documents\MATLAB</code>). Drop-in files go in <code>fastener_library\&lt;category&gt;\*.json</code> beside it, and factor presets live there too.</li>
-<li><strong>Library Folder…</strong> moves all three to a folder you choose, such as a synced OneDrive folder shared by your machines. Files are copied only where none exists yet: nothing is overwritten, and the old folder is left as it was. Save Library first. Updating the tool never touches this folder.</li>
+<li><strong>Open Library Folder</strong> shows that folder in File Explorer, with a subfolder ready for each kind of drop-in. <strong>Everything in that folder is yours to edit</strong>: add, change or remove drop-in files there, then restart the tool (<code>fastenerTool</code>) to load them. <strong>Choose Library Folder…</strong> moves all three to a folder you choose, such as a synced OneDrive folder shared by your machines. Files are copied only where none exists yet: nothing is overwritten, and the old folder is left as it was. Save Library first. Updating the tool never touches this folder.</li>
 <li>A corrected baseline in a later release still reaches you: shipped values load underneath your custom ones.</li>
 </ul>
+<div class="callout"><strong>Never edit the shipped library.</strong> The baseline files inside the installed toolbox (its <code>+data\library</code> folder) are the tool's reviewed originals. An edit there is overwritten by the next update, and until then it changes numbers with no record of who changed them. To change a baseline value, use <strong>Duplicate as Custom</strong>, or add a drop-in under a new name: a drop-in can never reuse a shipped key.</div>
 <p class="next">Next: <a href="limits.html">What the tool does not do</a></p>
 </main>
 </body>
