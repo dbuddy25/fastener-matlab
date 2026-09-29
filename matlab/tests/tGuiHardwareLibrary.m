@@ -303,6 +303,23 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
 
     % ---- Adding and duplicating ------------------------------------------
     methods (Test)
+        function reloadPicksUpAFileEditedInTheLibraryFolder(testCase)
+            % Only inside runTests' sandbox: this edits the library folder.
+            testCase.assumeNotEmpty(getenv("FASTENER_TOOL_DATA_FOLDER"), ...
+                'Run through runTests; this test edits the library folder.');
+            f = fullfile(data.Library.dropInPath(), "materials", "15-5PH.json");
+            testCase.assumeTrue(isfile(f), 'The shipped copies are not in the sandbox.');
+            orig = fileread(f);
+            testCase.addTeardown(@() tGuiHardwareLibrary.writeText(f, orig));
+            tGuiHardwareLibrary.writeText(f, ...
+                regexprep(orig, '"ftu": \d+', '"ftu": 123456'));
+
+            testCase.press(testCase.Page.reloadButton());
+
+            testCase.verifyEqual(testCase.App.State.Library.material("15-5PH").Ftu, 123456, ...
+                'Reload must read the edited file without a restart.');
+        end
+
         function bothFolderButtonsNameTheFolderInUse(testCase)
             % Choosing and opening are two actions; each says which folder
             % it acts on. Neither is pressed: both would act on the real
@@ -596,6 +613,12 @@ classdef tGuiHardwareLibrary < matlab.uitest.TestCase
     end
 
     methods (Static, Access = private)
+        function writeText(f, txt)
+            fid = fopen(f, 'w');
+            fprintf(fid, '%s', txt);
+            fclose(fid);
+        end
+
         function assumeCleanInstall(testCase)
             % These describe a library with nothing added on this machine;
             % a user's drop-in or custom files make them unreachable here.

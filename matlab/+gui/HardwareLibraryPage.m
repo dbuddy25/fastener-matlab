@@ -56,6 +56,7 @@ classdef HardwareLibraryPage < gui.Page
         SaveButton
         FolderButton                % Choose Library Folder...
         OpenFolderButton            % Open Library Folder
+        ReloadButton                % Reload Library: pick up edited files
         Unsaved      (1,1) logical = false   % added entries not yet saved
         Dialog                      % the add/duplicate form (its own uifigure)
         DialogFields = struct()     % field name -> control, while open
@@ -150,7 +151,7 @@ classdef HardwareLibraryPage < gui.Page
             bar.Layout.Row    = row;
             bar.Layout.Column = 1;
             bar.RowHeight     = {'1x'};
-            bar.ColumnWidth   = {50, 130, '1x', 'fit', 'fit', 'fit', 'fit', 'fit'};
+            bar.ColumnWidth   = {50, 130, '1x', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit'};
             bar.Padding       = [0 0 0 0];
             bar.ColumnSpacing = 8;
 
@@ -200,6 +201,14 @@ classdef HardwareLibraryPage < gui.Page
             obj.OpenFolderButton = uibutton(bar, 'push', 'Text', 'Open Library Folder', ...
                 'ButtonPushedFcn', @(~, ~) obj.onOpenFolder());
             obj.OpenFolderButton.Layout.Row = 1;  obj.OpenFolderButton.Layout.Column = 8;
+
+            obj.ReloadButton = uibutton(bar, 'push', 'Text', 'Reload Library', ...
+                'Tooltip', ['Re-read the library folder, so files edited or ' ...
+                            'added there load without restarting the tool. ' ...
+                            'A result on screen is marked stale, since its ' ...
+                            'numbers may have come from the old values.'], ...
+                'ButtonPushedFcn', @(~, ~) obj.onReload());
+            obj.ReloadButton.Layout.Row = 1;  obj.ReloadButton.Layout.Column = 9;
         end
 
         function buildSection(obj, spec)
@@ -357,9 +366,9 @@ classdef HardwareLibraryPage < gui.Page
             obj.OpenFolderButton.Tooltip = sprintf(['Open %s in File ' ...
                 'Explorer. Its fastener_library subfolders hold the whole ' ...
                 'library, one file per entry: a copy of every shipped entry ' ...
-                'plus any you add. Edit them freely; changes load when the ' ...
-                'tool next starts, and an update never overwrites a file ' ...
-                'you changed.'], data.userDataFolder());
+                'plus any you add. Edit them freely, then Reload Library; ' ...
+                'an update never overwrites a file you changed.'], ...
+                data.userDataFolder());
         end
 
         function showLoadWarnings(obj)
@@ -528,6 +537,30 @@ classdef HardwareLibraryPage < gui.Page
                     numel(kept), strjoin(kept, ", "));
             end
             obj.setStatus(msg + sprintf('. %s is unchanged.', old));
+        end
+
+        function onReload(obj)
+            %ONRELOAD  Re-read the library folder without a restart.
+            %   Refused while entries are unsaved: the reload reads the
+            %   files, so an entry only in memory would be dropped.
+            if obj.Unsaved
+                uialert(obj.figureHandle(), ['Save Library first. Entries ' ...
+                    'added since the last save are only in memory and a ' ...
+                    'reload would drop them.'], 'Unsaved entries');
+                return
+            end
+            obj.State.loadLibrary();          % fires LibraryChanged
+            if ~obj.State.LibraryOK
+                uialert(obj.figureHandle(), char(obj.State.LibraryLoadError), ...
+                    'Library load failed');
+                return
+            end
+            % Not markDirty: the library is not case state (A4). But a
+            % result computed from the old values must not look current (A3).
+            obj.State.markResultStale();
+            obj.State.markBulkStale();
+            obj.setStatus(sprintf('Reloaded the library from %s.', ...
+                data.Library.dropInPath()));
         end
 
         function onOpenFolder(obj)
@@ -1070,6 +1103,10 @@ classdef HardwareLibraryPage < gui.Page
 
         function b = openFolderButton(obj)
             b = obj.OpenFolderButton;
+        end
+
+        function b = reloadButton(obj)
+            b = obj.ReloadButton;
         end
 
         function selectSection(obj, entityId)
