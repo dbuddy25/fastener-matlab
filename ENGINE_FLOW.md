@@ -29,7 +29,6 @@ flowchart LR
 
     subgraph OUT[" Consumers "]
         GUI[gui.FastenerApp]
-        PDF[report.singleJointReport]
         XL[report.exportResults]
     end
 

@@ -131,7 +131,6 @@ classdef ResultsPage < gui.Page
         VerdictLabel
         CapCheck
         StaleBanner
-        ReportButton
         ExportButton
         CsvButton
         CalcButton
@@ -234,14 +233,8 @@ classdef ResultsPage < gui.Page
             end
             hasResult = ~isempty(obj.State.Result);
 
-            % Export needs a Result; the PDF additionally needs the inputs
-            % that produced it, which a Result staged directly (a test, a
-            % future case-file load) does not carry. Disabled beats writing
-            % a report about the wrong joint.
             obj.ExportButton.Enable = matlab.lang.OnOffSwitchState(hasResult);
             obj.CsvButton.Enable    = matlab.lang.OnOffSwitchState(hasResult);
-            obj.ReportButton.Enable = matlab.lang.OnOffSwitchState( ...
-                hasResult && ~isempty(obj.State.ResultInputs));
 
             % Empty state and table share one grid cell; only one is ever
             % visible (A12). An empty table with column headers looks like
@@ -283,10 +276,10 @@ classdef ResultsPage < gui.Page
     methods (Access = private)
         function buildHeaderRow(obj, g, row)
             %BUILDHEADERROW  The scope-qualified verdict, and the cap toggle.
-            h = uigridlayout(g, [1 6]);
+            h = uigridlayout(g, [1 5]);
             h.Layout.Row    = row;
             h.Layout.Column = [1 2];
-            h.ColumnWidth   = {'1x', 'fit', 'fit', 'fit', 'fit', 'fit'};
+            h.ColumnWidth   = {'1x', 'fit', 'fit', 'fit', 'fit'};
             h.RowHeight     = {'fit'};
             h.Padding       = [0 0 0 0];
 
@@ -313,21 +306,13 @@ classdef ResultsPage < gui.Page
             % Result on this page, and an analyst who has just read a
             % verdict should not have to go looking elsewhere to hand it to
             % someone. Both stay disabled until there is something to write.
-            obj.ReportButton = uibutton(h, 'push', 'Text', 'Save PDF Report...', ...
-                'ButtonPushedFcn', @(~, ~) obj.onSaveReport());
-            obj.ReportButton.Layout.Row    = 1;
-            obj.ReportButton.Layout.Column = 3;
-            obj.ReportButton.Tooltip = ['Write the full single-joint report ' ...
-                'as a PDF - inputs, preload, design loads, every margin ' ...
-                'and its citation - stamped with the tool version and the ' ...
-                'time of the run.'];
-
+            %
             % Two buttons, not one with a file-type filter: a CSV hidden
             % in the save dialog's type list is one nobody finds.
             obj.ExportButton = uibutton(h, 'push', 'Text', 'Export Excel...', ...
                 'ButtonPushedFcn', @(~, ~) obj.onExportTable("xlsx"));
             obj.ExportButton.Layout.Row    = 1;
-            obj.ExportButton.Layout.Column = 4;
+            obj.ExportButton.Layout.Column = 3;
             obj.ExportButton.Tooltip = ['Write a styled .xlsx: a slide-ready ' ...
                 'summary, every equation with its numbers, and the ' ...
                 'project details. The scope statement travels with it.'];
@@ -335,14 +320,14 @@ classdef ResultsPage < gui.Page
             obj.CsvButton = uibutton(h, 'push', 'Text', 'Export CSV...', ...
                 'ButtonPushedFcn', @(~, ~) obj.onExportTable("csv"));
             obj.CsvButton.Layout.Row    = 1;
-            obj.CsvButton.Layout.Column = 5;
+            obj.CsvButton.Layout.Column = 4;
             obj.CsvButton.Tooltip = ['Write the displayed checks as a plain ' ...
                 '.csv, with the scope statement.'];
 
             obj.CalcButton = uibutton(h, 'push', 'Text', 'Show calculation', ...
                 'ButtonPushedFcn', @(~, ~) obj.onShowCalculation());
             obj.CalcButton.Layout.Row    = 1;
-            obj.CalcButton.Layout.Column = 6;
+            obj.CalcButton.Layout.Column = 5;
             obj.CalcButton.Tooltip = ['Open the Calculation Map at the ' ...
                 'selected check: every function and equation behind it, ' ...
                 'each clickable to open the code at that line.'];
@@ -350,44 +335,6 @@ classdef ResultsPage < gui.Page
 
         function onShowCalculation(obj)
             obj.showCalculationMap(obj.selectedCheck());
-        end
-
-        function onSaveReport(obj)
-            %ONSAVEREPORT  The PDF, from the inputs that produced this Result.
-            %   report.singleJointReport RE-RUNS engine.analyze rather than
-            %   taking a Result, so it is handed AppState.ResultInputs - the
-            %   joint as it was when Analyze ran - and never the current
-            %   form. Handed the form it would document a different analysis
-            %   from the one on screen whenever the case had been edited
-            %   since, which is precisely what ResultStale flags.
-            in = obj.State.ResultInputs;
-            if isempty(in)
-                obj.setStatus(['This result was not produced by a run in ' ...
-                    'this session, so its inputs are unknown - re-run ' ...
-                    'Analyze before reporting.']);
-                return
-            end
-
-            [f, p] = uiputfile('*.pdf', 'Save Report As', 'joint-report.pdf');
-            if isequal(f, 0)
-                return
-            end
-            file = string(fullfile(p, f));
-
-            % Its own try/catch inside its own callback (Section 11), and
-            % the Report Generator is the slowest thing this app does, so
-            % the status bar says so before it starts.
-            obj.setStatus('Writing the PDF report...');
-            try
-                written = report.singleJointReport(in.Joint, in.LoadCase, ...
-                    in.Factors, file, Project = obj.State.Project);
-            catch err
-                uialert(ancestor(obj.Root, 'figure'), err.message, ...
-                    'Report failed');
-                obj.setStatus('Report failed.');
-                return
-            end
-            obj.setStatus(sprintf('Wrote %s', written));
         end
 
         function onExportTable(obj, kind)
@@ -1485,10 +1432,6 @@ classdef ResultsPage < gui.Page
 
         function l = scopeLabel(obj)
             l = obj.ScopeLabel;
-        end
-
-        function b = reportButton(obj)
-            b = obj.ReportButton;
         end
 
         function b = calcButton(obj)

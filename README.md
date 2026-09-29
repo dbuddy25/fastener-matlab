@@ -31,7 +31,7 @@ matlab/
 ├── +model/            domain types: Bolt, Material, Joint, enums 
 ├── +engine/           analysis math — the core; bulk entry points `runBulk` (three files) + `runWorkbook` (one workbook)
 ├── +data/             library loader (`data.Library` + `library/` — one JSON per part, plus user drop-in files); bulk parsers (`loadJointLibrary`/`loadElements` + `templates/`); global settings (`loadSettings` — temps + factors); workbook template generator (`makeTemplate` — Joints/Elements/Settings + Lists + Fields dictionary sheets); case save/load (`saveCase`/`loadCase` via generic `toStruct`/`fromStruct`); factor presets (`factorPreset`/`saveFactorPreset`)
-├── +report/           XLSX export (`report.exportResults`); single-joint PDF report (`report.singleJointReport`, via MATLAB Report Generator)
+├── +report/           XLSX and CSV exports (`report.exportResults`, the styled workbook writers)
 ├── +gui/             THE GUI (`gui.launch`, GUI_SPEC.md) — what `fastenerTool`
 │                      opens. Programmatic uifigure, rail + card over AppState,
 │                      eleven pages.

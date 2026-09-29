@@ -679,36 +679,20 @@ classdef tGuiResults < matlab.uitest.TestCase
         end
     end
 
-    % ---- Report and export -------------------------------------------------
+    % ---- Export -------------------------------------------------
     methods (Test)
-        function bothActionsAreDisabledWithNothingToWrite(testCase)
+        function exportsAreDisabledWithNothingToWrite(testCase)
             p = testCase.Page;
             testCase.verifyEqual(char(p.exportButton().Enable), 'off');
             testCase.verifyEqual(char(p.csvButton().Enable), 'off');
-            testCase.verifyEqual(char(p.reportButton().Enable), 'off');
         end
 
-        function reportStaysDisabledWithoutTheInputsThatMadeTheResult(testCase)
-            % report.singleJointReport RE-RUNS engine.analyze rather than
-            % taking a Result, so without the joint that produced this one
-            % it would document a different analysis. Disabled beats wrong.
-            testCase.showSynthetic();          % staged, no inputs
+        function exportIsOfferedForAStagedResult(testCase)
+            % The table can always be written - it IS the Result.
+            testCase.showSynthetic();
             p = testCase.Page;
-
-            testCase.verifyEqual(char(p.exportButton().Enable), 'on', ...
-                'The table can always be written - it IS the Result.');
+            testCase.verifyEqual(char(p.exportButton().Enable), 'on');
             testCase.verifyEqual(char(p.csvButton().Enable), 'on');
-            testCase.verifyEqual(char(p.reportButton().Enable), 'off', ...
-                'The PDF cannot, without the inputs behind the numbers.');
-        end
-
-        function reportIsOfferedOnceTheInputsAreKnown(testCase)
-            testCase.App.State.setResult( ...
-                tGuiResults.syntheticResult("mixed"), ...
-                struct('Joint', model.Joint(), 'LoadCase', [], 'Factors', []));
-
-            testCase.verifyEqual( ...
-                char(testCase.Page.reportButton().Enable), 'on');
         end
 
         function theExportCarriesAllFifteenChecks(testCase)

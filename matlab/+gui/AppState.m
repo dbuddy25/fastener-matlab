@@ -151,8 +151,8 @@ classdef AppState < handle
         % The joint / loadCase / factors that produced Result, or empty.
         % NOT a copy of the form: the form moves on (that is exactly what
         % ResultStale means) while these stay pinned to the numbers on
-        % screen, so anything re-deriving from the analysed inputs — the
-        % PDF report — documents what was actually displayed.
+        % screen, so anything re-deriving from the analysed inputs
+        % describes what was actually displayed.
         ResultInputs struct = struct.empty
         BulkStale   (1,1) logical = false
 
@@ -292,8 +292,8 @@ classdef AppState < handle
             %   The only path that clears ResultStale — a successful run.
             %
             %   `inputs` is the joint / loadCase / factors that produced r,
-            %   kept because report.singleJointReport re-runs engine.analyze
-            %   rather than taking a Result: handed the form's current
+            %   kept for anything that re-derives from the inputs rather
+            %   than taking a Result: handed the form's current
             %   contents it would document a different analysis from the one
             %   on screen, which is the whole failure the stale banner
             %   exists to catch. Optional, so a test can still stage a bare

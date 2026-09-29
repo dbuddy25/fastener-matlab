@@ -53,7 +53,9 @@ Rules carried over:
 
 Always the complete result set, whatever the on-screen filters show (as now).
 
-## 5. Calc PDF (Results → Save PDF Report…), kept and fixed
+## 5. Calc PDF (Results → Save PDF Report…) — REMOVED 2026-09-29
+
+Dropped: nobody would use it, and it was the only thing needing Report Generator. The Excel Detail sheet carries the equations and substituted numbers. The original plan follows for the record.
 
 The checker's document. Same content, reordered to be followable:
 1. **Page 1 = the Slide sheet's content**: verdict, key inputs, margin table, cross-section.

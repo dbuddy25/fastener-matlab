@@ -133,13 +133,6 @@ pre-existing gap.
 - [ ] **Help → User Guide** opens the HTML guide in the browser, styled, with
       working links between pages. **? Help for this page** opens the right
       page from at least three rail pages.
-- [ ] **Results → Save PDF Report...** Opens in a real viewer, carries the
-      version stamp, margins match section B. *Slowest action in the app —
-      `report.singleJointReport` re-runs `engine.analyze` internally.*
-- [ ] **The PDF reports what was analyzed, not what is on screen.** Analyze,
-      then change the bolt count *without* re-analyzing, then Save PDF. The PDF
-      must show the **analyzed** joint. (It uses `ResultInputs` by design; this
-      is the check that proves it.)
 - [ ] **Results → Export Excel...**. Open it: three sheets
       (Results / Summary / About), headers, units and numbers intact.
 - [ ] Export again **over the same filename**. `report.exportResults` deletes

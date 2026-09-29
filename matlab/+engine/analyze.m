@@ -88,7 +88,7 @@ function r = analyze(joint, loadCase, factors)
 %   R ALSO LIVES ON ITS OWN Margins.R FIELD (added alongside MS, never
 %   inside it — see the local entry() helper below), NaN on every row
 %   except "Interaction". This is what lets downstream consumers
-%   (engine.analyzeBulk, report.singleJointReport, the GUI Results row and
+%   (engine.analyzeBulk, the report.* exports, the GUI Results row and
 %   Bulk grid) carry the real ratio through to their own tables/exports
 %   without ever reading it out of MS (which stays NaN for this row by
 %   design, per the note above) or risking a caller applying the MS >= 0

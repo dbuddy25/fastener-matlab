@@ -146,7 +146,7 @@ matlab/
 │                    workbook template (`makeTemplate`); case save/load (`saveCase`/`loadCase` via
 │                    `toStruct`/`fromStruct`); factor presets
 ├── +validation/     DABJ §9 answer-key case (`dabjSection9`) + Example 8-b stiffness case (`dabjExample8b`)
-├── +report/         XLSX export (`exportResults`); single-joint PDF report (`singleJointReport`, via MATLAB Report Generator)
+├── +report/         XLSX and CSV exports (`exportResults`, the styled workbook writers)
 ├── +gui/           THE GUI — programmatic uifigure app, `classdef < handle` on
 │                    `uigridlayout`; rail + card shell over `AppState`; eleven pages
 ├── userguide/       Help → User Guide: static HTML + CSS, one file per rail page (GUI_SPEC.md)

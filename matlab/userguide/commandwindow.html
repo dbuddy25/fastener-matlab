@@ -80,13 +80,8 @@ r.GoverningCheck</code></pre>
 <tr><td>Interaction row</td><td>Reports a ratio <code>R</code>, not a margin, in <code>Margins(k).R</code> — <strong>passes at R ≤ 1</strong>, the opposite direction from every other row, and is excluded from <code>WorstMargin</code>/<code>GoverningCheck</code></td></tr>
 </table>
 
-<h3>PDF report</h3>
-<p>Requires the MATLAB Report Generator toolbox:</p>
-<pre><code>report.singleJointReport(j, lc, f, "report.pdf")</code></pre>
-<p>Builds a title page, an Inputs table, Preload and Design Loads tables, the full margins table (governing check bolded, Fail rows shaded), the separation-before-rupture narrative, and a Governing Equations table. Pass a <code>Project=</code> struct (fields <code>analyst</code>, <code>program</code>, <code>assembly</code>, <code>partNumber</code>, <code>environment</code>, <code>notes</code>) to stamp the report's Project section.</p>
-
 <h3>Export the margins table</h3>
-<p>Without a PDF, write just the margins table to Excel or CSV:</p>
+<p>Write the margins table to Excel or CSV:</p>
 <pre><code>report.exportResults(r.asTable(), "margins.xlsx")</code></pre>
 
 <h2>Save / load a case</h2>

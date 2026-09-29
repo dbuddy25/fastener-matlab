@@ -145,7 +145,7 @@ function v = toolVersion()
 %   this string must never invalidate a user's saved cases.
 %
 %   Consumers: fastenerTool, gui.AppState,
-%   report.singleJointReport, report.exportResults.
+%   report.exportResults and the report.* workbook writers.
 
 v = "0.7.0";
 end

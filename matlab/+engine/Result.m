@@ -134,7 +134,7 @@ classdef Result
     %   Margins(k).R directly (see the Margins field list above and
     %   engine.analyze's INTERACTION IS NOT A MARGIN note). Warnings is not
     %   part of asTable() at all (it is a separate property, not a Margins
-    %   row) — report.singleJointReport and the GUI read r.Warnings
+    %   row) — the GUI and the exports read r.Warnings
     %   directly, never through asTable().
     %
     properties
