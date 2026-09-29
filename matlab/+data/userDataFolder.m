@@ -21,11 +21,19 @@ function p = userDataFolder(newPath, store)
 %   default would quietly split the library across two places.
 %
 %   The store argument exists so tests never touch the real preference.
+%   runTests goes further: it sets FASTENER_TOOL_DATA_FOLDER to a temp
+%   folder for the run, which wins over the stored choice, so no test
+%   (the GUI's included) reads or writes the real user's library.
 arguments
     newPath (1,1) string = ""
     store   (1,1) string = ""
 end
 if strlength(store) == 0
+    override = string(getenv("FASTENER_TOOL_DATA_FOLDER"));
+    if strlength(override) > 0 && strlength(newPath) == 0
+        p = override;
+        return
+    end
     store = string(fullfile(prefdir(), 'fastener-tool-data-folder.json'));
 end
 

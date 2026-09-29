@@ -53,10 +53,12 @@ Help → References lists them and can open the colleague's own copies.
 > 5. Send back: anything wrong, anything confusing, and the version from
 >    **Help → About**.
 >
-> Your custom library entries are saved in your MATLAB user folder as
-> `fastener_library.json` (usually `Documents\MATLAB`; type `userpath` to
-> check). Drop-in JSON files go in `fastener_library\<category>\` beside
-> it. Neither is inside the toolbox, so both survive updates. To keep one
+> The whole hardware library lives in your MATLAB user folder (usually
+> `Documents\MATLAB`; type `userpath` to check), one JSON file per entry
+> under `fastener_library\<category>\`, with your custom entries in
+> `fastener_library.json` beside it. **Hardware Library → Open Library
+> Folder** shows it. Edit any of it; an update refreshes only the files you
+> have not changed. To keep one
 > library across machines, **Hardware Library → Choose Library Folder…** moves it
 > to a folder you choose (a synced OneDrive folder, say). To update, install the newer `.mltbx`; it replaces this one.
 > To remove, **Home → Add-Ons → Manage Add-Ons**.

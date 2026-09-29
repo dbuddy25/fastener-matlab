@@ -877,8 +877,8 @@ classdef tLibrary < matlab.unittest.TestCase
             % overlay path and quietly passing for the wrong reason.
             testCase.assumeFalse(isfile(data.Library.userPath()), ...
                 'This machine has a real user library; the fallback path is not reachable here.');
-            testCase.assumeFalse(isfolder(data.Library.dropInPath()), ...
-                'This machine has a real drop-in folder; the fallback path is not reachable here.');
+            testCase.assumeFalse(tLibrary.hasUserFiles(data.Library.dropInPath()), ...
+                'This machine has drop-in files or edited shipped copies; the fallback path is not reachable here.');
 
             lib = data.Library.loadInstalled();
             testCase.verifyEqual(numel(lib.boltKeys()), ...
@@ -1555,6 +1555,127 @@ classdef tLibrary < matlab.unittest.TestCase
             testCase.verifyFalse(any(lib.materialKeys() == "Typo alloy"));
             testCase.verifyTrue(any(contains(lib.LoadWarnings, "cte")), ...
                 'The skip must say why, or the analyst never learns the file was refused.');
+        end
+    end
+
+    % ---- The whole library in the user's folder -------------------------------
+    methods (Test)
+        function everyShippedFileIsCopiedAndLoadsUnchanged(testCase)
+            d = testCase.syncedFolder();
+            n = numel(dir(fullfile(data.Library.defaultPath(), "*", "*.json")));
+            testCase.verifyEqual(numel(dir(fullfile(d, "*", "*.json"))), n);
+            lib = data.Library.load(DropIn=d);
+            base = data.Library.load();
+            testCase.verifyEqual(lib.materialKeys(), base.materialKeys());
+            testCase.verifyEqual(lib.material("15-5PH").Ftu, base.material("15-5PH").Ftu);
+            testCase.verifyEmpty(lib.materialKeys("dropin"), ...
+                'A copy of a shipped file is not a drop-in.');
+            testCase.verifyEmpty(lib.LoadWarnings);
+        end
+
+        function anEditedCopyIsUsed(testCase)
+            d = testCase.syncedFolder();
+            tLibrary.editFtu(d, 123456);
+            lib = data.Library.load(DropIn=d);
+            testCase.verifyEqual(lib.material("15-5PH").Ftu, 123456, ...
+                'The analyst''s copy is the library.');
+        end
+
+        function anEditedCopyIsNeverOverwrittenByAnUpdate(testCase)
+            d = testCase.syncedFolder();
+            f = tLibrary.editFtu(d, 123456);
+            mine = fileread(f);
+            tLibrary.forgetSignature(d);          % as if a new release shipped
+
+            r = data.Library.syncShipped(d);
+
+            testCase.verifyEqual(fileread(f), mine);
+            testCase.verifyTrue(any(r.Kept == "materials/15-5PH.json"));
+        end
+
+        function anUneditedCopyTakesTheNewShippedVersion(testCase)
+            % Simulate an older release: the copy and the manifest both
+            % hold the old text, and the shipped file is newer.
+            d = testCase.syncedFolder();
+            f = fullfile(d, "materials", "15-5PH.json");
+            old = strrep(fileread(f), """ftu"": 190000", """ftu"": 180000");
+            tLibrary.writeFile(f, old);
+            m = jsondecode(fileread(fullfile(d, "shipped_manifest.json")));
+            k = strcmp({m.files.path}, "materials/15-5PH.json");
+            m.files(k).text = old;
+            m.signature = "";
+            tLibrary.writeFile(fullfile(d, "shipped_manifest.json"), jsonencode(m));
+
+            r = data.Library.syncShipped(d);
+
+            testCase.verifyTrue(any(r.Updated == "materials/15-5PH.json"));
+            testCase.verifyEqual(fileread(f), ...
+                fileread(fullfile(data.Library.defaultPath(), "materials", "15-5PH.json")));
+        end
+
+        function aDeletedCopyComesBack(testCase)
+            d = testCase.syncedFolder();
+            f = fullfile(d, "materials", "15-5PH.json");
+            delete(f);
+            r = data.Library.syncShipped(d);
+            testCase.verifyTrue(isfile(f));
+            testCase.verifyTrue(any(r.Copied == "materials/15-5PH.json"));
+        end
+
+        function anUnreadableCopyKeepsTheShippedValuesAndSaysSo(testCase)
+            d = testCase.syncedFolder();
+            tLibrary.writeFile(fullfile(d, "materials", "15-5PH.json"), "{ not json");
+            lib = data.Library.load(DropIn=d);
+            testCase.verifyEqual(lib.material("15-5PH").Ftu, ...
+                data.Library.load().material("15-5PH").Ftu);
+            testCase.verifyTrue(any(contains(lib.LoadWarnings, "15-5PH.json")));
+        end
+    end
+
+    methods
+        function d = syncedFolder(testCase)
+            fx = testCase.applyFixture( ...
+                matlab.unittest.fixtures.TemporaryFolderFixture);
+            d = string(fullfile(fx.Folder, "fastener_library"));
+            data.Library.syncShipped(d);
+        end
+    end
+
+    methods (Static, Access = private)
+        function f = editFtu(d, v)
+            f = fullfile(d, "materials", "15-5PH.json");
+            tLibrary.writeFile(f, regexprep(fileread(f), '"ftu": \d+', sprintf('"ftu": %d', v)));
+        end
+
+        function forgetSignature(d)
+            mf = fullfile(d, "shipped_manifest.json");
+            m = jsondecode(fileread(mf));
+            m.signature = "";
+            tLibrary.writeFile(mf, jsonencode(m));
+        end
+
+        function writeFile(f, txt)
+            fid = fopen(f, 'w');
+            fprintf(fid, '%s', txt);
+            fclose(fid);
+        end
+    end
+
+    methods (Static)
+        function tf = hasUserFiles(drop)
+            % Drop-ins, or copies of shipped files that differ from them.
+            % Unedited copies (loadInstalled makes them) change nothing.
+            tf = false;
+            for c = data.Library.dropInCategories()
+                for f = dir(fullfile(drop, c, "*.json"))'
+                    ship = fullfile(data.Library.defaultPath(), c, f.name);
+                    if ~isfile(ship) || ~strcmp(fileread(ship), ...
+                            fileread(fullfile(f.folder, f.name)))
+                        tf = true;
+                        return
+                    end
+                end
+            end
         end
     end
 

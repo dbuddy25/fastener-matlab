@@ -101,10 +101,12 @@ classdef Library
     %     - save(path) writes ONLY the custom entries (plus the untouched
     %       description/units passthrough from Raw — nuts, washers, and
     %       inserts are all managed like materials/bolts/boltSpecs).
-    %       The shipped baseline is NEVER copied into user files, so a
-    %       corrected baseline value in a later release actually reaches a
-    %       user who has already saved a library — their stale copy cannot
-    %       silently win forever. save() therefore refuses to overwrite the
+    %       save() never writes baseline entries into the custom file.
+    %       (loadInstalled does keep a COPY of each shipped file in the
+    %       user's library folder, one file per entry, which the analyst
+    %       may edit; syncShipped replaces a copy with a newer release only
+    %       while it is unedited, so a correction still arrives and an
+    %       edit is never lost.) save() refuses to overwrite the
     %       bundled seed file itself (id "data:Library:baselinePath"); the
     %       shipped baseline is curated by editing the files under +data/library/
     %       directly.
@@ -176,6 +178,7 @@ classdef Library
             end
             obj = data.Library(raw, path);
             if strlength(opts.DropIn) > 0 && isfolder(opts.DropIn)
+                obj = obj.applyUserCopies(opts.DropIn);
                 obj = obj.addDropIns(opts.DropIn);
             end
         end
@@ -213,11 +216,116 @@ classdef Library
             %   would be gone from the GUI itself after a restart.
             p = data.Library.userPath();
             d = data.Library.dropInPath();
+            note = strings(1, 0);
+            try
+                data.Library.syncShipped(d);
+            catch err
+                % A folder that cannot be written (offline, read-only)
+                % must not stop the tool: the copies already there, or the
+                % shipped values, still load.
+                note = "Could not update the shipped copies in " + d + ": " + ...
+                    string(err.message);
+            end
             if isfile(p)
                 obj = data.Library.load(p, DropIn=d);
             else
                 obj = data.Library.load(DropIn=d);
             end
+            obj.LoadWarnings = [note, obj.LoadWarnings];
+        end
+
+        function report = syncShipped(folder)
+            %SYNCSHIPPED  Keep a copy of every shipped entry in the user's folder.
+            %   report = data.Library.syncShipped(folder) copies each shipped
+            %   file (+data/library/<category>/*.json) to
+            %   folder/<category>/, so the whole library lives in one place
+            %   the analyst can read and edit. The rule, per file:
+            %     missing from folder         -> copied (a deleted file
+            %                                    comes back, so a case that
+            %                                    uses the part still opens)
+            %     unchanged since last copied -> replaced by the shipped
+            %                                    version, so a correction in
+            %                                    a new release arrives
+            %     changed by the analyst      -> KEPT. Never overwritten.
+            %   "Last copied" is recorded in folder/shipped_manifest.json,
+            %   one entry per file with the exact text written. A file the
+            %   manifest does not know (already there before the first
+            %   copy) counts as the analyst's and is kept.
+            %   report has fields Copied, Updated, Kept (relative paths).
+            %
+            %   Cheap when nothing shipped has changed: the manifest records
+            %   the shipped folder's signature, and only missing files are
+            %   copied until that signature moves.
+            arguments
+                folder (1,1) string
+            end
+            report = struct('Copied', strings(1, 0), 'Updated', strings(1, 0), ...
+                'Kept', strings(1, 0));
+            shipped = dir(fullfile(data.Library.defaultPath(), "*", "*.json"));
+            sig = strjoin(string({shipped.name}) + compose("@%.9f:%d", ...
+                [shipped.datenum]', [shipped.bytes]')', "|");
+
+            mfile = fullfile(folder, "shipped_manifest.json");
+            known = containers.Map('KeyType', 'char', 'ValueType', 'any');
+            oldSig = "";
+            if isfile(mfile)
+                try
+                    m = jsondecode(fileread(mfile));
+                    oldSig = string(m.signature);
+                    for k = 1:numel(m.files)
+                        known(char(m.files(k).path)) = string(m.files(k).text);
+                    end
+                catch
+                    known = containers.Map('KeyType', 'char', 'ValueType', 'any');
+                    oldSig = "";
+                end
+            end
+            full = oldSig ~= sig;
+
+            changed = false;
+            for i = 1:numel(shipped)
+                [~, c] = fileparts(shipped(i).folder);
+                rel = string(c) + "/" + shipped(i).name;
+                dst = fullfile(folder, c, shipped(i).name);
+                if isfile(dst) && ~full
+                    continue
+                end
+                txt = string(fileread(fullfile(shipped(i).folder, shipped(i).name)));
+                if ~isfile(dst)
+                    data.Library.writeTextFile(dst, txt);
+                    known(char(rel)) = txt;
+                    report.Copied(end + 1) = rel;
+                    changed = true;
+                    continue
+                end
+                mine = string(fileread(dst));
+                if mine == txt
+                    if ~isKey(known, char(rel)) || known(char(rel)) ~= txt
+                        known(char(rel)) = txt;
+                        changed = true;
+                    end
+                elseif isKey(known, char(rel)) && known(char(rel)) == mine
+                    data.Library.writeTextFile(dst, txt);
+                    known(char(rel)) = txt;
+                    report.Updated(end + 1) = rel;
+                    changed = true;
+                else
+                    report.Kept(end + 1) = rel;
+                end
+            end
+            if changed || full
+                k = string(keys(known));
+                files = struct('path', cellstr(k), 'text', ...
+                    cellfun(@(x) char(known(x)), cellstr(k), 'UniformOutput', false));
+                data.Library.writeTextFile(mfile, string(jsonencode(struct( ...
+                    'signature', sig, 'files', files), PrettyPrint=true)));
+            end
+        end
+
+        function n = shippedFileNames(category)
+            %SHIPPEDFILENAMES  File names of the shipped entries in a category.
+            d = dir(fullfile(data.Library.defaultPath(), category, "*.json"));
+            n = string({d.name});
         end
 
         function p = userPath()
@@ -1108,6 +1216,36 @@ classdef Library
     end
 
     methods (Access = private)
+        function obj = applyUserCopies(obj, folder)
+            %APPLYUSERCOPIES  The analyst's copies of shipped files win.
+            %   For each shipped file with a copy in folder/<category>/,
+            %   a copy that differs from the shipped text replaces that
+            %   entry. The engineer owns these files, so the values are
+            %   used as written; only a copy that cannot be read, or whose
+            %   key now collides with another entry, keeps the shipped
+            %   values, with the reason in LoadWarnings.
+            [ops, warns] = data.Library.readUserCopies(folder);
+            obj.LoadWarnings = [obj.LoadWarnings, warns];
+            for k = 1:numel(ops)
+                list = obj.(ops(k).Prop);
+                keys = data.Library.keyList(list);
+                idx = find(keys == ops(k).Was, 1);
+                if isempty(idx)
+                    continue
+                end
+                e = ops(k).Entry;
+                if string(e.key) ~= ops(k).Was && any(keys == string(e.key))
+                    obj.LoadWarnings(end+1) = sprintf( ...
+                        "%s renames %s to %s, which is already taken; shipped values used.", ...
+                        ops(k).File, ops(k).Was, string(e.key));
+                    continue
+                end
+                e.origin = "baseline";
+                list{idx} = e;
+                obj.(ops(k).Prop) = list;
+            end
+        end
+
         function obj = addDropIns(obj, folder)
             %ADDDROPINS  Load folder/<category>/*.json as origin "dropin".
             %   Each file holds ONE entry object or an ARRAY of entries, so a
@@ -1125,6 +1263,10 @@ classdef Library
             cats = data.Library.dropInCategories();
             for c = cats
                 files = dir(fullfile(folder, c, "*.json"));
+                % The copies of shipped files are not drop-ins:
+                % applyUserCopies has already put them in the library.
+                files = files(~ismember(string({files.name}), ...
+                    data.Library.shippedFileNames(c)));
                 [~, order] = sort(string({files.name}));
                 for f = files(order)'
                     file = fullfile(f.folder, f.name);
@@ -1182,6 +1324,70 @@ classdef Library
     end
 
     methods (Static, Access = private)
+        function writeTextFile(file, txt)
+            d = fileparts(file);
+            if ~isfolder(d)
+                mkdir(d);
+            end
+            fid = fopen(file, 'w', 'n', 'UTF-8');
+            if fid < 0
+                error("data:Library:writeFailed", "Could not write %s.", file);
+            end
+            closer = onCleanup(@() fclose(fid)); %#ok<NASGU>
+            fprintf(fid, '%s', txt);
+        end
+
+        function [ops, warns] = readUserCopies(folder)
+            %READUSERCOPIES  The edited copies of shipped files, decoded.
+            %   Cached on both folders' listings (names, dates, sizes): the
+            %   GUI tests build an app per method and would otherwise
+            %   re-read every copy and every shipped file each time.
+            persistent cache
+            base = data.Library.defaultPath();
+            mine = dir(fullfile(folder, "*", "*.json"));
+            ship = dir(fullfile(base, "*", "*.json"));
+            sig = string(folder) + "#" + strjoin([ ...
+                string({mine.folder}) + "/" + string({mine.name}) + ...
+                compose("@%.9f:%d", [mine.datenum]', [mine.bytes]')', ...
+                string({ship.name}) + compose("@%.9f:%d", [ship.datenum]', [ship.bytes]')'], "|");
+            if ~isempty(cache) && cache.sig == sig
+                ops = cache.ops;
+                warns = cache.warns;
+                return
+            end
+            props = dictionary(["materials" "bolts" "boltSpecs" "nuts" "washers" "inserts"], ...
+                ["Materials" "Bolts" "BoltSpecs" "Nuts" "Washers" "Inserts"]);
+            ops = struct('Prop', {}, 'Was', {}, 'Entry', {}, 'File', {});
+            warns = strings(1, 0);
+            for c = data.Library.dropInCategories()
+                for name = data.Library.shippedFileNames(c)
+                    f = fullfile(folder, c, name);
+                    if ~isfile(f)
+                        continue
+                    end
+                    shippedText = string(fileread(fullfile(base, c, name)));
+                    txt = string(fileread(f));
+                    if txt == shippedText
+                        continue
+                    end
+                    rel = c + "/" + name;
+                    try
+                        e = jsondecode(txt);
+                        if ~isstruct(e) || ~isscalar(e) || ~isfield(e, "key")
+                            error("data:Library:badCopy", "not a single entry with a key");
+                        end
+                    catch err
+                        warns(end+1) = sprintf( ...
+                            "%s could not be read, shipped values used: %s", rel, err.message); %#ok<AGROW>
+                        continue
+                    end
+                    was = string(getfield(jsondecode(shippedText), "key")); %#ok<GFLD>
+                    ops(end+1) = struct('Prop', props(c), 'Was', was, 'Entry', e, 'File', rel); %#ok<AGROW>
+                end
+            end
+            cache = struct("sig", sig, "ops", ops, "warns", warns);
+        end
+
         function raw = readFolder(folder)
             %READFOLDER  Baseline folder -> the raw struct a single library file gives.
             %   folder/library.json is the header (schemaVersion, description,

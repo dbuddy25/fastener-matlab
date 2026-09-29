@@ -88,6 +88,14 @@ end
 
 fprintf("runTests(""%s""): %d of %d files\n", scope, numel(pick), numel(names));
 
+% A throwaway user-data folder for the run (data.userDataFolder reads
+% this), so the app's startup copy of the shipped library, and every
+% save a test makes, lands there and never in the real user's folder.
+sandbox = string(tempname);
+previous = getenv("FASTENER_TOOL_DATA_FOLDER");
+setenv("FASTENER_TOOL_DATA_FOLDER", sandbox);
+restore = onCleanup(@() restoreDataFolder(previous, sandbox)); %#ok<NASGU>
+
 t0      = tic;
 results = runSuite(cellstr(fullfile(testDir, pick)));
 elapsed = toc(t0);
@@ -103,6 +111,13 @@ if ~strcmpi(scope, "all")
 end
 
 printFailureDetail(results);
+end
+
+function restoreDataFolder(previous, sandbox)
+setenv("FASTENER_TOOL_DATA_FOLDER", previous);
+if isfolder(sandbox)
+    rmdir(sandbox, 's');
+end
 end
 
 % ---- The runner -------------------------------------------------------------
