@@ -21,10 +21,10 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     % ONE APP PER CLASS, RESET PER TEST. Building the app and this page is
     % most of this file's runtime, so it is built once and each test starts
     % from File > New's own reset (AppState.newCase), the shipped library,
-    % an empty status bar and the groups as build() left them. A test that
-    % raises a dialog dismisses it itself: one left open blocks every
-    % gesture in the tests after it. A test that needs a truly fresh app
-    % builds its own.
+    % an empty status bar, the groups as build() left them and the page
+    % scrolled to the top. A test that raises a dialog dismisses it itself:
+    % one left open blocks every gesture in the tests after it. A test that
+    % needs a truly fresh app builds its own.
     methods (TestClassSetup)
         function launchAppOnce(testCase)
             testDir = fileparts(mfilename("fullpath"));   % .../matlab/tests
@@ -48,7 +48,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             s.newCase();
             testCase.App.setStatus("");
             testCase.App.navigateTo("JointConfig");
-            testCase.Page.resetGroups();
+            testCase.Page.resetView();
         end
     end
 

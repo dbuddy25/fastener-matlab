@@ -151,11 +151,16 @@ classdef (Abstract) Page < handle
             gui.Page.setGroupCollapsed(g.Grid, g.Header, g.Body, g.Title, false);
         end
 
-        function resetGroups(obj)
-            %RESETGROUPS  Fold every collapsible group back to how build()
-            %   left it. For tests that reuse one app across methods.
+        function resetView(obj)
+            %RESETVIEW  Fold every collapsible group back to how build()
+            %   left it and scroll back to the top. For tests that reuse one
+            %   app across methods: a gesture outside the viewport fails.
             for g = obj.Groups
                 gui.Page.setGroupCollapsed(g.Grid, g.Header, g.Body, g.Title, g.StartCollapsed);
+            end
+            grids = findall(obj.Root, 'Type', 'uigridlayout', 'Scrollable', 'on');
+            for k = 1:numel(grids)
+                scroll(grids(k), 'top');
             end
         end
 
