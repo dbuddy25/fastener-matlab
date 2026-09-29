@@ -45,14 +45,43 @@ opts.MinimumMatlabRelease = "R2023a";
 opts.ToolboxFiles = shippedFiles(src);
 opts.OutputFile = file;
 matlab.addons.toolbox.packageToolbox(opts);
+checkPackage(file, src);
 fprintf("Built %s\n", file);
+end
+
+function checkPackage(file, src)
+% Fail the build, not the colleague: every shipped library, template and
+% user guide file must be inside the .mltbx (a zip), counted against the
+% source folders.
+tmp = string(tempname);
+cleanup = onCleanup(@() rmdir(tmp, 's'));
+inside = replace(string(unzip(file, tmp)), "\", "/");
+need = ["+data/library/materials", "+data/library/bolts", "+data/library/nuts", ...
+        "+data/library/washers", "+data/library/inserts", "+data/library/boltSpecs", ...
+        "templates", "userguide", "calcmap"];
+bad = strings(0, 1);
+for n = need
+    want = numel(dir(fullfile(src, n, "*.*"))) - 2;   % minus . and ..
+    got = nnz(contains(inside, "/" + n + "/"));
+    if got < want
+        bad(end + 1) = sprintf("%s: %d of %d files", n, got, want); %#ok<AGROW>
+    end
+end
+if ~isfile(fullfile(src, "+data", "library", "library.json")) || ...
+        ~any(endsWith(inside, "/+data/library/library.json"))
+    bad(end + 1) = "+data/library/library.json missing";
+end
+if ~isempty(bad)
+    error("packageToolbox:missingFiles", ...
+        "The .mltbx is missing files it must ship:\n  %s", strjoin(bad, newline + "  "));
+end
 end
 
 function f = shippedFiles(src)
 % Every file under src except the developer-only ones.
 d = dir(fullfile(src, "**", "*"));
 d = d(~[d.isdir]);
-f = string(fullfile({d.folder}, {d.name}))';
+f = string({d.folder})' + filesep + string({d.name})';
 rel = replace(extractAfter(f, strlength(string(src)) + 1), "\", "/");
 devOnly = startsWith(rel, ["tests/", "tools/", "+testing/", "+validation/"]) | ...
     rel == "runTests.m" | startsWith(string({d.name})', ".") | endsWith(rel, ".asv");
