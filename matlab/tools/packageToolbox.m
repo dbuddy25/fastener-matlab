@@ -42,6 +42,11 @@ opts.Summary = "NASA-STD-5020B bolted-joint margins of safety, single joint and 
 opts.Description = "Run fastenerTool to open the app. Help > User Guide covers every page.";
 % uihtml's sendEventToMATLAB (Calculation Map, R2023a) is the newest API used.
 opts.MinimumMatlabRelease = "R2023a";
+% The release fingerprint (toolIntegrity) ships inside the package and is
+% removed from the checkout afterwards: there, edits are the point.
+toolIntegrity(Write=true, Root=string(src));
+fingerprint = fullfile(src, "integrity.json");
+removeFingerprint = onCleanup(@() delete(fingerprint)); %#ok<NASGU>
 opts.ToolboxFiles = shippedFiles(src);
 opts.OutputFile = file;
 matlab.addons.toolbox.packageToolbox(opts);
@@ -66,6 +71,9 @@ for n = need
     if got < want
         bad(end + 1) = sprintf("%s: %d of %d files", n, got, want); %#ok<AGROW>
     end
+end
+if ~any(endsWith(inside, "/integrity.json"))
+    bad(end + 1) = "integrity.json (the release fingerprint) missing";
 end
 if ~isfile(fullfile(src, "+data", "library", "library.json")) || ...
         ~any(endsWith(inside, "/+data/library/library.json"))

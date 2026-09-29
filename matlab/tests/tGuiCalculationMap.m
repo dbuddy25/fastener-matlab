@@ -4,8 +4,8 @@ classdef tGuiCalculationMap < matlab.uitest.TestCase
     %   Run from the matlab/ folder with:
     %       runTests("GuiCalculationMap")
     %
-    %   Nothing here clicks an equation: that opens the MATLAB editor. The
-    %   click resolves through linkFor, which is checked against the file.
+    %   A click resolves through linkFor, which is checked against the
+    %   file, and shows the file read-only in the Source window (openLink).
 
     properties
         App
@@ -59,6 +59,25 @@ classdef tGuiCalculationMap < matlab.uitest.TestCase
             testCase.choose(v.layoutDropDown(), 'Top to bottom');
             ev = tGuiCalculationMap.waitForRender(v);
             testCase.verifyTrue(startsWith(ev, "rendered"), ev);
+        end
+
+        function aClickShowsTheCodeReadOnlyAtItsLine(testCase)
+            % Never the MATLAB editor: an editable copy of the installed
+            % engine one click from every user is how an equation gets
+            % changed with nothing on record.
+            v = testCase.App.showCalculationMap("Slip");
+            k = v.linkFor("F1E1");
+            testCase.assertNotEmpty(k);
+            v.openLink("F1E1");
+            s = v.shownSource();
+            testCase.verifyEqual(s.File, string(k.File));
+            testCase.verifyEqual(s.Line, k.Line);
+            fig = v.sourceFigure();
+            testCase.verifySubstring(string(fig.Name), "read-only");
+
+            v.openLink("F1");
+            testCase.verifySameHandle(v.sourceFigure(), fig, ...
+                'A second click reuses the Source window.');
         end
 
         function aSecondOpenReusesTheWindow(testCase)

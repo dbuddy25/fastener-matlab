@@ -49,6 +49,7 @@ classdef FastenerApp < handle
     end
 
     properties (Access = private)
+        CodeModified (1,1) logical = false   % toolIntegrity at startup
         % Layout
         RailGrid
         CardGrid
@@ -137,6 +138,19 @@ classdef FastenerApp < handle
                     'saving is disabled until this is fixed.'];
                 uialert(app.Fig, char(app.State.LibraryLoadError), ...
                     'Library not loaded');
+            end
+
+            % An edited engine changes every margin with nothing on record.
+            % Checked once, here; the title keeps saying so all session.
+            [st, ~, txt] = toolIntegrity();
+            app.CodeModified = st == "modified";
+            if app.CodeModified
+                app.updateTitle();
+                uialert(app.Fig, sprintf(['The calculation code differs from ' ...
+                    'the release that was installed:\n\n%s\n\nMargins from ' ...
+                    'this copy are not the released tool''s. Every export says ' ...
+                    'so. Reinstall the toolbox to restore it.'], txt), ...
+                    'Calculation code modified', 'Icon', 'warning');
             end
         end
 
@@ -713,14 +727,16 @@ classdef FastenerApp < handle
             %   States the check scope accurately: this dialog's whole job
             %   is telling the analyst what the tool covers, so a stale
             %   claim here is worse than one anywhere else in the app.
+            [~, ~, code] = toolIntegrity();
             msg = sprintf([ ...
                 'Fastener Analysis Tool (MATLAB) v%s\n' ...
                 'NASA-STD-5020B bolted-joint margins.\n\n' ...
                 'Displays all 15 checks the engine computes: 14 margin ' ...
                 'rows plus the Fig. 8 separation-before-rupture gate, ' ...
                 'which selects a branch rather than carrying a margin.\n\n' ...
-                'Case files: JSON, format "%s".'], ...
-                toolVersion(), app.State.CaseFormat);
+                'Case files: JSON, format "%s".\n\n' ...
+                'Calculation code: %s'], ...
+                toolVersion(), app.State.CaseFormat, code);
             uialert(app.Fig, msg, 'About — Fastener Analysis Tool', 'Icon', 'info');
         end
 
@@ -953,6 +969,9 @@ classdef FastenerApp < handle
             end
             if app.State.IsDirty
                 t = ['* ' t];
+            end
+            if app.CodeModified
+                t = [t ' — MODIFIED CALCULATION CODE'];
             end
             app.Fig.Name = t;
         end

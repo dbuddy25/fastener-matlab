@@ -5,8 +5,9 @@ arguments
     notes (1,:) string = string.empty(1, 0)
 end
 [pItem, pValue] = report.projectRows(project);
-item  = ["Tool"; "Version"; "Generated"; "Standard"; pItem];
-value = ["Fastener Analysis Tool"; toolVersion(); ...
+[~, ~, code] = toolIntegrity();
+item  = ["Tool"; "Version"; "Calculation code"; "Generated"; "Standard"; pItem];
+value = ["Fastener Analysis Tool"; toolVersion(); code; ...
          string(datetime("now", "Format", "yyyy-MM-dd HH:mm")); ...
          "NASA-STD-5020B"; pValue];
 for k = 1:numel(notes)

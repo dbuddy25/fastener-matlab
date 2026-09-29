@@ -330,7 +330,7 @@ classdef ResultsPage < gui.Page
             obj.CalcButton.Layout.Column = 5;
             obj.CalcButton.Tooltip = ['Open the Calculation Map at the ' ...
                 'selected check: every function and equation behind it, ' ...
-                'each clickable to open the code at that line.'];
+                'each clickable to show the code at that line.'];
         end
 
         function onShowCalculation(obj)

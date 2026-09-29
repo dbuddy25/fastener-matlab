@@ -4,7 +4,9 @@ classdef CalculationMapView < handle
     %   raises it rather than opening a second, and closes it with the app.
     %   The map comes from engine.calculationMap, built from the code each
     %   time a check is shown; this class only draws it. Clicking an
-    %   equation opens its file in the MATLAB editor at that line.
+    %   equation shows its file, read-only, in a Source window scrolled to
+    %   that line. NOT the MATLAB editor: that would put an editable,
+    %   saveable copy of the installed engine one click from every user.
     %
     %   Drawn by Mermaid (bundled in matlab/calcmap, so it works offline)
     %   inside a uihtml panel.
@@ -17,6 +19,9 @@ classdef CalculationMapView < handle
         Links = struct('Id', {}, 'File', {}, 'Line', {})
         Check (1,1) string = ""
         LastEvent (1,1) string = ""
+        SourceFig                   % the read-only Source window, reused
+        SourceHtml
+        Shown = struct('File', "", 'Line', 0)
     end
 
     methods
@@ -38,6 +43,27 @@ classdef CalculationMapView < handle
             if ~isempty(obj.Fig) && isvalid(obj.Fig)
                 delete(obj.Fig);
             end
+            if ~isempty(obj.SourceFig) && isvalid(obj.SourceFig)
+                delete(obj.SourceFig);
+            end
+        end
+
+        function openLink(obj, id)
+            %OPENLINK  Show the file and line a node id points to, read-only.
+            k = obj.linkFor(id);
+            if isempty(k)
+                return
+            end
+            obj.showSource(k.File, k.Line);
+        end
+
+        function s = shownSource(obj)
+            %SHOWNSOURCE  File and Line the Source window shows (test seam).
+            s = obj.Shown;
+        end
+
+        function f = sourceFigure(obj)
+            f = obj.SourceFig;
         end
 
         function c = currentCheck(obj)
@@ -94,9 +120,9 @@ classdef CalculationMapView < handle
                 'ItemsData', {'LR', 'TB'}, 'Value', 'LR', ...
                 'ValueChangedFcn', @(~, ~) obj.setCheck(obj.Check));
             obj.LayoutDropDown.Layout.Row = 1;  obj.LayoutDropDown.Layout.Column = 4;
-            hint = uilabel(g, 'Text', ['Click an equation to open it in the ' ...
-                'editor. Arrows run from a step to the function that uses it. ' ...
-                'Ctrl + wheel zooms.']);
+            hint = uilabel(g, 'Text', ['Click an equation to see its code ' ...
+                '(read-only). Arrows run from a step to the function that ' ...
+                'uses it. Ctrl + wheel zooms.']);
             hint.Layout.Row = 1;  hint.Layout.Column = 5;
             hint.FontColor = gui.palette('mutedText');
 
@@ -104,6 +130,26 @@ classdef CalculationMapView < handle
             obj.Html = uihtml(g, 'HTMLSource', fullfile(here, "calcmap", "index.html"), ...
                 'HTMLEventReceivedFcn', @(~, evt) obj.onHtmlEvent(evt));
             obj.Html.Layout.Row = 2;  obj.Html.Layout.Column = [1 5];
+        end
+
+        function showSource(obj, file, line)
+            if isempty(obj.SourceFig) || ~isvalid(obj.SourceFig)
+                obj.SourceFig = uifigure('Name', 'Source', ...
+                    'Position', [220 120 900 640]);
+                g = uigridlayout(obj.SourceFig, [1 1]);
+                g.Padding = [0 0 0 0];
+                here = fileparts(fileparts(mfilename("fullpath")));
+                obj.SourceHtml = uihtml(g, 'HTMLSource', ...
+                    fullfile(here, "calcmap", "source.html"));
+            else
+                figure(obj.SourceFig);
+            end
+            [~, name, ext] = fileparts(file);
+            obj.SourceFig.Name = char("Source — " + name + ext + " (read-only)");
+            lines = splitlines(string(fileread(file)));
+            obj.SourceHtml.Data = struct('title', char(name + ext), ...
+                'lines', {cellstr(lines)}, 'line', line);
+            obj.Shown = struct('File', string(file), 'Line', line);
         end
 
         function setCheck(obj, check)
@@ -134,10 +180,7 @@ classdef CalculationMapView < handle
             data = string(evt.HTMLEventData);
             obj.LastEvent = strtrim(name + " " + data);
             if name == "open"
-                k = obj.linkFor(data);
-                if ~isempty(k)
-                    opentoline(char(k.File), k.Line);
-                end
+                obj.openLink(data);
             end
         end
     end

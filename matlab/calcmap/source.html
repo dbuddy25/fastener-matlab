@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Source</title>
+<style>
+  html, body { height: 100%; margin: 0; background: #ffffff; color: #1c1c1e; }
+  body { display: flex; flex-direction: column;
+         font: 13px "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; }
+  #bar { padding: 6px 14px; border-bottom: 1px solid #c7c7cc; background: #f4f4f6; color: #444; }
+  #code { flex: 1; overflow: auto; margin: 0; padding: 8px 0;
+          font: 12.5px Consolas, "Cascadia Mono", Menlo, monospace; }
+  .ln { display: block; white-space: pre; padding: 0 14px 0 0; }
+  .ln::before { content: attr(data-n); display: inline-block; width: 4.5em;
+                padding-right: 1em; text-align: right; color: #8e8e93; }
+  .ln.hit { background: #fff3cd; }
+  .ln.cmt { color: #1f7a3a; }
+</style>
+</head>
+<body>
+<div id="bar">Read-only. The calculation code is not edited from the tool.</div>
+<pre id="code"></pre>
+<script>
+  function draw(H) {
+    var d = H.Data;
+    if (!d || !d.lines) { return; }
+    document.getElementById("bar").textContent = d.title + " (read-only)";
+    var pre = document.getElementById("code");
+    pre.textContent = "";
+    var hit = null;
+    var lines = Array.isArray(d.lines) ? d.lines : [d.lines];
+    for (var i = 0; i < lines.length; i++) {
+      var s = document.createElement("span");
+      s.className = "ln" + (/^\s*%/.test(lines[i]) ? " cmt" : "");
+      s.setAttribute("data-n", i + 1);
+      s.textContent = lines[i] === "" ? " " : lines[i];
+      if (i + 1 === d.line) { s.className += " hit"; hit = s; }
+      pre.appendChild(s);
+    }
+    if (hit) { hit.scrollIntoView({ block: "center" }); }
+  }
+  function setup(H) {
+    H.addEventListener("DataChanged", function () { draw(H); });
+    draw(H);
+  }
+</script>
+</body>
+</html>
