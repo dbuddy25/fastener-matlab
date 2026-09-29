@@ -1,6 +1,6 @@
 function captureUserGuideScreens()
 %CAPTUREUSERGUIDESCREENS  Screenshot every rail page into userguide/img/.
-%   Run from anywhere in MATLAB, before building the .exe:
+%   packageToolbox runs this first; to run it alone, from anywhere in MATLAB:
 %       captureUserGuideScreens
 %
 %   Each page is captured from a FRESH app holding the sample case (the
@@ -10,8 +10,8 @@ function captureUserGuideScreens()
 %   state is carried between captures. exportapp can take a minute or
 %   more per page.
 %
-%   The images are gitignored: they are build output, bundled by
-%   `mcc -a userguide`, and the guide hides any image that is missing.
+%   The images are gitignored: they are build output, packaged into the
+%   .mltbx, and the guide hides any image that is missing.
 
 here = fileparts(mfilename("fullpath"));          % .../matlab/tools
 src  = fileparts(here);                           % .../matlab

@@ -1,13 +1,27 @@
-function file = packageToolbox()
+function file = packageToolbox(args)
 %PACKAGETOOLBOX  Build the .mltbx a colleague installs with a double-click.
-%   file = packageToolbox() writes build/FastenerTool_v<version>.mltbx at
-%   the repo root and returns its path. See PACKAGING.md.
+%   file = packageToolbox() recaptures the user guide's screenshots
+%   (captureUserGuideScreens, several minutes), then writes
+%   build/FastenerTool_v<version>.mltbx at the repo root and returns its
+%   path. See PACKAGING.md.
+%   file = packageToolbox(Screens=false) keeps the screenshots already in
+%   userguide/img, for a quick rebuild when no page changed.
+%
+%   Recapturing by default means a release never ships screenshots of an
+%   older build: the images are gitignored, so nothing else keeps them in
+%   step with the pages.
 %
 %   The toolbox is the whole matlab/ folder: code, library, templates, the
-%   user guide (with its screenshots, if captureUserGuideScreens has been
-%   run on this machine), the Calculation Map, examples and tests. The
+%   user guide and its screenshots, the Calculation Map, examples and tests. The
 %   identifier stays fixed, so installing a newer version replaces the
 %   older one instead of sitting beside it.
+arguments
+    args.Screens (1,1) logical = true
+end
+if args.Screens
+    captureUserGuideScreens();
+end
+
 here = fileparts(mfilename("fullpath"));          % .../matlab/tools
 src  = fileparts(here);                           % .../matlab
 addpath(src);

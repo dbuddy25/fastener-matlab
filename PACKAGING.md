@@ -12,8 +12,8 @@ In MATLAB, from the repo's `matlab/` folder:
 rehash path                  % OneDrive: make sure MATLAB sees every file
 runTests                     % full suite green first
 addpath tools
-captureUserGuideScreens      % optional: puts screenshots in the guide
-packageToolbox
+packageToolbox               % recaptures the guide's screenshots first (minutes)
+% packageToolbox(Screens=false)  % quick rebuild, keeps the current screenshots
 ```
 
 Output: `build/FastenerTool_v0.7.0.mltbx` at the repo root (git-ignored).
