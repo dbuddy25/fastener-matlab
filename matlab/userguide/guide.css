@@ -123,6 +123,10 @@ th { background: var(--nav-bg); }
   color: var(--fg);
   padding: 0.6rem 0.9rem;
   margin: 1rem 0;
+  /* Hug the text: a one-line callout must not wrap at the 75ch reading
+     width that p carries. Long callouts still stop at the column edge. */
+  width: fit-content;
+  max-width: 100%;
 }
 
 h3 { margin: 1.4rem 0 0.2rem; font-size: 1rem; }
