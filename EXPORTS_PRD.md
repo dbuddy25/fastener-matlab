@@ -26,7 +26,7 @@ easy to understand at a glance. The current exports are calc-document dumps:
 | Bulk | A **Joint Summary** sheet (one row per joint, every reported margin) plus the full results sheet, both formatted |
 | Slide sheet layout | **Wide**: the margin table beside the key inputs |
 
-## 3. Single-joint Excel (Results → Export Table…)
+## 3. Single-joint Excel (Results → Export Excel…)
 
 | Sheet | Contents |
 |---|---|
@@ -43,7 +43,7 @@ Rules carried over:
 - A not-evaluated check shows `—` in amber, never blank (A1).
 - The verdict never says "all pass" while anything is not evaluated.
 
-## 4. Bulk Excel (Bulk Analysis → Export…)
+## 4. Bulk Excel (Bulk Analysis → Export Excel…)
 
 | Sheet | Contents |
 |---|---|

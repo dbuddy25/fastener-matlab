@@ -133,6 +133,7 @@ classdef ResultsPage < gui.Page
         StaleBanner
         ReportButton
         ExportButton
+        CsvButton
         CalcButton
         PreloadValues       % 1x5 gobjects, in PreloadRows order
         DesignLoadValues    % 1x4 gobjects, in DesignLoadRows order
@@ -238,6 +239,7 @@ classdef ResultsPage < gui.Page
             % future case-file load) does not carry. Disabled beats writing
             % a report about the wrong joint.
             obj.ExportButton.Enable = matlab.lang.OnOffSwitchState(hasResult);
+            obj.CsvButton.Enable    = matlab.lang.OnOffSwitchState(hasResult);
             obj.ReportButton.Enable = matlab.lang.OnOffSwitchState( ...
                 hasResult && ~isempty(obj.State.ResultInputs));
 
@@ -281,10 +283,10 @@ classdef ResultsPage < gui.Page
     methods (Access = private)
         function buildHeaderRow(obj, g, row)
             %BUILDHEADERROW  The scope-qualified verdict, and the cap toggle.
-            h = uigridlayout(g, [1 5]);
+            h = uigridlayout(g, [1 6]);
             h.Layout.Row    = row;
             h.Layout.Column = [1 2];
-            h.ColumnWidth   = {'1x', 'fit', 'fit', 'fit', 'fit'};
+            h.ColumnWidth   = {'1x', 'fit', 'fit', 'fit', 'fit', 'fit'};
             h.RowHeight     = {'fit'};
             h.Padding       = [0 0 0 0];
 
@@ -320,18 +322,27 @@ classdef ResultsPage < gui.Page
                 'and its citation - stamped with the tool version and the ' ...
                 'time of the run.'];
 
-            obj.ExportButton = uibutton(h, 'push', 'Text', 'Export Table...', ...
-                'ButtonPushedFcn', @(~, ~) obj.onExportTable());
+            % Two buttons, not one with a file-type filter: a CSV hidden
+            % in the save dialog's type list is one nobody finds.
+            obj.ExportButton = uibutton(h, 'push', 'Text', 'Export Excel...', ...
+                'ButtonPushedFcn', @(~, ~) obj.onExportTable("xlsx"));
             obj.ExportButton.Layout.Row    = 1;
             obj.ExportButton.Layout.Column = 4;
-            obj.ExportButton.Tooltip = ['Write the displayed checks to ' ...
-                '.xlsx or .csv. The scope statement travels with them, so ' ...
-                'the six computed-but-not-shown checks cannot be lost.'];
+            obj.ExportButton.Tooltip = ['Write a styled .xlsx: a slide-ready ' ...
+                'summary, every equation with its numbers, and the ' ...
+                'project details. The scope statement travels with it.'];
+
+            obj.CsvButton = uibutton(h, 'push', 'Text', 'Export CSV...', ...
+                'ButtonPushedFcn', @(~, ~) obj.onExportTable("csv"));
+            obj.CsvButton.Layout.Row    = 1;
+            obj.CsvButton.Layout.Column = 5;
+            obj.CsvButton.Tooltip = ['Write the displayed checks as a plain ' ...
+                '.csv, with the scope statement.'];
 
             obj.CalcButton = uibutton(h, 'push', 'Text', 'Show calculation', ...
                 'ButtonPushedFcn', @(~, ~) obj.onShowCalculation());
             obj.CalcButton.Layout.Row    = 1;
-            obj.CalcButton.Layout.Column = 5;
+            obj.CalcButton.Layout.Column = 6;
             obj.CalcButton.Tooltip = ['Open the Calculation Map at the ' ...
                 'selected check: every function and equation behind it, ' ...
                 'each clickable to open the code at that line.'];
@@ -379,7 +390,7 @@ classdef ResultsPage < gui.Page
             obj.setStatus(sprintf('Wrote %s', written));
         end
 
-        function onExportTable(obj)
+        function onExportTable(obj, kind)
             %ONEXPORTTABLE  The DISPLAYED checks, with the scope statement.
             %   Section 2: exports carry the same nine checks the page
             %   shows, and the statement naming the six that are computed
@@ -390,8 +401,11 @@ classdef ResultsPage < gui.Page
             if isempty(r)
                 return
             end
-            [f, p] = uiputfile({'*.xlsx', 'Excel workbook'; '*.csv', 'CSV'}, ...
-                'Export Table As', 'joint-margins.xlsx');
+            if kind == "csv"
+                [f, p] = uiputfile({'*.csv', 'CSV'}, 'Export CSV As', 'joint-margins.csv');
+            else
+                [f, p] = uiputfile({'*.xlsx', 'Excel workbook'}, 'Export Excel As', 'joint-margins.xlsx');
+            end
             if isequal(f, 0)
                 return
             end
@@ -1483,6 +1497,10 @@ classdef ResultsPage < gui.Page
 
         function b = exportButton(obj)
             b = obj.ExportButton;
+        end
+
+        function b = csvButton(obj)
+            b = obj.CsvButton;
         end
 
         function T = exportTable(obj)

@@ -140,7 +140,7 @@ pre-existing gap.
       then change the bolt count *without* re-analyzing, then Save PDF. The PDF
       must show the **analyzed** joint. (It uses `ResultInputs` by design; this
       is the check that proves it.)
-- [ ] **Results → Export Table...** as `.xlsx`. Open it: three sheets
+- [ ] **Results → Export Excel...**. Open it: three sheets
       (Results / Summary / About), headers, units and numbers intact.
 - [ ] Export again **over the same filename**. `report.exportResults` deletes
       the existing file first — confirm you get a clean new file, not a
@@ -175,7 +175,7 @@ pre-existing gap.
       Easiest via **Show in Single Joint Analysis** on a By Element row. They
       must agree — Bulk and Results share `MarginView` so they cannot drift, and
       this is the check that proves it.
-- [ ] **Export...** the bulk table. It exports the **complete** table, not the
+- [ ] **Export Excel...** the bulk table. It exports the **complete** table, not the
       filtered view — verify the row count in the success alert matches the
       unfiltered total, not what's on screen.
 - [ ] Edit any case field → Bulk goes stale, Export locks until re-run. (Known

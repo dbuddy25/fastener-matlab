@@ -49,7 +49,7 @@ Help → References lists them and can open the colleague's own copies.
 > 3. **Help → User Guide** explains every page. **? Help for this page** (status
 >    bar, bottom right) opens the section for the page you're on.
 > 4. Try a joint you know the answer to. Check the margins against your own
->    numbers, then **Export Table…** and **Save PDF Report…** on Results.
+>    numbers, then **Export Excel…** and **Save PDF Report…** on Results.
 > 5. Send back: anything wrong, anything confusing, and the version from
 >    **Help → About**.
 >

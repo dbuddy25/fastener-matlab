@@ -684,6 +684,7 @@ classdef tGuiResults < matlab.uitest.TestCase
         function bothActionsAreDisabledWithNothingToWrite(testCase)
             p = testCase.Page;
             testCase.verifyEqual(char(p.exportButton().Enable), 'off');
+            testCase.verifyEqual(char(p.csvButton().Enable), 'off');
             testCase.verifyEqual(char(p.reportButton().Enable), 'off');
         end
 
@@ -696,6 +697,7 @@ classdef tGuiResults < matlab.uitest.TestCase
 
             testCase.verifyEqual(char(p.exportButton().Enable), 'on', ...
                 'The table can always be written - it IS the Result.');
+            testCase.verifyEqual(char(p.csvButton().Enable), 'on');
             testCase.verifyEqual(char(p.reportButton().Enable), 'off', ...
                 'The PDF cannot, without the inputs behind the numbers.');
         end

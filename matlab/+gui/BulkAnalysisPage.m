@@ -47,6 +47,7 @@ classdef BulkAnalysisPage < gui.Page
 
         RunButton
         ExportButton
+        CsvButton
         JointFilter
         FailOnlyCheck
         SuppCheck
@@ -155,12 +156,12 @@ classdef BulkAnalysisPage < gui.Page
     % ---- Construction -----------------------------------------------------
     methods (Access = private)
         function buildToolbar(obj, parent, row)
-            tb = uigridlayout(parent, [1 8]);
+            tb = uigridlayout(parent, [1 9]);
             tb.Layout.Row    = row;
             tb.Layout.Column = 1;
             tb.RowHeight     = {'1x'};
-            tb.ColumnWidth   = {'fit', 'fit', 180, 'fit', 'fit', 'fit', ...
-                                '1x', 'fit'};
+            tb.ColumnWidth   = {'fit', 'fit', 'fit', 180, 'fit', 'fit', ...
+                                'fit', '1x', 'fit'};
             tb.Padding       = [0 0 0 0];
             tb.ColumnSpacing = 8;
 
@@ -171,19 +172,24 @@ classdef BulkAnalysisPage < gui.Page
             obj.RunButton.Tooltip = ['Analyze every mapped element against ' ...
                 'every imported load case (engine.analyzeBulk).'];
 
-            obj.ExportButton = uibutton(tb, 'Text', 'Export...', ...
-                'ButtonPushedFcn', @(~, ~) obj.onExport());
+            % Two buttons, not one with a file-type filter: a CSV hidden
+            % in the save dialog's type list is one nobody finds.
+            obj.ExportButton = uibutton(tb, 'Text', 'Export Excel...', ...
+                'ButtonPushedFcn', @(~, ~) obj.onExport("xlsx"));
             obj.ExportButton.Layout.Row = 1;  obj.ExportButton.Layout.Column = 2;
+            obj.CsvButton = uibutton(tb, 'Text', 'Export CSV...', ...
+                'ButtonPushedFcn', @(~, ~) obj.onExport("csv"));
+            obj.CsvButton.Layout.Row = 1;  obj.CsvButton.Layout.Column = 3;
 
             obj.JointFilter = uidropdown(tb, 'Items', {'All Joints'}, ...
                 'ValueChangedFcn', @(~, ~) obj.renderAfterFilter());
-            obj.JointFilter.Layout.Row = 1;  obj.JointFilter.Layout.Column = 3;
+            obj.JointFilter.Layout.Row = 1;  obj.JointFilter.Layout.Column = 4;
             obj.JointFilter.Tooltip = 'Narrow every tier to one joint (display only).';
 
             obj.FailOnlyCheck = uicheckbox(tb, 'Text', 'Failures Only', ...
                 'Value', true, ...
                 'ValueChangedFcn', @(~, ~) obj.onFailOnlyToggled());
-            obj.FailOnlyCheck.Layout.Row = 1;  obj.FailOnlyCheck.Layout.Column = 4;
+            obj.FailOnlyCheck.Layout.Row = 1;  obj.FailOnlyCheck.Layout.Column = 5;
             obj.FailOnlyCheck.Tooltip = ['On by default: nobody scans ' ...
                 'thousands of rows hunting a negative margin. Display ' ...
                 'only — the counts above and the export are unaffected.'];
@@ -191,7 +197,7 @@ classdef BulkAnalysisPage < gui.Page
             obj.SuppCheck = uicheckbox(tb, 'Text', 'Show Supplemental', ...
                 'Value', false, ...
                 'ValueChangedFcn', @(~, ~) obj.renderAfterFilter());
-            obj.SuppCheck.Layout.Row = 1;  obj.SuppCheck.Layout.Column = 5;
+            obj.SuppCheck.Layout.Row = 1;  obj.SuppCheck.Layout.Column = 6;
             obj.SuppCheck.Tooltip = ['Also show the TM-106943 columns ' ...
                 '(bearing, tearout, thread checks). A WIDTH concession, ' ...
                 'not a scope one — the counts include them either way, ' ...
@@ -200,7 +206,7 @@ classdef BulkAnalysisPage < gui.Page
             obj.CapCheck = uicheckbox(tb, 'Text', 'Cap MS > 5', ...
                 'Value', true, ...
                 'ValueChangedFcn', @(~, ~) obj.renderAfterFilter());
-            obj.CapCheck.Layout.Row = 1;  obj.CapCheck.Layout.Column = 6;
+            obj.CapCheck.Layout.Row = 1;  obj.CapCheck.Layout.Column = 7;
             obj.CapCheck.Tooltip = ['Display only — shows ">+5" so the eye ' ...
                 'lands on near-failure margins. Does not affect the ' ...
                 'analysis or the export.'];
@@ -208,7 +214,7 @@ classdef BulkAnalysisPage < gui.Page
             obj.DrillButton = uibutton(tb, ...
                 'Text', 'Show in Single Joint Analysis', ...
                 'ButtonPushedFcn', @(~, ~) obj.onDrillDown());
-            obj.DrillButton.Layout.Row = 1;  obj.DrillButton.Layout.Column = 8;
+            obj.DrillButton.Layout.Row = 1;  obj.DrillButton.Layout.Column = 9;
             obj.DrillButton.Tooltip = ['Select a row on By Element to ' ...
                 're-run that one element as a single joint and open it on ' ...
                 'the Results page.'];
@@ -527,12 +533,17 @@ classdef BulkAnalysisPage < gui.Page
         function renderEnables(obj)
             fresh = ~isempty(obj.State.BulkTable) && ~obj.State.BulkStale;
             obj.ExportButton.Enable = matlab.lang.OnOffSwitchState(fresh);
+            obj.CsvButton.Enable    = matlab.lang.OnOffSwitchState(fresh);
             if fresh
                 obj.ExportButton.Tooltip = ['Write the COMPLETE result ' ...
-                    'set. On-screen filters and the display cap never ' ...
-                    'narrow the export.'];
+                    'set as a styled .xlsx: a per-joint summary, every ' ...
+                    'row, and the project details. On-screen filters and ' ...
+                    'the display cap never narrow the export.'];
+                obj.CsvButton.Tooltip = ['Write the COMPLETE result set ' ...
+                    'as a plain .csv.'];
             else
                 obj.ExportButton.Tooltip = 'Run the bulk analysis first.';
+                obj.CsvButton.Tooltip    = 'Run the bulk analysis first.';
             end
             obj.DrillButton.Enable = matlab.lang.OnOffSwitchState( ...
                 fresh && ~isempty(obj.selectedElementRow()));
@@ -938,13 +949,16 @@ classdef BulkAnalysisPage < gui.Page
 
     % ---- Export and drill-down --------------------------------------------
     methods (Access = private)
-        function onExport(obj)
+        function onExport(obj, kind)
             T = obj.State.BulkTable;
             if isempty(T) || obj.State.BulkStale
                 return
             end
-            [f, p] = uiputfile({'*.xlsx', 'Excel workbook'; '*.csv', 'CSV'}, ...
-                'Export Bulk Results', 'bulk-margins.xlsx');
+            if kind == "csv"
+                [f, p] = uiputfile({'*.csv', 'CSV'}, 'Export Bulk CSV', 'bulk-margins.csv');
+            else
+                [f, p] = uiputfile({'*.xlsx', 'Excel workbook'}, 'Export Bulk Excel', 'bulk-margins.xlsx');
+            end
             if isequal(f, 0)
                 return
             end
@@ -1211,6 +1225,10 @@ classdef BulkAnalysisPage < gui.Page
 
         function b = exportButton(obj)
             b = obj.ExportButton;
+        end
+
+        function b = csvButton(obj)
+            b = obj.CsvButton;
         end
 
         function b = drillButton(obj)

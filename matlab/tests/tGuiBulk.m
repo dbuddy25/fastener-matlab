@@ -65,6 +65,7 @@ classdef tGuiBulk < matlab.uitest.TestCase
 
         function exportAndDrillDownAreOffUntilThereAreResults(testCase)
             testCase.verifyFalse(logical(testCase.Page.exportButton().Enable));
+            testCase.verifyFalse(logical(testCase.Page.csvButton().Enable));
             testCase.verifyFalse(logical(testCase.Page.drillButton().Enable));
         end
 
@@ -329,6 +330,7 @@ classdef tGuiBulk < matlab.uitest.TestCase
             testCase.App.State.markDirty();
 
             testCase.verifyFalse(logical(testCase.Page.exportButton().Enable));
+            testCase.verifyFalse(logical(testCase.Page.csvButton().Enable));
             testCase.verifyFalse(logical(testCase.Page.drillButton().Enable));
         end
 

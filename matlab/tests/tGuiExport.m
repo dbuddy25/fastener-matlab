@@ -1,5 +1,5 @@
 classdef tGuiExport < matlab.uitest.TestCase
-    %TGUIEXPORT  Results -> Export Table as the styled workbook.
+    %TGUIEXPORT  Results -> Export Excel, the styled workbook.
     %
     %   Run from the matlab/ folder with:
     %       runTests("GuiExport")
