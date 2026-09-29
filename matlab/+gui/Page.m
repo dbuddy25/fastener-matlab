@@ -143,12 +143,25 @@ classdef (Abstract) Page < handle
             %
             %   Substring, not exact: titles are long sentences here
             %   ("Flange stack (clamped layers only - ...)").
+            %
+            %   Also scrolls the group into view: an opened group the user
+            %   cannot see is not revealed, and a test gesture outside the
+            %   viewport errors.
             arguments
                 obj             (1,1) gui.Page
                 titleSubstring  (1,1) string
             end
             g = obj.groupNamed(titleSubstring);
             gui.Page.setGroupCollapsed(g.Grid, g.Header, g.Body, g.Title, false);
+            sc = g.Grid.Parent;
+            while ~isempty(sc) && ~isa(sc, 'matlab.ui.Figure')
+                if isa(sc, 'matlab.ui.container.GridLayout') && sc.Scrollable == "on"
+                    drawnow
+                    scroll(sc, g.Grid);
+                    break
+                end
+                sc = sc.Parent;
+            end
         end
 
         function resetView(obj)
