@@ -821,16 +821,18 @@ classdef tLibrary < matlab.unittest.TestCase
         end
 
         function aDropInCannotShadowAShippedPart(testCase)
-            % A dropped file silently replacing A286's allowables is the
-            % wrong default for a margins tool.
+            % A NEW file reusing A286's key must not replace its
+            % allowables. (Editing the copy of A286's own file does, by
+            % design: see anEditedCopyIsUsed. So this file must not carry
+            % the shipped file's name.)
             d = testCase.dropInFolder();
             e = testCase.sampleMaterial();  e.key = "A286";  e.ftu = 1;
-            testCase.writeJson(fullfile(d, "materials", "a286.json"), e);
+            testCase.writeJson(fullfile(d, "materials", "my-a286.json"), e);
 
             lib = data.Library.load(DropIn=d);
             testCase.verifyEqual(lib.material("A286").Ftu, 160000);
             testCase.verifyNumElements(lib.LoadWarnings, 1);
-            testCase.verifySubstring(lib.LoadWarnings(1), "a286.json");
+            testCase.verifySubstring(lib.LoadWarnings(1), "my-a286.json");
         end
 
         function aBadDropInIsSkippedAndTheGoodOneBesideItStillLoads(testCase)
