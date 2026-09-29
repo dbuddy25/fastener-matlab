@@ -215,11 +215,10 @@ classdef Library
 
         function p = userPath()
             %USERPATH  Where this installation's CUSTOM entries live.
-            %   fullfile(userpath, "fastener_library.json"), falling back to
-            %   prefdir() when userpath() is empty (not yet initialized on
-            %   this MATLAB install) — the same shape, and the same
-            %   fallback, as the user factor-presets file in
-            %   +data/private/userFactorPresetsPath.m.
+            %   fastener_library.json in data.userDataFolder(): userpath
+            %   by default (prefdir() when userpath() is empty), or the
+            %   folder the analyst chose. The factor presets resolve
+            %   through the same folder, so the two always move together.
             %
             %   WHY NOT THE INSTALL DIRECTORY. save() refuses to write the
             %   bundled seed, and a compiled standalone cannot reliably
@@ -230,21 +229,7 @@ classdef Library
             %   NOT USED AS A DEFAULT ARGUMENT ANYWHERE. Callers pass it
             %   explicitly, and tests pass a temp path instead, so a test
             %   run can never read or write the real user's library.
-            up = userpath();
-            if isempty(up) || strlength(string(up)) == 0
-                % PREFDIR, NOT THE INSTALL DIRECTORY. A file beside
-                % Library.m would be wrong twice over: from source it
-                % writes a user's private data into the repository, and in
-                % the packaged .exe that folder is under ctfroot --
-                % read-only under Program Files, or extracted fresh each
-                % run, so a saved custom library would either refuse to
-                % write or silently disappear. prefdir() is per-user and
-                % always writable, which is why gui.recentFiles already
-                % uses it.
-                p = string(fullfile(prefdir(), "fastener_library.json"));
-            else
-                p = string(fullfile(char(up), "fastener_library.json"));
-            end
+            p = string(fullfile(char(data.userDataFolder()), "fastener_library.json"));
         end
     end
 

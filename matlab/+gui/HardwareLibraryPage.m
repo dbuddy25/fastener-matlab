@@ -54,6 +54,8 @@ classdef HardwareLibraryPage < gui.Page
         AddButton
         DuplicateButton
         SaveButton
+        FolderButton                % Library Folder...: where user data lives
+        Unsaved      (1,1) logical = false   % added entries not yet saved
         Dialog                      % the add/duplicate form (its own uifigure)
         DialogFields = struct()     % field name -> control, while open
         DialogSpec                  % which section the open form is for
@@ -147,7 +149,7 @@ classdef HardwareLibraryPage < gui.Page
             bar.Layout.Row    = row;
             bar.Layout.Column = 1;
             bar.RowHeight     = {'1x'};
-            bar.ColumnWidth   = {50, 130, '1x', 'fit', 'fit', 'fit'};
+            bar.ColumnWidth   = {50, 130, '1x', 'fit', 'fit', 'fit', 'fit'};
             bar.Padding       = [0 0 0 0];
             bar.ColumnSpacing = 8;
 
@@ -189,6 +191,10 @@ classdef HardwareLibraryPage < gui.Page
                             'entries are never written.'], ...
                 'ButtonPushedFcn', @(~, ~) obj.onSave());
             obj.SaveButton.Layout.Row = 1;  obj.SaveButton.Layout.Column = 6;
+
+            obj.FolderButton = uibutton(bar, 'push', 'Text', 'Library Folder…', ...
+                'ButtonPushedFcn', @(~, ~) obj.onChooseFolder());
+            obj.FolderButton.Layout.Row = 1;  obj.FolderButton.Layout.Column = 7;
         end
 
         function buildSection(obj, spec)
@@ -337,6 +343,12 @@ classdef HardwareLibraryPage < gui.Page
             % write. A Save that writes a file containing nothing but the
             % header reads as "saved" and has saved nothing.
             obj.SaveButton.Enable = ok && obj.customCount() > 0;
+            obj.FolderButton.Tooltip = sprintf(['Where your custom entries, ' ...
+                'drop-in folders and factor presets live. Now: %s\n\nChoose ' ...
+                'another folder (a synced OneDrive one, say) to use the same ' ...
+                'library on several machines. Files are copied there only ' ...
+                'where none exists yet; nothing is overwritten or deleted.'], ...
+                data.userDataFolder());
         end
 
         function showLoadWarnings(obj)
@@ -456,9 +468,55 @@ classdef HardwareLibraryPage < gui.Page
                 uialert(obj.figureHandle(), err.message, 'Save failed');
                 return
             end
+            obj.Unsaved = false;
             obj.setStatus(sprintf('Saved %d custom entr%s to %s', ...
                 obj.customCount(), ...
                 gui.HardwareLibraryPage.plural(obj.customCount()), path));
+        end
+    end
+
+    % ---- Where the user data lives ------------------------------------------
+    methods (Access = private)
+        function onChooseFolder(obj)
+            %ONCHOOSEFOLDER  Move the library to a folder the analyst picks.
+            %   Copy, then switch, then reload. The copy never overwrites:
+            %   a synced folder another machine already filled keeps its
+            %   own files, and the old folder is left as it was.
+            fig = obj.figureHandle();
+            if obj.Unsaved
+                uialert(fig, ['Save Library first. Entries added since the ' ...
+                    'last save are only in memory and would not follow the ' ...
+                    'library to its new folder.'], 'Unsaved entries');
+                return
+            end
+            old = data.userDataFolder();
+            picked = uigetdir(char(old), 'Choose the library folder');
+            if isequal(picked, 0)
+                return
+            end
+            new = string(picked);
+            if strcmpi(new, old)
+                obj.setStatus(sprintf('The library already uses %s.', new));
+                return
+            end
+            try
+                [copied, kept] = data.copyUserData(old, new);
+                data.userDataFolder(new);
+            catch err
+                uialert(fig, err.message, 'Library folder not changed');
+                return
+            end
+            obj.State.loadLibrary();          % fires LibraryChanged
+            if ~obj.State.LibraryOK
+                uialert(fig, char(obj.State.LibraryLoadError), 'Library load failed');
+            end
+            msg = string(sprintf('Library folder is now %s. Copied %d file(s)', ...
+                new, numel(copied)));
+            if ~isempty(kept)
+                msg = msg + sprintf('; kept %d already there (%s)', ...
+                    numel(kept), strjoin(kept, ", "));
+            end
+            obj.setStatus(msg + sprintf('. %s is unchanged.', old));
         end
     end
 
@@ -641,6 +699,7 @@ classdef HardwareLibraryPage < gui.Page
             % and every dropdown that reads the library. Not markDirty:
             % the hardware library is not part of the case.
             obj.State.Library = lib;
+            obj.Unsaved = true;
             obj.setStatus(sprintf('Added %s "%s". Not saved yet — use Save Library.', ...
                 spec.Id, string(entry.key)));
         end
@@ -970,6 +1029,10 @@ classdef HardwareLibraryPage < gui.Page
 
         function b = saveButton(obj)
             b = obj.SaveButton;
+        end
+
+        function b = folderButton(obj)
+            b = obj.FolderButton;
         end
 
         function selectSection(obj, entityId)
