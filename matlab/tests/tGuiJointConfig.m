@@ -21,8 +21,10 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     % ONE APP PER CLASS, RESET PER TEST. Building the app and this page is
     % most of this file's runtime, so it is built once and each test starts
     % from File > New's own reset (AppState.newCase), the shipped library,
-    % no open dialog, an empty status bar and the groups as build() left
-    % them. A test that needs a truly fresh app builds its own.
+    % an empty status bar and the groups as build() left them. A test that
+    % raises a dialog dismisses it itself: one left open blocks every
+    % gesture in the tests after it. A test that needs a truly fresh app
+    % builds its own.
     methods (TestClassSetup)
         function launchAppOnce(testCase)
             testDir = fileparts(mfilename("fullpath"));   % .../matlab/tests
@@ -39,12 +41,6 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
     methods (TestMethodSetup)
         function resetApp(testCase)
-            for kind = ["uiconfirm", "uialert"]
-                try
-                    testCase.dismissDialog(char(kind), testCase.App.Fig);
-                catch
-                end
-            end
             s = testCase.App.State;
             if ~isequal(s.Library, testCase.BaseLibrary)
                 s.Library = testCase.BaseLibrary;
@@ -1198,11 +1194,11 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
         end
 
         function savingWithNoNameIsRefused(testCase)
-            % The refusal is a non-blocking uialert, so nothing needs
-            % dismissing - the teardown's figure delete takes it with the
-            % window. Asserting the library rather than driving the dialog
-            % keeps this testing the behaviour that matters.
+            % The refusal is a uialert. Asserting the library rather than
+            % driving the dialog keeps this testing the behaviour that
+            % matters; the alert is dismissed because the app is shared.
             testCase.press(testCase.Page.saveJointButton());
+            testCase.dismissDialog('uialert', testCase.App.Fig);
             testCase.verifyEmpty(testCase.App.State.JointLibrary, ...
                 'A nameless joint must not enter the library - it is the key.');
         end
@@ -1237,6 +1233,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
             testCase.type(p.jointNameField(), "jt-a");
             testCase.press(p.saveJointButton());
+            testCase.dismissDialog('uiconfirm', testCase.App.Fig);
 
             testCase.verifyNumElements(testCase.App.State.JointLibrary, 1, ...
                 'A case-only collision must ask, never silently duplicate.');
