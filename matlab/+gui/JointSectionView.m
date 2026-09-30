@@ -26,11 +26,12 @@ classdef JointSectionView < handle
     %   and the geometry in inches, so a label anchored at a 0.03 in washer
     %   overlaps its neighbours at any zoom. Every callout therefore sits
     %   in a column to the RIGHT of the section, one per row, spread apart
-    %   by spreadRows() and tied to its feature by a leader; dimensions
-    %   (grip, L, Lmin, Le) sit in columns to the LEFT, packed by
-    %   packColumns() so non-overlapping spans share a column. The only
-    %   pixel arithmetic in the file is frame(), which reserves room for
-    %   that text; the geometry itself never touches pixels.
+    %   by spreadRows() and tied to its feature by a leader; dimension
+    %   lines (grip, L, Lmin, Le) sit in columns to the LEFT, packed by
+    %   packColumns() so non-overlapping spans share a column, with their
+    %   values in spread rows beyond them. The only pixel arithmetic in
+    %   the file is frame(), which reserves room for that text from the
+    %   axes' real pixel size - so the window repaints on resize.
     %
     %   THREE DIMENSIONS IN THIS DRAWING ARE NOT DATA. The model carries no
     %   bolt head height, no head across-flats and no nut hex geometry, and
@@ -135,6 +136,9 @@ classdef JointSectionView < handle
                 return
             end
             obj.build();
+            % Lay the window out before the first paint: frame() reads the
+            % axes' pixel size, which is zeros until then.
+            drawnow;
             obj.redraw();
         end
 
@@ -195,6 +199,12 @@ classdef JointSectionView < handle
                 @(~, ~) obj.redraw());
 
             obj.Fig.CloseRequestFcn = @(~, ~) obj.onClose();
+            % Row spacing is in data units derived from the pixel size, so
+            % a resize changes the answer. AutoResizeChildren must be off
+            % for a uifigure to take a SizeChangedFcn; the grid still lays
+            % its children out.
+            obj.Fig.AutoResizeChildren = 'off';
+            obj.Fig.SizeChangedFcn     = @(~, ~) obj.redraw();
         end
 
         function onClose(obj)
@@ -396,10 +406,11 @@ classdef JointSectionView < handle
             W  = ip(3);
             H  = ip(4);
             if ~isfinite(W) || ~isfinite(H) || W < 80 || H < 80
-                % Not laid out yet (hidden figure, first paint). Assume the
-                % window's opening size less the margins.
-                W = 560;
-                H = 600;
+                % Not laid out yet (hidden figure). Estimate from the window:
+                % grid padding, the y-axis rule and labels, the note row.
+                fp = obj.Fig.Position;
+                W  = max(fp(3) - 16 - 70, 200);
+                H  = max(fp(4) - 16 - 60, 200);
             end
             fontPx = gui.JointSectionView.AnnotFontSize * gui.JointSectionView.PxPerPoint;
 
@@ -409,25 +420,28 @@ classdef JointSectionView < handle
             end
             nDims  = numel(g.Dims);
             nCols  = 0;
+            dimChars = 0;
             if nDims > 0
-                nCols = max(gui.JointSectionView.packColumns([g.Dims.Y0], [g.Dims.Y1]));
+                nCols    = max(gui.JointSectionView.packColumns([g.Dims.Y0], [g.Dims.Y1]));
+                dimChars = max(strlength([g.Dims.Text]));
             end
 
             leader = 0.35 * g.Scale;
             xl     = g.XLim;
             yr     = diff(g.YLim);
             s      = min(W / diff(xl), H / yr);          % px per inch
+            colGap = 0.18 * g.Scale;
             for pass = 1:3
                 textW  = gui.JointSectionView.CharWidthFactor * fontPx * maxChars / s;
+                dimW   = gui.JointSectionView.CharWidthFactor * fontPx * dimChars / s;
                 textH  = 1.2 * fontPx / s;
-                colGap = textH + 0.12 * g.Scale;
                 right  = g.XLim(2);
                 if maxChars > 0
                     right = g.XLim(2) + leader + textW + 0.10 * g.Scale;
                 end
                 left = g.XLim(1);
                 if nCols > 0
-                    left = g.XLim(1) - 0.10 * g.Scale - nCols * colGap - textH;
+                    left = g.XLim(1) - 0.10 * g.Scale - nCols * colGap - dimW - 0.10 * g.Scale;
                 end
                 xl = [left right];
                 s  = min(W / diff(xl), H / yr);
@@ -469,28 +483,37 @@ classdef JointSectionView < handle
 
         function paintDims(obj, g, fr)
             %PAINTDIMS  The left-hand dimension ladder.
-            %   Drafting-style: a line with end ticks, the value written
-            %   along it. Spans that do not overlap share a column, so
-            %   grip and Le sit together and L / Lmin step outward.
+            %   Drafting-style lines with end ticks, packed into columns so
+            %   spans that do not overlap share one. The values are
+            %   horizontal text in rows to the left of the columns - spread
+            %   apart like the callouts, since a value is often longer than
+            %   the span it measures - each tied to its line by a leader.
             if isempty(g.Dims)
                 return
             end
-            cols = gui.JointSectionView.packColumns([g.Dims.Y0], [g.Dims.Y1]);
-            tick = 0.06 * g.Scale;
+            cols  = gui.JointSectionView.packColumns([g.Dims.Y0], [g.Dims.Y1]);
+            nCols = max(cols);
+            tick  = 0.06 * g.Scale;
+            mids  = ([g.Dims.Y0] + [g.Dims.Y1]) / 2;
+            rows  = gui.JointSectionView.spreadRows(mids, fr.RowH, ...
+                g.YLim(1) + fr.RowH / 2, g.YLim(2) - fr.RowH / 2);
+            xText = fr.DimX0 - (nCols - 1) * fr.ColGap - 0.10 * g.Scale;
             for k = 1:numel(g.Dims)
                 d = g.Dims(k);
-                x = fr.DimX0 - (cols(k) - 1) * fr.ColGap - fr.TextH;
+                x = fr.DimX0 - (cols(k) - 1) * fr.ColGap;
                 plot(obj.Ax, [x x], [d.Y0 d.Y1], d.LineStyle, ...
                     'Color', d.Color, 'LineWidth', 0.75);
                 plot(obj.Ax, [x - tick, x + tick], [d.Y0 d.Y0], '-', ...
                     'Color', d.Color, 'LineWidth', 0.75);
                 plot(obj.Ax, [x - tick, x + tick], [d.Y1 d.Y1], '-', ...
                     'Color', d.Color, 'LineWidth', 0.75);
-                text(obj.Ax, x - 0.02 * g.Scale, (d.Y0 + d.Y1) / 2, char(d.Text), ...
+                plot(obj.Ax, [x - tick, xText + 0.03 * g.Scale], [mids(k), rows(k)], '-', ...
+                    'Color', obj.LeaderColour, 'LineWidth', 0.5);
+                text(obj.Ax, xText, rows(k), char(d.Text), ...
                     'FontSize', gui.JointSectionView.AnnotFontSize, ...
                     'Color', d.Color, 'Interpreter', 'none', ...
-                    'Rotation', 90, 'HorizontalAlignment', 'center', ...
-                    'VerticalAlignment', 'bottom', 'Clipping', 'off');
+                    'HorizontalAlignment', 'right', ...
+                    'VerticalAlignment', 'middle', 'Clipping', 'off');
             end
         end
     end
