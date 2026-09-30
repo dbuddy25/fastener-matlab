@@ -801,7 +801,29 @@ alive beside the app, repainting on `JointChanged` as the form is edited.
 
 Draws a to-scale axial cross-section: head → washer → flanges (split left/right
 with the true clearance gap) → nut/insert/tapped host → shank at true length,
-plus centreline, per-flange labels and the loading-plane line.
+plus centreline, the compression frustum, the loading-plane line and every
+shear plane (flange/flange interfaces, and flange/parent for a threaded-in
+joint).
+
+**Text lives in ladders, never on the section.** Labels are sized in points
+and the geometry in inches, so a label anchored on a thin washer overlaps
+its neighbours at any zoom. Every callout (`washer (head), t = 0.030`,
+`flange 1, t = 0.200`, `frustum, 30°`, `shear plane: body`,
+`loading plane, n = 1.00`) sits in a column to the right, one per row,
+spread apart by `spreadRows()` and tied to its feature by a leader.
+Dimensions (`grip`, `Le`, `L`, `Lmin`) sit in columns to the left, packed by
+`packColumns()` so non-overlapping spans share a column. All numbers come
+from the model or `engine.boltLengthCheck`; `Lmin` turns red and the note
+says `Bolt short` when the engine finds the bolt inadequate.
+
+**Shear plane is a consistency flag, not an analysis.** `Joint.ShearPlane`
+is declared by the analyst and read by the engine as declared. The drawing
+labels each shear plane with the bolt section it actually cuts (`thread` or
+`body`, from `Length − ThreadLength`, or `BodyLengthInGrip` when set, since
+that is what `engine.stiffness` analyses) and turns the line amber with a
+note when that disagrees with the declaration. Eq. 20–23 use different
+exponents for the two conditions, so the disagreement is an engineering
+error. It never changes the declaration.
 
 **Useful, not decorative.** It catches exactly what the Joint Config form is
 prone to: a bolt too short for the stack, a washer wider than the flange, an

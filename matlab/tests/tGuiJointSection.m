@@ -62,7 +62,7 @@ classdef tGuiJointSection < matlab.uitest.TestCase
 
             labels = string({g.Bands.Label});
             testCase.verifyEqual(labels, ...
-                ["head washer", "flange 1", "flange 2", "nut washer", "nut"], ...
+                ["washer (head)", "flange 1", "flange 2", "washer (nut)", "nut"], ...
                 'The section must read in the order the joint stacks.');
         end
 
@@ -124,7 +124,7 @@ classdef tGuiJointSection < matlab.uitest.TestCase
             g = gui.JointSectionView.layout(j);
 
             testCase.verifyTrue(g.Bands(2).WidthAssumed);
-            testCase.verifyTrue(any(contains(g.Notes, "assumed widths")), ...
+            testCase.verifyTrue(any(contains(g.Notes, "edge distance")), ...
                 'An assumed width must be stated, not just drawn dashed.');
         end
 
@@ -148,7 +148,7 @@ classdef tGuiJointSection < matlab.uitest.TestCase
 
             g = gui.JointSectionView.layout(j);
 
-            testCase.verifyFalse(any(string({g.Bands.Label}) == "head washer"));
+            testCase.verifyFalse(any(string({g.Bands.Label}) == "washer (head)"));
         end
 
         function aThreadedInJointHasNoNutWasher(testCase)
@@ -161,9 +161,9 @@ classdef tGuiJointSection < matlab.uitest.TestCase
 
             g = gui.JointSectionView.layout(j);
 
-            testCase.verifyFalse(any(string({g.Bands.Label}) == "nut washer"), ...
+            testCase.verifyFalse(any(string({g.Bands.Label}) == "washer (nut)"), ...
                 'A nut washer on an insert joint contradicts the engine.');
-            testCase.verifyTrue(any(string({g.Bands.Label}) == "insert + parent"));
+            testCase.verifyTrue(any(string({g.Bands.Label}) == "insert, parent"));
         end
     end
 
@@ -298,7 +298,7 @@ classdef tGuiJointSection < matlab.uitest.TestCase
 
             g = gui.JointSectionView.layout(j);
 
-            testCase.verifyTrue(any(contains(g.Notes, "Parent thickness")), ...
+            testCase.verifyTrue(any(contains(g.Notes, "Parent depth")), ...
                 'A drawn depth that is not modelled must say so.');
         end
     end
@@ -322,6 +322,162 @@ classdef tGuiJointSection < matlab.uitest.TestCase
 
             testCase.verifyTrue(g.LoadingPlane.Outside, ...
                 'n > 1 puts the loading plane outside the grip.');
+        end
+    end
+
+    % ---- Shear planes ------------------------------------------------------
+    %   A consistency flag, not an analysis: Joint.ShearPlane is declared
+    %   and the engine reads it as declared. The drawing reports whether
+    %   the thread it draws agrees with that declaration.
+    methods (Test)
+        function theFlangeInterfaceIsTheShearPlane(testCase)
+            % Two flanges under a nut: one interface, at the bottom of
+            % flange 1. The nut washer is not a shear interface.
+            g = gui.JointSectionView.layout(tGuiJointSection.fullJoint());
+
+            testCase.verifyNumElements(g.ShearPlanes, 1);
+            testCase.verifyEqual(g.ShearPlanes(1).Y, 0.030 + 0.200, 'AbsTol', 1e-12, ...
+                'The shear plane is where flange 1 meets flange 2.');
+        end
+
+        function aThreadedInJointShearsAtTheParentFace(testCase)
+            % One flange bolted to a tapped parent: the flange/parent
+            % interface IS a shear plane, and it is where threads-in-shear
+            % usually happens.
+            j = tGuiJointSection.fullJoint();
+            j.FlangeStack = j.FlangeStack(1);
+            j.ThreadedMember = model.ThreadedMember( ...
+                Type = model.ThreadedMemberType.TappedHole, EngagementLength = 0.220);
+
+            g = gui.JointSectionView.layout(j);
+
+            testCase.verifyNumElements(g.ShearPlanes, 1);
+            testCase.verifyEqual(g.ShearPlanes(1).Y, 0.030 + 0.200, 'AbsTol', 1e-12);
+        end
+
+        function oneFlangeUnderANutHasNoShearPlaneAndSaysSo(testCase)
+            j = tGuiJointSection.fullJoint();
+            j.FlangeStack = j.FlangeStack(1);
+
+            g = gui.JointSectionView.layout(j);
+
+            testCase.verifyEmpty(g.ShearPlanes);
+            testCase.verifyTrue(any(contains(g.Notes, "No shear plane")));
+        end
+
+        function aDeclarationThatDisagreesWithTheThreadIsFlagged(testCase)
+            % The fixture threads from mid-length (0.500) and its shear
+            % plane is at 0.230, in the body. The model default declares
+            % threads-in-shear, so the drawing must object.
+            g = gui.JointSectionView.layout(tGuiJointSection.fullJoint());
+
+            testCase.verifyEqual(g.ShearPlanes(1).Condition, "body");
+            testCase.verifyTrue(g.ShearPlanes(1).Mismatch);
+            testCase.verifyTrue(any(contains(g.Notes, "Declared threads-in-shear")));
+        end
+
+        function aDeclarationThatAgreesIsNotFlagged(testCase)
+            j = tGuiJointSection.fullJoint();
+            j.ShearPlane = model.ShearPlaneCondition.BodyInShear;
+
+            g = gui.JointSectionView.layout(j);
+
+            testCase.verifyFalse(g.ShearPlanes(1).Mismatch);
+            testCase.verifyFalse(any(contains(g.Notes, "Declared")));
+        end
+
+        function anUnknownThreadStartCannotBeJudged(testCase)
+            % No thread length: the condition is unknown, not "body".
+            j = tGuiJointSection.fullJoint();
+            j.Bolt.ThreadLength = NaN;
+
+            g = gui.JointSectionView.layout(j);
+
+            testCase.verifyEqual(g.ShearPlanes(1).Condition, "");
+            testCase.verifyFalse(g.ShearPlanes(1).Mismatch);
+        end
+
+        function bodyLengthInGripMovesTheThreadStart(testCase)
+            % Joint.BodyLengthInGrip is what engine.stiffness analyses when
+            % it is set. The drawing follows the engine, so a 0.100 in body
+            % puts the shear plane at 0.230 in the thread.
+            j = tGuiJointSection.fullJoint();
+            j.BodyLengthInGrip = 0.100;
+
+            g = gui.JointSectionView.layout(j);
+
+            testCase.verifyEqual(g.Bolt.ThreadTop, 0.100, 'AbsTol', 1e-12);
+            testCase.verifyEqual(g.ShearPlanes(1).Condition, "thread");
+            testCase.verifyFalse(g.ShearPlanes(1).Mismatch, ...
+                'Threads-in-shear declared, thread at the plane: consistent.');
+            testCase.verifyTrue(any(contains(g.Notes, "L1 = 0.100")), ...
+                'An override of the bolt''s own thread length must be stated.');
+        end
+    end
+
+    % ---- Ladders -----------------------------------------------------------
+    %   Words and anchors are decided in layout(); only the row spacing is
+    %   decided at paint time, through two pure helpers tested here.
+    methods (Test)
+        function everyBandAndFeatureGetsACallout(testCase)
+            g = gui.JointSectionView.layout(tGuiJointSection.fullJoint());
+            txt = [g.Callouts.Text];
+
+            testCase.verifyTrue(any(startsWith(txt, "washer (head), t = 0.030")));
+            testCase.verifyTrue(any(startsWith(txt, "flange 1, t = 0.200")));
+            testCase.verifyTrue(any(txt == "nut"));
+            testCase.verifyTrue(any(startsWith(txt, "frustum, 30")));
+            testCase.verifyTrue(any(startsWith(txt, "shear plane")));
+            testCase.verifyTrue(any(txt == "loading plane, n = 1.00"));
+        end
+
+        function theDimensionLadderCarriesTheEngineNumbers(testCase)
+            % grip and Lmin are engine.boltLengthCheck's; L is the model's.
+            % Nothing here is computed by the drawing.
+            j   = tGuiJointSection.fullJoint();
+            g   = gui.JointSectionView.layout(j);
+            chk = engine.boltLengthCheck(j);
+            txt = [g.Dims.Text];
+
+            testCase.verifyTrue(any(txt == sprintf("grip %.3f", chk.GripLength)));
+            testCase.verifyTrue(any(txt == sprintf("Lmin %.3f", chk.RequiredLength)));
+            testCase.verifyTrue(any(txt == "L 1.000"));
+            testCase.verifyTrue(any(txt == sprintf("Le %.3f", chk.Engagement)));
+        end
+
+        function aShortBoltIsSaidInTheNote(testCase)
+            j = tGuiJointSection.fullJoint();
+            j.Bolt.Length = 0.500;
+
+            g = gui.JointSectionView.layout(j);
+
+            testCase.verifyTrue(any(startsWith(g.Notes, "Bolt short")));
+        end
+
+        function spreadRowsSeparatesOverlappingLabels(testCase)
+            y = gui.JointSectionView.spreadRows([0.10 0.11 0.12 0.50], 0.05, 0, 1);
+
+            testCase.verifyGreaterThanOrEqual(min(diff(sort(y))), 0.05 - 1e-12, ...
+                'Adjacent rows must clear each other by the row height.');
+            testCase.verifyEqual(y(4), 0.50, 'AbsTol', 1e-12, ...
+                'A label with room around it stays on its anchor.');
+        end
+
+        function spreadRowsKeepsOrderAndStaysInBounds(testCase)
+            y = gui.JointSectionView.spreadRows([0.98 0.97 0.99], 0.05, 0, 1);
+
+            testCase.verifyLessThanOrEqual(max(y), 1 + 1e-12);
+            [~, anchorOrder] = sort([0.98 0.97 0.99]);
+            [~, rowOrder]    = sort(y);
+            testCase.verifyEqual(rowOrder, anchorOrder, ...
+                'Leaders must not cross: rows keep the anchors'' order.');
+        end
+
+        function packColumnsSharesAColumnBetweenDisjointSpans(testCase)
+            % grip (0-0.4) and Le (0.5-0.7) do not overlap and share
+            % column 1; L (0-1) overlaps both and takes column 2.
+            col = gui.JointSectionView.packColumns([0 0.5 0], [0.4 0.7 1.0]);
+            testCase.verifyEqual(col, [1 1 2]);
         end
     end
 

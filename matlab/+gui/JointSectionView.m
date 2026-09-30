@@ -22,6 +22,16 @@ classdef JointSectionView < handle
     %   sits at the top and the stack reads head-to-tail like Joint
     %   Config's left column.
     %
+    %   LABELS LIVE IN LADDERS, NOT ON THE DRAWING. Text is sized in points
+    %   and the geometry in inches, so a label anchored at a 0.03 in washer
+    %   overlaps its neighbours at any zoom. Every callout therefore sits
+    %   in a column to the RIGHT of the section, one per row, spread apart
+    %   by spreadRows() and tied to its feature by a leader; dimensions
+    %   (grip, L, Lmin, Le) sit in columns to the LEFT, packed by
+    %   packColumns() so non-overlapping spans share a column. The only
+    %   pixel arithmetic in the file is frame(), which reserves room for
+    %   that text; the geometry itself never touches pixels.
+    %
     %   THREE DIMENSIONS IN THIS DRAWING ARE NOT DATA. The model carries no
     %   bolt head height, no head across-flats and no nut hex geometry, and
     %   neither does the library - see HeadHeightFactor below. They are
@@ -30,10 +40,13 @@ classdef JointSectionView < handle
     %   drawn to an assumed half-width gets a dashed outer edge so an
     %   invented dimension can never be read as a measured one.
     %
-    %   IT COMPUTES NO ENGINEERING VALUES. Grip and thread engagement come
-    %   from engine.boltLengthCheck, not from arithmetic here, for the same
-    %   reason ResultsPage refuses to call engine.preload: a second
-    %   implementation is a second answer. layout() is a pure function of a
+    %   IT COMPUTES NO ENGINEERING VALUES. Grip, required length and thread
+    %   engagement come from engine.boltLengthCheck, not from arithmetic
+    %   here, for the same reason ResultsPage refuses to call
+    %   engine.preload: a second implementation is a second answer. The
+    %   shear-plane condition it shows is a CONSISTENCY flag - the declared
+    %   Joint.ShearPlane against where the drawn thread starts - and never
+    %   alters the declaration. layout() is a pure function of a
     %   model.Joint and is where every coordinate is decided, so the
     %   geometry is testable without a figure on screen.
     %
@@ -59,9 +72,16 @@ classdef JointSectionView < handle
         % Type sizes. Set explicitly rather than left to the uiaxes default,
         % which renders small enough to be unreadable at the window's
         % opening size.
-        AxisFontSize  = 11
+        AxisFontSize  = 10
         LabelFontSize = 11
         AnnotFontSize = 10
+
+        % Screen text metrics, used ONLY to reserve room for the ladders.
+        % Points to pixels at the 96 dpi MATLAB assumes for uifigures; the
+        % average glyph is about 0.55 em wide in the default sans face.
+        PxPerPoint      = 96 / 72
+        CharWidthFactor = 0.55
+        RowHeightFactor = 1.6    % callout row pitch, x font height
 
         % Thread teeth are skipped outside this range: below it there is
         % nothing to see, above it the teeth merge into a grey band and the
@@ -71,11 +91,22 @@ classdef JointSectionView < handle
 
         % Fill colours. Deliberately muted and few: this is a diagram, not
         % a rendering, and GUI_SPEC.md Section 16 says skip the gradients.
-        BoltFill   = [0.62 0.66 0.72]
-        WasherFill = [0.78 0.80 0.84]
-        FlangeFill = [0.86 0.88 0.91]
-        MemberFill = [0.72 0.76 0.70]
-        EdgeColour = [0.25 0.27 0.30]
+        % Adjacent flanges alternate two greys so a two-layer stack reads
+        % as two layers; washers are darker than either.
+        BoltFill      = [0.62 0.66 0.72]
+        WasherFill    = [0.70 0.72 0.76]
+        FlangeFill    = [0.88 0.90 0.93]
+        FlangeFillAlt = [0.79 0.82 0.86]
+        MemberFill    = [0.72 0.76 0.70]
+        EdgeColour    = [0.25 0.27 0.30]
+
+        % Line and text colours for the annotations.
+        LeaderColour       = [0.55 0.55 0.58]
+        DimColour          = [0.30 0.30 0.33]
+        FrustumColour      = [0.55 0.40 0.65]
+        EngagementColour   = [0.30 0.45 0.30]
+        LoadingPlaneColour = [0.15 0.35 0.65]
+        ShearPlaneColour   = [0.20 0.20 0.22]
     end
 
     properties (Access = private)
@@ -124,7 +155,7 @@ classdef JointSectionView < handle
                 visible (1,1) logical = true
             end
             obj.Fig = uifigure('Name', 'Joint Cross-Section', ...
-                'Position', [200 160 560 680], ...
+                'Position', [200 160 640 720], ...
                 'Visible', matlab.lang.OnOffSwitchState(visible));
 
             g = uigridlayout(obj.Fig, [2 1]);
@@ -144,9 +175,12 @@ classdef JointSectionView < handle
             % bearing plane, which is how the joint is described everywhere
             % else in this app.
             obj.Ax.YDir     = 'reverse';
-            obj.Ax.Box      = 'on';
+            obj.Ax.Box      = 'off';
             obj.Ax.FontSize = gui.JointSectionView.AxisFontSize;
-            xlabel(obj.Ax, 'radius (in)');
+            % A signed "radius" is a contradiction; the x axis carries no
+            % information the section does not, so it is hidden. The y
+            % axis is the one worth reading.
+            obj.Ax.XAxis.Visible = 'off';
             ylabel(obj.Ax, 'axial position from under-head (in)');
 
             obj.NoteLabel = uilabel(g, 'WordWrap', 'on', 'Text', '', ...
@@ -185,9 +219,7 @@ classdef JointSectionView < handle
                 obj.paint(g);
             catch err
                 cla(obj.Ax);
-                obj.NoteLabel.Text = sprintf( ...
-                    'The section could not be drawn (%s). The joint itself is unaffected.', ...
-                    err.message);
+                obj.NoteLabel.Text = sprintf('Section not drawn: %s', err.message);
             end
         end
     end
@@ -199,7 +231,7 @@ classdef JointSectionView < handle
             hold(obj.Ax, 'on');
 
             if ~g.Ok
-                obj.NoteLabel.Text = char(strjoin(g.Notes, '  '));
+                obj.NoteLabel.Text = gui.JointSectionView.joinNotes(g.Notes);
                 hold(obj.Ax, 'off');
                 return
             end
@@ -208,15 +240,20 @@ classdef JointSectionView < handle
             obj.paintBolt(g);
             obj.paintFrustum(g);
             obj.paintEngagement(g);
+            obj.paintShearPlanes(g);
             obj.paintLoadingPlane(g);
 
             % Centreline last so it sits over the fills.
             plot(obj.Ax, [0 0], [g.YTop g.YBottom], '-.', ...
                 'Color', [0.45 0.45 0.50], 'LineWidth', 0.5);
 
-            obj.Ax.XLim = g.XLim;
+            fr = obj.frame(g);
+            obj.paintCallouts(g, fr);
+            obj.paintDims(g, fr);
+
+            obj.Ax.XLim = fr.XLim;
             obj.Ax.YLim = g.YLim;
-            obj.NoteLabel.Text = char(strjoin(g.Notes, '  '));
+            obj.NoteLabel.Text = gui.JointSectionView.joinNotes(g.Notes);
             hold(obj.Ax, 'off');
         end
 
@@ -226,7 +263,8 @@ classdef JointSectionView < handle
             %   left and right of a real clearance hole. Drawing one solid
             %   block and putting the bolt on top of it would hide exactly
             %   the thing this view exists to show - whether the hole and
-            %   the bolt in it are plausible.
+            %   the bolt in it are plausible. Names go to the callout
+            %   ladder, never onto the drawing.
             for k = 1:numel(g.Bands)
                 b = g.Bands(k);
                 if b.OuterR <= b.InnerR || b.Height <= 0
@@ -238,13 +276,6 @@ classdef JointSectionView < handle
                     style = '--';
                 end
                 obj.band(b.InnerR, b.OuterR, b.Y0, b.Height, b.Fill, style);
-                if strlength(b.Label) > 0
-                    text(obj.Ax, b.OuterR + 0.04 * g.Scale, ...
-                        b.Y0 + b.Height / 2, char(b.Label), ...
-                        'FontSize', gui.JointSectionView.AnnotFontSize, ...
-                        'VerticalAlignment', 'middle', ...
-                        'Color', gui.palette('mutedText'));
-                end
             end
         end
 
@@ -299,20 +330,13 @@ classdef JointSectionView < handle
         function paintFrustum(obj, g)
             %PAINTFRUSTUM  The compression cone, at the user's half-angle.
             %   Two polylines rather than four lines: the profile is one
-            %   path per side.
+            %   path per side. Named in the callout ladder.
             if ~g.Frustum.Ok
                 return
             end
-            f   = g.Frustum;
-            col = [0.55 0.40 0.65];
-            plot(obj.Ax, f.R, f.Y, '--', 'Color', col, 'LineWidth', 1);
-            plot(obj.Ax, -f.R, f.Y, '--', 'Color', col, 'LineWidth', 1);
-
-            % Named, and carrying its angle: two dashed lines on a diagram
-            % of a bolt are not self-evidently a compression cone.
-            text(obj.Ax, f.R(2), f.Y(2), sprintf('  compression cone %g deg', ...
-                f.Angle), 'FontSize', gui.JointSectionView.AnnotFontSize, ...
-                'Color', col, 'VerticalAlignment', 'middle');
+            f = g.Frustum;
+            plot(obj.Ax, f.R, f.Y, '--', 'Color', obj.FrustumColour, 'LineWidth', 1);
+            plot(obj.Ax, -f.R, f.Y, '--', 'Color', obj.FrustumColour, 'LineWidth', 1);
         end
 
         function paintEngagement(obj, g)
@@ -325,10 +349,23 @@ classdef JointSectionView < handle
             end
             e = g.Engagement;
             plot(obj.Ax, [-e.R e.R], [e.Y e.Y], '--', ...
-                'Color', [0.30 0.45 0.30], 'LineWidth', 1);
-            text(obj.Ax, e.R, e.Y, sprintf('  Le = %.3f in', e.Le), ...
-                'FontSize', gui.JointSectionView.AnnotFontSize, ...
-                'Color', [0.30 0.45 0.30], 'VerticalAlignment', 'middle');
+                'Color', obj.EngagementColour, 'LineWidth', 1);
+        end
+
+        function paintShearPlanes(obj, g)
+            %PAINTSHEARPLANES  Every interface load can shear across.
+            %   Amber when the declared Joint.ShearPlane disagrees with the
+            %   bolt section the line actually cuts.
+            for k = 1:numel(g.ShearPlanes)
+                s = g.ShearPlanes(k);
+                if s.Mismatch
+                    col = gui.palette('statusWarn');
+                else
+                    col = obj.ShearPlaneColour;
+                end
+                plot(obj.Ax, [-s.HalfWidth s.HalfWidth], [s.Y s.Y], '-', ...
+                    'Color', col, 'LineWidth', 1.5);
+            end
         end
 
         function paintLoadingPlane(obj, g)
@@ -342,13 +379,119 @@ classdef JointSectionView < handle
             if lp.Outside
                 col = gui.palette('statusFail');
             else
-                col = [0.15 0.35 0.65];
+                col = obj.LoadingPlaneColour;
             end
             plot(obj.Ax, [-lp.HalfWidth lp.HalfWidth], [lp.Y lp.Y], '-', ...
                 'Color', col, 'LineWidth', 1.25);
-            text(obj.Ax, -lp.HalfWidth, lp.Y, ' loading plane', ...
-                'FontSize', gui.JointSectionView.AnnotFontSize, ...
-                'Color', col, 'VerticalAlignment', 'bottom');
+        end
+
+        function fr = frame(obj, g)
+            %FRAME  Reserve room either side of the section for the text.
+            %   THE ONE PLACE PIXELS ENTER. Text is in points and the
+            %   section in inches, so how much x-range a label needs
+            %   depends on the zoom - which depends on the x-range. Three
+            %   passes settle it; the answer only has to be roomy, not
+            %   exact.
+            ip = obj.Ax.InnerPosition;
+            W  = ip(3);
+            H  = ip(4);
+            if ~isfinite(W) || ~isfinite(H) || W < 80 || H < 80
+                % Not laid out yet (hidden figure, first paint). Assume the
+                % window's opening size less the margins.
+                W = 560;
+                H = 600;
+            end
+            fontPx = gui.JointSectionView.AnnotFontSize * gui.JointSectionView.PxPerPoint;
+
+            maxChars = 0;
+            if ~isempty(g.Callouts)
+                maxChars = max(strlength([g.Callouts.Text]));
+            end
+            nDims  = numel(g.Dims);
+            nCols  = 0;
+            if nDims > 0
+                nCols = max(gui.JointSectionView.packColumns([g.Dims.Y0], [g.Dims.Y1]));
+            end
+
+            leader = 0.35 * g.Scale;
+            xl     = g.XLim;
+            yr     = diff(g.YLim);
+            s      = min(W / diff(xl), H / yr);          % px per inch
+            for pass = 1:3
+                textW  = gui.JointSectionView.CharWidthFactor * fontPx * maxChars / s;
+                textH  = 1.2 * fontPx / s;
+                colGap = textH + 0.12 * g.Scale;
+                right  = g.XLim(2);
+                if maxChars > 0
+                    right = g.XLim(2) + leader + textW + 0.10 * g.Scale;
+                end
+                left = g.XLim(1);
+                if nCols > 0
+                    left = g.XLim(1) - 0.10 * g.Scale - nCols * colGap - textH;
+                end
+                xl = [left right];
+                s  = min(W / diff(xl), H / yr);
+            end
+
+            fr = struct('XLim', xl, 'PxPerIn', s, ...
+                'RowH', gui.JointSectionView.RowHeightFactor * fontPx / s, ...
+                'TextH', textH, 'ColGap', colGap, ...
+                'LadderX', g.XLim(2) + leader, ...
+                'DimX0', g.XLim(1) - 0.10 * g.Scale);
+        end
+
+        function paintCallouts(obj, g, fr)
+            %PAINTCALLOUTS  The right-hand ladder: one row per feature.
+            %   Rows are spread so no two labels share a line, then each
+            %   is tied back to its anchor with a leader. Labels never sit
+            %   on the section.
+            if isempty(g.Callouts)
+                return
+            end
+            ys   = [g.Callouts.Y];
+            rows = gui.JointSectionView.spreadRows(ys, fr.RowH, ...
+                g.YLim(1) + fr.RowH / 2, g.YLim(2) - fr.RowH / 2);
+            xText = fr.LadderX;
+            xEnd  = xText - 0.06 * g.Scale;
+            for k = 1:numel(g.Callouts)
+                c = g.Callouts(k);
+                plot(obj.Ax, [c.AnchorR, xEnd], [c.Y, rows(k)], '-', ...
+                    'Color', obj.LeaderColour, 'LineWidth', 0.5);
+                plot(obj.Ax, c.AnchorR, c.Y, '.', ...
+                    'Color', obj.LeaderColour, 'MarkerSize', 7);
+                text(obj.Ax, xText, rows(k), char(c.Text), ...
+                    'FontSize', gui.JointSectionView.AnnotFontSize, ...
+                    'Color', c.Color, 'Interpreter', 'none', ...
+                    'HorizontalAlignment', 'left', ...
+                    'VerticalAlignment', 'middle', 'Clipping', 'off');
+            end
+        end
+
+        function paintDims(obj, g, fr)
+            %PAINTDIMS  The left-hand dimension ladder.
+            %   Drafting-style: a line with end ticks, the value written
+            %   along it. Spans that do not overlap share a column, so
+            %   grip and Le sit together and L / Lmin step outward.
+            if isempty(g.Dims)
+                return
+            end
+            cols = gui.JointSectionView.packColumns([g.Dims.Y0], [g.Dims.Y1]);
+            tick = 0.06 * g.Scale;
+            for k = 1:numel(g.Dims)
+                d = g.Dims(k);
+                x = fr.DimX0 - (cols(k) - 1) * fr.ColGap - fr.TextH;
+                plot(obj.Ax, [x x], [d.Y0 d.Y1], d.LineStyle, ...
+                    'Color', d.Color, 'LineWidth', 0.75);
+                plot(obj.Ax, [x - tick, x + tick], [d.Y0 d.Y0], '-', ...
+                    'Color', d.Color, 'LineWidth', 0.75);
+                plot(obj.Ax, [x - tick, x + tick], [d.Y1 d.Y1], '-', ...
+                    'Color', d.Color, 'LineWidth', 0.75);
+                text(obj.Ax, x - 0.02 * g.Scale, (d.Y0 + d.Y1) / 2, char(d.Text), ...
+                    'FontSize', gui.JointSectionView.AnnotFontSize, ...
+                    'Color', d.Color, 'Interpreter', 'none', ...
+                    'Rotation', 90, 'HorizontalAlignment', 'center', ...
+                    'VerticalAlignment', 'bottom', 'Clipping', 'off');
+            end
         end
     end
 
@@ -377,17 +520,19 @@ classdef JointSectionView < handle
             %   figure. Returns g.Ok false plus g.Notes when there is not
             %   enough to draw; never throws.
             %
-            %   Grip and engagement come from engine.boltLengthCheck rather
-            %   than being recomputed here - one implementation, one answer.
+            %   Grip, required length and engagement come from
+            %   engine.boltLengthCheck rather than being recomputed here -
+            %   one implementation, one answer.
             % Built field by field, not in one struct(...) call: a struct
             % array passed as a value there does not mean what it looks
             % like it means, and Bands is a struct array.
             g              = struct();
             g.Ok           = false;
             g.Notes        = string.empty(1, 0);
-            g.Bands        = struct('Y0', {}, 'Height', {}, 'InnerR', {}, ...
-                                    'OuterR', {}, 'Fill', {}, 'Label', {}, ...
-                                    'WidthAssumed', {});
+            g.Bands        = gui.JointSectionView.emptyBands();
+            g.Callouts     = gui.JointSectionView.emptyCallouts();
+            g.Dims         = gui.JointSectionView.emptyDims();
+            g.ShearPlanes  = gui.JointSectionView.emptyShearPlanes();
             g.Scale        = 1;
             g.XLim         = [-1 1];
             g.YLim         = [-1 1];
@@ -400,38 +545,37 @@ classdef JointSectionView < handle
             g.Engagement   = struct('Ok', false, 'Y', NaN, 'R', 0, 'Le', NaN);
 
             if isempty(joint) || ~isa(joint, 'model.Joint')
-                g.Notes(end + 1) = "No joint to draw.";
+                g.Notes(end + 1) = "No joint.";
                 return
             end
 
             D = joint.Bolt.NominalDiameter;
             if ~isfinite(D) || D <= 0
-                g.Notes(end + 1) = ...
-                    "Choose a bolt on Joint Config - the section is drawn to " + ...
-                    "its nominal diameter.";
+                g.Notes(end + 1) = "No bolt selected.";
                 return
             end
             g.Scale = D;
 
             if isempty(joint.FlangeStack)
-                g.Notes(end + 1) = ...
-                    "Add at least one flange layer to see the clamped stack.";
+                g.Notes(end + 1) = "No flange layers.";
             end
 
+            chk = gui.JointSectionView.lengthCheck(joint);
+
             % ---- the clamped stack, head to tail ----
-            bands  = struct('Y0', {}, 'Height', {}, 'InnerR', {}, ...
-                            'OuterR', {}, 'Fill', {}, 'Label', {}, ...
-                            'WidthAssumed', {});
+            bands = gui.JointSectionView.emptyBands();
             y = 0;
 
             hw = joint.HeadWasher;
             if gui.JointSectionView.washerPresent(hw)
-                [b, y] = gui.JointSectionView.washerBand(hw, D, y, 'head washer');
+                [b, y] = gui.JointSectionView.washerBand(hw, D, y, "washer (head)");
                 bands(end + 1) = b;
             end
 
             gripTop = y;
-            for k = 1:numel(joint.FlangeStack)
+            nFl     = numel(joint.FlangeStack);
+            flangeIdx = zeros(1, nFl);
+            for k = 1:nFl
                 f  = joint.FlangeStack(k);
                 hr = gui.JointSectionView.holeRadius(f, D);
 
@@ -445,14 +589,18 @@ classdef JointSectionView < handle
                 if strlength(label) == 0
                     label = sprintf('flange %d', k);
                 end
+                fill = gui.JointSectionView.FlangeFill;
+                if mod(k, 2) == 0
+                    fill = gui.JointSectionView.FlangeFillAlt;
+                end
 
-                bands(end + 1) = struct('Y0', y, 'Height', f.Thickness, ...
-                    'InnerR', hr, 'OuterR', halfW, ...
-                    'Fill', gui.JointSectionView.FlangeFill, ...
-                    'Label', string(label), 'WidthAssumed', assumed); %#ok<AGROW>
+                bands(end + 1) = gui.JointSectionView.bandStruct(y, f.Thickness, ...
+                    hr, halfW, fill, string(label), assumed); %#ok<AGROW>
+                flangeIdx(k) = numel(bands);
                 y = y + f.Thickness;
             end
-            gripBottom = y;
+            flangeBottom = y;
+            gripBottom   = y;
 
             isNut = joint.ThreadedMember.Type == model.ThreadedMemberType.Nut;
 
@@ -460,12 +608,13 @@ classdef JointSectionView < handle
             % engine only reads HeadWasher on that branch.
             nw = joint.NutWasher;
             if isNut && gui.JointSectionView.washerPresent(nw)
-                [b, y] = gui.JointSectionView.washerBand(nw, D, y, 'nut washer');
+                [b, y] = gui.JointSectionView.washerBand(nw, D, y, "washer (nut)");
                 bands(end + 1) = b;
                 gripBottom = y;
             end
 
-            [Le, engagementNote] = gui.JointSectionView.engagement(joint, D, isNut);
+            [Le, LeIsDefault, engagementNote] = ...
+                gui.JointSectionView.engagement(chk, D, isNut);
             if strlength(engagementNote) > 0
                 g.Notes(end + 1) = engagementNote;
             end
@@ -491,7 +640,7 @@ classdef JointSectionView < handle
                 hostAssumed = false;
             else
                 if joint.ThreadedMember.Type == model.ThreadedMemberType.Insert
-                    memberLabel = "insert + parent";
+                    memberLabel = "insert, parent";
                 else
                     memberLabel = "tapped parent";
                 end
@@ -499,37 +648,45 @@ classdef JointSectionView < handle
                 hostAssumed = true;
             end
 
-            bands(end + 1) = struct('Y0', y, 'Height', hostHeight, ...
-                'InnerR', gui.JointSectionView.threadRadius(joint, D), ...
-                'OuterR', memberOuter, ...
-                'Fill', gui.JointSectionView.MemberFill, ...
-                'Label', memberLabel, 'WidthAssumed', false);
+            hostTop = y;
+            bands(end + 1) = gui.JointSectionView.bandStruct(y, hostHeight, ...
+                gui.JointSectionView.threadRadius(joint, D), memberOuter, ...
+                gui.JointSectionView.MemberFill, memberLabel, false);
             memberBottom = y + hostHeight;
 
             % Where the threads actually stop. Only worth drawing when the
             % host is deeper than the engagement - on a nut the two are the
             % same line and it would just be the band's own edge.
-            % Le is carried whatever the member type - a nut simply has no
-            % separate line to draw, because its own bottom edge IS the end
-            % of engagement.
             g.Engagement = struct('Ok', hostAssumed && isfinite(Le) && Le > 0, ...
                 'Y', y + Le, 'R', memberOuter, 'Le', Le);
             if hostAssumed
-                g.Notes(end + 1) = "Parent thickness is not modelled - the " + ...
-                    "host is drawn to the engine's t2 >= D assumption. The " + ...
-                    "dashed line is where thread engagement ends.";
+                g.Notes(end + 1) = "Parent depth drawn to t2 ≥ D. " + ...
+                    "Dashed line: end of thread engagement.";
             end
 
             g.Bands = bands;
 
             % ---- the bolt ----
-            g.Bolt = gui.JointSectionView.boltGeometry(joint, D, memberBottom);
+            [g.Bolt, boltNote] = gui.JointSectionView.boltGeometry(joint, D, memberBottom);
+            if strlength(boltNote) > 0
+                g.Notes(end + 1) = boltNote;
+            end
 
             % ---- frustum, loading plane ----
             g.Frustum = gui.JointSectionView.frustumProfile( ...
                 joint, gripTop, gripBottom, g.Bolt.HeadR);
             g.LoadingPlane = gui.JointSectionView.loadingPlane( ...
                 joint, gripTop, gripBottom, memberOuter);
+            if g.LoadingPlane.Ok && g.LoadingPlane.Outside
+                g.Notes(end + 1) = sprintf( ...
+                    "Loading plane outside the grip (n = %.2f).", ...
+                    joint.LoadingPlaneFactor);
+            end
+
+            % ---- shear planes ----
+            [g.ShearPlanes, shearNotes] = gui.JointSectionView.shearPlanes( ...
+                joint, bands, flangeIdx, flangeBottom, memberOuter, isNut, g.Bolt);
+            g.Notes = [g.Notes, shearNotes];
 
             % ---- extents ----
             outerR = max([bands.OuterR, g.Bolt.HeadR, memberOuter]);
@@ -541,13 +698,127 @@ classdef JointSectionView < handle
             g.XLim = [-(outerR + pad), outerR + pad];
             g.YLim = [g.YTop - pad, g.YBottom + pad];
 
+            % ---- callouts (right ladder) ----
+            g.Callouts = gui.JointSectionView.callouts(g, joint);
+
+            % ---- dimensions (left ladder) ----
+            [g.Dims, dimNotes] = gui.JointSectionView.dims( ...
+                chk, joint, gripTop, gripBottom, hostTop, Le, LeIsDefault, g.Bolt);
+            g.Notes = [g.Notes, dimNotes];
+
             g.Notes = [g.Notes, gui.JointSectionView.conventionNote(bands)];
             g.Ok = true;
+        end
+
+        function y = spreadRows(y0, rowH, yMin, yMax)
+            %SPREADROWS  Push label rows apart so none overlap.
+            %   Sorted by anchor, each row is moved down until it clears
+            %   the one above by rowH; if the last row then falls past
+            %   yMax the stack is walked back up. Order is preserved, so a
+            %   leader never crosses another's anchor. Pure.
+            arguments
+                y0   (1,:) double
+                rowH (1,1) double
+                yMin (1,1) double
+                yMax (1,1) double
+            end
+            n = numel(y0);
+            y = y0;
+            if n == 0
+                return
+            end
+            [ys, order] = sort(y0);
+            ys(1) = max(ys(1), yMin);
+            for i = 2:n
+                ys(i) = max(ys(i), ys(i - 1) + rowH);
+            end
+            if ys(end) > yMax
+                ys(end) = yMax;
+                for i = (n - 1):-1:1
+                    ys(i) = min(ys(i), ys(i + 1) - rowH);
+                end
+            end
+            y(order) = ys;
+        end
+
+        function col = packColumns(y0, y1)
+            %PACKCOLUMNS  First-fit column for each span, so spans that do
+            %   not overlap share a column. Column 1 is nearest the
+            %   section. Pure.
+            arguments
+                y0 (1,:) double
+                y1 (1,:) double
+            end
+            n   = numel(y0);
+            lo  = min(y0, y1);
+            hi  = max(y0, y1);
+            col = zeros(1, n);
+            for i = 1:n
+                c = 1;
+                while true
+                    taken = col == c;
+                    if ~any(taken & (lo < hi(i)) & (hi > lo(i)))
+                        col(i) = c;
+                        break
+                    end
+                    c = c + 1;
+                end
+            end
         end
     end
 
     % ---- Geometry helpers -------------------------------------------------
     methods (Static, Access = private)
+        function b = emptyBands()
+            b = struct('Y0', {}, 'Height', {}, 'InnerR', {}, ...
+                       'OuterR', {}, 'Fill', {}, 'Label', {}, ...
+                       'WidthAssumed', {});
+        end
+
+        function b = bandStruct(y0, h, innerR, outerR, fill, label, assumed)
+            b = struct('Y0', y0, 'Height', h, 'InnerR', innerR, ...
+                       'OuterR', outerR, 'Fill', fill, 'Label', string(label), ...
+                       'WidthAssumed', logical(assumed));
+        end
+
+        function c = emptyCallouts()
+            c = struct('Y', {}, 'AnchorR', {}, 'Text', {}, 'Color', {});
+        end
+
+        function c = calloutStruct(y, anchorR, txt, color)
+            c = struct('Y', y, 'AnchorR', anchorR, 'Text', string(txt), 'Color', color);
+        end
+
+        function d = emptyDims()
+            d = struct('Y0', {}, 'Y1', {}, 'Text', {}, 'Color', {}, 'LineStyle', {});
+        end
+
+        function d = dimStruct(y0, y1, txt, color, style)
+            d = struct('Y0', y0, 'Y1', y1, 'Text', string(txt), ...
+                       'Color', color, 'LineStyle', style);
+        end
+
+        function s = emptyShearPlanes()
+            s = struct('Y', {}, 'HalfWidth', {}, 'Condition', {}, 'Mismatch', {});
+        end
+
+        function s = joinNotes(notes)
+            s = char(strjoin(notes, '  ·  '));
+        end
+
+        function chk = lengthCheck(joint)
+            %LENGTHCHECK  engine.boltLengthCheck, or empty on a half-filled joint.
+            %   The engine owns grip, required length and the
+            %   ratio-over-length engagement precedence. Everything this
+            %   drawing prints as a number comes from here.
+            chk = [];
+            try
+                chk = engine.boltLengthCheck(joint);
+            catch
+                % Half-filled joint. Callers fall back to drawing defaults.
+            end
+        end
+
         function tf = washerPresent(w)
             %WASHERPRESENT  model.Washer has no Present flag.
             %   A washer is absent iff it is untouched at its model default:
@@ -569,10 +840,8 @@ classdef JointSectionView < handle
             if ~isfinite(t) || t <= 0
                 t = 0.06 * D;
             end
-            b = struct('Y0', y, 'Height', t, 'InnerR', innerR, ...
-                'OuterR', outerR, ...
-                'Fill', gui.JointSectionView.WasherFill, ...
-                'Label', string(label), 'WidthAssumed', false);
+            b = gui.JointSectionView.bandStruct(y, t, innerR, outerR, ...
+                gui.JointSectionView.WasherFill, label, false);
             yNext = y + t;
         end
 
@@ -592,33 +861,33 @@ classdef JointSectionView < handle
             end
         end
 
-        function [Le, note] = engagement(joint, D, isNut)
+        function [Le, isDefault, note] = engagement(chk, D, isNut)
             %ENGAGEMENT  Thread engagement, from the engine where possible.
             %   engine.boltLengthCheck owns the ratio-over-length precedence
             %   and the 1.5D fallback. Replicating it here would be a second
             %   implementation of an engineering quantity.
-            note = "";
-            Le   = NaN;
-            try
-                chk = engine.boltLengthCheck(joint);
-                Le  = chk.Engagement;
-            catch
-                % Half-filled joint. Fall through to the drawing default.
+            note      = "";
+            Le        = NaN;
+            isDefault = false;
+            if ~isempty(chk)
+                Le = chk.Engagement;
             end
             if ~isfinite(Le) || Le <= 0
-                Le = gui.JointSectionView.NutHeightFactor * D;
+                Le        = gui.JointSectionView.NutHeightFactor * D;
+                isDefault = true;
                 if isNut
-                    note = "Nut height is a drawing default - no engagement set.";
+                    note = "Nut height: drawing default, no engagement set.";
                 else
-                    note = "Engagement depth is a drawing default - none set.";
+                    note = "Engagement depth: drawing default, none set.";
                 end
             end
         end
 
-        function b = boltGeometry(joint, D, memberBottom)
+        function [b, note] = boltGeometry(joint, D, memberBottom)
             %BOLTGEOMETRY  Head, shank and thread, in axial coordinates.
             %   y = 0 is the under-head bearing plane, so the head is at
             %   NEGATIVE y and the shank runs positive down the stack.
+            note  = "";
             headR = joint.Bolt.HeadBearingDiameter / 2;
             conv  = gui.JointSectionView.HeadDiameterFactor * D / 2;
             if ~isfinite(headR) || headR <= 0
@@ -643,7 +912,8 @@ classdef JointSectionView < handle
             % still closes - and say so in the note.
             L = joint.Bolt.Length;
             if ~isfinite(L) || L <= 0
-                L = memberBottom;
+                L    = memberBottom;
+                note = "No bolt length set: shank drawn to the bottom of the threaded member.";
             end
 
             % ThreadLength is measured FROM THE TIP.
@@ -652,6 +922,22 @@ classdef JointSectionView < handle
                 tl = 0;
             end
             tl = min(tl, L);
+            threadKnown = tl > 0;
+
+            % Joint.BodyLengthInGrip (L1) is what the engine analyses when
+            % it is set (engine.stiffness, level 1 of its precedence): the
+            % unthreaded body ends L1 below the head. The drawing follows
+            % the engine, so the thread it shows is the thread the margins
+            % assume - which is what the shear-plane check reads.
+            L1 = joint.BodyLengthInGrip;
+            if isfinite(L1) && L1 >= 0 && L1 < L
+                if abs((L - tl) - L1) > 1e-6
+                    note = strtrim(note + " " + sprintf( ...
+                        "Thread drawn from L1 = %.3f (body length in grip).", L1));
+                end
+                tl          = L - L1;
+                threadKnown = true;
+            end
 
             b = struct( ...
                 'HeadR', headR, 'HeadHeight', headH, 'HeadTop', -headH, ...
@@ -659,6 +945,7 @@ classdef JointSectionView < handle
                 'TotalLength', L, ...
                 'ShankLength', L - tl, ...
                 'ThreadR', threadR, 'ThreadLength', tl, 'ThreadTop', L - tl, ...
+                'ThreadKnown', threadKnown, ...
                 'MajorR', D / 2, ...
                 'Thread', gui.JointSectionView.threadProfile( ...
                               joint, D, L - tl, tl, threadR));
@@ -754,13 +1041,191 @@ classdef JointSectionView < handle
             lp.Ok      = true;
         end
 
+        function [planes, notes] = shearPlanes(joint, bands, flangeIdx, ...
+                flangeBottom, memberOuter, isNut, bolt)
+            %SHEARPLANES  Every interface a shear load crosses.
+            %   Between consecutive flanges, and - for a threaded-in joint -
+            %   between the last flange and the parent it bolts to. A nut
+            %   washer is not a shear interface, so a single flange under a
+            %   nut has none.
+            %
+            %   CONSISTENCY, NOT ANALYSIS. Joint.ShearPlane is declared by
+            %   the analyst and read by the engine as declared. This only
+            %   reports whether the drawn thread start agrees with that
+            %   declaration; NASA-STD-5020B Eq. 20-23 use different
+            %   exponents for the two conditions, so a disagreement is an
+            %   engineering error, not a cosmetic one.
+            planes = gui.JointSectionView.emptyShearPlanes();
+            notes  = string.empty(1, 0);
+            nFl    = numel(flangeIdx);
+            if nFl == 0
+                return
+            end
+
+            ys = zeros(1, 0);
+            hw = zeros(1, 0);
+            for k = 1:(nFl - 1)
+                a = bands(flangeIdx(k));
+                b = bands(flangeIdx(k + 1));
+                ys(end + 1) = a.Y0 + a.Height;                 %#ok<AGROW>
+                hw(end + 1) = min(a.OuterR, b.OuterR);         %#ok<AGROW>
+            end
+            if ~isNut
+                a = bands(flangeIdx(end));
+                ys(end + 1) = flangeBottom;
+                hw(end + 1) = min(a.OuterR, memberOuter);
+            end
+            if isempty(ys)
+                notes(end + 1) = "No shear plane drawn: one flange layer under a nut.";
+                return
+            end
+
+            declared = joint.ShearPlane;
+            for k = 1:numel(ys)
+                cond     = "";
+                mismatch = false;
+                if bolt.ThreadKnown
+                    if ys(k) >= bolt.ThreadTop - 1e-9
+                        cond = "thread";
+                    else
+                        cond = "body";
+                    end
+                    mismatch = ...
+                        (declared == model.ShearPlaneCondition.ThreadsInShear && cond == "body") || ...
+                        (declared == model.ShearPlaneCondition.BodyInShear    && cond == "thread");
+                end
+                planes(end + 1) = struct('Y', ys(k), 'HalfWidth', hw(k), ...
+                    'Condition', cond, 'Mismatch', mismatch); %#ok<AGROW>
+            end
+
+            if any([planes.Mismatch])
+                if declared == model.ShearPlaneCondition.ThreadsInShear
+                    notes(end + 1) = "Declared threads-in-shear; unthreaded body at the shear plane.";
+                else
+                    notes(end + 1) = "Declared body-in-shear; thread runs through the shear plane.";
+                end
+            end
+        end
+
+        function c = callouts(g, joint)
+            %CALLOUTS  Text for the right-hand ladder, in stack order.
+            %   Every named feature of the drawing, each anchored where
+            %   its leader should land. The ladder's row positions are
+            %   decided at paint time; the anchors and words are decided
+            %   here, where they can be tested.
+            c = gui.JointSectionView.emptyCallouts();
+            for k = 1:numel(g.Bands)
+                b = g.Bands(k);
+                if b.OuterR <= b.InnerR || b.Height <= 0
+                    continue
+                end
+                txt = b.Label;
+                if b.Label ~= "nut" && b.Label ~= "insert, parent" && ...
+                   b.Label ~= "tapped parent"
+                    txt = sprintf("%s, t = %.3f", b.Label, b.Height);
+                end
+                c(end + 1) = gui.JointSectionView.calloutStruct( ...
+                    b.Y0 + b.Height / 2, b.OuterR, txt, ...
+                    gui.palette('defaultText')); %#ok<AGROW>
+            end
+
+            if g.Frustum.Ok
+                c(end + 1) = gui.JointSectionView.calloutStruct( ...
+                    g.Frustum.Y(2), g.Frustum.R(2), ...
+                    sprintf("frustum, %g°", g.Frustum.Angle), ...
+                    gui.JointSectionView.FrustumColour); %#ok<AGROW>
+            end
+
+            for k = 1:numel(g.ShearPlanes)
+                s = g.ShearPlanes(k);
+                txt = "shear plane";
+                if numel(g.ShearPlanes) > 1
+                    txt = sprintf("shear plane %d", k);
+                end
+                if strlength(s.Condition) > 0
+                    txt = txt + ": " + s.Condition;
+                end
+                col = gui.JointSectionView.ShearPlaneColour;
+                if s.Mismatch
+                    col = gui.palette('statusWarn');
+                end
+                c(end + 1) = gui.JointSectionView.calloutStruct( ...
+                    s.Y, s.HalfWidth, txt, col); %#ok<AGROW>
+            end
+
+            if g.LoadingPlane.Ok
+                lp  = g.LoadingPlane;
+                col = gui.JointSectionView.LoadingPlaneColour;
+                if lp.Outside
+                    col = gui.palette('statusFail');
+                end
+                c(end + 1) = gui.JointSectionView.calloutStruct( ...
+                    lp.Y, lp.HalfWidth, ...
+                    sprintf("loading plane, n = %.2f", joint.LoadingPlaneFactor), ...
+                    col); %#ok<AGROW>
+            end
+
+            if g.Engagement.Ok
+                c(end + 1) = gui.JointSectionView.calloutStruct( ...
+                    g.Engagement.Y, g.Engagement.R, "end of engagement", ...
+                    gui.JointSectionView.EngagementColour); %#ok<AGROW>
+            end
+        end
+
+        function [d, notes] = dims(chk, joint, gripTop, gripBottom, ...
+                hostTop, Le, LeIsDefault, bolt)
+            %DIMS  The left-hand dimension ladder.
+            %   Numbers come from the engine (grip, Lmin) or the model (L);
+            %   the only value this file supplies is a flagged drawing
+            %   default for Le. Lmin turns red when the bolt is short - the
+            %   first of GUI_SPEC.md Section 16's four catches, made visible.
+            d     = gui.JointSectionView.emptyDims();
+            notes = string.empty(1, 0);
+            col   = gui.JointSectionView.DimColour;
+
+            grip = gripBottom - gripTop;
+            if ~isempty(chk) && isfinite(chk.GripLength) && chk.GripLength > 0
+                grip = chk.GripLength;
+            end
+            if grip > 0
+                d(end + 1) = gui.JointSectionView.dimStruct(gripTop, gripBottom, ...
+                    sprintf("grip %.3f", grip), col, '-'); %#ok<AGROW>
+            end
+
+            if isfinite(Le) && Le > 0
+                txt = sprintf("Le %.3f", Le);
+                if LeIsDefault
+                    txt = txt + " (default)";
+                end
+                d(end + 1) = gui.JointSectionView.dimStruct(hostTop, hostTop + Le, ...
+                    txt, gui.JointSectionView.EngagementColour, '-'); %#ok<AGROW>
+            end
+
+            L = joint.Bolt.Length;
+            if isfinite(L) && L > 0
+                d(end + 1) = gui.JointSectionView.dimStruct(0, bolt.TotalLength, ...
+                    sprintf("L %.3f", L), col, '-'); %#ok<AGROW>
+            end
+
+            if ~isempty(chk) && isfinite(chk.RequiredLength) && chk.RequiredLength > 0
+                lcol  = col;
+                short = chk.Evaluated && ~chk.IsAdequate;
+                if short
+                    lcol = gui.palette('statusFail');
+                    notes(end + 1) = sprintf("Bolt short: L %.3f < Lmin %.3f.", ...
+                        chk.SuppliedLength, chk.RequiredLength);
+                end
+                d(end + 1) = gui.JointSectionView.dimStruct(0, chk.RequiredLength, ...
+                    sprintf("Lmin %.3f", chk.RequiredLength), lcol, '--'); %#ok<AGROW>
+            end
+        end
+
         function note = conventionNote(bands)
             %CONVENTIONNOTE  Say plainly which lines are not measurements.
-            note = "Head height and hex geometry are drawing conventions - " + ...
-                   "the model carries neither.";
+            note = "Head height, nut envelope and parent depth: drawing " + ...
+                   "conventions, not inputs.";
             if any([bands.WidthAssumed])
-                note = note + " Dashed outer edges are assumed widths " + ...
-                       "(no edge distance set).";
+                note = note + " Dashed outer edge: no edge distance set.";
             end
         end
     end
