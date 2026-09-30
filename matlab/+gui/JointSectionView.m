@@ -158,8 +158,14 @@ classdef JointSectionView < handle
                 obj
                 visible (1,1) logical = true
             end
+            % Wide: the section is height-limited (DataAspectRatio), so
+            % width is what buys room for the two ladders at a readable
+            % scale. Clamped to the screen so it never opens off-screen.
+            scr = get(groot, 'ScreenSize');
+            w   = min(1400, scr(3) - 80);
+            h   = min(750,  scr(4) - 120);
             obj.Fig = uifigure('Name', 'Joint Cross-Section', ...
-                'Position', [200 160 640 720], ...
+                'Position', [40 80 w h], ...
                 'Visible', matlab.lang.OnOffSwitchState(visible));
 
             g = uigridlayout(obj.Fig, [2 1]);
