@@ -264,6 +264,18 @@ classdef tGuiJointSection < matlab.uitest.TestCase
                 'engine.stiffness assumes t2 >= D; the drawing must not contradict it.');
         end
 
+        function theEngagementLineIsNamedForWhatStopsThere(testCase)
+            j = tGuiJointSection.fullJoint();
+            j.ThreadedMember = model.ThreadedMember( ...
+                Type = model.ThreadedMemberType.Insert, EngagementLength = 0.220);
+            g = gui.JointSectionView.layout(j);
+            testCase.verifyTrue(any([g.Callouts.Text] == "insert ends, Le"));
+
+            j.ThreadedMember.Type = model.ThreadedMemberType.TappedHole;
+            g = gui.JointSectionView.layout(j);
+            testCase.verifyTrue(any([g.Callouts.Text] == "engagement ends, Le"));
+        end
+
         function theParentShowsWhereEngagementActuallyStops(testCase)
             % The parent's depth is a convention; Le is data, and it is the
             % number that governs thread shear. The two must be separable.

@@ -72,9 +72,9 @@ classdef JointSectionView < handle
         % Type sizes. Set explicitly rather than left to the uiaxes default,
         % which renders small enough to be unreadable at the window's
         % opening size.
-        AxisFontSize  = 10
-        LabelFontSize = 11
-        AnnotFontSize = 10
+        AxisFontSize  = 11
+        LabelFontSize = 12
+        AnnotFontSize = 12
 
         % Screen text metrics, used ONLY to reserve room for the ladders.
         % Points to pixels at the 96 dpi MATLAB assumes for uifigures; the
@@ -1166,8 +1166,15 @@ classdef JointSectionView < handle
             end
 
             if g.Engagement.Ok
+                % Named for what stops there, and carrying Le so it reads
+                % as the same thing as the Le dimension on the left.
+                if joint.ThreadedMember.Type == model.ThreadedMemberType.Insert
+                    txt = "insert ends, Le";
+                else
+                    txt = "engagement ends, Le";
+                end
                 c(end + 1) = gui.JointSectionView.calloutStruct( ...
-                    g.Engagement.Y, g.Engagement.R, "end of engagement", ...
+                    g.Engagement.Y, g.Engagement.R, txt, ...
                     gui.JointSectionView.EngagementColour); %#ok<AGROW>
             end
         end
