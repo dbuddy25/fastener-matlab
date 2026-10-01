@@ -134,7 +134,7 @@ classdef FastenerApp < handle
             % bar (see setStatus), so put it there directly — setStatus
             % itself would refuse.
             if strlength(app.State.LibraryLoadError) > 0
-                app.StatusLabel.Text = ['Hardware library not loaded — ' ...
+                app.StatusLabel.Text = ['Hardware library not loaded - ' ...
                     'saving is disabled until this is fixed.'];
                 uialert(app.Fig, char(app.State.LibraryLoadError), ...
                     'Library not loaded');
@@ -739,7 +739,7 @@ classdef FastenerApp < handle
                 'which selects a branch rather than carrying a margin.\n\n' ...
                 'Case files: JSON, format "%s".%s'], ...
                 toolVersion(), app.State.CaseFormat, code);
-            uialert(app.Fig, msg, 'About — Fastener Analysis Tool', 'Icon', 'info');
+            uialert(app.Fig, msg, 'About - Fastener Analysis Tool', 'Icon', 'info');
         end
 
         function onHelpUserGuide(app)
@@ -776,7 +776,7 @@ classdef FastenerApp < handle
         function commitNewCase(app)
             %COMMITNEWCASE  The blank case, once discarding is agreed.
             app.State.newCase();
-            app.setStatus(['New case — choose a bolt and materials on ' ...
+            app.setStatus(['New case - choose a bolt and materials on ' ...
                 'Joint Config to begin.']);
         end
 
@@ -964,16 +964,16 @@ classdef FastenerApp < handle
             %   Version when nothing is open, the file path when a case is,
             %   prefixed "* " when dirty (GUI_SPEC.md Section 4).
             if strlength(app.State.CurrentFile) == 0
-                t = sprintf('Fastener Analysis Tool v%s — NASA-STD-5020B', ...
+                t = sprintf('Fastener Analysis Tool v%s - NASA-STD-5020B', ...
                     toolVersion());
             else
-                t = sprintf('Fastener Analysis Tool — %s', app.State.CurrentFile);
+                t = sprintf('Fastener Analysis Tool - %s', app.State.CurrentFile);
             end
             if app.State.IsDirty
                 t = ['* ' t];
             end
             if app.CodeModified
-                t = [t ' — MODIFIED CALCULATION CODE'];
+                t = [t ' - MODIFIED CALCULATION CODE'];
             end
             app.Fig.Name = t;
         end

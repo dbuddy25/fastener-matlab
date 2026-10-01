@@ -128,6 +128,6 @@ switch char(name)
 
     otherwise
         error('gui:palette:unknownName', ...
-            'Unknown palette color "%s" — add it to gui.palette, never inline an RGB triple.', name);
+            'Unknown palette color "%s" - add it to gui.palette, never inline an RGB triple.', name);
 end
 end

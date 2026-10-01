@@ -151,7 +151,7 @@ classdef JointConfigPage < gui.Page
             obj.addBanner(g, 1, [1 2], ...
                 ['Define one joint and its limit loads, then Analyze. The ' ...
                  'left column follows the physical stack, top to bottom. ' ...
-                 'Factors and temperature extremes are global — they live ' ...
+                 'Factors and temperature extremes are global - they live ' ...
                  'on their own pages and are shown in the bar at the bottom ' ...
                  'of the window.']);
 
@@ -1798,7 +1798,7 @@ classdef JointConfigPage < gui.Page
             % filled here -- the values were already right and the family
             % was inferred from them, which is a different claim.
             obj.setStatus(sprintf( ...
-                'Nut fields match %s — family reselected.', hit));
+                'Nut fields match %s - family reselected.', hit));
         end
 
         function reselectWasherSpec(obj, which, washer)
@@ -1850,7 +1850,7 @@ classdef JointConfigPage < gui.Page
                 obj.fillWasherFromSize(which);
             end
             obj.setStatus(sprintf( ...
-                '%s washer geometry matches %s — family reselected.', ...
+                '%s washer geometry matches %s - family reselected.', ...
                 which, hits(1).Key));
         end
 
@@ -2433,16 +2433,16 @@ classdef JointConfigPage < gui.Page
             if ~r.Evaluated
                 % Named cause, not a bare dash: the analyst needs to know
                 % WHICH input is missing to act on it.
-                lines{end + 1} = sprintf('Not evaluated — %s', char(r.Detail));
+                lines{end + 1} = sprintf('Not evaluated - %s', char(r.Detail));
                 obj.BoltLengthLabel.FontColor  = gui.palette('statusWarn');
                 obj.BoltLengthLabel.FontWeight = 'normal';
             elseif r.Shortfall > 0
-                lines{end + 1} = sprintf('Selected %.4f in — TOO SHORT by %.4f in', ...
+                lines{end + 1} = sprintf('Selected %.4f in - TOO SHORT by %.4f in', ...
                     r.SuppliedLength, r.Shortfall);
                 obj.BoltLengthLabel.FontColor  = gui.palette('statusFail');
                 obj.BoltLengthLabel.FontWeight = 'bold';
             else
-                lines{end + 1} = sprintf('Selected %.4f in — OK', r.SuppliedLength);
+                lines{end + 1} = sprintf('Selected %.4f in - OK', r.SuppliedLength);
                 obj.BoltLengthLabel.FontColor  = gui.palette('mutedText');
                 obj.BoltLengthLabel.FontWeight = 'normal';
             end
@@ -2481,15 +2481,15 @@ classdef JointConfigPage < gui.Page
             end
             if isempty(s) || isnan(s.L1)
                 missing = true;
-                text = ['Body length L1: — stiffness cannot run, so the ' ...
+                text = ['Body length L1: - stiffness cannot run, so the ' ...
                         'tension checks will report not evaluated. Supply ' ...
                         'a bolt length, a nut engagement, or L1 itself.'];
                 return
             end
             if ~isnan(j.BodyLengthInGrip)
-                text = sprintf('Body length L1: %.4f in — your override', s.L1);
+                text = sprintf('Body length L1: %.4f in - your override', s.L1);
             else
-                text = sprintf(['Body length L1: %.4f in — derived from ' ...
+                text = sprintf(['Body length L1: %.4f in - derived from ' ...
                                 'the bolt and its catalogue thread length'], s.L1);
             end
         end

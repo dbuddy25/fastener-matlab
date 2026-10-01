@@ -155,8 +155,8 @@ function C = jointColumns()
 %JOINTCOLUMNS  Nx5 {MATLAB name, friendly name, description, units, valid/default}.
 C = {
 "Name"                "Joint Name"                  "Unique joint identifier; Elements rows reference it via joint_name. Rows with a blank Name are skipped."                                    "—"          "required"
-"Bolt"                "Bolt Size"                   "Bolt thread designation — a library key resolved via lib.bolt()."                                                                          "—"          "required; pick from Lists!Bolts"
-"BoltMaterial"        "Bolt Material"               "Bolt material — a library key resolved via lib.material()."                                                                                "—"          "required; pick from Lists!Materials"
+"Bolt"                "Bolt Size"                   "Bolt thread designation - a library key resolved via lib.bolt()."                                                                          "—"          "required; pick from Lists!Bolts"
+"BoltMaterial"        "Bolt Material"               "Bolt material - a library key resolved via lib.material()."                                                                                "—"          "required; pick from Lists!Materials"
 "BoltSpec"            "Bolt Spec (optional)"        "Explicit bolt-spec key for the rated ultimate/yield loads; blank = auto-lookup of the library spec matching Bolt + Bolt Material (no match: engine derives At*Ftu)." "—"          "optional"
 "FrustumAngle"        "Frustum Angle (deg)"         "Conical pressure-frustum half-angle used in the clamped-stack stiffness model."                                                            "deg"        "blank → 30"
 "ThreadsInShear"      "Threads in Shear?"           "TRUE = threads lie in the shear plane (threads-in-shear allowables); FALSE = unthreaded body in the shear plane."                          "TRUE/FALSE" "blank → TRUE (threads in shear)"
@@ -165,11 +165,11 @@ C = {
 "AxialX"              "Axial Dir X"                 "Mark this cell (X or TRUE) when the bolt axis is the FEM X direction. Mark EXACTLY ONE of the three Axial columns."                        "mark"       "none marked → Z"
 "AxialY"              "Axial Dir Y"                 "Mark this cell (X or TRUE) when the bolt axis is the FEM Y direction."                                                                     "mark"       "—"
 "AxialZ"              "Axial Dir Z"                 "Mark this cell (X or TRUE) when the bolt axis is the FEM Z direction."                                                                     "mark"       "—"
-"BoltCount"           "Bolt Count (nf)"             "Number of fasteners in the bolt pattern, nf — used by joint-mode slip."                                                                    "—"          "blank → 1"
+"BoltCount"           "Bolt Count (nf)"             "Number of fasteners in the bolt pattern, nf - used by joint-mode slip."                                                                    "—"          "blank → 1"
 "FrictionCoefficient" "Friction Coeff (μ)"          "Coefficient of friction between the faying surfaces, for the slip check."                                                                  "—"          "blank → 0 (slip not evaluated)"
-"LoadingPlaneFactor"  "Loading Plane Factor (n)"    "Loading-plane factor n = Llp/L — where the applied load is introduced into the stack (1.0 is conservative)."                               "—"          "blank → 1.0"
+"LoadingPlaneFactor"  "Loading Plane Factor (n)"    "Loading-plane factor n = Llp/L - where the applied load is introduced into the stack (1.0 is conservative)."                               "—"          "blank → 1.0"
 "HeadWasherOn"        "Head Washer?"                "TRUE builds a washer under the bolt head from the Head Washer columns; FALSE/blank = no washer."                                           "TRUE/FALSE" "blank → FALSE; Lists!Boolean"
-"HeadWasherMaterial"  "Head Washer Material"        "Head-washer material — library key (carried for completeness; washers are rigid in the frustum model)."                                    "—"          "used when Head Washer? is TRUE"
+"HeadWasherMaterial"  "Head Washer Material"        "Head-washer material - library key (carried for completeness; washers are rigid in the frustum model)."                                    "—"          "used when Head Washer? is TRUE"
 "HeadWasherOD"        "Head Washer OD (in)"         "Head-washer outer diameter (caps the frustum cone diameter)."                                                                              "in"         "blank → frustum governs"
 "HeadWasherID"        "Head Washer ID (in)"         "Head-washer inner diameter."                                                                                                               "in"         "optional"
 "HeadWasherThickness" "Head Washer Thk (in)"        "Head-washer thickness (adds to the grip)."                                                                                                 "in"         "blank → 0"
@@ -179,24 +179,24 @@ for k = 1:4
 end
 C = [C; {
 "NutWasherOn"         "Nut Washer?"                 "TRUE builds a washer under the nut from the Nut Washer columns; FALSE/blank = no washer."                                                  "TRUE/FALSE" "blank → FALSE; Lists!Boolean"
-"NutWasherMaterial"   "Nut Washer Material"         "Nut-washer material — library key."                                                                                                        "—"          "used when Nut Washer? is TRUE"
+"NutWasherMaterial"   "Nut Washer Material"         "Nut-washer material - library key."                                                                                                        "—"          "used when Nut Washer? is TRUE"
 "NutWasherOD"         "Nut Washer OD (in)"          "Nut-washer outer diameter."                                                                                                                "in"         "blank → frustum governs"
 "NutWasherID"         "Nut Washer ID (in)"          "Nut-washer inner diameter."                                                                                                                "in"         "optional"
 "NutWasherThickness"  "Nut Washer Thk (in)"         "Nut-washer thickness (adds to the grip)."                                                                                                  "in"         "blank → 0"
 "NutHeight"           "Nut Height (in)"             "Nut config only: thread engagement length Le (nut height). Feeds the nut-thread-shear allowable (engine.marginNutStrength) and, only when BOTH Bolt.Length and BodyLengthInGrip are blank, the simplified bolt-length fallback for stiffness (NASA-STD-5020B §4.7.4). There is no other default: blank leaves EngagementLength unset and Nut Strength reports NotEvaluated." "in"         "blank → Nut Strength NotEvaluated"
-"NutMaterial"         "Nut Material"                "Nut config only: nut material — library key (nut-thread shear allowable)."                                                                 "—"          "Lists!Materials"
+"NutMaterial"         "Nut Material"                "Nut config only: nut material - library key (nut-thread shear allowable)."                                                                 "—"          "Lists!Materials"
 "NutDiameter"         "Nut Bearing Dia (in)"        "Nut config only: nut bearing outer diameter for the under-nut bearing check."                                                              "in"         "blank → not checked"
 "HelicoilParentName"  "Helicoil Parent Name"        "Insert config only: name/label of the part the insert is installed in (cosmetic)."                                                         "—"          "optional"
-"HelicoilParentMaterial" "Helicoil Parent Material" "Insert config only: parent (host) material — library key (parent-thread shear allowable)."                                                 "—"          "Lists!Materials"
+"HelicoilParentMaterial" "Helicoil Parent Material" "Insert config only: parent (host) material - library key (parent-thread shear allowable)."                                                 "—"          "Lists!Materials"
 "HelicoilLengthRatio" "Helicoil Length (×D)"        "Insert config only: insert engagement length as a multiple of the bolt nominal diameter (1.5 = 1.5D)."                                     "×D"         "e.g. 1, 1.5, 2"
-"HelicoilRatedLoad"   "Helicoil Rated Load (lbf)"   "Insert config only: the insert's own INTERNAL-THREAD allowable tensile load, from the insert or procurement specification — the first of the two allowables NASA-STD-5020B §4.4.1 names, which §4.4.1 (p26) requires to come from the spec rather than from thread-stripping analysis. It is NOT a pull-out rating: pull-out from the parent is computed separately (engine.marginInsert) and is not capped by this value, so the lower of the two governs across rows. Blank leaves the insert internal-thread check NotEvaluated." "lbf" "blank → not evaluated"
+"HelicoilRatedLoad"   "Helicoil Rated Load (lbf)"   "Insert config only: the insert's own INTERNAL-THREAD allowable tensile load, from the insert or procurement specification - the first of the two allowables NASA-STD-5020B §4.4.1 names, which §4.4.1 (p26) requires to come from the spec rather than from thread-stripping analysis. It is NOT a pull-out rating: pull-out from the parent is computed separately (engine.marginInsert) and is not capped by this value, so the lower of the two governs across rows. Blank leaves the insert internal-thread check NotEvaluated." "lbf" "blank → not evaluated"
 "NutFactor"           "Nut Factor (K)"              "Torque-to-preload nut factor K (T = K·D·P), NASA-STD-5020B Eq. 24."                                                                        "—"          "blank → 0.2"
 "Uncertainty"         "Preload Uncertainty (Γ)"     "Preload uncertainty Γ (± fraction) in the min/max preload equations (NASA-STD-5020B Eq. 3/4/5)."                                           "frac"       "blank → 0.25"
 "PreloadLoss"         "Preload Loss (frac)"         "Relaxation/embedment preload loss as a fraction of nominal preload."                                                                       "frac"       "blank → 0.05"
 "NominalTorque"       "Nominal Torque (in-lbf)"     "Nominal effective installation torque (above running torque)."                                                                             "in-lbf"     "required (torque control)"
 "TorqueTolerance"     "Torque Tolerance (frac)"     "Fractional torque tolerance: a spec of 470 ± 20 in-lbf is 20/470 ≈ 0.0426 (the 5020B c-factors)."                                          "frac"       "blank → 0"
 "FlangeCount"         "Flange Count"                "Number of clamped layers to read (1–4)."                                                                                                   "—"          "blank → inferred from populated Flange Materials"
-"BodyLengthInGrip"    "Body Length in Grip (in)"   "Unthreaded body (shank) length within the grip, L1 — the shank/thread split engine.stiffness needs to compute bolt stiffness Kb (and, from it, phi, Eq. 9, and the thermal CTE-mismatch preload change). None of the shipped catalog bolts carry a Length or ThreadLength, so the two alternate routes (overall Bolt.Length minus ThreadLength; or ThreadedMember.EngagementLength + Bolt.Pitch + Bolt.ThreadLength) are never available from library data alone — this column is the ONLY practical way to supply L1. Leaving it blank does not fall back to a computed value: stiffness (and everything that needs it — phi, the Fig. 8 rupture branch of Tension-Ultimate, and the CTE-mismatch thermal preload change, TM-106943 Eq. 10) reports NotEvaluated. Nut configuration only for now — engine.stiffness defers the insert/tapped-hole frustum form regardless of this column (Phase 3.1 later)." "in" "required for stiffness (Nut config); blank → NotEvaluated"
+"BodyLengthInGrip"    "Body Length in Grip (in)"   "Unthreaded body (shank) length within the grip, L1 - the shank/thread split engine.stiffness needs to compute bolt stiffness Kb (and, from it, phi, Eq. 9, and the thermal CTE-mismatch preload change). None of the shipped catalog bolts carry a Length or ThreadLength, so the two alternate routes (overall Bolt.Length minus ThreadLength; or ThreadedMember.EngagementLength + Bolt.Pitch + Bolt.ThreadLength) are never available from library data alone - this column is the ONLY practical way to supply L1. Leaving it blank does not fall back to a computed value: stiffness (and everything that needs it - phi, the Fig. 8 rupture branch of Tension-Ultimate, and the CTE-mismatch thermal preload change, TM-106943 Eq. 10) reports NotEvaluated. Nut configuration only for now - engine.stiffness defers the insert/tapped-hole frustum form regardless of this column (Phase 3.1 later)." "in" "required for stiffness (Nut config); blank → NotEvaluated"
 }];
 % No STI pitch diameter column above: the parent tapped-hole thread-shear
 % pitch diameter (ThreadedMember.StiPitchDiameter) is auto-resolved from
@@ -211,7 +211,7 @@ function C = flangeColumns(k)
 K = string(k);
 C = { ...
 "Flange" + K + "Name",      "Flange " + K + " Name",            "Label for clamped layer " + K + " (layer 1 is under the bolt head).",     "—",          "optional"; ...
-"Flange" + K + "Material",  "Flange " + K + " Material",        "Layer " + K + " material — library key.",                                  "—",          "required per counted layer; Lists!Materials"; ...
+"Flange" + K + "Material",  "Flange " + K + " Material",        "Layer " + K + " material - library key.",                                  "—",          "required per counted layer; Lists!Materials"; ...
 "Flange" + K + "HoleDia",   "Flange " + K + " Hole Dia (in)",   "Clearance-hole diameter in layer " + K + " (bearing / tear-out checks).",  "in",         "blank → not checked"; ...
 "Flange" + K + "Thickness", "Flange " + K + " Thickness (in)",  "Layer " + K + " thickness (sums into the grip length).",                   "in",         "blank → 0.1"; ...
 "Flange" + K + "Tearout",   "Flange " + K + " Check Tear-out?", "TRUE runs the shear tear-out check on layer " + K + " (needs Edge Dist).", "TRUE/FALSE", "blank → TRUE; Lists!Boolean"; ...
@@ -352,10 +352,10 @@ function C = elementColumns()
 %ELEMENTCOLUMNS  Nx5 {MATLAB name, friendly name, description, units, valid/default}.
 C = {
 "element_id" "Element ID"          "FEM element identifier (each element = one bolt)."                                                          "—"          "required"
-"joint_name" "Joint Name"          "Which joint definition applies — must match a Name on the Joints sheet. Optional: blank rows are kept and mapped in the GUI's Element Mapping tab; headless runs (runBulk/runWorkbook) need it filled." "—" "optional (headless needs it)"
+"joint_name" "Joint Name"          "Which joint definition applies - must match a Name on the Joints sheet. Optional: blank rows are kept and mapped in the GUI's Element Mapping tab; headless runs (runBulk/runWorkbook) need it filled." "—" "optional (headless needs it)"
 "pattern_id" "Pattern ID"          "Physical bolt-pattern tag: rows sharing a pattern_id are one joint instance (joint-mode slip aggregation)." "—"          "blank → joint_name"
 "load_case"  "Load Case"           "Load-case label carried into the results."                                                                  "—"          "optional"
-"FX"         "Force X (lbf)"       "Element force, FEM X — resolved onto the joint's bolt axis into tension + shear."                           "lbf"        "blank → 0"
+"FX"         "Force X (lbf)"       "Element force, FEM X - resolved onto the joint's bolt axis into tension + shear."                           "lbf"        "blank → 0"
 "FY"         "Force Y (lbf)"       "Element force, FEM Y."                                                                                      "lbf"        "blank → 0"
 "FZ"         "Force Z (lbf)"       "Element force, FEM Z."                                                                                      "lbf"        "blank → 0"
 "MX"         "Moment X (in-lbf)"   "Element moment about FEM X (informational for now)."                                                        "in-lbf"     "blank → 0"
@@ -397,9 +397,9 @@ function S = settingsRows()
 %SETTINGSROWS  Nx5 {key, value, description, units, valid/default}.
 %   Values are the DABJ Section 9 case (matching templates/settings_template.csv).
 S = {
-"NominalTempC" 20      "Assembly/reference temperature — applied to every joint (ReferenceTemperature)."       "degC" "blank → 20"
-"HotTempC"     33.8889 "Maximum expected temperature (hot extreme) — applied to every joint (MaxTemperature)."       "degC" "blank → 20"
-"ColdTempC"    6.1111  "Minimum expected temperature (cold extreme) — applied to every joint (MinTemperature)."       "degC" "blank → 20"
+"NominalTempC" 20      "Assembly/reference temperature - applied to every joint (ReferenceTemperature)."       "degC" "blank → 20"
+"HotTempC"     33.8889 "Maximum expected temperature (hot extreme) - applied to every joint (MaxTemperature)."       "degC" "blank → 20"
+"ColdTempC"    6.1111  "Minimum expected temperature (cold extreme) - applied to every joint (MinTemperature)."       "degC" "blank → 20"
 "FSU"          1.4     "Ultimate safety factor (tension/shear/bearing rupture checks)."                        "—"    "DABJ §9: 1.4"
 "FSY"          1.25    "Yield safety factor."                                                                  "—"    "DABJ §9: 1.25"
 "FSSep"        1       "Separation safety factor."                                                             "—"    "DABJ §9: 1.0"

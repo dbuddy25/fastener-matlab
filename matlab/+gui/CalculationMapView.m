@@ -145,7 +145,7 @@ classdef CalculationMapView < handle
                 figure(obj.SourceFig);
             end
             [~, name, ext] = fileparts(file);
-            obj.SourceFig.Name = char("Source — " + name + ext + " (read-only)");
+            obj.SourceFig.Name = char("Source - " + name + ext + " (read-only)");
             lines = splitlines(string(fileread(file)));
             obj.SourceHtml.Data = struct('title', char(name + ext), ...
                 'lines', {cellstr(lines)}, 'line', line);

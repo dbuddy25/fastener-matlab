@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Command Window (MATLAB) — Fastener Tool User Guide</title>
+<title>Command Window (MATLAB) - Fastener Tool User Guide</title>
 <link rel="stylesheet" href="guide.css">
 </head>
 <body>
 <nav aria-label="Guide">
-<a class="home" href="index.html">Fastener Tool — User Guide</a>
+<a class="home" href="index.html">Fastener Tool - User Guide</a>
 <h2>SETUP</h2><ul>
 <li><a href="Project.html">Project</a></li>
 <li><a href="Factors.html">Factors</a></li>
@@ -74,9 +74,9 @@ r.GoverningCheck</code></pre>
 <tr><td><code>r.asTable()</code></td><td>One row per check: Name, MS, Status, Method (the equation citation)</td></tr>
 <tr><td>MS ≥ 0</td><td>Pass</td></tr>
 <tr><td>MS &lt; 0</td><td>Fail</td></tr>
-<tr><td>MS = <code>NaN</code></td><td>NotEvaluated — the check did not run (missing geometry, not applicable, or deferred). Not a pass, not a fail.</td></tr>
+<tr><td>MS = <code>NaN</code></td><td>NotEvaluated - the check did not run (missing geometry, not applicable, or deferred). Not a pass, not a fail.</td></tr>
 <tr><td><code>r.WorstMargin</code> / <code>r.GoverningCheck</code></td><td>The smallest evaluated margin and which check produced it</td></tr>
-<tr><td>Interaction row</td><td>Reports a ratio <code>R</code>, not a margin, in <code>Margins(k).R</code> — <strong>passes at R ≤ 1</strong>, the opposite direction from every other row, and is excluded from <code>WorstMargin</code>/<code>GoverningCheck</code></td></tr>
+<tr><td>Interaction row</td><td>Reports a ratio <code>R</code>, not a margin, in <code>Margins(k).R</code> - <strong>passes at R ≤ 1</strong>, the opposite direction from every other row, and is excluded from <code>WorstMargin</code>/<code>GoverningCheck</code></td></tr>
 </table>
 
 <h3>Export the margins table</h3>
@@ -90,13 +90,13 @@ r.GoverningCheck</code></pre>
 % ... later, in a new session ...
 c = data.loadCase("demo_case.json");
 r = engine.analyze(c.Joint, c.LoadCase, c.Factors);</code></pre>
-<p>The round trip is lossless — re-analyzing a loaded case reproduces the exact same margins as the original, including unconfigured (<code>NaN</code>) fields.</p>
+<p>The round trip is lossless - re-analyzing a loaded case reproduces the exact same margins as the original, including unconfigured (<code>NaN</code>) fields.</p>
 
 <h2>Factor presets</h2>
 <p>Pull a named safety/fitting-factor preset instead of typing <code>model.Factors(...)</code> every time:</p>
 <pre><code>f = data.factorPreset("NASA-STD-5020B");   % the built-in standard set
 data.factorPresetNames()                   % every preset name available, built-in + yours</code></pre>
-<p>Save your own program-specific set for reuse — built-in names are protected and cannot be overwritten:</p>
+<p>Save your own program-specific set for reuse - built-in names are protected and cannot be overwritten:</p>
 <pre><code>data.saveFactorPreset("My Program Factors", model.Factors(FSU=1.5, FFU=1.2));
 f = data.factorPreset("My Program Factors");   % pulls it back, any session</code></pre>
 
