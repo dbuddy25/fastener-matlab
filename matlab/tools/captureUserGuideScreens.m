@@ -25,6 +25,11 @@ probe = gui.FastenerApp();
 ids = probe.pageIds();
 delete(probe);
 
+% Joint Config is taller than the window, and exportapp captures only the
+% scrolled-to half; the guide describes it field by field instead.
+skip = "JointConfig";
+ids  = ids(~ismember(ids, skip));
+
 failed = strings(0, 1);
 for id = ids
     app = gui.FastenerApp();
