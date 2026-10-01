@@ -146,6 +146,23 @@
 <li><strong>Save to Defined Joints</strong> adds the joint to this case for bulk runs. Names collide ignoring case: <code>JT-A</code> overwrites <code>jt-a</code> after a confirm.</li>
 <li>Advanced / overrides starts collapsed.</li>
 </ul>
+<h2>Bolt bending</h2>
+<p>NASA-STD-5020B puts bending into the interaction check (Eq. 20 body / Eq. 22 threads) as a bending ratio added inside the tension bracket: R = Rs<sup>es</sup> + (Rt + Rb)<sup>et</sup>, with Rb = fbu / Ftu. Two inputs control it.</p>
+<table>
+<tr><th>Input</th><th>Where</th><th>What it does</th></tr>
+<tr><td>Bolt bending limit MbL</td><td>Applied loads</td><td>The limit bending <strong>moment</strong> on the most-loaded bolt, in-lbf. Factored to ultimate like the other loads. When entered it is <strong>always used</strong>, whatever the dropdown below says. Leave blank if there is none.</td></tr>
+<tr><td>Bolt bending (4.4.4)</td><td>Analysis assumptions</td><td>Records the 5020B §4.4.4 determination: whether bending <em>caused by the shear load</em> can be neglected. It only matters when no moment is entered.</td></tr>
+</table>
+<p>With <strong>no moment entered</strong>, the dropdown decides what Interaction reports:</p>
+<table>
+<tr><th>Bolt bending (4.4.4)</th><th>Interaction with no moment</th></tr>
+<tr><td>Not determined</td><td>Runs with Rb = 0. Method says the §4.4.4 exemption is <em>assumed</em>, not verified.</td></tr>
+<tr><td>Exempt - close or interference fit</td><td>Runs with Rb = 0. Method says the exemption is <em>verified</em>: no shear across a gap or spacer, close or interference fit.</td></tr>
+<tr><td>Required - clearance or gap</td><td><span class="noteval">—</span> Not evaluated. You have said bending matters and supplied nothing to compute it from. Enter MbL to run.</td></tr>
+</table>
+<p>Why the moment is not derived from the shear: §4.4.4 exempts only bending <em>caused by the shear loading</em>. A moment you enter may come from prying, eccentric tension or flange rotation, so the tool never discards it, and it never invents one for you.</p>
+<p>How the stress is formed: fbu = 32·Mbu / (π·d³), linear-elastic bending of a round section. The diameter follows the <strong>Shear plane</strong> setting, body diameter for body-in-shear and minor diameter for threads-in-shear, the same sectioning 5020B applies to the shear allowable (Eq. 12 / 13). This choice of d is a stated convention; 5020B does not name the section.</p>
+<p>Only Eq. 20 and 22 are implemented. Eq. 21 and 23 credit plastic bending through an allowable flexural stress the material library does not carry; 5020B calls the elastic form conservative. The row's Method names the equation that ran.</p>
 <h2>Required before Analyze</h2>
 <table>
 <tr><th>Group</th><th>Required</th></tr>
