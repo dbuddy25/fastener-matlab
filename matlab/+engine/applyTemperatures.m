@@ -1,5 +1,5 @@
 function j = applyTemperatures(j, s)
-%APPLYTEMPERATURES  Stamp the global service temperatures onto ONE joint.
+%APPLYTEMPERATURES  Stamp the global temperature extremes onto ONE joint.
 %   j = engine.applyTemperatures(j, s) applies a settings struct `s`
 %   (fields NominalTempC / HotTempC / ColdTempC, °C) to a model.Joint:
 %       ReferenceTemperature = s.NominalTempC

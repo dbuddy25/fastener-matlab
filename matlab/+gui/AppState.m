@@ -27,7 +27,7 @@ classdef AppState < handle
     %       JointChanged        Joint replaced
     %       LoadCaseChanged     LoadCase replaced
     %       FactorsChanged      Factors replaced
-    %       SettingsChanged     Settings (global service temperatures) replaced
+    %       SettingsChanged     Settings (global temperature extremes) replaced
     %       LibraryChanged      hardware Library reloaded or edited
     %       JointLibraryChanged defined joints added/removed/renamed
     %       ElementsChanged     the bulk input data changed — element mapping
@@ -89,7 +89,7 @@ classdef AppState < handle
         LoadCase (1,1) model.LoadCase = model.LoadCase()
         Factors  (1,1) model.Factors  = model.Factors()
 
-        % Global service temperatures, degC — ONE isothermal-soak set for
+        % Global temperature extremes, degC — ONE isothermal-soak set for
         % every joint, matching data.loadSettings for the headless path.
         % Field names match data.loadSettings' output so the two cannot
         % drift. Real default is set by the constructor, not here: a
@@ -353,7 +353,7 @@ classdef AppState < handle
             c = struct();
             c.format   = obj.CaseFormat;
             c.project  = obj.Project;
-            % Global service temperatures — project-level, NOT per joint.
+            % Global temperature extremes — project-level, NOT per joint.
             % Lower-camel JSON names are the file format.
             c.settings = struct( ...
                 'nominalTempC', obj.Settings.NominalTempC, ...
@@ -651,7 +651,7 @@ classdef AppState < handle
         end
 
         function s = defaultSettings()
-            %DEFAULTSETTINGS  Global service temperatures, degC.
+            %DEFAULTSETTINGS  Global temperature extremes, degC.
             %   Field names match data.loadSettings' output so the GUI and
             %   the headless path cannot drift. 20 degC isothermal is the
             %   model default.

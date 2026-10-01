@@ -941,7 +941,7 @@ classdef BulkAnalysisPage < gui.Page
                 end
             catch err
                 uialert(obj.figureHandle(), err.message, ...
-                    'Service temperatures rejected');
+                    'Temperature extremes rejected');
                 jl = [];
             end
         end
@@ -1077,7 +1077,7 @@ classdef BulkAnalysisPage < gui.Page
                 e  = elements(k);
                 jl = obj.stampedLibrary();
                 if isempty(jl)
-                    obj.giveUpDrilling("the service temperatures were rejected");
+                    obj.giveUpDrilling("the temperature extremes were rejected");
                     return
                 end
                 j = find(strcmpi(string({jl.Name}), e.JointName), 1);

@@ -1,5 +1,5 @@
 classdef TempLoadsPage < gui.Page
-    %TEMPLOADSPAGE  Global service temperatures (GUI_SPEC.md Section 3,
+    %TEMPLOADSPAGE  Global temperature extremes (GUI_SPEC.md Section 3,
     %   "Temp Loads").
     %
     %   GLOBAL, NOT PER-JOINT. Analyses are isothermal soaks — ONE
@@ -65,7 +65,7 @@ classdef TempLoadsPage < gui.Page
 
             degC = [char(176) 'C'];
             % No unit in the title: every row now carries its own.
-            panel = uipanel(g, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Service Temperatures');
+            panel = uipanel(g, 'FontWeight', 'bold', 'FontSize', 13, 'Title', 'Temperature Extremes');
             panel.Layout.Row    = 2;
             panel.Layout.Column = 1;
             pg = uigridlayout(panel, [3 3]);
@@ -78,7 +78,7 @@ classdef TempLoadsPage < gui.Page
             pg.RowSpacing  = 4;
             pg.Padding     = [6 6 6 6];
 
-            tip = ['Global service temperatures, ' degC ' — analyses are ' ...
+            tip = ['Global temperature extremes, ' degC ' — analyses are ' ...
                 'isothermal soaks, so this one trio applies to every joint ' ...
                 '(matches data.loadSettings). Nominal = assembly/reference, ' ...
                 'Hot = maximum, Cold = minimum. Must satisfy Cold <= ' ...
@@ -152,8 +152,8 @@ classdef TempLoadsPage < gui.Page
                     'NominalTempC', nom, 'HotTempC', hot, 'ColdTempC', cold);
             else
                 degC = [char(176) 'C'];
-                uialert(ancestor(obj.Root, 'figure'), sprintf(['Service ' ...
-                    'temperatures must satisfy Cold <= Nominal <= Hot ' ...
+                uialert(ancestor(obj.Root, 'figure'), sprintf(['Temperature ' ...
+                    'extremes must satisfy Cold <= Nominal <= Hot ' ...
                     '(got %g <= %g <= %g ' degC ') — the edit was ' ...
                     'reverted.'], cold, nom, hot), 'Invalid temperatures');
                 % Programmatic Value sets fire no callbacks.

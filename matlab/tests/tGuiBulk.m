@@ -186,7 +186,7 @@ classdef tGuiBulk < matlab.uitest.TestCase
         end
 
         function theGlobalServiceTemperaturesReachTheRun(testCase)
-            % A bulk run that skips the global service temperatures would
+            % A bulk run that skips the global temperature extremes would
             % leave the thermal preload term silently zero, and just as
             % quietly wrong.
             %

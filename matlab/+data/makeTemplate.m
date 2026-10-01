@@ -398,8 +398,8 @@ function S = settingsRows()
 %   Values are the DABJ Section 9 case (matching templates/settings_template.csv).
 S = {
 "NominalTempC" 20      "Assembly/reference temperature — applied to every joint (ReferenceTemperature)."       "degC" "blank → 20"
-"HotTempC"     33.8889 "Maximum expected service temperature — applied to every joint (MaxTemperature)."       "degC" "blank → 20"
-"ColdTempC"    6.1111  "Minimum expected service temperature — applied to every joint (MinTemperature)."       "degC" "blank → 20"
+"HotTempC"     33.8889 "Maximum expected temperature (hot extreme) — applied to every joint (MaxTemperature)."       "degC" "blank → 20"
+"ColdTempC"    6.1111  "Minimum expected temperature (cold extreme) — applied to every joint (MinTemperature)."       "degC" "blank → 20"
 "FSU"          1.4     "Ultimate safety factor (tension/shear/bearing rupture checks)."                        "—"    "DABJ §9: 1.4"
 "FSY"          1.25    "Yield safety factor."                                                                  "—"    "DABJ §9: 1.25"
 "FSSep"        1       "Separation safety factor."                                                             "—"    "DABJ §9: 1.0"

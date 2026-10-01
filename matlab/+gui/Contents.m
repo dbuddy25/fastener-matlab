@@ -22,7 +22,7 @@
 %                          safety. Backed by AppState.Factors, fires
 %                          FactorsChanged. The preset UI is deferred; the
 %                          data.factorPreset* API stays in place for it.
-%   gui.TempLoadsPage   — GLOBAL service temperatures (one isothermal-soak
+%   gui.TempLoadsPage   — GLOBAL temperature extremes (one isothermal-soak
 %                          trio for every joint). Backed by AppState.Settings,
 %                          fires SettingsChanged.
 %   gui.BoltSizingPage  — gut check on bolt size: material + one limit-load

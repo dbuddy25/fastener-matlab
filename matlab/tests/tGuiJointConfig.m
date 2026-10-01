@@ -1728,7 +1728,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
     end
 
     % ---- Global temperatures reach the engine ------------------------------
-    %   REGRESSION. Service temperatures are project-level and live on Temp
+    %   REGRESSION. Temperature extremes are project-level and live on Temp
     %   & Loads, so buildJoint cannot know them; nothing stamped them onto
     %   the single-joint run, and every Analyze used model.Joint's 20/20/20
     %   degC defaults. The run succeeded and the margins looked plausible -
@@ -1743,9 +1743,9 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
             testCase.verifyEqual(j.ReferenceTemperature, 22, ...
                 'Nominal is the reference temperature.');
             testCase.verifyEqual(j.MaxTemperature, 71, ...
-                'Hot is the maximum service temperature.');
+                'Hot is the maximum expected temperature.');
             testCase.verifyEqual(j.MinTemperature, -54, ...
-                'Cold is the minimum service temperature.');
+                'Cold is the minimum expected temperature.');
         end
 
         function changingTheTemperaturesChangesTheNextRun(testCase)
@@ -1762,7 +1762,7 @@ classdef tGuiJointConfig < matlab.uitest.TestCase
 
             testCase.verifyEqual(before, 20);
             testCase.verifyEqual(after, 90, ...
-                'A changed service temperature must reach the analysis.');
+                'A changed temperature extreme must reach the analysis.');
         end
 
         function anEditedTemperatureStalesTheShownResult(testCase)
