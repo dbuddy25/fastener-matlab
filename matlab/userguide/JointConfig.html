@@ -112,7 +112,7 @@
 <tr data-group="Preload (torque-controlled)" data-field="Nut factor K"><td>Nut factor K</td><td>Torque-to-preload nut factor.</td></tr>
 <tr data-group="Preload (torque-controlled)" data-field="Preload uncertainty +/- (Gamma)"><td>Preload uncertainty ± (Γ)</td><td>Scatter in torque-to-preload (5020B Eq. 3–5). 0.25 is usual for unlubricated fasteners.</td></tr>
 <tr data-group="Preload (torque-controlled)" data-field="Relaxation fraction"><td>Relaxation fraction</td><td>Short-term preload relaxation.</td></tr>
-<tr data-group="Preload (torque-controlled)" data-field="Separation critical joint"><td>Separation critical joint</td><td>Selects the minimum-preload equation: 5020B Eq. 4 (ticked) or Eq. 5.</td></tr>
+<tr data-group="Preload (torque-controlled)" data-field="Separation critical joint"><td>Separation critical joint</td><td>Selects the minimum-preload equation: 5020B Eq. 4 (ticked) or Eq. 5. See <em>Separation-critical joints</em> below.</td></tr>
 </table>
 <h3>Applied loads (single joint)</h3>
 <table class="fields">
@@ -146,6 +146,17 @@
 <li><strong>Save to Defined Joints</strong> adds the joint to this case for bulk runs. Names collide ignoring case: <code>JT-A</code> overwrites <code>jt-a</code> after a confirm.</li>
 <li>Advanced / overrides starts collapsed.</li>
 </ul>
+<h2>Separation-critical joints</h2>
+<p>5020B: <em>a joint that fails to function as required if separated.</em> Examples it gives: joints that must keep contact for a thermal, electrical or fluid path, seals, and joints whose dynamic stiffness drops if they gap. Primary structure that merely carries load is usually not separation-critical, but 5020B notes a non-critical joint with FSsep = 1.0 can gap during a qualification test above limit load and shift the dynamic response.</p>
+<p>The tick is yours to decide; the tool records it and does not infer it. What it changes:</p>
+<table>
+<tr><th>Ticked</th><th>Minimum preload for the Separation check</th></tr>
+<tr><td>Yes</td><td>5020B Eq. 4: Ppi-min = cmin (1 − Γ) Ppi-nom. The full preload uncertainty Γ is taken against every bolt.</td></tr>
+<tr><td>No</td><td>5020B Eq. 5: Ppi-min = cmin (1 − Γ/√nf) Ppi-nom. The uncertainty is averaged across the nf bolts in the pattern; with one bolt the two are identical.</td></tr>
+</table>
+<p>Slip always uses Eq. 5, ticked or not, as §4.3.1 directs. Nothing else in the run changes. The uncertainty Γ you enter should be the value 5020B Table 3 assigns to the class you have chosen, since the table's basis differs between the two.</p>
+<p>Two things the tick does not set, both on <a href="Factors.html">Factors</a>: the separation factor of safety FSsep, and the fitting factor. 5020B asks for a fitting factor of at least 1.15 on the separation analysis of a separation-critical joint unless the joint is verified by test or detailed FEA; the tool warns when FF is below 1.15 and the box is ticked.</p>
+<p>If unsure, tick it. Eq. 4 gives the lower minimum preload, so the separation margin is the conservative one.</p>
 <h2>Bolt bending</h2>
 <p>NASA-STD-5020B puts bending into the interaction check (Eq. 20 body / Eq. 22 threads) as a bending ratio added inside the tension bracket: R = Rs<sup>es</sup> + (Rt + Rb)<sup>et</sup>, with Rb = fbu / Ftu. Two inputs control it.</p>
 <table>
